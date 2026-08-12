@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7 · Playing — Zynthian Docs</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#0d2233', primaryTextColor: '#e0f0e0',
+  primaryBorderColor: '#3db87a', lineColor: '#3db87a',
+  secondaryColor: '#1a3a2a', tertiaryColor: '#0a2a1a',
+  actorBkg: '#0d2233', actorTextColor: '#e0f0e0',
+  actorBorder: '#3db87a', actorLineColor: '#3db87a',
+  activationBkgColor: '#1a4a3a', activationBorderColor: '#3db87a',
+  signalColor: '#3db87a', signalTextColor: '#0d2233',
+  labelBoxBkgColor: '#0d2233', labelBoxBorderColor: '#3db87a', labelTextColor: '#e0f0e0',
+  noteBkgColor: '#1a3a2a', noteTextColor: '#e0f0e0', noteBorderColor: '#3db87a',
+  titleColor: '#e0f0e0',
+  clusterBkg: '#1a3a2a', clusterBorder: '#3db87a', clusterTextColor: '#e0f0e0',
+  fillType0: '#0d2233', fillType1: '#1a3a2a', fillType2: '#0a2a1a'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Zynthian</a> &mdash; User Documentation
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Build</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html">6 · Testing</a></li>
+<li><a href="07-playing.html" aria-current="page"><strong>7 · Playing</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="7--playing">7 · Playing</h1>
+<p><strong>This section is a placeholder.</strong> The instrument is built and installed by the six sections before it; how to <em>play</em> it is not written yet.</p>
+<p>Until it is, the material exists in a manual written for the prototype: <code>docs/superpowers/techno-machine/2026-08-10-techno-machine-manual.md</code> in the <a href="https://github.com/Witzman/zynth-docs">zynth-docs</a> repository.</p>
+<blockquote><p><strong>Read that manual with a date in mind.</strong> It describes the surface as of 2026-08-10: three pages (CONTROL, STEP, ALL) and pads that only toggle steps. The shipped surface has <strong>five modes</strong> with page rings, pads that play as an instrument outside STEP, REC overdubbing with pattern ownership, and SHIFT+GRID channel-kind switching. Where the two disagree, the code is right and the manual is old.</p></blockquote>
+<hr>
+<h2 id="what-will-go-here">What will go here</h2>
+<p><strong>The euclidean model.</strong> Hits spread as evenly as the grid allows, then rotated. Why 4 in 16 is four-on-the-floor, 5 in 16 is the clave, 3 in 8 is tresillo. Why pattern length moves in whole <em>beats</em> while the display counts <em>steps</em>, and why 1, 5, 7, 11 and 13 steps are unreachable.</p>
+<p><strong>The Turing machine, and <code>LOCK</code> as the central gesture.</strong> A register clocked once per pass, mutated one bit at a time, read as pitch. The workflow the instrument is built around: set <code>RANDOM</code> to 20-40, let the voice fish for a phrase, and snap it to 0 the moment you hear one worth keeping — the cell reads <code>LOCK</code>, a word rather than a number that could be a coincidence. Then <code>DUPLICATE</code> as the undo for the phrase the wrap took before your hand arrived, four registers deep.</p>
+<p><strong>The five modes and the page rings.</strong> What CONTROL, STEP, ALL, MIXER and FILTER each make the eight encoders mean, why encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel of both kinds, and why a knob with no source is greyed and dead rather than quietly doing nothing.</p>
+<p><strong>REC and ownership.</strong> Holding REC overdubs into the same pattern the generator writes; the note's length is how long the pad was held. A captured note makes the player the owner of that channel's pattern and the generator stops writing it. Two gestures hand it back, both destructive, and knowing which knobs those are is the difference between keeping a take and losing it.</p>
+<p><strong>SHIFT + GRID.</strong> Switching a channel between drum and voice behaviour without swapping its engine: a drum kit gets the Turing generator, a synth gets euclid as a root pulse. Why the register walks a <em>kit's own note list</em> on a sampler instead of quantising to a scale.</p>
+<p><strong>Performing.</strong> Mute and solo, tap versus hold, ERASE as a hold-only gesture, what each LED colour means, and reading the display's tab row — including the dashed tab, which is the only thing that ever explains silence.</p>
+<hr>
+<p><strong>Back to:</strong> <a href="01-what-it-is.html">1 · What It Is</a> · <a href="06-testing.html">6 · Testing</a></p>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
