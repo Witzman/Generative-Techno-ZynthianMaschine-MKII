@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6 · Testing — Zynthian Docs</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#0d2233', primaryTextColor: '#e0f0e0',
+  primaryBorderColor: '#3db87a', lineColor: '#3db87a',
+  secondaryColor: '#1a3a2a', tertiaryColor: '#0a2a1a',
+  actorBkg: '#0d2233', actorTextColor: '#e0f0e0',
+  actorBorder: '#3db87a', actorLineColor: '#3db87a',
+  activationBkgColor: '#1a4a3a', activationBorderColor: '#3db87a',
+  signalColor: '#3db87a', signalTextColor: '#0d2233',
+  labelBoxBkgColor: '#0d2233', labelBoxBorderColor: '#3db87a', labelTextColor: '#e0f0e0',
+  noteBkgColor: '#1a3a2a', noteTextColor: '#e0f0e0', noteBorderColor: '#3db87a',
+  titleColor: '#e0f0e0',
+  clusterBkg: '#1a3a2a', clusterBorder: '#3db87a', clusterTextColor: '#e0f0e0',
+  fillType0: '#0d2233', fillType1: '#1a3a2a', fillType2: '#0a2a1a'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Zynthian</a> &mdash; User Documentation
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Build</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html" aria-current="page"><strong>6 · Testing</strong></a></li>
+<li><a href="07-playing.html">7 · Playing</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="6--testing">6 · Testing</h1>
+<p>Two halves, and the split is the point: what a machine can check, and what only your ears can.</p>
+<p>Every command below was run on the rig this guide was written from, and the outputs shown are the real ones.</p>
+<hr>
+<h2 id="machine-checkable">Machine-checkable</h2>
+<h3 id="the-unit-tests">The unit tests</h3>
+<p>Run these anywhere — a laptop, no Pi, no Maschine attached.</p>
+<pre><code class="language-bash">cd ctrldev &amp;&amp; python3 -m unittest discover -s tests -q</code></pre>
+<pre><code>Ran 271 tests in 0.012s
+
+OK</code></pre>
+<p><strong>These are the only automated proof this project has, and it is worth knowing why.</strong> The driver itself cannot be imported off the Pi: it needs <code>zynlibs.zynseq</code>, which exists only there. So everything generative and everything presentational was pushed down into <code>techno_lib.py</code>, which has no Zynthian imports at all — the Turing register and its mutation, the undo ring, register-to-pitch quantisation, the euclidean placement, the gate mask, the page and column model, the four-character value cells. That module is tested. The driver's plumbing around it is verified by hand, on hardware.</p>
+<p>The tests include the invariant the whole instrument rests on: that <code>RANDOM</code> at 0 produces a byte-identical register forever, checked over 500 iterations rather than asserted in a comment.</p>
+<h3 id="the-preflight">The preflight</h3>
+<p>On the Pi:</p>
+<pre><code class="language-bash">bash tools/check-prereqs.sh; echo "exit=$?"</code></pre>
+<pre><code>exit=0</code></pre>
+<p>After the snapshot is loaded this must exit <strong>0</strong>. Before it, two MISSING lines are expected — see <a href="04-prepare-zynthian.html">section 4</a>.</p>
+<h3 id="the-rig">The rig</h3>
+<p>All on the Pi, with the snapshot loaded and playing.</p>
+<pre><code class="language-bash">jack_lsp | grep -c TAP</code></pre>
+<pre><code>64</code></pre>
+<p>Sixteen insert instances, four ports each. Fewer means plugin hosts failed to start.</p>
+<pre><code class="language-bash">jack_lsp -c | awk '/\(capture\): Pads MIDI/{f=1;next} /^[^ ]/{f=0} f&amp;&amp;/ZynMidiRouter/{print "  route: " $1; c++} END{print "count=" c+0}'</code></pre>
+<pre><code>  route: ZynMidiRouter:dev2_in
+count=1</code></pre>
+<p><strong>Count exactly one. Do not check for a particular slot number.</strong> The helper script asks for <code>dev3_in</code>, but Zynthian assigns the slot itself once the <code>zynautoconnect</code> patch is in place, and the number differs between rigs and across reboots. What matters is that there is <em>one</em>: two routes make every pad tap fire twice, and that is a stale connection left by an earlier session, since <code>zynautoconnect</code> only tears down connections it made itself and <code>jackd</code> outlives a Zynthian restart.</p>
+<p>Do not use <code>grep -A3 "Pads MIDI"</code> for this. The daemon exposes several ports and <code>jack_lsp -c</code> interleaves their connection blocks, so a fixed-window <code>grep</code> over-counts — it reported four routes on a rig that has one.</p>
+<pre><code class="language-bash">journalctl -u zynthian --since -5min | grep -icE "traceback|error|segfault"</code></pre>
+<pre><code>0</code></pre>
+<pre><code class="language-bash">journalctl --since -20min | grep -c "watchdog: input stalled, reopened"</code></pre>
+<pre><code>26</code></pre>
+<p><strong>The watchdog line is healthy.</strong> The MK2's input dies every few seconds under a kernel hidraw fault, and the daemon closes and reopens the device to recover. One reopen every 8 seconds or so is the normal baseline; 26 in twenty minutes is about one per 46 seconds, which is comfortably better. A sudden jump to many per second is a regression worth reporting.</p>
+<hr>
+<h2 id="by-ear">By ear</h2>
+<p>Nothing in this repository can hear. This half is yours, and the factory snapshot is not signed off until it passes.</p>
+<h3 id="the-beat">The beat</h3>
+<ul><li><strong>A KICK</strong> — four on the floor, steps 0, 4, 8, 12.</li><li><strong>B SNAR</strong> — backbeat, steps 4 and 12.</li><li><strong>C CLAP</strong> — syncopated, steps 3, 8, 13.</li><li><strong>D CHAT</strong> — offbeat sixteenths, the odd steps.</li><li>Select each channel with its <strong>Group</strong> button and watch the pads: bright pads</li></ul>
+<p>are active steps, the white pad is the playhead, dark pads are beyond the pattern's length.</p>
+<h3 id="the-three-kinds-of-authorship">The three kinds of authorship</h3>
+<ul><li><strong>F BASS</strong> repeats <em>exactly</em> the same line, bar after bar. This is <code>LOCK</code> —</li></ul>
+<p><code>RANDOM</code> at 0 means the driver skips the rewrite entirely, so the loop cannot drift. Listen for a full minute; any change at all is a defect.</p>
+<ul><li><strong>G LEAD</strong> plays a different phrase roughly every bar, but a <em>related</em> one —</li></ul>
+<p>the register mutates one bit at a time rather than being replaced.</p>
+<ul><li><strong>H PADS</strong> sounds one long note per loop, and its pattern is 8 steps where</li></ul>
+<p>everything else is 16, so it lands twice as often as a bar.</p>
+<ul><li><strong>E OHAT</strong> is a drum kit walked by a Turing register: the <em>sound</em> changes as the</li></ul>
+<p>register moves through the kit's note list, not the pitch.</p>
+<h3 id="the-surface">The surface</h3>
+<ul><li><strong>F1-F8</strong> mute channels A-H regardless of which channel is selected. A tap</li></ul>
+<p>latches; a hold over 250 ms is momentary and releases when you let go.</p>
+<ul><li><strong>SOLO held</strong> plus an F button is momentary solo. <strong>SOLO tapped</strong> latches, and</li></ul>
+<p>the whole F row means solo until you tap it again. Solo is additive, not exclusive.</p>
+<ul><li><strong>ERASE alone does nothing.</strong> ERASE plus a pad clears that step; ERASE plus a</li></ul>
+<p>Group silences that channel — HITS to 0 on a drum, play chance to 0 on a voice.</p>
+<ul><li><strong>Restart</strong> jumps every channel to step 0 without stopping.</li><li>A <strong>dashed tab</strong> means that channel is not sounding. It is the instrument's only</li></ul>
+<p>way of explaining silence, so read it before assuming a fault.</p>
+<h3 id="the-send-contract">The send contract</h3>
+<p>This one is worth doing deliberately, because it is the property the whole encoder layout depends on.</p>
+<ol><li>Select any channel, press <strong>CONTROL</strong>.</li><li>Sweep <strong>encoder 7 (REVERB)</strong> from 0 to 100.</li><li><strong>The dry signal must still be there, at the same level, at the top.</strong></li></ol>
+<p>If the dry fades as the wet comes up, the insert is a dry/wet crossfade rather than a true wet level, and encoders 7 and 8 have stopped being sends. Every cheaper reverb and delay tested for this rig failed exactly that way.</p>
+<p>Expect the knob to feel back-heavy: 0-100 maps onto −70 dB … +10 dB, so 25 is inaudible, 50 is barely there, 88 equals dry, and the musically useful travel is roughly <strong>60 to 100</strong>.</p>
+<h3 id="two-things-to-set-after-loading">Two things to set after loading</h3>
+<ul><li><strong>MASTER</strong>, on the ALL page, near 80 — this snapshot does not store a main-strip</li></ul>
+<p>level, so the main fader stays wherever it was.</p>
+<ul><li>Watch the main meter if you open several wets at once. Both inserts pass dry at</li></ul>
+<p>unity and add wet on top of it.</p>
+<hr>
+<p><strong>Next:</strong> <a href="07-playing.html">7 · Playing</a></p>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

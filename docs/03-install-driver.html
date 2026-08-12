@@ -155,7 +155,8 @@ systemctl restart zynthian</code></pre>
 <pre><code class="language-bash">journalctl -u zynthian --since -3min | grep -i ctrldev</code></pre>
 <p>You want a line saying the driver was <strong>Loaded</strong>. <em>Found</em> alone means step 7 did not take effect.</p>
 <pre><code class="language-bash">jack_lsp -c | grep -A3 "Pads MIDI"</code></pre>
-<p>Exactly <strong>one</strong> <code>ZynMidiRouter:devN_in</code> connection. Two means a stale route from an earlier session is still alive — <code>zynautoconnect</code> only tears down connections it made itself, and <code>jackd</code> outlives a Zynthian restart. Extra routes make every pad tap fire twice.</p>
+<p>Exactly <strong>one</strong> <code>ZynMidiRouter:devN_in</code> connection — and <strong>do not expect a particular slot number.</strong> The helper script asks for <code>dev3_in</code>, but once the <code>zynautoconnect</code> patch is in place Zynthian assigns the slot itself, and it differs between rigs and across reboots; the rig this was written on runs on <code>dev2_in</code>. <a href="06-testing.html">Section 6</a> gives an <code>awk</code> one-liner that counts the port's connections properly, because a fixed-window <code>grep -A3</code> over-counts here.</p>
+<p>Two routes mean a stale one from an earlier session is still alive — <code>zynautoconnect</code> only tears down connections it made itself, and <code>jackd</code> outlives a Zynthian restart. Extra routes make every pad tap fire twice.</p>
 <p>Then look at the hardware. With <strong>no snapshot loaded</strong>, the MK2 should show:</p>
 <ul><li>the left display drawing the tab row <code>A KICK</code>, <code>B SNAR</code>, <code>C CLAP</code>, <code>D CHAT</code>,</li></ul>
 <p>the right drawing <code>E OHAT</code>, <code>F BASS</code>, <code>G LEAD</code>, <code>H PADS</code></p>

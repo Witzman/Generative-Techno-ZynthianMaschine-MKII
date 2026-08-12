@@ -257,8 +257,14 @@ not take effect.
 jack_lsp -c | grep -A3 "Pads MIDI"
 ```
 
-Exactly **one** `ZynMidiRouter:devN_in` connection. Two means a stale route from
-an earlier session is still alive — `zynautoconnect` only tears down connections
+Exactly **one** `ZynMidiRouter:devN_in` connection — and **do not expect a
+particular slot number.** The helper script asks for `dev3_in`, but once the
+`zynautoconnect` patch is in place Zynthian assigns the slot itself, and it
+differs between rigs and across reboots; the rig this was written on runs on
+`dev2_in`. [Section 6](06-testing.md) gives an `awk` one-liner that counts the
+port's connections properly, because a fixed-window `grep -A3` over-counts here.
+
+Two routes mean a stale one from an earlier session is still alive — `zynautoconnect` only tears down connections
 it made itself, and `jackd` outlives a Zynthian restart. Extra routes make every
 pad tap fire twice.
 
