@@ -4,9 +4,9 @@ An eight-channel generative groovebox: five euclidean drum channels and three
 Turing-machine voices, running on Zynthian on a Raspberry Pi 4, played entirely
 from a Native Instruments Maschine MK2.
 
-**Build guide:** [`guide/01-what-it-is.md`](guide/01-what-it-is.md) — seven
-sections, from a blank SD card to a rig that plays. Also rendered as a site from
-this repository's `docs/`.
+**Build guide:** <https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/> — seven
+sections, from a blank SD card to a rig that plays. Markdown source lives in
+[`guide/`](guide/01-what-it-is.md).
 
 **Status:** verified on ZynthianOS `Oram-2601-1`.
 

@@ -125,6 +125,10 @@ instead of a mystery.
 
 ---
 
+This guide is published at
+<https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/> and its
+source lives in the repository's `guide/` directory.
+
 **Next:** [2 · Install ZynthianOS](02-install-zynthianos.md)
 
 The appendix [How 017 Was Built](a1-how-017-was-built.md) documents the factory
