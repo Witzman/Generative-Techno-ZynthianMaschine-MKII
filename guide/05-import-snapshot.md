@@ -6,6 +6,12 @@ mixer levels, and the driver's own state including every voice's Turing register
 
 Nothing is constructed at run time. You copy one file and load it.
 
+**The file:**
+[`snapshot/017-generative-techno.zss`](https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII/blob/main/snapshot/017-generative-techno.zss)
+— 26,931 bytes, md5 `5b8558b7bb7a580e0f4aff5bd6f7240e`. Its contents are
+documented in
+[`snapshot/README.md`](https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII/blob/main/snapshot/README.md).
+
 ---
 
 ## Step 1 — Copy the snapshot into a bank
@@ -98,9 +104,21 @@ Those three voices are deliberately three different kinds of authorship: **froze
 (PADS). Channel E exists to show that the Turing generator is not tied to
 melodic engines — a drum kit walked by a register is a texture generator.
 
-Mixer: strips at **0.19**, main at **0.80**. Both inserts pass dry at unity and
-their wets start at −70 dB, so the rig arrives dry, with headroom, and you add
-space by hand.
+Mixer: strips at **0.19**. Both inserts pass dry at unity and their wets start at
+−70 dB, so the rig arrives dry, with headroom, and you add space by hand.
+
+> **Set the main strip yourself after loading.** This snapshot stores the eight
+> channel strips but no main-strip level, so loading it leaves the main fader
+> wherever it already was. Put **MASTER** near 80 on the ALL page, or the main
+> strip at 0.80 on the touchscreen mixer. The design headroom is strips 0.19 with
+> main 0.80: one sampler channel peaks at 1.24 before the mixer, and eight summed
+> to 2.92 on the main bus — nearly three times full scale.
+
+> **The patterns have not been verified note by note.** The driver state in the
+> snapshot was read back and is correct; the patterns live in a base64 RIFF blob
+> that has not been decoded, so the step positions above describe what was asked
+> for, not what has been confirmed. [Section 6](06-testing.md) checks them by ear
+> in one pass, which is the only way — nothing in this repository can hear.
 
 ---
 
