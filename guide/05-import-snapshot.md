@@ -104,15 +104,11 @@ Those three voices are deliberately three different kinds of authorship: **froze
 (PADS). Channel E exists to show that the Turing generator is not tied to
 melodic engines — a drum kit walked by a register is a texture generator.
 
-Mixer: strips at **0.19**. Both inserts pass dry at unity and their wets start at
-−70 dB, so the rig arrives dry, with headroom, and you add space by hand.
-
-> **Set the main strip yourself after loading.** This snapshot stores the eight
-> channel strips but no main-strip level, so loading it leaves the main fader
-> wherever it already was. Put **MASTER** near 80 on the ALL page, or the main
-> strip at 0.80 on the touchscreen mixer. The design headroom is strips 0.19 with
-> main 0.80: one sampler channel peaks at 1.24 before the mixer, and eight summed
-> to 2.92 on the main bus — nearly three times full scale.
+Mixer: strips at **0.19**, main at **0.774**. Both inserts pass dry at unity and
+their wets start at −70 dB, so the rig arrives dry, with headroom, and you add
+space by hand. That staging is measured: one sampler channel peaks at 1.24 before
+the mixer, and eight of them summed to 2.92 on the main bus — nearly three times
+full scale.
 
 > **The patterns have not been verified note by note.** The driver state in the
 > snapshot was read back and is correct; the patterns live in a base64 RIFF blob

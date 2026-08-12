@@ -1,7 +1,7 @@
 # The factory snapshot
 
-**File:** [`017-generative-techno.zss`](017-generative-techno.zss) · 26,931 bytes ·
-md5 `5b8558b7bb7a580e0f4aff5bd6f7240e`
+**File:** [`017-generative-techno.zss`](017-generative-techno.zss) · 27,015 bytes ·
+md5 `0becfb52db2c195143956a6389b9f4dd`
 
 This one file *is* the instrument's configuration: eight chains on MIDI channels
 1-8, sixteen post-fader insert plugins with their dry and wet levels, the
@@ -44,18 +44,15 @@ revsize 25, revtype 3, dlytime index 1 (`1/8`), dlyfbk 35.
 Ownership: all eight channels are `gen` — the generator owns every pattern, so
 nothing is player-owned and no take can be lost by turning a knob.
 
-Mixer: channel strips `chan_00` … `chan_07` all at **0.19**.
+Mixer: channel strips `chan_00` … `chan_07` all at **0.19**, and the main strip
+`chan_16` at **0.774**. That staging is measured, not cautious: one sampler channel
+peaks at 1.24 before the mixer, and eight of them summed to 2.92 on the main bus —
+nearly three times full scale. The attenuation lives on the strips, and main just
+under 0.80 leaves the MASTER knob travel in both directions.
 
 ---
 
-## Two honest caveats
-
-**The main strip's level is not stored in this file.** The mixer block carries the
-eight channel strips and no `chan_16` entry, so loading this snapshot leaves the
-main fader wherever it already was. Set **MASTER** to about 80 on the ALL page, or
-the main strip to 0.80 on the touchscreen mixer, after loading. Design headroom is
-strips 0.19 with main 0.80: one sampler channel peaks at 1.24 before the mixer and
-eight of them summed to 2.92 on the main bus, nearly three times full scale.
+## One honest caveat
 
 **The patterns have not been verified note by note.** Patterns, tempo, swing and
 play chance live inside `zynseq_riff_b64`, a 2,544-byte base64 RIFF blob, and that
@@ -65,7 +62,7 @@ actually fire, the PADS pattern's 8-step length, and which step the single PADS
 note sits on — if it is not step 0, `note_duration()` clamps it to
 `steps - step`, so it is shorter than the loop.
 
-Both are checked by ear in one pass with
+That is checked by ear in one pass with
 [section 6's checklist](../guide/06-testing.md). No automated check in this
 repository can hear.
 

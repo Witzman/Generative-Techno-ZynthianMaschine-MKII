@@ -68,8 +68,11 @@ full scale. The sampler's own volume control is not the lever: taking it from 96
 to 40 moved the bus peak by about 1.5 dB. The mixer strips are, and main at 0.80
 leaves the MASTER knob travel in both directions.
 
-Note that `017` stores the eight channel strips but **no main-strip level**, so
-set MASTER near 80 after loading.
+`017` stores all nine: `chan_00` … `chan_07` at 0.19 and `chan_16` at **0.774**.
+
+Note that the main strip only lands in a snapshot if it is saved *after* MASTER is
+set — the first build of `017` had no `chan_16` entry at all, so it loaded leaving
+the main fader wherever it happened to be.
 
 ---
 

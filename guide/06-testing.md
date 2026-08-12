@@ -165,12 +165,13 @@ Expect the knob to feel back-heavy: 0-100 maps onto −70 dB … +10 dB, so 25 i
 inaudible, 50 is barely there, 88 equals dry, and the musically useful travel is
 roughly **60 to 100**.
 
-### Two things to set after loading
+### One thing to watch
 
-- **MASTER**, on the ALL page, near 80 — this snapshot does not store a main-strip
-  level, so the main fader stays wherever it was.
-- Watch the main meter if you open several wets at once. Both inserts pass dry at
-  unity and add wet on top of it.
+Watch the main meter if you open several wets at once. Both inserts pass dry at
+unity and add wet on top of it, so the level only goes up as you add space.
+
+Levels arrive with the snapshot — strips 0.19, main 0.774 — so there is nothing to
+set by hand before you play.
 
 ---
 

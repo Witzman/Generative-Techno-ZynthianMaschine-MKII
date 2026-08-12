@@ -72,7 +72,8 @@
 <h2 id="gain-staging">Gain staging</h2>
 <p>Channel strips <strong>0.19</strong>, main <strong>0.80</strong>.</p>
 <p>That is measurement, not caution. One sampler channel peaks at <strong>1.24</strong> before the mixer, and eight of them summed to <strong>2.92</strong> on the main bus — nearly three times full scale. The sampler's own volume control is not the lever: taking it from 96 to 40 moved the bus peak by about 1.5 dB. The mixer strips are, and main at 0.80 leaves the MASTER knob travel in both directions.</p>
-<p>Note that <code>017</code> stores the eight channel strips but <strong>no main-strip level</strong>, so set MASTER near 80 after loading.</p>
+<p><code>017</code> stores all nine: <code>chan_00</code> … <code>chan_07</code> at 0.19 and <code>chan_16</code> at <strong>0.774</strong>.</p>
+<p>Note that the main strip only lands in a snapshot if it is saved <em>after</em> MASTER is set — the first build of <code>017</code> had no <code>chan_16</code> entry at all, so it loaded leaving the main fader wherever it happened to be.</p>
 <hr>
 <h2 id="building-the-sixteen-inserts-without-placing-sixteen-processors">Building the sixteen inserts without placing sixteen processors</h2>
 <p>Do one channel by hand, then let the script replicate it.</p>
