@@ -52,19 +52,22 @@ under 0.80 leaves the MASTER knob travel in both directions.
 
 ---
 
-## One honest caveat
+## How this was verified
 
-**The patterns have not been verified note by note.** Patterns, tempo, swing and
-play chance live inside `zynseq_riff_b64`, a 2,544-byte base64 RIFF blob, and that
-blob has not been decoded and checked against the intended beat. The driver state
-above *was* read back and matches. What remains unconfirmed is which steps
-actually fire, the PADS pattern's 8-step length, and which step the single PADS
-note sits on — if it is not step 0, `note_duration()` clamps it to
-`steps - step`, so it is shorter than the loop.
+Two independent passes, because neither alone is sufficient.
 
-That is checked by ear in one pass with
-[section 6's checklist](../guide/06-testing.md). No automated check in this
-repository can hear.
+**The driver state was read back out of the file** — the table above is what the
+`.zss` actually contains, not what was intended: the `kinds` override on channel
+E, all eight channels `gen`-owned, the four voice states, the mixer levels.
+
+**The patterns were confirmed by ear at the panel**, against
+[section 6's checklist](../guide/06-testing.md). This pass is not optional and
+cannot be automated: patterns, tempo, swing and play chance live inside
+`zynseq_riff_b64`, a 2,544-byte base64 RIFF blob, and nothing in this repository
+decodes it. A snapshot that loads without error is not a snapshot that plays the
+right notes — the previous snapshot in this project shipped with two channels at
+play chance 0 for its entire existence, reading as perfectly healthy on the
+surface.
 
 ---
 

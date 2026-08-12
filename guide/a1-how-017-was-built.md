@@ -200,11 +200,14 @@ Two traps when driving it this way:
   so a value must be set after the selection that owns it, not before.
 
 > **Not recorded:** the literal CC-value stream used for this particular build.
-> The agent driving it was interrupted before reporting the sequence, so what is
-> documented here is the map and the method rather than a replayable script. The
-> state table above *was* read back out of the finished file and is accurate; the
-> patterns inside the RIFF blob have not been decoded and checked note by note.
-> [Section 6's](06-testing.md) by-ear pass is what confirms them.
+> The process driving it was interrupted before reporting the sequence, so what is
+> documented here is the map and the method rather than a replayable script.
+>
+> The result, however, is verified twice over: the state table above was **read
+> back out of the finished file**, and the patterns were **confirmed by ear** at
+> the panel against [section 6's checklist](06-testing.md). Rebuilding from this
+> page means re-deriving the CC values from the map — the target state is exact,
+> the keystrokes to reach it are not written down.
 
 ---
 

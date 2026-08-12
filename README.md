@@ -107,15 +107,15 @@ Verified on **one rig**: ZynthianOS `Oram-2601-1`, `zynthian-ui` on branch
 `oram-2601.1`, one Maschine MK2, audio on the Pi's built-in headphone output at
 48 kHz.
 
-Two honest limits, both also stated in the guide where they matter:
+The factory snapshot is **confirmed by ear** on that rig: its driver state was
+read back out of the file, and its patterns were checked at the panel against
+[section 6's checklist](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/06-testing.html).
+
+One honest limit, also stated in the guide where it matters:
 
 - **Sections 2-5 were written from a running instrument, not walked from a fresh
   flash** — there was no spare SD card. Where a clean install could differ, the
   guide gives a check rather than a promise.
-- **The factory snapshot's patterns have not been verified note by note.** Its
-  driver state was read back out of the file and is correct; the patterns live in
-  a base64 RIFF blob that has not been decoded. Section 6's by-ear pass is what
-  confirms them — nothing in this repository can hear.
 
 ## Credits
 

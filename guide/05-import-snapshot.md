@@ -110,11 +110,11 @@ space by hand. That staging is measured: one sampler channel peaks at 1.24 befor
 the mixer, and eight of them summed to 2.92 on the main bus — nearly three times
 full scale.
 
-> **The patterns have not been verified note by note.** The driver state in the
-> snapshot was read back and is correct; the patterns live in a base64 RIFF blob
-> that has not been decoded, so the step positions above describe what was asked
-> for, not what has been confirmed. [Section 6](06-testing.md) checks them by ear
-> in one pass, which is the only way — nothing in this repository can hear.
+Both halves of this are verified: the driver state was read back out of the file,
+and the patterns were confirmed **by ear** at the panel against
+[section 6's checklist](06-testing.md). Run that checklist on your own rig too —
+it is how you find out that a plugin failed to load or a drum kit is missing,
+which a clean-looking snapshot load will not tell you.
 
 ---
 
