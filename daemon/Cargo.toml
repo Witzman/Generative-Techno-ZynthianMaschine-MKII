@@ -1,0 +1,22 @@
+[package]
+name = "maschine"
+version = "0.0.1"
+authors = ["William Light <wrl@illest.net>"]
+edition = "2021"
+
+[profile.release]
+lto = true
+
+[dependencies]
+nix = "~0.7"
+hsl = "~0.1"
+midi = "*"
+tinyosc = "0.0.3"
+png = "0.17.13"
+hex = "0.4.3"
+tungstenite = "0.21"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dependencies.alsa-seq]
+path = "alsa-seq"

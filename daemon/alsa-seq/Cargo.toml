@@ -1,0 +1,12 @@
+[package]
+name = "alsa-seq"
+version = "0.0.1"
+authors = ["William Light <wrl@illest.net>"]
+license = "MIT"
+edition = "2015"
+
+[dependencies]
+libc = "*"
+bitflags = "1.2"
+alsa-sys = "0.1"
+midi = "*"
