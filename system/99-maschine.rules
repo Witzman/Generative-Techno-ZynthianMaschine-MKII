@@ -1,0 +1,3 @@
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140", MODE="0664", GROUP="audio", SYMLINK+="maschine"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140", ACTION=="add", RUN+="/bin/systemctl --no-block restart maschine-mk2.service"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140", ACTION=="remove", RUN+="/bin/systemctl --no-block stop maschine-mk2.service"

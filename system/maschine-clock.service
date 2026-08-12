@@ -1,0 +1,14 @@
+[Unit]
+Description=Maschine MK2 JACK transport clock bridge
+After=jack2.service maschine-mk2.service
+Requires=jack2.service
+Wants=maschine-mk2.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/maschine-clock-bridge.py
+ExecStartPost=/usr/local/bin/maschine-clock-connect.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

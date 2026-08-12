@@ -1,0 +1,14 @@
+[Unit]
+Description=Maschine MK2 MIDI daemon
+After=jack2.service a2jmidid.service
+Requires=jack2.service
+
+[Service]
+ExecStart=/root/Generative-Techno-ZynthianMaschine-MKII/daemon/target/release/maschine /dev/maschine any
+ExecStartPost=/usr/local/bin/maschine-jack-connect.sh
+Restart=always
+RestartSec=5
+WorkingDirectory=/root/Generative-Techno-ZynthianMaschine-MKII/daemon
+
+[Install]
+WantedBy=multi-user.target
