@@ -158,8 +158,15 @@ systemctl restart zynthian</code></pre>
 <h3 id="why-there-is-no-loaded-line">Why there is no "Loaded" line</h3>
 <p>Zynthian logs <code>Found ctrldev driver …</code> and <code>Loaded ctrldev driver …</code> at <strong>INFO</strong>, while <code>ZYNTHIAN_LOG_LEVEL</code> defaults to <code>WARNING</code> (30). On a stock rig neither line is ever written, whether the driver loaded or not, so <strong>their absence proves nothing</strong> — the JACK route in step 10 is the check that works as shipped.</p>
 <p>To see them, uncomment the line Zynthian ships for it in <code>/zynthian/zynthian-ui/zynthian.sh</code>, set it to 20, and restart the UI:</p>
-<pre><code class="language-bash">export ZYNTHIAN_LOG_LEVEL=20    # 10=DEBUG, 20=INFO, 30=WARNING (the default)</code></pre>
-<p>That is a core Zynthian file, so a system update reverts it. There is no setting for this in webconf.</p>
+<pre><code class="language-bash">export ZYNTHIAN_LOG_LEVEL=20    # 10=DEBUG, 20=INFO, 30=WARNING (the default)
+systemctl restart zynthian</code></pre>
+<p>Measured, not assumed: at level 20 the two lines appear as</p>
+<pre><code>INFO:zynthian_ctrldev_manager.update_available_drivers: Found ctrldev driver
+  'zynthian_ctrldev_maschine_mk2' for devices with ID 'Maschine MK2 Pads'
+INFO:zynthian_ctrldev_manager.load_driver: Loaded ctrldev driver
+  'Maschine MK2 Drum Rig' for 'Maschine MK2 Pads'.</code></pre>
+<p><strong>Note what the <em>Loaded</em> line is keyed on.</strong> It carries the driver's display name, <code>Maschine MK2 Drum Rig</code> — not the module name. A grep for <code>maschine_mk2</code> finds the <em>Found</em> line and misses the <em>Loaded</em> one, which is the one that matters. Grep for <code>ctrldev driver</code> instead.</p>
+<p><code>zynthian.sh</code> is a core Zynthian file, so a system update reverts it. There is no setting for this in webconf.</p>
 <hr>
 <h2 id="verify">Verify</h2>
 <pre><code class="language-bash">bash tools/check-prereqs.sh; echo "exit=$?"     # → exit=0 once loaded

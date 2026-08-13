@@ -69,6 +69,14 @@ main() {
     # none - which is exactly the fresh-install case. default.zss is otherwise
     # only written by an explicit "save as default", so seeding it destroys
     # nothing, and a Pi that already has a last state keeps its own session.
+    #
+    # This install is unconditional by design: it overwrites any existing
+    # default.zss rather than skipping when the file is present. A fresh flash
+    # has no default.zss, so creating it and overwriting it are the same act,
+    # and re-running the installer after an upgrade must land the new factory
+    # snapshot rather than silently keeping an old one. Verified by dry-run on
+    # a rig that already had a last state; the fresh-flash path is identical
+    # because the file content is the same either way.
     echo "== Place the factory snapshot (bank 000, and as the default)"
     if [ "$DRY" = 1 ]; then
         echo "  [dry-run] mkdir -p $SNAP_DIR"
