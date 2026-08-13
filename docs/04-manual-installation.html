@@ -120,11 +120,7 @@ systemctl restart zynthian</code></pre>
 <pre><code class="language-bash">jack_lsp -c | grep -A3 "Pads MIDI"
 # → a2j:maschine rs [NNN] (capture): Pads MIDI
 # →    ZynMidiRouter:dev2_in            ← exactly one of these</code></pre>
-<p><strong>Do not expect a particular slot number.</strong> The helper asks for <code>dev3_in</code>, but once patched Zynthian assigns the slot itself; this rig runs on <code>dev2_in</code>.</p>
-<blockquote><p><strong>Do not look for a "Loaded" line in the journal.</strong> Zynthian logs <code>Found ctrldev driver …</code> and <code>Loaded ctrldev driver …</code> at <strong>INFO</strong> level, while <code>ZYNTHIAN_LOG_LEVEL</code> defaults to <code>WARNING</code> (30) — so on a stock rig neither line is ever written, whether the driver loaded or not. Their absence proves nothing. The JACK route above is the check that works as shipped.</p></blockquote>
-<p>If you do want those lines, uncomment the line Zynthian ships for it in <code>/zynthian/zynthian-ui/zynthian.sh</code> and set it to 20, then restart the UI:</p>
-<pre><code class="language-bash">export ZYNTHIAN_LOG_LEVEL=20    # 10=DEBUG, 20=INFO, 30=WARNING (the default)</code></pre>
-<p>That is a core Zynthian file, so a system update reverts it. There is no setting for this in webconf.</p>
+<p><strong>Do not expect a particular slot number.</strong> The helper asks for <code>dev3_in</code>, but once patched Zynthian assigns the slot itself; this rig runs on <code>dev2_in</code>. See <em>Why there is no "Loaded" line</em> below before hunting through the journal.</p>
 <p>With no snapshot loaded the MK2 draws both tab rows, the Group buttons in channel colours, and the <strong>CONTROL</strong> button lit. Nothing sounds yet — no chains exist.</p>
 <hr>
 <h2 id="plugins-and-drum-kits">Plugins and drum kits</h2>
@@ -154,8 +150,16 @@ dpkg -s obxd-lv2 padthv1-lv2 tap-lv2 | grep ^Status</code></pre>
 systemctl restart zynthian</code></pre>
 <h3 id="step-17--or-load-it-by-hand">Step 17 — Or load it by hand</h3>
 <p><strong>What.</strong> Opens Snapshots, goes <strong>into</strong> bank <code>000</code>, taps <code>017-generative-techno</code>. <strong>Why.</strong> Needed only if this Pi already had a session, whose <code>last_state.zss</code> takes priority over the default. Loading takes about fifteen seconds: eight engines start, sixteen plugin hosts come up, and the driver re-reads its parameters out of the sequencer. <strong>How to confirm.</strong> Eight mixer strips plus main, both tab rows drawn.</p>
-<p>You do not need a touchscreen for this. The UI is ordinary HDMI — a monitor or TV with a USB mouse and keyboard works — and webconf's Snapshots page can load one from a browser with no screen attached at all.</p>
 <blockquote><p><strong>Never save from webconf's Snapshots page.</strong> Its <strong>Name:</strong> field plus the checkmark <strong>renames the selected bank</strong> — it has destroyed bank <code>000</code> here once. Loading from webconf is safe; saving from it is not.</p></blockquote>
+<hr>
+<h2 id="notes">Notes</h2>
+<h3 id="you-do-not-need-a-touchscreen">You do not need a touchscreen</h3>
+<p>The UI is ordinary HDMI: a monitor or TV with a USB mouse and keyboard drives it, and webconf's Snapshots page loads a snapshot from a browser with no screen attached at all. A touchscreen is what the instrument was built around and is far nicer to play — but <em>saving</em> a snapshot is the one thing that needs the screen.</p>
+<h3 id="why-there-is-no-loaded-line">Why there is no "Loaded" line</h3>
+<p>Zynthian logs <code>Found ctrldev driver …</code> and <code>Loaded ctrldev driver …</code> at <strong>INFO</strong>, while <code>ZYNTHIAN_LOG_LEVEL</code> defaults to <code>WARNING</code> (30). On a stock rig neither line is ever written, whether the driver loaded or not, so <strong>their absence proves nothing</strong> — the JACK route in step 10 is the check that works as shipped.</p>
+<p>To see them, uncomment the line Zynthian ships for it in <code>/zynthian/zynthian-ui/zynthian.sh</code>, set it to 20, and restart the UI:</p>
+<pre><code class="language-bash">export ZYNTHIAN_LOG_LEVEL=20    # 10=DEBUG, 20=INFO, 30=WARNING (the default)</code></pre>
+<p>That is a core Zynthian file, so a system update reverts it. There is no setting for this in webconf.</p>
 <hr>
 <h2 id="verify">Verify</h2>
 <pre><code class="language-bash">bash tools/check-prereqs.sh; echo "exit=$?"     # → exit=0 once loaded
