@@ -276,16 +276,33 @@ a{color:inherit}
   width:100%;height:clamp(240px,26vw,320px);object-fit:cover;object-position:center 58%;
   border-radius:3px;display:block;
 }
-/* the caption sits on the photograph, as a little screen in its corner */
+/* the caption sits on the photograph as a screen of its own, reading
+   parameters in the instrument's grammar rather than prose */
 .photo-card figcaption{
-  position:absolute;top:19px;right:19px;max-width:min(62%,17rem);
-  background:rgba(8,33,63,.86);border:1px solid var(--lcd-dim);border-radius:3px;
-  padding:.5rem .6rem .55rem;
-  font-family:var(--mono);font-size:.66rem;line-height:1.55;letter-spacing:.01em;
-  color:var(--lcd-ink);
+  position:absolute;top:19px;right:19px;width:min(74%,20.5rem);
+  background:rgba(8,33,63,.88);border:1px solid var(--lcd-dim);border-radius:3px;
+  padding:.45rem .5rem .5rem;
+  font-family:var(--mono);letter-spacing:.01em;color:var(--lcd-ink);
   box-shadow:0 0 20px rgba(0,0,0,.55), inset 0 0 22px rgba(80,180,255,.12);
 }
-.photo-card figcaption b{display:block;color:#fff;font-weight:400;margin-bottom:.15rem}
+.hc-tab{
+  border:1px solid var(--lcd-dim);background:var(--lcd-ink);color:var(--lcd-bg);
+  font-size:.58rem;letter-spacing:.06em;text-align:center;padding:.05rem 0;
+  border-radius:1px;margin-bottom:.42rem;
+}
+.hc-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
+.hc-col .l{font-size:.55rem;letter-spacing:.08em;color:var(--lcd-dim);white-space:nowrap}
+.hc-col .v{font-size:.98rem;line-height:1.15;text-shadow:0 0 10px rgba(140,205,255,.5);white-space:nowrap}
+.hc-col.dead .l{text-transform:lowercase}
+.hc-col.dead .v{color:var(--lcd-dim);text-shadow:none}
+.hc-col .m{display:flex;gap:1px;height:4px;margin-top:.22rem}
+.hc-col .m i{flex:1;background:var(--lcd-dim);opacity:.22;border-radius:1px}
+.hc-col .m i.on{opacity:1;background:var(--lcd-ink)}
+.hc-line{
+  margin:.5rem 0 0;padding-top:.4rem;border-top:1px solid rgba(79,131,176,.45);
+  font-size:.63rem;line-height:1.5;color:#bcd9f2;
+}
+.hc-line b{color:#fff;font-weight:400}
 .photo-card img,.photo-card figcaption{transition:opacity .45s ease}
 .photo-card.turning img,.photo-card.turning figcaption{opacity:.12}
 
@@ -508,9 +525,13 @@ input[type=range]::-moz-range-thumb{
 
 /* ---------- gallery ---------- */
 .gal{margin-top:1.8rem}
-.rail-strip{display:flex;gap:1rem;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:.6rem;scrollbar-width:none}
-.rail-strip::-webkit-scrollbar{display:none}
-.shot{flex:0 0 100%;scroll-snap-align:center}
+/* the photographs cross-fade in place; they do not slide */
+.rail-strip{display:grid;padding-bottom:.6rem}
+.shot{
+  grid-area:1 / 1;opacity:0;visibility:hidden;
+  transition:opacity .5s ease, visibility 0s linear .5s;
+}
+.shot.on{opacity:1;visibility:visible;transition:opacity .5s ease}
 .shot figure{margin:0}
 .shot .frame{border:1px solid var(--ivory-edge);border-radius:6px;overflow:hidden;background:#0b0b0d;box-shadow:0 20px 50px -25px rgba(0,0,0,.9)}
 .shot img{width:100%;height:clamp(240px,46vw,520px);object-fit:cover;object-position:center 55%}
@@ -872,7 +893,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 
     <div class="gal">
       <div class="rail-strip" id="galRail" tabindex="0" role="group" aria-label="Photographs of the instrument">
-        <div class="shot">
+        <div class="shot on">
           <figure>
             <div class="frame">
               <img src="img/rig.jpg" srcset="img/rig-sm.jpg 900w, img/rig.jpg 1600w"
@@ -1126,19 +1147,26 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     'step-voice':'Close-up of the Maschine MK2 displays in STEP mode on a voice channel, with RANDOM reading LOCK and the pads lit magenta and violet.'
   };
 
+  /* col: [label, value, unit-fill 0-6, dead] — the panel's own grammar */
   var SLIDES=[
-    {img:'rig', pos:'center 58%',
-     cap:'<b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the panel above is drawn from. One USB cable between them, one supply behind.'},
-    {img:'step-drum', pos:'center 42%',
-     cap:'<b>A new instrument on hardware you already own.</b> The software is free and open. About forty minutes from flashing the card to first sound.'},
-    {img:'step-voice', pos:'center 45%',
-     cap:'<b>Generative is the default mode.</b> Not a feature buried in a menu. Set RANDOM to zero and the readout says LOCK: the loop freezes bit for bit.'},
-    {img:'rig', pos:'center 66%',
-     cap:'<b>The cheapest part is the computer.</b> A Pi 4 at 40 undercuts every module, pedal and cable on the desk. About 180 for the lot.'},
-    {img:'step-drum', pos:'center 58%',
-     cap:'<b>Half the bill is a controller its maker stopped supporting.</b> Discontinued — which is exactly why it was there to be found.'},
-    {img:'step-voice', pos:'center 62%',
-     cap:'<b>No cloud, no account, no subscription.</b> One supply is the whole power story; on a USB powerbank it plays on a park bench.'}
+    {img:'rig', pos:'center 58%', tab:'THE RIG',
+     cols:[['CHANS','0008',6],['DRUMS','0005',4],['VOICES','0003',3]],
+     line:'<b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the panel above is drawn from.'},
+    {img:'step-drum', pos:'center 42%', tab:'INSTALL',
+     cols:[['SETUP','0040',3],['SOFTWARE','0000',0],['LICENCE','----',0,1]],
+     line:'<b>A new instrument on hardware you already own.</b> The software is free and open; about forty minutes to first sound.'},
+    {img:'step-voice', pos:'center 45%', tab:'STEP · VOICE',
+     cols:[['RANDOM','LOCK',0],['LENGTH','0016',6],['DIVIDE','1/8',3]],
+     line:'<b>Generative is the default mode.</b> At RANDOM 0 the readout says LOCK and the loop freezes bit for bit.'},
+    {img:'rig', pos:'center 66%', tab:'COST',
+     cols:[['TOTAL','0180',6],['CPU','0040',2],['CARD','0030',1]],
+     line:'<b>The cheapest part is the computer.</b> A Pi 4 at 40 undercuts every module, pedal and cable on the desk.'},
+    {img:'step-drum', pos:'center 58%', tab:'THE SURFACE',
+     cols:[['MK2','0100',4],['PADS','0016',6],['ENCODERS','0008',5]],
+     line:'<b>Half the bill is a controller its maker stopped supporting.</b> Discontinued — which is exactly why it was there to be found.'},
+    {img:'step-voice', pos:'center 62%', tab:'OPEN',
+     cols:[['CLOUD','----',0,1],['ACCOUNT','----',0,1],['SUBS','----',0,1]],
+     line:'<b>Nothing here can be switched off from outside.</b> One supply is the whole power story; on a powerbank it plays on a park bench.'}
   ];
 
   var card=document.getElementById('heroCard'), img=document.getElementById('heroImg');
@@ -1156,13 +1184,26 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     })(i);
   }
 
+  function meter(n){
+    var h='<div class="m">';
+    for(var i=0;i<6;i++) h+='<i'+(i<n?' class="on"':'')+'></i>';
+    return h+'</div>';
+  }
   function apply(i){
     var s=SLIDES[i];
     img.src='img/'+s.img+'.jpg';
     img.srcset='img/'+s.img+'-sm.jpg 900w, img/'+s.img+'.jpg 1600w';
     img.alt=ALT[s.img];
     img.style.objectPosition=s.pos;
-    cap.innerHTML=s.cap;
+
+    var h='<div class="hc-tab">'+s.tab+'</div><div class="hc-cols">';
+    for(var c=0;c<s.cols.length;c++){
+      var col=s.cols[c];
+      h+='<div class="hc-col'+(col[3]?' dead':'')+'">'
+       +  '<div class="l">'+col[0]+'</div><div class="v">'+col[1]+'</div>'+meter(col[2])
+       + '</div>';
+    }
+    cap.innerHTML = h+'</div><p class="hc-line">'+s.line+'</p>';
     var bs=dots.querySelectorAll('button');
     for(var j=0;j<bs.length;j++) bs[j].setAttribute('aria-current', j===i?'true':'false');
   }
@@ -1384,11 +1425,11 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   function paint(){
     var bs=dots.querySelectorAll('button');
     for(var i=0;i<bs.length;i++) bs[i].setAttribute('aria-current', i===cur?'true':'false');
+    for(var s=0;s<shots.length;s++) shots[s].classList.toggle('on', s===cur);
     count.textContent='SCENE '+(cur+1)+'/'+shots.length;
   }
   function go(i){
     cur=Math.max(0,Math.min(shots.length-1,i));
-    rail.scrollTo({left: shots[cur].offsetLeft - rail.offsetLeft, behavior:'smooth'});
     paint();
   }
   /* auto-advance, 8s, wrapping. Held while the reader is on it. */
@@ -1404,19 +1445,6 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   rail.addEventListener('keydown',function(e){
     if(e.key==='ArrowRight'){ e.preventDefault(); go(cur+1); rest(); }
     if(e.key==='ArrowLeft'){ e.preventDefault(); go(cur-1); rest(); }
-  });
-  var t;
-  rail.addEventListener('scroll',function(){
-    clearTimeout(t);
-    t=setTimeout(function(){
-      var best=0,bd=Infinity,c=rail.scrollLeft+rail.clientWidth/2;
-      for(var i=0;i<shots.length;i++){
-        var sc=shots[i].offsetLeft-rail.offsetLeft+shots[i].offsetWidth/2;
-        var d=Math.abs(sc-c);
-        if(d<bd){ bd=d; best=i; }
-      }
-      cur=best; paint();
-    },90);
   });
   paint();
   start();
