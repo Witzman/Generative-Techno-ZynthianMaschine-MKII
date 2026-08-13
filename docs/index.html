@@ -590,7 +590,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
           <button type="button" id="soundBtn" class="sound-btn" aria-pressed="false">
             <span class="led" aria-hidden="true"></span><span class="txt">Play the pattern</span>
           </button>
-          <p class="sound-note">All eight channels at 128 BPM, synthesised in your browser. No samples, nothing downloaded.</p>
+          <p class="sound-note">Then pick a group &mdash; A to H &mdash; and turn HITS and ROTATE to dial that channel's rhythm in. The other seven keep playing.</p>
         </div>
         <p>
           The three voices are Turing machines. Each owns a shift register, clocked once per pass
@@ -978,7 +978,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     {hits:2,rot:4},                            /* ....x.......x... */
     {hits:8,rot:0},                            /* x.x.x.x.x.x.x.x. */
     {hits:6,rot:2},                            /* ..x..x.x..x..x.x */
-    {hits:6,rot:0,rand:12,reg:0xB4C7},         /* x..x.x..x..x.x.. */
+    {hits:3,rot:0,rand:60,reg:0xB4C7},         /* x....x....x..... , mutating fast */
     {hits:0,rot:0,rand:35,reg:0x93A5},
     {hits:0,rot:0,rand:0, reg:0xC61B}
   ];
