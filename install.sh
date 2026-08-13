@@ -111,6 +111,9 @@ run "systemctl restart zynthian"
 say "Verify (this script does not verify anything itself)"
 cat <<'EOF'
   bash tools/check-prereqs.sh
-  journalctl -u zynthian --since -3min | grep -i ctrldev     # want "Loaded", not just "Found"
-  jack_lsp -c | grep -A3 "Pads MIDI"                          # exactly one devN_in
+  jack_lsp -c | grep -A3 "Pads MIDI"     # exactly one ZynMidiRouter:devN_in
+
+  Do not look for a "Loaded" line in the journal. Zynthian logs it at INFO and
+  ZYNTHIAN_LOG_LEVEL defaults to WARNING, so it is never written on a stock rig
+  whether the driver bound or not. The JACK route above is the real check.
 EOF

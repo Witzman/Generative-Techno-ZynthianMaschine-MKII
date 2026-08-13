@@ -73,7 +73,8 @@ flowchart LR
 <h2 id="why-zynautoconnect-has-to-be-patched">Why <code>zynautoconnect</code> has to be patched</h2>
 <p>It is the only Zynthian core file this project changes, and it ships as an idempotent patcher rather than a copy, so it edits your version instead of overwriting it.</p>
 <p>Two changes. The Pads port joins the list of ports treated as hardware MIDI sources, which is what earns it a zmip slot. And the uid <code>virtual:maschine.rs/Maschine MK2 Pads</code> is pinned, because the ALSA client number embedded in the port name changes across boots while a ctrldev driver binds by device id.</p>
-<p>Unpatched, Zynthian reports the driver as <strong>Found</strong> and never <strong>Loaded</strong>. The rig does nothing, and no log anywhere says why. Re-run the patcher after every Zynthian update: an update replaces the file and takes the binding with it.</p>
+<p>Unpatched, the driver never binds: Zynthian gets as far as <em>Found</em> and never reaches <em>Loaded</em>. The rig does nothing, and no log anywhere says why — literally, because both of those messages are logged at INFO while <code>ZYNTHIAN_LOG_LEVEL</code> defaults to WARNING, so neither is written on a stock rig. The check that works is the JACK route: exactly one <code>ZynMidiRouter:devN_in</code> under the Pads port.</p>
+<p>Re-run the patcher after every Zynthian update: an update replaces the file and takes the binding with it.</p>
 <hr>
 <h2 id="the-driver">The driver</h2>
 <p><strong>The generator owns the pattern.</strong> The driver does not synthesise notes at play time — it writes them into zynseq, which is why patterns survive in snapshots and why the touchscreen editor shows the same thing the pads do. Playing is Zynthian's job; the driver only decides what is written.</p>

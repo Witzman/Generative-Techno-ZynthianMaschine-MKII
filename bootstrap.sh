@@ -72,11 +72,13 @@ main() {
     echo "== Verify"
     if [ "$DRY" = 1 ]; then
         echo "  [dry-run] bash tools/check-prereqs.sh"
-        echo "  [dry-run] journalctl -u zynthian --since -3min | grep -i ctrldev"
         echo "  [dry-run] jack_lsp -c | grep -A3 'Pads MIDI'"
     else
         ( cd "$REPO_DIR" && bash tools/check-prereqs.sh ) || true
-        journalctl -u zynthian --since -3min | grep -i ctrldev || true
+        # Exactly one ZynMidiRouter:devN_in under the Pads port. Do not look for
+        # a "Loaded" line: Zynthian logs it at INFO and ZYNTHIAN_LOG_LEVEL
+        # defaults to WARNING, so it is never written on a stock rig.
+        echo "-- Pads MIDI routing (want exactly one devN_in):"
         jack_lsp -c | grep -A3 "Pads MIDI" || true
     fi
 

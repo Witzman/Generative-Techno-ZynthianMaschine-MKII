@@ -91,7 +91,7 @@ bash tools/check-prereqs.sh     # what is missing, if anything
 
 Read [section 4](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html)
 before running the installer for real. It documents the failures that are silent —
-a driver that loads as *Found* but never *Loaded*, a daemon restarted in the wrong
+a driver that never binds and says so nowhere, a daemon restarted in the wrong
 order, a missing config flag that destroys the pad LEDs on first touch. The guide
 is authoritative; `install.sh` is only a wrapper over it.
 

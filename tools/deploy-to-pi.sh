@@ -107,15 +107,22 @@ else
 fi
 
 # --- 6. verify ----------------------------------------------------------------
-# "Found" without "Loaded" means the driver has no zmip slot - the rig then does
-# nothing at all, with no error. More than one devN_in on the Pads port means a
-# stale JACK route, which makes every pad tap play a phantom sound.
+# No devN_in on the Pads port means the driver never got a zmip slot - the rig
+# then does nothing at all, with no error. More than one means a stale JACK
+# route, which makes every pad tap play a phantom sound.
+#
+# Do NOT check for a "Loaded" line in the journal. Zynthian logs both "Found
+# ctrldev driver" and "Loaded ctrldev driver" at INFO, and ZYNTHIAN_LOG_LEVEL
+# defaults to WARNING, so neither is ever written on a stock rig - their absence
+# proves nothing. Measured 2026-08-13. Any driver WARNING lines are shown below
+# because those do come through, and they are worth seeing after a deploy.
 if [ "$RESTART" = 1 ] && [ "$DRY" = 0 ]; then
     say "Verify"
-    echo "-- ctrldev load lines (want Loaded, not just Found):"
-    ssh "$PI" 'journalctl -u zynthian --since -2min | grep -i ctrldev | tail -5' || echo "  (nothing logged)"
     echo "-- Pads MIDI routing (want exactly one devN_in):"
     ssh "$PI" 'jack_lsp -c | grep -A3 "Pads MIDI"' || echo "  (port not found)"
+    echo "-- driver warnings, if any (INFO is invisible at the default log level):"
+    ssh "$PI" 'journalctl -u zynthian --since -2min | grep -i "ctrldev_maschine" | tail -5' \
+        || echo "  (none - not an error)"
     echo
     echo "Then play it. Neither check above proves a note sounds."
 fi
