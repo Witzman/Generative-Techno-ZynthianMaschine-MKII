@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Manual installation — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17171b', primaryTextColor: '#f0f0f4',
+  primaryBorderColor: '#b4b4bc', lineColor: '#b4b4bc',
+  secondaryColor: '#1f1f24', tertiaryColor: '#131316',
+  actorBkg: '#17171b', actorTextColor: '#f0f0f4',
+  actorBorder: '#b4b4bc', actorLineColor: '#b4b4bc',
+  activationBkgColor: '#26262c', activationBorderColor: '#b4b4bc',
+  signalColor: '#b4b4bc', signalTextColor: '#17171b',
+  labelBoxBkgColor: '#17171b', labelBoxBorderColor: '#b4b4bc', labelTextColor: '#f0f0f4',
+  noteBkgColor: '#1f1f24', noteTextColor: '#f0f0f4', noteBorderColor: '#b4b4bc',
+  titleColor: '#f0f0f4',
+  clusterBkg: '#1f1f24', clusterBorder: '#b4b4bc', clusterTextColor: '#f0f0f4',
+  fillType0: '#17171b', fillType1: '#1f1f24', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Generative-Techno ZynthianMaschine MKII</a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Start here</a></li>
+<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
+<li><a href="02-features.html">2 · Features</a></li>
+<li><a href="03-playing.html">3 · Playing</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="04-manual-installation.html" aria-current="page"><strong>4 · Manual installation</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html">6 · Testing</a></li>
+<li><a href="07-playing.html">7 · Playing</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="4--manual-installation">4 · Manual installation</h1>
+<p>This is what <a href="01-fast-installation.html"><code>bootstrap.sh</code></a> does, step by step, for readers installing by hand or debugging an install that went wrong. Every step states what it does, why it is needed, and how to confirm it worked.</p>
+<p>Run everything on the Pi, as <code>root</code>, from the repository root:</p>
+<pre><code class="language-bash">git clone https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
+cd Generative-Techno-ZynthianMaschine-MKII</code></pre>
+<hr>
+<h2 id="before-you-start">Before you start</h2>
+<p>Confirm the machine is what the rest of this page assumes.</p>
+<table><thead><tr><th>Check</th><th>Command</th><th>Expected</th></tr></thead><tbody><tr><td>OS build</td><td><code>head -1 /zynthian/build_info.txt</code></td><td>contains <code>Oram-2601-1</code></td></tr><tr><td>UI branch</td><td><code>git -C /zynthian/zynthian-ui branch --show-current</code></td><td><code>oram-2601.1</code></td></tr><tr><td>webconf</td><td>open <code>http://&lt;pi&gt;</code></td><td>the configuration page loads</td></tr></tbody></table>
+<p>A different branch means another release train. Nothing here has been run on <code>vangelis</code>, which is still beta.</p>
+<hr>
+<h2 id="the-daemon-and-the-driver">The daemon and the driver</h2>
+<h3 id="step-1--build-the-daemon">Step 1 — Build the daemon</h3>
+<p><strong>What.</strong> Compiles the Rust HID daemon that speaks to the Maschine. <strong>Why.</strong> No binary is shipped; the daemon is built where it runs. <strong>How to confirm.</strong> <code>daemon/target/release/maschine</code> exists and is executable.</p>
+<pre><code class="language-bash">apt install -y rustc cargo
+cd daemon &amp;&amp; cargo build --release &amp;&amp; cp picturetest.png target/release/ &amp;&amp; cd ..</code></pre>
+<p>Minutes on a Pi 4. Do not interrupt it.</p>
+<h3 id="step-2--put-the-daemon-config-in-place">Step 2 — Put the daemon config in place</h3>
+<p><strong>What.</strong> Installs pad note offsets, encoder CC numbers, and <code>external_pad_leds</code>. <strong>Why.</strong> Without <code>"external_pad_leds": true</code> the daemon repaints the pads itself in its own global colour, and the first pad you touch destroys the driver's per-channel picture. <strong>How to confirm.</strong> The <code>grep</code> prints the flag as <code>true</code>.</p>
+<pre><code class="language-bash">cp system/maschine.json daemon/maschine.json
+grep external_pad_leds daemon/maschine.json
+# → "external_pad_leds": true</code></pre>
+<h3 id="step-3--install-the-udev-rule">Step 3 — Install the udev rule</h3>
+<p><strong>What.</strong> Creates the stable <code>/dev/maschine</code> symlink and restarts the daemon on replug. <strong>Why.</strong> Otherwise the daemon must be pointed at a <code>/dev/hidrawN</code> number that moves between boots. <strong>How to confirm.</strong> <code>/dev/maschine</code> exists and points at a <code>hidraw</code> node.</p>
+<pre><code class="language-bash">install -m 0644 system/99-maschine.rules /etc/udev/rules.d/99-maschine.rules
+udevadm control --reload-rules
+udevadm trigger --subsystem-match=hidraw</code></pre>
+<h3 id="step-4--install-the-helper-scripts">Step 4 — Install the helper scripts</h3>
+<p><strong>What.</strong> Puts the JACK connect and clock helpers in <code>/usr/local/bin</code>. <strong>Why.</strong> <code>maschine-jack-connect.sh</code> sets the port alias <code>virtual:maschine.rs/Maschine MK2 Pads</code>. Zynthian derives a control-device id from the part of an alias after the first <code>/</code>, and <code>a2j</code> gives user-client ports no alias at all — without it the driver has no id to bind to and never loads. <strong>How to confirm.</strong> All three files are present and executable.</p>
+<pre><code class="language-bash">install -m 0755 system/maschine-jack-connect.sh /usr/local/bin/
+install -m 0755 system/maschine-clock-bridge.py /usr/local/bin/
+install -m 0755 system/maschine-clock-connect.sh /usr/local/bin/</code></pre>
+<h3 id="step-5--install-and-enable-the-systemd-units">Step 5 — Install and enable the systemd units</h3>
+<p><strong>What.</strong> Installs the daemon, its web editor and the clock bridge as services. <strong>Why.</strong> The daemon must survive reboots and reconnect to JACK by itself. <strong>How to confirm.</strong> <code>systemctl is-active maschine-mk2</code> prints <code>active</code>, and the MK2's displays light.</p>
+<pre><code class="language-bash">install -m 0644 system/maschine-mk2.service   /etc/systemd/system/
+install -m 0644 system/maschine-web.service   /etc/systemd/system/
+install -m 0644 system/maschine-clock.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now maschine-mk2 maschine-web maschine-clock</code></pre>
+<blockquote><p><strong>If you cloned anywhere other than <code>/root/Generative-Techno-ZynthianMaschine-MKII</code>,</strong> edit <code>ExecStart</code> and <code>WorkingDirectory</code> in <code>maschine-mk2.service</code>, and <code>--directory</code> in <code>maschine-web.service</code>. <code>install.sh</code> rewrites these for you; by hand it is on you.</p></blockquote>
+<h3 id="step-6--let-a2jmidid-export-software-clients">Step 6 — Let <code>a2jmidid</code> export software clients</h3>
+<p><strong>What.</strong> Makes the daemon's ALSA sequencer port visible in JACK. <strong>Why.</strong> Without a JACK port, step 4's script has nothing to connect or alias. <strong>How to confirm.</strong> The port appears.</p>
+<pre><code class="language-bash">jack_lsp | grep "Pads MIDI"
+# → a2j:maschine rs [N] (playback): Maschine MK2 Pads MIDI</code></pre>
+<h3 id="step-7--patch-zynautoconnect">Step 7 — Patch <code>zynautoconnect</code></h3>
+<p><strong>What.</strong> The only change to a Zynthian core file: adds the Pads port to the hardware-MIDI-source whitelist so it gets a zmip slot, and pins the stable uid. <strong>Why.</strong> Without it Zynthian lists the driver as <strong>Found</strong> and never <strong>Loaded</strong>, and the rig does nothing with no error in any log — the most confusing failure in this project. <strong>How to confirm.</strong> The grep returns 1 or more.</p>
+<pre><code class="language-bash">python3 tools/patch-autoconnect-maschine.py
+grep -c "maschine rs.*Pads MIDI" /zynthian/zynthian-ui/zynautoconnect/zynthian_autoconnect.py</code></pre>
+<p>It ships as a patcher rather than a copy, so it edits <em>your</em> file. It is idempotent. <strong>Re-run it after every Zynthian system update</strong> — an update replaces <code>zynthian_autoconnect.py</code> and takes the binding with it.</p>
+<h3 id="step-8--copy-the-three-driver-files">Step 8 — Copy the three driver files</h3>
+<p><strong>What.</strong> Drops the control-surface driver into Zynthian's <code>ctrldev</code> directory. <strong>Why.</strong> Two traps. These are untracked drop-ins in a checkout that tracks upstream, so <strong>never use git in <code>/zynthian/zynthian-ui</code></strong> — a <code>git reset --hard</code> deletes them and the running instrument with them. And every module there needs a <code>dev_ids</code> attribute; without it the whole UI crash-loops every 14 seconds. <strong>How to confirm.</strong> All three files are present in the target directory.</p>
+<pre><code class="language-bash">install -m 0644 ctrldev/zynthian_ctrldev_maschine_mk2.py \
+                ctrldev/techno_lib.py \
+                ctrldev/maschine_mk2_lib.py \
+                /zynthian/zynthian-ui/zyngine/ctrldev/</code></pre>
+<h3 id="step-9--restart-daemon-first-and-ui-second">Step 9 — Restart, daemon first and UI second</h3>
+<p><strong>What.</strong> Brings both halves up in the one order that works. <strong>Why.</strong> Restarting the daemon alone makes <code>a2j</code> re-register the Pads port onto a <em>new</em> zmip slot while the driver stays bound to the dead one. The rig goes silent, no error appears anywhere, and a stale route is left behind that makes every later pad tap fire twice. <strong>How to confirm.</strong> Zynthian's UI comes back on the display.</p>
+<pre><code class="language-bash">systemctl restart maschine-mk2
+sleep 8
+systemctl restart zynthian</code></pre>
+<h3 id="step-10--confirm-the-surface-is-alive">Step 10 — Confirm the surface is alive</h3>
+<p><strong>What.</strong> Proves the driver bound and the routing is clean. <strong>Why.</strong> <em>Found</em> alone means step 7 did not take effect; two routes mean a stale one from an earlier session is still alive. <strong>How to confirm.</strong> A <strong>Loaded</strong> line, and exactly one <code>devN_in</code> connection.</p>
+<pre><code class="language-bash">journalctl -u zynthian --since -3min | grep -i ctrldev
+jack_lsp -c | grep -A3 "Pads MIDI"</code></pre>
+<p><strong>Do not expect a particular slot number.</strong> The helper asks for <code>dev3_in</code>, but once patched Zynthian assigns the slot itself; this rig runs on <code>dev2_in</code>.</p>
+<p>With no snapshot loaded the MK2 draws both tab rows, the Group buttons in channel colours, and the <strong>CONTROL</strong> button lit. Nothing sounds yet — no chains exist.</p>
+<hr>
+<h2 id="plugins-and-drum-kits">Plugins and drum kits</h2>
+<h3 id="step-11--install-the-packaged-plugins">Step 11 — Install the packaged plugins</h3>
+<p><strong>What.</strong> Installs three of the five engines from Debian. <strong>Why.</strong> <code>obxd-lv2</code> is channel G, <code>padthv1-lv2</code> is channel H, and <code>tap-lv2</code> provides TAP Reverberator and TAP Stereo Echo for all sixteen inserts. <strong>How to confirm.</strong> Three <code>Status: install ok installed</code> lines.</p>
+<pre><code class="language-bash">apt install -y obxd-lv2 padthv1-lv2 tap-lv2
+dpkg -s obxd-lv2 padthv1-lv2 tap-lv2 | grep ^Status</code></pre>
+<h3 id="step-12--confirm-jc303">Step 12 — Confirm JC303</h3>
+<p><strong>What.</strong> Checks the bass engine, which is not a Debian package. <strong>Why.</strong> It comes from Zynthian's own plugin set; if missing, install it through webconf so the plugin cache learns about it. <strong>How to confirm.</strong> The directory exists.</p>
+<pre><code class="language-bash">ls -d /zynthian/zynthian-plugins/lv2/JC303.lv2</code></pre>
+<h3 id="step-13--enable-the-plugins-and-regenerate-the-lv2-cache">Step 13 — Enable the plugins and regenerate the LV2 cache</h3>
+<p><strong>What.</strong> In webconf: <strong>Engines</strong>, enable Obxd, padthv1, JC303, TAP Reverberator and TAP Stereo Echo, then <strong>Regenerate LV2 Cache</strong>. <strong>Why.</strong> A plugin that is installed but not <em>enabled</em> is invisible to a snapshot, and loading one that names a disabled plugin gives a chain with no engine. <strong>How to confirm.</strong> All five appear as available engines. Let the scan finish before loading anything.</p>
+<h3 id="step-14--confirm-the-sfz-drum-kits">Step 14 — Confirm the SFZ drum kits</h3>
+<p><strong>What.</strong> Checks the kits the five drum channels play. <strong>Why.</strong> Missing kits load silently — the channels exist and make no sound. Use <code>find -type f</code>: one entry is a <em>directory</em>, so <code>ls</code> over-counts. <strong>How to confirm.</strong> A count greater than zero.</p>
+<pre><code class="language-bash">find "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines" -maxdepth 1 -type f -name '*.sfz' | wc -l
+# → 40   (on the rig this was written from)</code></pre>
+<hr>
+<h2 id="the-snapshot">The snapshot</h2>
+<h3 id="step-15--copy-it-into-a-bank">Step 15 — Copy it into a bank</h3>
+<p><strong>What.</strong> Places the factory snapshot in bank <code>000</code>. <strong>Why.</strong> The bank subdirectory is <strong>not optional</strong> — a snapshot at the snapshots root is invisible in the UI. <strong>How to confirm.</strong> The file is listed under <code>000/</code>.</p>
+<pre><code class="language-bash">install -m 0644 snapshot/017-generative-techno.zss \
+        /zynthian/zynthian-my-data/snapshots/000/</code></pre>
+<h3 id="step-16--load-it-from-the-touchscreen">Step 16 — Load it from the touchscreen</h3>
+<p><strong>What.</strong> Opens Snapshots, goes <strong>into</strong> bank <code>000</code>, taps <code>017-generative-techno</code>. <strong>Why.</strong> Loading takes about fifteen seconds: eight engines start, sixteen plugin hosts come up, and the driver re-reads its parameters out of the sequencer. <strong>How to confirm.</strong> Eight mixer strips plus main, both tab rows drawn.</p>
+<blockquote><p><strong>Never save from webconf's Snapshots page.</strong> Its <strong>Name:</strong> field plus the checkmark <strong>renames the selected bank</strong> — it has destroyed bank <code>000</code> here once. Loading from webconf is safe; saving from it is not.</p></blockquote>
+<hr>
+<h2 id="verify">Verify</h2>
+<pre><code class="language-bash">bash tools/check-prereqs.sh; echo "exit=$?"     # → exit=0 once loaded
+jack_lsp | grep -c TAP                          # → 64
+cd ctrldev &amp;&amp; python3 -m unittest discover -s tests -q   # → Ran 271 tests … OK</code></pre>
+<p>The unit tests run anywhere — no Pi, no Maschine. They are the only automated proof this project has: the driver cannot be imported off the Pi, so everything generative and presentational lives in <code>techno_lib.py</code>, which has no Zynthian imports and is tested.</p>
+<hr>
+<h2 id="when-it-does-not-work">When it does not work</h2>
+<table><thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead><tbody><tr><td>Displays blank, buttons dark, Zynthian fine</td><td>daemon not running</td><td><code>systemctl status maschine-mk2</code>, then <code>journalctl -u maschine-mk2 -n 50</code></td></tr><tr><td>Driver <strong>Found</strong> but never <strong>Loaded</strong></td><td>no zmip slot</td><td>Step 7, then restart daemon and UI</td></tr><tr><td>No <code>Pads MIDI</code> in <code>jack_lsp</code></td><td><code>a2jmidid</code> not exporting software clients</td><td>Step 6</td></tr><tr><td>Every pad tap fires twice</td><td>a stale JACK route</td><td>Step 10 — disconnect the extra <code>devN_in</code></td></tr><tr><td>Whole UI restarts every ~14 s</td><td>a module in <code>ctrldev/</code> without <code>dev_ids</code></td><td>Step 8</td></tr><tr><td>First pad touch destroys the pad colours</td><td><code>external_pad_leds</code> missing</td><td>Step 2, then restart the daemon <strong>and</strong> the UI</td></tr><tr><td>Input dies after seconds, then recovers</td><td>kernel hidraw fault; the daemon reopens the device</td><td>Nothing to do. <code>watchdog: input stalled, reopened</code> about every 8 s is <strong>healthy</strong></td></tr><tr><td>A channel is silent, tab <strong>dashed</strong></td><td>muted, or its generator is silent — HITS 0, or play chance 0</td><td>Not a fault. Raise HITS or CHANCE, or unmute with its F button</td></tr><tr><td>A channel is silent, tab normal</td><td>engines did not start</td><td>`jack_lsp \</td><td>grep -c TAP` → 64. Fewer means plugin instances failed</td></tr><tr><td>Every channel silent</td><td>something is soloed</td><td>Tap SOLO to leave solo mode</td></tr></tbody></table>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
