@@ -389,11 +389,13 @@ input[type=range]::-moz-range-thumb{
 }
 .mach-read .dead{color:var(--lcd-dim)}
 .mach-read .lock{background:var(--lcd-ink);color:var(--lcd-bg);padding:0 .25rem}
+.mach-read .btns{margin-left:auto;flex:0 0 auto;display:flex;gap:.35rem}
 .mach-read button{
-  margin-left:auto;flex:0 0 auto;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;
+  flex:0 0 auto;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;
   background:transparent;color:var(--lcd-ink);border:1px solid var(--lcd-dim);
   border-radius:2px;padding:.1rem .45rem;cursor:pointer;
 }
+.mach-read button[aria-pressed="true"]{background:var(--lcd-ink);color:var(--lcd-bg);border-color:var(--lcd-ink)}
 .mach-hint{margin:.8rem 0 0;font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
 
 /* ---------- install steps ---------- */
@@ -1005,11 +1007,17 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
        + '<span>RANDOM '+(state.rand===0?'<span class="lock">LOCK</span>':pad4(state.rand))+'</span>'
        + '<span>GATE 0040</span>';
     }
-    h+='<button type="button" id="holdBtn" aria-pressed="'+String(!state.playing)+'">'+(state.playing?'HOLD':'RUN')+'</button>';
+    h+='<span class="btns">'
+     + '<button type="button" id="soundBtn" aria-pressed="'+String(AU.on)+'">'+(AU.on?'SOUND ON':'SOUND')+'</button>'
+     + '<button type="button" id="holdBtn" aria-pressed="'+String(!state.playing)+'">'+(state.playing?'HOLD':'RUN')+'</button>'
+     + '</span>';
     read.innerHTML=h;
     document.getElementById('holdBtn').addEventListener('click',function(){
-      state.playing=!state.playing; paintRead();
+      state.playing=!state.playing;
+      if(AU.on && state.playing) AU.next=AU.ctx.currentTime+0.06;
+      paintRead();
     });
+    document.getElementById('soundBtn').addEventListener('click',function(){ setSound(!AU.on); });
   }
 
   function sync(){
@@ -1034,19 +1042,163 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     state.rot=parseInt(k2.value,10); sync(); paintRead(); draw();
   });
 
-  /* clock */
-  var last=0, PASS=2400, stepMs=PASS/STEPS, acc=0;
+  var PASS=2400, stepMs=PASS/STEPS;
+
+  /* the register mutates once per pass, exactly as the driver does it */
+  function mutate(){
+    if(CH[state.ch].kind==='voice' && state.rand>0 && Math.random()*100 < state.rand)
+      state.reg ^= (1 << Math.floor(Math.random()*16));
+  }
+
+  /* ============================================================
+     Sound. Synthesised here, in the browser - no samples, nothing
+     downloaded, and nothing runs until the reader asks for it: a
+     browser will not start an AudioContext without a gesture, and a
+     page that animates on load should not also make noise on load.
+     ============================================================ */
+  var AU={ctx:null,out:null,noise:null,on:false,next:0,step:0,timer:null,queue:[]};
+  var LOOKAHEAD=0.12, TIMER_MS=25;
+
+  function audioStart(){
+    if(!AU.ctx){
+      var Ctx=window.AudioContext||window.webkitAudioContext;
+      if(!Ctx) return false;
+      AU.ctx=new Ctx();
+      var comp=AU.ctx.createDynamicsCompressor();
+      AU.out=AU.ctx.createGain(); AU.out.gain.value=.8;
+      AU.out.connect(comp); comp.connect(AU.ctx.destination);
+      var n=Math.floor(AU.ctx.sampleRate), buf=AU.ctx.createBuffer(1,n,AU.ctx.sampleRate), d=buf.getChannelData(0);
+      for(var i=0;i<n;i++) d[i]=Math.random()*2-1;   /* one buffer, reused by every hit */
+      AU.noise=buf;
+    }
+    if(AU.ctx.resume) AU.ctx.resume();
+    return true;
+  }
+
+  /* every hit builds its own nodes, stops, and is dropped - nothing is left running */
+  function envGain(t,peak,att,dec){
+    var g=AU.ctx.createGain();
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.linearRampToValueAtTime(peak,t+att);
+    g.gain.exponentialRampToValueAtTime(.0001,t+att+dec);
+    return g;
+  }
+  function noiseAt(t,dur){
+    var s=AU.ctx.createBufferSource();
+    s.buffer=AU.noise; s.loop=true;
+    s.start(t,Math.random()*.5); s.stop(t+dur);
+    return s;
+  }
+  function filt(type,freq,q){
+    var f=AU.ctx.createBiquadFilter();
+    f.type=type; f.frequency.value=freq; if(q) f.Q.value=q;
+    return f;
+  }
+
+  function kick(t){
+    var o=AU.ctx.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(120,t);
+    o.frequency.exponentialRampToValueAtTime(45,t+.06);
+    var g=envGain(t,.9,.002,.32);
+    o.connect(g); g.connect(AU.out); o.start(t); o.stop(t+.45);
+  }
+  function snare(t){
+    var s=noiseAt(t,.22), bp=filt('bandpass',1800,.9), g=envGain(t,.45,.001,.17);
+    s.connect(bp); bp.connect(g); g.connect(AU.out);
+    var o=AU.ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(190,t);
+    var g2=envGain(t,.22,.001,.09);
+    o.connect(g2); g2.connect(AU.out); o.start(t); o.stop(t+.15);
+  }
+  function clap(t){
+    for(var k=0;k<3;k++){
+      var tt=t+k*.011, s=noiseAt(tt,.03), hp=filt('highpass',1100), g=envGain(tt,.3,.001,.02);
+      s.connect(hp); hp.connect(g); g.connect(AU.out);
+    }
+    var s2=noiseAt(t+.03,.16), hp2=filt('highpass',1300), g3=envGain(t+.03,.22,.002,.13);
+    s2.connect(hp2); hp2.connect(g3); g3.connect(AU.out);
+  }
+  function hat(t,open){
+    var dur=open?.3:.05, s=noiseAt(t,dur), hp=filt('highpass',open?6200:7600),
+        g=envGain(t,open?.22:.18,.001,open?.26:.035);
+    s.connect(hp); hp.connect(g); g.connect(AU.out);
+  }
+  var DRUM=[kick,snare,clap,function(t){hat(t,false);},function(t){hat(t,true);}];
+
+  /* the register's five-bit window becomes a pitch, the same value the pads draw */
+  var SCALE=[0,2,3,5,7,8,10];                 /* natural minor, the snapshot's own scale */
+  function voiceHit(t,val,ch){
+    var deg=SCALE[val%7], oct=Math.min(Math.floor(val/7),2);
+    var base=(ch===5?33:ch===6?57:45)+deg+12*oct;      /* bass low, lead high, pads between */
+    var o=AU.ctx.createOscillator();
+    o.type=ch===6?'square':'sawtooth';
+    o.frequency.setValueAtTime(440*Math.pow(2,(base-69)/12),t);
+    var dur=ch===7?.85:.2;
+    var lp=filt('lowpass',ch===5?520:2400,ch===5?9:5);
+    lp.frequency.setValueAtTime(ch===5?900:3200,t);
+    lp.frequency.exponentialRampToValueAtTime(ch===5?260:700,t+dur);
+    var g=envGain(t,ch===7?.15:.24,ch===7?.08:.005,dur);
+    o.connect(lp); lp.connect(g); g.connect(AU.out);
+    o.start(t); o.stop(t+dur+.12);
+  }
+
+  /* Chris Wilson's lookahead: schedule ahead on the audio clock, never on rAF,
+     which drifts and stalls in a background tab. rAF only reads the clock. */
+  function scheduleStep(step,t){
+    var ch=CH[state.ch];
+    if(ch.kind==='drum'){
+      var pat=rot(euclid(state.hits,STEPS),state.rot);
+      if(pat[step]) DRUM[state.ch](t);
+    } else if(step%2===0){                    /* DIVIDE 1/8, as the readout says */
+      voiceHit(t,pitches()[step],state.ch);
+    }
+    AU.queue.push({s:step,t:t});
+  }
+  function scheduler(){
+    if(!AU.on||!AU.ctx) return;
+    if(!state.playing){ AU.next=AU.ctx.currentTime+.06; return; }
+    while(AU.next < AU.ctx.currentTime+LOOKAHEAD){
+      scheduleStep(AU.step,AU.next);
+      AU.step=(AU.step+1)%STEPS;
+      if(AU.step===0) mutate();
+      AU.next+=stepMs/1000;
+    }
+  }
+  function setSound(on){
+    if(on){
+      if(!audioStart()){ return; }
+      AU.on=true; AU.step=state.step; AU.queue=[];
+      AU.next=AU.ctx.currentTime+.06;
+      AU.timer=setInterval(scheduler,TIMER_MS);
+    } else {
+      AU.on=false; AU.queue=[];
+      if(AU.timer){ clearInterval(AU.timer); AU.timer=null; }
+      if(AU.ctx&&AU.ctx.suspend) AU.ctx.suspend();
+    }
+    paintRead();
+  }
+  /* a throttled background tab starves the lookahead and the loop stutters on
+     return, so the sound stops with the tab and restarts cleanly */
+  document.addEventListener('visibilitychange',function(){
+    if(!AU.on||!AU.ctx) return;
+    if(document.hidden){ AU.ctx.suspend(); }
+    else { AU.ctx.resume(); AU.queue=[]; AU.next=AU.ctx.currentTime+.06; AU.step=state.step; }
+  });
+
+  /* clock - the audio one when sound is on, otherwise the frame timer */
+  var last=0, acc=0;
   function tick(t){
     if(!last) last=t;
     var dt=t-last; last=t;
-    if(state.playing){
+    if(AU.on&&AU.ctx){
+      var now=AU.ctx.currentTime, moved=false;
+      while(AU.queue.length&&AU.queue[0].t<=now){ state.step=AU.queue.shift().s; moved=true; }
+      if(moved) draw();
+    } else if(state.playing){
       acc+=dt;
       while(acc>=stepMs){
         acc-=stepMs;
         state.step=(state.step+1)%STEPS;
-        if(state.step===0 && CH[state.ch].kind==='voice' && state.rand>0){
-          if(Math.random()*100 < state.rand) state.reg ^= (1 << Math.floor(Math.random()*16));
-        }
+        if(state.step===0) mutate();
       }
       draw();
     }
