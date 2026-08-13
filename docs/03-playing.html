@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Generative-Techno ZynthianMaschine MKII — Generative-Techno ZynthianMaschine MKII</title>
+<title>3 · Playing — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
@@ -35,10 +35,10 @@
 <div class="track">
 <button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
-<li><a href="00-start.html" aria-current="page"><strong>Start here</strong></a></li>
+<li><a href="00-start.html">Start here</a></li>
 <li><a href="01-fast-installation.html">1 · Fast installation</a></li>
 <li><a href="02-features.html">2 · Features</a></li>
-<li><a href="03-playing.html">3 · Playing</a></li>
+<li><a href="03-playing.html" aria-current="page"><strong>3 · Playing</strong></a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
@@ -60,13 +60,19 @@
 </nav>
 <main>
 <article>
-<h1 id="generative-techno-zynthianmaschine-mkii">Generative-Techno ZynthianMaschine MKII</h1>
-<p>An eight-channel generative groovebox on Zynthian, played entirely from a Native Instruments Maschine MK2 — pads, encoders, both displays, LEDs. Five euclidean drum channels and three Turing-machine voices, all eight always alive; nothing is created or torn down while playing.</p>
-<p><strong>The generator owns the pattern.</strong> You do not draw a beat. You set hits, rotation and randomness, and the driver writes real notes into Zynthian's own sequencer — so patterns persist in snapshots and the touchscreen pattern editor mirrors exactly what the pads show.</p>
-<h2 id="where-to-go">Where to go</h2>
-<table><thead><tr><th>You are</th><th>Start at</th></tr></thead><tbody><tr><td>Here to play it — you have the hardware and want it running</td><td><a href="01-fast-installation.html">1 · Fast installation</a></td></tr><tr><td>Wondering what it actually does</td><td><a href="02-features.html">2 · Features</a></td></tr><tr><td>Installing by hand, or debugging an install that went wrong</td><td><a href="04-manual-installation.html">4 · Manual installation</a></td></tr><tr><td>Curious how it works inside</td><td><a href="05-internals.html">5 · Internals</a></td></tr></tbody></table>
-<h2 id="what-you-need">What you need</h2>
-<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>Computer</td><td>Raspberry Pi 4 (this is what the rig was built and measured on)</td></tr><tr><td>Surface</td><td>Native Instruments Maschine MK2, over USB</td></tr><tr><td>Audio</td><td>Any interface Zynthian supports. Every figure in this project was measured on the Pi's built-in headphone output at 48 kHz</td></tr><tr><td>Storage</td><td>SD card, 16 GB or more — the ZynthianOS image is about 7.5 GB compressed</td></tr><tr><td>Display</td><td>A screen for Zynthian's own UI. Snapshots are saved and loaded there, so it is not optional</td></tr><tr><td>Network</td><td>The Pi must reach the internet during installation</td></tr></tbody></table>
+<h1 id="3--playing">3 · Playing</h1>
+<p><strong>This section is a placeholder.</strong> The instrument is built and installed by the sections around it; how to <em>play</em> it is not written yet. It will be written once the surface stops changing — an earlier draft described a prototype that has since gained two modes, live capture and channel-kind switching, and publishing it would mislead rather than help.</p>
+<p>Until then, <a href="02-features.html">2 · Features</a> lists what every mode and encoder does, which is most of what a manual would tell you.</p>
+<hr>
+<h2 id="what-will-go-here">What will go here</h2>
+<p><strong>The euclidean model.</strong> Hits spread as evenly as the grid allows, then rotated. Why 4 in 16 is four-on-the-floor, 5 in 16 is the clave, 3 in 8 is tresillo. Why pattern length moves in whole <em>beats</em> while the display counts <em>steps</em>, and why 1, 5, 7, 11 and 13 steps are unreachable.</p>
+<p><strong>The Turing machine, and <code>LOCK</code> as the central gesture.</strong> A register clocked once per pass, mutated one bit at a time, read as pitch. The workflow the instrument is built around: set <code>RANDOM</code> to 20-40, let the voice fish for a phrase, and snap it to 0 the moment you hear one worth keeping — the cell reads <code>LOCK</code>, a word rather than a number that could be a coincidence. Then <code>DUPLICATE</code> as the undo for the phrase the wrap took before your hand arrived, four registers deep.</p>
+<p><strong>The five modes and the page rings.</strong> What CONTROL, STEP, ALL, MIXER and FILTER each make the eight encoders mean, why encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel of both kinds, and why a knob with no source is greyed and dead rather than quietly doing nothing.</p>
+<p><strong>REC and ownership.</strong> Holding REC overdubs into the same pattern the generator writes; the note's length is how long the pad was held. A captured note makes the player the owner of that channel's pattern and the generator stops writing it. Two gestures hand it back, both destructive, and knowing which knobs those are is the difference between keeping a take and losing it.</p>
+<p><strong>SHIFT + GRID.</strong> Switching a channel between drum and voice behaviour without swapping its engine: a drum kit gets the Turing generator, a synth gets euclid as a root pulse. Why the register walks a <em>kit's own note list</em> on a sampler instead of quantising to a scale.</p>
+<p><strong>Performing.</strong> Mute and solo, tap versus hold, ERASE as a hold-only gesture, what each LED colour means, and reading the display's tab row — including the dashed tab, which is the only thing that ever explains silence.</p>
+<hr>
+<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="02-features.html">2 · Features</a></p>
 </article>
 </main>
 <div id="toc-column"></div>
