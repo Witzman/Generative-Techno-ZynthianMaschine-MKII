@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Appendix A2 · Touchscreen Coordinate Patch — Generative-Techno ZynthianMaschine MKII</title>
+<title>Appendix · Touchscreen Coordinate Patch — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
@@ -46,10 +46,10 @@
 <li><a href="04-manual-installation.html">4 · Manual installation</a></li>
 <li><a href="05-internals.html">5 · Internals</a></li>
 </ul></div>
-<div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list" style="display:none">
-<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="a1-touchscreen-patch.html" aria-current="page"><strong>Touchscreen patch</strong></a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
@@ -62,16 +62,16 @@
 <li><a href="06-testing.html">6 · Testing</a></li>
 <li><a href="07-playing.html">7 · Playing</a></li>
 </ul></div>
-<div class="track">
-<button class="track-header" aria-expanded="true"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list">
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
 <li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
-<li><a href="a2-touchscreen-patch.html" aria-current="page"><strong>Touchscreen Patch</strong></a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
 </ul></div>
 </nav>
 <main>
 <article>
-<h1 id="appendix-a2--touchscreen-coordinate-patch">Appendix A2 · Touchscreen Coordinate Patch</h1>
+<h1 id="appendix--touchscreen-coordinate-patch">Appendix · Touchscreen Coordinate Patch</h1>
 <p><strong>Optional.</strong> Not part of the instrument. Apply it only if you have the symptom below.</p>
 <hr>
 <h2 id="who-needs-this">Who needs this</h2>
@@ -121,7 +121,7 @@ systemctl restart zynthian</code></pre>
 <p><strong>A Zynthian update overwrites it.</strong> <code>multitouch.py</code> is tracked in the <code>zynthian-ui</code> checkout, so any update replaces your edit. Keep the <code>.bak</code>, and expect to re-apply after upgrading.</p>
 <p><strong>Do not run <code>git checkout</code> or <code>git reset</code> in <code>/zynthian/zynthian-ui</code> to undo this.</strong> That directory also holds this project's three driver files as <em>untracked</em> drop-ins; a hard reset removes the instrument along with the patch. Restore from the <code>.bak</code> copy instead.</p>
 <hr>
-<p><strong>Back to:</strong> <a href="a1-how-017-was-built.html">Appendix A1 · How 017 was built</a> · <a href="01-what-it-is.html">1 · What It Is</a></p>
+<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="04-manual-installation.html">4 · Manual installation</a></p>
 </article>
 </main>
 <div id="toc-column"></div>

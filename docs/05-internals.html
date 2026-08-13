@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 · Internals — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17171b', primaryTextColor: '#f0f0f4',
+  primaryBorderColor: '#b4b4bc', lineColor: '#b4b4bc',
+  secondaryColor: '#1f1f24', tertiaryColor: '#131316',
+  actorBkg: '#17171b', actorTextColor: '#f0f0f4',
+  actorBorder: '#b4b4bc', actorLineColor: '#b4b4bc',
+  activationBkgColor: '#26262c', activationBorderColor: '#b4b4bc',
+  signalColor: '#b4b4bc', signalTextColor: '#17171b',
+  labelBoxBkgColor: '#17171b', labelBoxBorderColor: '#b4b4bc', labelTextColor: '#f0f0f4',
+  noteBkgColor: '#1f1f24', noteTextColor: '#f0f0f4', noteBorderColor: '#b4b4bc',
+  titleColor: '#f0f0f4',
+  clusterBkg: '#1f1f24', clusterBorder: '#b4b4bc', clusterTextColor: '#f0f0f4',
+  fillType0: '#17171b', fillType1: '#1f1f24', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Generative-Techno ZynthianMaschine MKII</a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Start here</a></li>
+<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
+<li><a href="02-features.html">2 · Features</a></li>
+<li><a href="03-playing.html">3 · Playing</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="04-manual-installation.html">4 · Manual installation</a></li>
+<li><a href="05-internals.html" aria-current="page"><strong>5 · Internals</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html">6 · Testing</a></li>
+<li><a href="07-playing.html">7 · Playing</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="5--internals">5 · Internals</h1>
+<p>How the instrument is built. What it does is <a href="02-features.html">2 · Features</a>; how to install it is <a href="04-manual-installation.html">4 · Manual installation</a>.</p>
+<hr>
+<h2 id="the-control-path">The control path</h2>
+<p>A pad press reaches the sequencer through five hops, and every one of them has broken at least once:</p>
+<div class="mermaid">
+flowchart LR
+  HID["Maschine MK2<br/>USB HID"] --> D["maschine daemon<br/>Rust"]
+  D --> A["a2jmidid<br/>virtual port"]
+  A --> Z["ZynMidiRouter<br/>zmip slot"]
+  Z --> C["ctrldev driver<br/>Python"]
+  C --> S["zynseq<br/>Zynthian's sequencer"]
+</div>
+<p>The daemon owns the hardware: it reads HID reports, drives both 255×64 displays and the LEDs, and exposes an ALSA sequencer port. <code>a2jmidid</code> lifts that port into JACK. Zynthian then has to be persuaded to treat it as a <strong>hardware MIDI source</strong> so it is given a zmip slot — and that is the patch below.</p>
+<p><strong>Encoders are relative.</strong> The daemon holds each encoder's value as device state and moves it by the hardware delta. Real movement is 0-4 units per report and a counter wrap reads as −38 to −40, so the wrap guard is 8. The big encoder sends 8 units per detent and wraps 120 → 0, sitting exactly on that threshold, so it needs its own delta path.</p>
+<hr>
+<h2 id="why-zynautoconnect-has-to-be-patched">Why <code>zynautoconnect</code> has to be patched</h2>
+<p>It is the only Zynthian core file this project changes, and it ships as an idempotent patcher rather than a copy, so it edits your version instead of overwriting it.</p>
+<p>Two changes. The Pads port joins the list of ports treated as hardware MIDI sources, which is what earns it a zmip slot. And the uid <code>virtual:maschine.rs/Maschine MK2 Pads</code> is pinned, because the ALSA client number embedded in the port name changes across boots while a ctrldev driver binds by device id.</p>
+<p>Unpatched, Zynthian reports the driver as <strong>Found</strong> and never <strong>Loaded</strong>. The rig does nothing, and no log anywhere says why. Re-run the patcher after every Zynthian update: an update replaces the file and takes the binding with it.</p>
+<hr>
+<h2 id="the-driver">The driver</h2>
+<p><strong>The generator owns the pattern.</strong> The driver does not synthesise notes at play time — it writes them into zynseq, which is why patterns survive in snapshots and why the touchscreen editor shows the same thing the pads do. Playing is Zynthian's job; the driver only decides what is written.</p>
+<p>Three facts hold the design together.</p>
+<p><strong>Everything testable lives outside the driver.</strong> The driver itself cannot be imported off the Pi — it needs <code>zynlibs.zynseq</code> — so the Turing register and its mutation, the undo ring, register-to-pitch quantisation, euclidean placement, the gate mask, and the whole page and column model were pushed into <code>techno_lib.py</code>, which has no Zynthian imports. That module carries 271 tests, including the invariant the instrument rests on: <code>RANDOM</code> at 0 produces a byte-identical register over 500 iterations.</p>
+<p><strong>Every zynseq call holds one lock.</strong> <code>libzynseq</code> is not thread-safe and the driver reaches it from three threads — the MIDI handler, a queued signal handler and a 30 Hz playhead poll. Without the lock the entire Zynthian UI died with a segfault about 95 seconds into a jam.</p>
+<p><strong>Nothing slow runs on the MIDI thread.</strong> Loading a preset blocks on a socket for seconds while the MIDI handler holds the lock for the whole event, so preset and kit changes are deferred to the poll thread.</p>
+<p><strong>A silent channel must say why.</strong> Play chance 0 emits nothing and looked exactly like a hang, so a channel that cannot sound draws its tab dashed. It is the one mechanism the surface has for explaining silence.</p>
+<hr>
+<h2 id="the-factory-snapshot">The factory snapshot</h2>
+<h3 id="the-eight-chains">The eight chains</h3>
+<table><thead><tr><th>Chain</th><th>Title in the snapshot</th><th>Engine</th><th>MIDI channel (0-based in the file)</th></tr></thead><tbody><tr><td>A</td><td><code>Kick</code></td><td><code>LS/LinuxSampler</code></td><td>0</td></tr><tr><td>B</td><td><code>Snare</code></td><td><code>LS/LinuxSampler</code></td><td>1</td></tr><tr><td>C</td><td><code>Clap</code></td><td><code>LS/LinuxSampler</code></td><td>2</td></tr><tr><td>D</td><td><code>Closed Hat</code></td><td><code>LS/LinuxSampler</code></td><td>3</td></tr><tr><td>E</td><td><code>Open Hat</code></td><td><code>LS/LinuxSampler</code></td><td>4</td></tr><tr><td>F</td><td><code>BASS</code></td><td><code>JV/JC303</code></td><td>5</td></tr><tr><td>G</td><td><code>LEAD</code></td><td><code>JV/Obxd</code></td><td>6</td></tr><tr><td>H</td><td><code>PADS</code></td><td><code>JV/padthv1</code></td><td>7</td></tr></tbody></table>
+<p><strong>The MIDI channel is the contract</strong>, not the title and not the order — the driver resolves a channel to a chain by MIDI channel, so titles are free and numbers are not. All five drum chains share one LinuxSampler process, so eight SFZ kits cost about 250 MB in total rather than per channel.</p>
+<h3 id="the-insert-pair-measured-on-the-wire">The insert pair, measured on the wire</h3>
+<pre><code>zynmixer:output_NNa/b → TAP_Stereo_Echo-NN → TAP_Reverberator-NN → zynmixer:input_17</code></pre>
+<p>Echo first, reverb second, so the reverb hears the echo's repeats. The order was read out of <code>jack_lsp -c</code> on the running rig, not assumed.</p>
+<p>The inserts are fed from the strip's <strong>output</strong>, which is what makes them post-fader: they inherit the fader and the mute, so muting a channel takes its reverb and delay tail with it.</p>
+<p><strong>Both plugins have a true wet level, not a dry/wet crossfade</strong> — sweep the wet to maximum and the dry is still there at the same level. That is what lets encoders 7 and 8 behave like sends. Every cheaper candidate measured turned out to be a crossfade.</p>
+<p>Four ports are forced rather than left at their defaults:</p>
+<table><thead><tr><th>Plugin</th><th>Port</th><th>Value</th><th>Why</th></tr></thead><tbody><tr><td>TAP Stereo Echo</td><td><code>dryLevel</code></td><td>0.0 dB</td><td>Ships at −4 dB; across the pair that quietly costs every channel about 8 dB</td></tr><tr><td>TAP Stereo Echo</td><td><code>lecholevel</code>, <code>recholevel</code></td><td>−70.0 dB</td><td>Wet starts closed; encoder 8 opens it</td></tr><tr><td>TAP Reverberator</td><td><code>drylevel</code></td><td>0.0 dB</td><td>Same reason</td></tr><tr><td>TAP Reverberator</td><td><code>wetlevel</code></td><td>−70.0 dB</td><td>Wet starts closed; encoder 7 opens it</td></tr></tbody></table>
+<h3 id="gain-staging">Gain staging</h3>
+<p>Channel strips <strong>0.19</strong>, main <strong>0.80</strong>. That is measurement, not caution: one sampler channel peaks at 1.24 before the mixer, and eight summed to 2.92 on the main bus — nearly three times full scale. The sampler's own volume is not the lever; taking it from 96 to 40 moved the bus peak by about 1.5 dB.</p>
+<h3 id="sixteen-inserts-without-placing-sixteen-processors">Sixteen inserts without placing sixteen processors</h3>
+<p>Build one channel by hand on the touchscreen — add TAP Stereo Echo, then TAP Reverberator, set the four values, save — and let <code>tools/build-techno-snapshot.py</code> replicate it. The cloner finds the chain carrying both inserts, appends the same two to every other chain that has a MIDI channel, gives each a fresh processor id, copies the template's fader position, and backs the file up first. Then load and save once more from the touchscreen, so what is on disk is Zynthian's own output rather than the script's.</p>
+<p>It deliberately does not build the whole snapshot. Nothing outside the UI process can reach Zynthian's live state manager, and hand-maintaining fader positions in JSON is exactly the kind of guess this project avoids.</p>
+<hr>
+<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="02-features.html">2 · Features</a></p>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
