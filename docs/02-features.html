@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · Features — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17171b', primaryTextColor: '#f0f0f4',
+  primaryBorderColor: '#b4b4bc', lineColor: '#b4b4bc',
+  secondaryColor: '#1f1f24', tertiaryColor: '#131316',
+  actorBkg: '#17171b', actorTextColor: '#f0f0f4',
+  actorBorder: '#b4b4bc', actorLineColor: '#b4b4bc',
+  activationBkgColor: '#26262c', activationBorderColor: '#b4b4bc',
+  signalColor: '#b4b4bc', signalTextColor: '#17171b',
+  labelBoxBkgColor: '#17171b', labelBoxBorderColor: '#b4b4bc', labelTextColor: '#f0f0f4',
+  noteBkgColor: '#1f1f24', noteTextColor: '#f0f0f4', noteBorderColor: '#b4b4bc',
+  titleColor: '#f0f0f4',
+  clusterBkg: '#1f1f24', clusterBorder: '#b4b4bc', clusterTextColor: '#f0f0f4',
+  fillType0: '#17171b', fillType1: '#1f1f24', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Generative-Techno ZynthianMaschine MKII</a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="00-start.html">Start here</a></li>
+<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
+<li><a href="02-features.html" aria-current="page"><strong>2 · Features</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html">6 · Testing</a></li>
+<li><a href="07-playing.html">7 · Playing</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="2--features">2 · Features</h1>
+<p>What the instrument does. How you operate it is <a href="03-playing.html">3 · Playing</a>; how it is built is <a href="05-internals.html">5 · Internals</a>.</p>
+<hr>
+<h2 id="the-eight-channels">The eight channels</h2>
+<table><thead><tr><th>Group</th><th>Name</th><th>Kind</th><th>Engine</th><th>MIDI ch</th><th>Colour</th></tr></thead><tbody><tr><td>A</td><td>KICK</td><td>drum</td><td>LinuxSampler, an SFZ drum machine</td><td>1</td><td>red</td></tr><tr><td>B</td><td>SNAR</td><td>drum</td><td>LinuxSampler</td><td>2</td><td>orange</td></tr><tr><td>C</td><td>CLAP</td><td>drum</td><td>LinuxSampler</td><td>3</td><td>amber</td></tr><tr><td>D</td><td>CHAT</td><td>drum</td><td>LinuxSampler</td><td>4</td><td>yellow-green</td></tr><tr><td>E</td><td>OHAT</td><td>drum</td><td>LinuxSampler</td><td>5</td><td>green</td></tr><tr><td>F</td><td>BASS</td><td>voice</td><td>JC303</td><td>6</td><td>blue</td></tr><tr><td>G</td><td>LEAD</td><td>voice</td><td>Obxd</td><td>7</td><td>violet</td></tr><tr><td>H</td><td>PADS</td><td>voice</td><td>padthv1</td><td>8</td><td>cyan</td></tr></tbody></table>
+<p>Drums are warm colours and voices cool, so the seam between the halves is visible on the panel without reading anything. All eight are always alive — nothing is created or torn down while playing.</p>
+<hr>
+<h2 id="the-generator-owns-the-pattern">The generator owns the pattern</h2>
+<p>You do not draw a beat. You set hits, rotation, chance and swing, and the driver writes real notes into Zynthian's own sequencer. Because they are real notes in the real sequencer, patterns persist in snapshots and the touchscreen pattern editor mirrors exactly what the pads show.</p>
+<p>The five drum channels are <strong>euclidean</strong>: hits spread as evenly as the grid allows, then rotate. Four hits in sixteen is four-on-the-floor; five is the clave.</p>
+<p>The three voices are <strong>Turing machines</strong>. Each owns a shift register, clocked once per pass and mutated with probability <code>RANDOM</code>, and the register's value becomes pitch. Set <code>RANDOM</code> to zero and the loop you are hearing freezes bit for bit, for as long as you leave it there — the display reads <code>LOCK</code> rather than a number, because a number could be a coincidence.</p>
+<hr>
+<h2 id="five-modes-and-what-the-encoders-mean-in-each">Five modes, and what the encoders mean in each</h2>
+<table><thead><tr><th>Mode</th><th>Encoder 1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr></thead><tbody><tr><td>CONTROL · drum</td><td>KIT</td><td>SAMPLE</td><td>—</td><td>—</td><td>—</td><td>LEVEL</td><td>REVERB</td><td>DELAY</td></tr><tr><td>CONTROL · voice</td><td>PRESET</td><td>CUTOFF</td><td>RESO</td><td>ENV</td><td>DECAY</td><td>LEVEL</td><td>REVERB</td><td>DELAY</td></tr><tr><td>STEP · drum</td><td>HITS</td><td>ROTATE</td><td>DIVIDE</td><td>LENGTH</td><td>VELO</td><td>CHANCE</td><td>SWING</td><td>—</td></tr><tr><td>STEP · voice</td><td>LENGTH</td><td>DIVIDE</td><td>RANDOM</td><td>GATE</td><td>OCTAVE</td><td>RANGE</td><td>DENSITY</td><td>VELO</td></tr><tr><td>ALL</td><td>ROOT</td><td>SCALE</td><td>BPM</td><td>MASTER</td><td>REVSIZE</td><td>REVTYPE</td><td>DLYTIME</td><td>DLYFBK</td></tr><tr><td>MIXER</td><td>eight channels at once — LEVEL, then REVERB, then DELAY</td></tr><tr><td>FILTER</td><td>eight channels at once — CUTOFF, then RESO</td></tr></tbody></table>
+<p>MIXER and FILTER are <strong>spread</strong> pages: one control across all eight channels rather than eight controls on one channel. STEP and MIXER carry more than one page; the arrows beside the display step through the ring, and each mode remembers its own page per channel kind.</p>
+<p><strong>A knob with no source draws dead.</strong> Where a control does not exist — a drum channel has no CUTOFF — the column greys out rather than showing a number the encoder cannot move.</p>
+<hr>
+<h2 id="a-channels-kind-is-switchable">A channel's kind is switchable</h2>
+<p><strong>SHIFT + GRID</strong> switches the selected channel between drum and voice behaviour. <strong>The engine is never swapped.</strong> A drum kit gets the Turing generator, and on a sampler the register walks the <em>kit's own note list</em> rather than a scale, because there a note selects a sample and scale-quantising would land most steps on empty keys. Euclid on a synth becomes a root pulse. Switching back clears the override; pattern length and division deliberately do not move, because they are pattern time rather than kind.</p>
+<hr>
+<h2 id="live-capture">Live capture</h2>
+<p>Pads are the instrument in every mode but STEP. <strong>Holding REC overdubs</strong> into the same pattern the generator writes: strikes quantise to the nearest step, and a note's length is how long you held the pad.</p>
+<p><strong>Recording adds, it does not overwrite.</strong> The generated line freezes and the played note goes on top; played-in steps light amber. A captured note makes you the owner of that channel's pattern and the generator stops writing it. Two gestures hand it back, both destructive — ERASE with a Group button, or turning any knob that rewrites the pattern.</p>
+<hr>
+<h2 id="per-channel-sound">Per-channel sound</h2>
+<p>Every channel of both kinds has LEVEL, REVERB and DELAY on encoders 6, 7 and 8 — the same three, in the same place, in either mode. Sixteen post-fader inserts carry the reverb and delay sends, and each drum chain has its own filter.</p>
+<p>The ALL page holds the global reach: root, scale, BPM, master level, reverb size and type, delay time and feedback.</p>
+<hr>
+<h2 id="the-surface-talks-back">The surface talks back</h2>
+<p>Both displays carry a tab row: <code>A KICK B SNAR C CLAP D CHAT</code> on the left, <code>E OHAT F BASS G LEAD H PADS</code> on the right, with four encoder columns under each. Group buttons light in channel colours, brightness tracking each channel's level. Peak meters run live.</p>
+<p><strong>A dashed tab means that channel is not sounding</strong> — muted at the mixer, or silenced by its own generator. It is the instrument's one mechanism for explaining silence, so read the tab row before assuming a fault.</p>
+<hr>
+<h2 id="what-it-is-not">What it is not</h2>
+<p>No song mode, no pattern chaining, no sampling, no audio recording. Eight channels, always alive. It is an instrument for playing a single evolving pattern, not a workstation for arranging one.</p>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
