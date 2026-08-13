@@ -340,6 +340,14 @@ table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.92r
   box-shadow:0 0 16px color-mix(in srgb,var(--cc) 35%,transparent);
 }
 .chip[aria-pressed="true"] span{color:#fff}
+/* lit for as long as that lane's hit is sounding */
+.chip.hit{
+  background:color-mix(in srgb,var(--cc) 45%,#131417);
+  border-color:var(--cc);
+  box-shadow:0 0 24px color-mix(in srgb,var(--cc) 65%,transparent);
+  transition:none;
+}
+.chip.hit b,.chip.hit span{color:#fff}
 
 .padgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem}
 .padgrid button{
@@ -397,6 +405,29 @@ input[type=range]::-moz-range-thumb{
 }
 .mach-read button[aria-pressed="true"]{background:var(--lcd-ink);color:var(--lcd-bg);border-color:var(--lcd-ink)}
 .mach-hint{margin:.8rem 0 0;font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
+
+/* ---------- the one control that has to be found ---------- */
+.sound-cta{display:flex;flex-direction:column;align-items:center;gap:.6rem;margin:0 0 1.6rem;text-align:center}
+.sound-btn{
+  display:inline-flex;align-items:center;gap:.75rem;cursor:pointer;
+  font-family:var(--disp);font-variation-settings:'wdth' 112;font-weight:800;
+  text-transform:uppercase;letter-spacing:.14em;font-size:.9rem;
+  padding:.95rem 1.7rem;border-radius:4px;
+  background:linear-gradient(180deg,#f3eee2,var(--ivory-2));color:#1c1d20;
+  border:1px solid var(--ivory-edge);box-shadow:0 3px 0 rgba(0,0,0,.35);
+  transition:transform .12s ease, box-shadow .12s ease, background .18s ease, color .18s ease;
+}
+.sound-btn:hover{transform:translateY(1px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.sound-btn .led{
+  width:11px;height:11px;border-radius:50%;flex:0 0 auto;
+  background:#9a9384;box-shadow:inset 0 1px 2px rgba(0,0,0,.5);
+}
+.sound-btn[aria-pressed="true"]{
+  background:linear-gradient(180deg,#123a6b,#0a2748);color:var(--lcd-ink);
+  border-color:var(--lcd-dim);box-shadow:0 3px 0 rgba(0,0,0,.5), 0 0 26px rgba(40,120,200,.35);
+}
+.sound-btn[aria-pressed="true"] .led{background:var(--ch-e);box-shadow:0 0 12px var(--ch-e)}
+.sound-note{margin:0;font-family:var(--mono);font-size:.72rem;line-height:1.5;color:var(--ink-2);max-width:38ch}
 
 /* ---------- install steps ---------- */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1.6rem}
@@ -555,6 +586,12 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       </div>
 
       <div>
+        <div class="sound-cta">
+          <button type="button" id="soundBtn" class="sound-btn" aria-pressed="false">
+            <span class="led" aria-hidden="true"></span><span class="txt">Play the pattern</span>
+          </button>
+          <p class="sound-note">All eight channels at 128 BPM, synthesised in your browser. No samples, nothing downloaded.</p>
+        </div>
         <p>
           The three voices are Turing machines. Each owns a shift register, clocked once per pass
           and mutated with probability RANDOM, and the register's value becomes pitch. Set RANDOM to
@@ -885,7 +922,8 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 /* ============================================================
    The pad machine — the generator, drawn on the 4x4 grid.
    Euclidean rhythms on the drums, a shift register on the voices.
-   Step 0 is the top-left pad, as the instrument presents it.
+   All eight lanes run off one clock, as they do on the instrument;
+   the pads show the one you are editing. Step 0 is the top-left pad.
    ============================================================ */
 (function(){
   'use strict';
@@ -918,27 +956,52 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   }
   function pad4(v){ return ('0000'+v).slice(-4); }
 
+  /* levels are fixed per channel: eight lanes at once mud up otherwise */
   var CH=[
-    {l:'A',n:'KICK',v:'--ch-a',kind:'drum'},
-    {l:'B',n:'SNAR',v:'--ch-b',kind:'drum'},
-    {l:'C',n:'CLAP',v:'--ch-c',kind:'drum'},
-    {l:'D',n:'CHAT',v:'--ch-d',kind:'drum'},
-    {l:'E',n:'OHAT',v:'--ch-e',kind:'drum'},
-    {l:'F',n:'BASS',v:'--ch-f',kind:'voice'},
-    {l:'G',n:'LEAD',v:'--ch-g',kind:'voice'},
-    {l:'H',n:'PADS',v:'--ch-h',kind:'voice'}
+    {l:'A',n:'KICK',v:'--ch-a',kind:'drum',lvl:.90},
+    {l:'B',n:'SNAR',v:'--ch-b',kind:'drum',lvl:.40},
+    {l:'C',n:'CLAP',v:'--ch-c',kind:'drum',lvl:.30},
+    {l:'D',n:'CHAT',v:'--ch-d',kind:'drum',lvl:.17},
+    {l:'E',n:'OHAT',v:'--ch-e',kind:'drum',lvl:.20},
+    {l:'F',n:'BASS',v:'--ch-f',kind:'voice',lvl:.34},
+    {l:'G',n:'LEAD',v:'--ch-g',kind:'voice',lvl:.24},
+    {l:'H',n:'PADS',v:'--ch-h',kind:'voice',lvl:.16}
   ];
-  var DEF=[{hits:4,rot:0},{hits:5,rot:4},{hits:2,rot:4},{hits:11,rot:0},{hits:7,rot:2},
-           {rand:12},{rand:35},{rand:0}];
 
-  var state={ch:0,hits:4,rot:0,rand:12,step:0,playing:!reduce,reg:0xB4C7};
+  /* The factory pattern, at 128 BPM: four-on-the-floor under a backbeat
+     snare and clap, eighth-note closed hats, an off-beat open hat that
+     never lands on the kick, and a syncopated bass. Lead and pads start
+     at density zero - they are alive and silent, waiting to be turned up. */
+  var LANES=[
+    {hits:4,rot:0},                            /* x...x...x...x... */
+    {hits:2,rot:4},                            /* ....x.......x... */
+    {hits:2,rot:4},                            /* ....x.......x... */
+    {hits:8,rot:0},                            /* x.x.x.x.x.x.x.x. */
+    {hits:6,rot:2},                            /* ..x..x.x..x..x.x */
+    {hits:6,rot:0,rand:12,reg:0xB4C7},         /* x..x.x..x..x.x.. */
+    {hits:0,rot:0,rand:35,reg:0x93A5},
+    {hits:0,rot:0,rand:0, reg:0xC61B}
+  ];
+
+  var state={ch:0,step:0,playing:!reduce,all:true};
 
   var chips=document.getElementById('chips');
   var grid=document.getElementById('padgrid');
   var read=document.getElementById('machRead');
   var row2=document.getElementById('row2');
   var k1=document.getElementById('k1'), k2=document.getElementById('k2');
-  var l1=document.getElementById('l1'), o1=document.getElementById('o1'), o2=document.getElementById('o2');
+  var l1=document.getElementById('l1'), l2=document.getElementById('l2');
+  var o1=document.getElementById('o1'), o2=document.getElementById('o2');
+
+  function lane(i){ return LANES[i]; }
+  function pattern(i){ return rot(euclid(LANES[i].hits,STEPS), LANES[i].rot); }
+
+  /* pitch from a lane's register: a sliding 5-bit window */
+  function pitches(i){
+    var reg=LANES[i].reg, out=[];
+    for(var s=0;s<STEPS;s++) out.push(((reg >> s) | (reg << (16-s))) & 0x1F);
+    return out;
+  }
 
   /* chips */
   for(var i=0;i<CH.length;i++){
@@ -950,8 +1013,6 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       b.innerHTML='<b>'+CH[i].l+'</b><span>'+CH[i].n+'</span>';
       b.addEventListener('click',function(){
         state.ch=i;
-        var d=DEF[i];
-        if(CH[i].kind==='voice'){ state.rand=d.rand; } else { state.hits=d.hits; state.rot=d.rot; }
         var all=chips.querySelectorAll('.chip');
         for(var x=0;x<all.length;x++) all[x].setAttribute('aria-pressed', x===i?'true':'false');
         accent(); sync(); paintRead(); draw();
@@ -973,88 +1034,45 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     document.documentElement.style.setProperty('--c', c || '#e03a2f');
   }
 
-  /* pitch from the register: a sliding 5-bit window */
-  function pitches(){
-    var out=[];
-    for(var i=0;i<STEPS;i++) out.push(((state.reg >> i) | (state.reg << (16-i))) & 0x1F);
+  /* the group buttons light when their own lane fires, so the eight are
+     visible at once even though the pads only draw the selected one */
+  var chipEls=chips.querySelectorAll('.chip');
+  var flashUntil=[0,0,0,0,0,0,0,0], lit=[0,0,0,0,0,0,0,0];
+  var FLASH=110;
+
+  function firing(step){
+    var out=[], first=state.all?0:state.ch, last=state.all?7:state.ch;
+    for(var c=first;c<=last;c++){
+      var L=LANES[c];
+      if(L.hits && pattern(c)[step]) out.push(c);
+    }
     return out;
+  }
+  function markFired(step,nowMs){
+    var f=firing(step);
+    for(var i=0;i<f.length;i++) flashUntil[f[i]]=nowMs+FLASH;
+  }
+  function paintChips(nowMs){
+    for(var c=0;c<8;c++){
+      var on = flashUntil[c]>nowMs ? 1 : 0;
+      if(on!==lit[c]){ lit[c]=on; chipEls[c].classList.toggle('hit',!!on); }
+    }
   }
 
   function draw(){
-    var voice = CH[state.ch].kind==='voice';
-    if(!voice){
-      var pat=rot(euclid(state.hits,STEPS), state.rot);
-      for(var i=0;i<STEPS;i++){
-        pads[i].className = pat[i] ? (i===state.step ? 'on head' : 'on') : (i===state.step ? 'head' : '');
-        pads[i].style.opacity='';
-      }
-    } else {
-      var pit=pitches();
-      for(var j=0;j<STEPS;j++){
-        pads[j].className = (j===state.step ? 'on head' : 'on');
-        pads[j].style.opacity = (0.22 + (pit[j]/31)*0.78).toFixed(2);
-      }
+    var ch=state.ch, pat=pattern(ch), voice=CH[ch].kind==='voice', pit=voice?pitches(ch):null;
+    for(var i=0;i<STEPS;i++){
+      var on=!!pat[i], head=(i===state.step);
+      pads[i].className = on ? (head?'on head':'on') : (head?'head':'');
+      pads[i].style.opacity = (on && voice) ? (0.3 + (pit[i]/31)*0.7).toFixed(2) : '';
     }
-  }
-
-  function paintRead(){
-    var ch=CH[state.ch], h='<span>'+ch.l+' '+ch.n+'</span>';
-    if(ch.kind!=='voice'){
-      h+='<span>HITS '+pad4(state.hits)+'</span><span>ROTATE '+pad4(state.rot)+'</span>'
-       + '<span>DIVIDE 1/16</span><span>LENGTH 0016</span><span class="dead">ratchet ----</span>';
-    } else {
-      h+='<span>LENGTH 0016</span><span>DIVIDE 1/8</span>'
-       + '<span>RANDOM '+(state.rand===0?'<span class="lock">LOCK</span>':pad4(state.rand))+'</span>'
-       + '<span>GATE 0040</span>';
-    }
-    h+='<span class="btns">'
-     + '<button type="button" id="soundBtn" aria-pressed="'+String(AU.on)+'">'+(AU.on?'SOUND ON':'SOUND')+'</button>'
-     + '<button type="button" id="holdBtn" aria-pressed="'+String(!state.playing)+'">'+(state.playing?'HOLD':'RUN')+'</button>'
-     + '</span>';
-    read.innerHTML=h;
-    document.getElementById('holdBtn').addEventListener('click',function(){
-      state.playing=!state.playing;
-      if(AU.on && state.playing) AU.next=AU.ctx.currentTime+0.06;
-      paintRead();
-    });
-    document.getElementById('soundBtn').addEventListener('click',function(){ setSound(!AU.on); });
-  }
-
-  function sync(){
-    var voice = CH[state.ch].kind==='voice';
-    if(voice){
-      l1.textContent='RANDOM'; k1.min=0; k1.max=100; k1.step=5; k1.value=state.rand;
-      o1.innerHTML = state.rand===0 ? '<span class="lock">LOCK</span>' : pad4(state.rand);
-      row2.style.display='none';
-    } else {
-      l1.textContent='HITS'; k1.min=0; k1.max=16; k1.step=1; k1.value=state.hits;
-      o1.textContent=pad4(state.hits);
-      row2.style.display='';
-      k2.value=state.rot; o2.textContent=pad4(state.rot);
-    }
-  }
-  k1.addEventListener('input',function(){
-    if(CH[state.ch].kind==='voice') state.rand=parseInt(k1.value,10);
-    else state.hits=parseInt(k1.value,10);
-    sync(); paintRead(); draw();
-  });
-  k2.addEventListener('input',function(){
-    state.rot=parseInt(k2.value,10); sync(); paintRead(); draw();
-  });
-
-  var PASS=2400, stepMs=PASS/STEPS;
-
-  /* the register mutates once per pass, exactly as the driver does it */
-  function mutate(){
-    if(CH[state.ch].kind==='voice' && state.rand>0 && Math.random()*100 < state.rand)
-      state.reg ^= (1 << Math.floor(Math.random()*16));
   }
 
   /* ============================================================
      Sound. Synthesised here, in the browser - no samples, nothing
      downloaded, and nothing runs until the reader asks for it: a
      browser will not start an AudioContext without a gesture, and a
-     page that animates on load should not also make noise on load.
+     page that already animates on load should not also make noise.
      ============================================================ */
   var AU={ctx:null,out:null,noise:null,on:false,next:0,step:0,timer:null,queue:[]};
   var LOOKAHEAD=0.12, TIMER_MS=25;
@@ -1065,7 +1083,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       if(!Ctx) return false;
       AU.ctx=new Ctx();
       var comp=AU.ctx.createDynamicsCompressor();
-      AU.out=AU.ctx.createGain(); AU.out.gain.value=.8;
+      AU.out=AU.ctx.createGain(); AU.out.gain.value=.85;
       AU.out.connect(comp); comp.connect(AU.ctx.destination);
       var n=Math.floor(AU.ctx.sampleRate), buf=AU.ctx.createBuffer(1,n,AU.ctx.sampleRate), d=buf.getChannelData(0);
       for(var i=0;i<n;i++) d[i]=Math.random()*2-1;   /* one buffer, reused by every hit */
@@ -1095,61 +1113,76 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     return f;
   }
 
-  function kick(t){
+  function kick(t,v){
     var o=AU.ctx.createOscillator(); o.type='sine';
-    o.frequency.setValueAtTime(120,t);
-    o.frequency.exponentialRampToValueAtTime(45,t+.06);
-    var g=envGain(t,.9,.002,.32);
-    o.connect(g); g.connect(AU.out); o.start(t); o.stop(t+.45);
+    o.frequency.setValueAtTime(125,t);
+    o.frequency.exponentialRampToValueAtTime(45,t+.055);
+    var g=envGain(t,v,.002,.30);
+    o.connect(g); g.connect(AU.out); o.start(t); o.stop(t+.42);
   }
-  function snare(t){
-    var s=noiseAt(t,.22), bp=filt('bandpass',1800,.9), g=envGain(t,.45,.001,.17);
+  function snare(t,v){
+    var s=noiseAt(t,.2), bp=filt('bandpass',1800,.9), g=envGain(t,v,.001,.15);
     s.connect(bp); bp.connect(g); g.connect(AU.out);
     var o=AU.ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(190,t);
-    var g2=envGain(t,.22,.001,.09);
-    o.connect(g2); g2.connect(AU.out); o.start(t); o.stop(t+.15);
+    var g2=envGain(t,v*.5,.001,.08);
+    o.connect(g2); g2.connect(AU.out); o.start(t); o.stop(t+.14);
   }
-  function clap(t){
+  function clap(t,v){
     for(var k=0;k<3;k++){
-      var tt=t+k*.011, s=noiseAt(tt,.03), hp=filt('highpass',1100), g=envGain(tt,.3,.001,.02);
+      var tt=t+k*.011, s=noiseAt(tt,.03), hp=filt('highpass',1100), g=envGain(tt,v,.001,.02);
       s.connect(hp); hp.connect(g); g.connect(AU.out);
     }
-    var s2=noiseAt(t+.03,.16), hp2=filt('highpass',1300), g3=envGain(t+.03,.22,.002,.13);
+    var s2=noiseAt(t+.03,.16), hp2=filt('highpass',1300), g3=envGain(t+.03,v*.75,.002,.13);
     s2.connect(hp2); hp2.connect(g3); g3.connect(AU.out);
   }
-  function hat(t,open){
+  function hat(t,v,open){
     var dur=open?.3:.05, s=noiseAt(t,dur), hp=filt('highpass',open?6200:7600),
-        g=envGain(t,open?.22:.18,.001,open?.26:.035);
+        g=envGain(t,v,.001,open?.26:.035);
     s.connect(hp); hp.connect(g); g.connect(AU.out);
   }
-  var DRUM=[kick,snare,clap,function(t){hat(t,false);},function(t){hat(t,true);}];
+  var DRUM=[kick,snare,clap,
+            function(t,v){hat(t,v,false);},
+            function(t,v){hat(t,v,true);}];
 
-  /* the register's five-bit window becomes a pitch, the same value the pads draw */
+  /* the register's five-bit window becomes a pitch - the value the pads draw */
   var SCALE=[0,2,3,5,7,8,10];                 /* natural minor, the snapshot's own scale */
-  function voiceHit(t,val,ch){
+  function voiceHit(t,val,ch,v){
     var deg=SCALE[val%7], oct=Math.min(Math.floor(val/7),2);
     var base=(ch===5?33:ch===6?57:45)+deg+12*oct;      /* bass low, lead high, pads between */
     var o=AU.ctx.createOscillator();
     o.type=ch===6?'square':'sawtooth';
     o.frequency.setValueAtTime(440*Math.pow(2,(base-69)/12),t);
-    var dur=ch===7?.85:.2;
+    var dur=ch===7?.9:(ch===5?.16:.2);
     var lp=filt('lowpass',ch===5?520:2400,ch===5?9:5);
-    lp.frequency.setValueAtTime(ch===5?900:3200,t);
-    lp.frequency.exponentialRampToValueAtTime(ch===5?260:700,t+dur);
-    var g=envGain(t,ch===7?.15:.24,ch===7?.08:.005,dur);
+    lp.frequency.setValueAtTime(ch===5?1100:3200,t);
+    lp.frequency.exponentialRampToValueAtTime(ch===5?240:700,t+dur);
+    var g=envGain(t,v,ch===7?.09:.005,dur);
     o.connect(lp); lp.connect(g); g.connect(AU.out);
     o.start(t); o.stop(t+dur+.12);
   }
 
+  /* 128 BPM: a sixteenth is 60/128/4 seconds */
+  var stepMs=60000/128/4, PASS=stepMs*STEPS;
+
+  /* every voice's register mutates once per pass, exactly as the driver does it */
+  function mutate(){
+    for(var c=5;c<8;c++){
+      var L=LANES[c];
+      if(L.rand>0 && Math.random()*100 < L.rand) L.reg ^= (1 << Math.floor(Math.random()*16));
+    }
+  }
+
   /* Chris Wilson's lookahead: schedule ahead on the audio clock, never on rAF,
-     which drifts and stalls in a background tab. rAF only reads the clock. */
+     which drifts and stalls in a background tab. rAF only reads the clock.
+     Every lane is placed at the same computed time, so they cannot drift apart. */
   function scheduleStep(step,t){
-    var ch=CH[state.ch];
-    if(ch.kind==='drum'){
-      var pat=rot(euclid(state.hits,STEPS),state.rot);
-      if(pat[step]) DRUM[state.ch](t);
-    } else if(step%2===0){                    /* DIVIDE 1/8, as the readout says */
-      voiceHit(t,pitches()[step],state.ch);
+    var first = state.all ? 0 : state.ch, last = state.all ? 7 : state.ch;
+    for(var c=first;c<=last;c++){
+      var L=LANES[c];
+      if(!L.hits) continue;
+      if(!pattern(c)[step]) continue;
+      if(CH[c].kind==='drum') DRUM[c](t,CH[c].lvl);
+      else voiceHit(t,pitches(c)[step],c,CH[c].lvl);
     }
     AU.queue.push({s:step,t:t});
   }
@@ -1174,14 +1207,75 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       if(AU.timer){ clearInterval(AU.timer); AU.timer=null; }
       if(AU.ctx&&AU.ctx.suspend) AU.ctx.suspend();
     }
-    paintRead();
+    paintSound(); paintRead();
   }
+
+  /* the sound button lives outside the readout, which repaints on every edit */
+  var soundBtn=document.getElementById('soundBtn');
+  function paintSound(){
+    soundBtn.setAttribute('aria-pressed',String(AU.on));
+    soundBtn.querySelector('.txt').textContent = AU.on ? 'Sound on — stop' : 'Play the pattern';
+  }
+  soundBtn.addEventListener('click',function(){ setSound(!AU.on); });
   /* a throttled background tab starves the lookahead and the loop stutters on
      return, so the sound stops with the tab and restarts cleanly */
   document.addEventListener('visibilitychange',function(){
     if(!AU.on||!AU.ctx) return;
     if(document.hidden){ AU.ctx.suspend(); }
     else { AU.ctx.resume(); AU.queue=[]; AU.next=AU.ctx.currentTime+.06; AU.step=state.step; }
+  });
+
+  function paintRead(){
+    var ch=CH[state.ch], L=LANES[state.ch], h='<span>'+ch.l+' '+ch.n+'</span>';
+    if(ch.kind!=='voice'){
+      h+='<span>HITS '+pad4(L.hits)+'</span><span>ROTATE '+pad4(L.rot)+'</span>'
+       + '<span>DIVIDE 1/16</span><span>LENGTH 0016</span><span class="dead">ratchet ----</span>';
+    } else {
+      h+='<span>DENSITY '+pad4(L.hits)+'</span><span>LENGTH 0016</span>'
+       + '<span>RANDOM '+(L.rand===0?'<span class="lock">LOCK</span>':pad4(L.rand))+'</span>'
+       + '<span>GATE 0040</span>';
+    }
+    h+='<span>BPM 0128</span>';
+    h+='<span class="btns">'
+     + '<button type="button" id="allBtn" aria-pressed="'+String(!state.all)+'">'+(state.all?'ALL 8':'SOLO')+'</button>'
+     + '<button type="button" id="holdBtn" aria-pressed="'+String(!state.playing)+'">'+(state.playing?'HOLD':'RUN')+'</button>'
+     + '</span>';
+    read.innerHTML=h;
+    document.getElementById('holdBtn').addEventListener('click',function(){
+      state.playing=!state.playing;
+      if(AU.on && state.playing) AU.next=AU.ctx.currentTime+.06;
+      paintRead();
+    });
+    document.getElementById('allBtn').addEventListener('click',function(){
+      state.all=!state.all; paintRead();
+    });
+  }
+
+  function sync(){
+    var L=LANES[state.ch], voice = CH[state.ch].kind==='voice';
+    if(voice){
+      l1.textContent='RANDOM'; k1.min=0; k1.max=100; k1.step=5; k1.value=L.rand;
+      o1.innerHTML = L.rand===0 ? '<span class="lock">LOCK</span>' : pad4(L.rand);
+      l2.textContent='DENSITY'; k2.min=0; k2.max=16; k2.step=1; k2.value=L.hits;
+      o2.textContent=pad4(L.hits);
+    } else {
+      l1.textContent='HITS'; k1.min=0; k1.max=16; k1.step=1; k1.value=L.hits;
+      o1.textContent=pad4(L.hits);
+      l2.textContent='ROTATE'; k2.min=0; k2.max=15; k2.step=1; k2.value=L.rot;
+      o2.textContent=pad4(L.rot);
+    }
+  }
+  k1.addEventListener('input',function(){
+    var L=LANES[state.ch];
+    if(CH[state.ch].kind==='voice') L.rand=parseInt(k1.value,10);
+    else L.hits=parseInt(k1.value,10);
+    sync(); paintRead(); draw();
+  });
+  k2.addEventListener('input',function(){
+    var L=LANES[state.ch];
+    if(CH[state.ch].kind==='voice') L.hits=parseInt(k2.value,10);
+    else L.rot=parseInt(k2.value,10);
+    sync(); paintRead(); draw();
   });
 
   /* clock - the audio one when sound is on, otherwise the frame timer */
@@ -1192,16 +1286,18 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     if(AU.on&&AU.ctx){
       var now=AU.ctx.currentTime, moved=false;
       while(AU.queue.length&&AU.queue[0].t<=now){ state.step=AU.queue.shift().s; moved=true; }
-      if(moved) draw();
+      if(moved){ markFired(state.step,t); draw(); }
     } else if(state.playing){
       acc+=dt;
       while(acc>=stepMs){
         acc-=stepMs;
         state.step=(state.step+1)%STEPS;
         if(state.step===0) mutate();
+        markFired(state.step,t);
       }
       draw();
     }
+    paintChips(t);
     requestAnimationFrame(tick);
   }
 
