@@ -439,6 +439,17 @@ input[type=range]::-moz-range-thumb{
 .step p{margin:0;font-size:.9rem;color:var(--ink-2);max-width:none}
 .step.sum{background:linear-gradient(180deg,#1c2a3c,#16202e);border-color:rgba(120,190,255,.3)}
 
+/* ---------- a photograph inside a section ---------- */
+.shotfig{margin:1.8rem 0 0}
+.shotfig .frame{
+  border:1px solid var(--ivory-edge);border-radius:6px;overflow:hidden;
+  background:#0b0b0d;box-shadow:0 20px 50px -25px rgba(0,0,0,.9);
+}
+/* the lit group buttons are the point of this photograph, so it is not cropped */
+.shotfig img{width:100%;height:auto;display:block}
+.shotfig figcaption{margin-top:.85rem;font-size:.9rem;color:var(--ink-2);max-width:66ch;line-height:1.55}
+.shotfig figcaption b{color:#fff;font-weight:600}
+
 /* ---------- channel strip ---------- */
 .chan{display:grid;grid-template-columns:repeat(8,1fr);gap:.45rem;margin:1.6rem 0 0}
 @media (max-width:860px){ .chan{grid-template-columns:repeat(4,1fr)} }
@@ -545,7 +556,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     <a class="rdg" href="#s-b"><span class="v">HITS</span></a>
     <a class="rdg" href="#s-g"><span class="v">CHANS</span></a>
     <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
-    <a class="rdg dead" href="#s-d"><span class="v">SUBS</span></a>
+    <a class="rdg dead" href="#s-d" aria-label="No cloud, no account, no subscription"><span class="v" aria-hidden="true">----</span></a>
     <a class="rdg" href="#s-e"><span class="v">PSU</span></a>
     <a class="rdg" href="#s-h"><span class="v">DOCS</span></a>
   </div>
@@ -687,6 +698,18 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
         <p>Load the snapshot, press play, turn HITS. That is the whole ceremony.</p>
       </div>
     </div>
+
+    <figure class="shotfig">
+      <div class="frame">
+        <img src="img/rig-desk.jpg" srcset="img/rig-desk-sm.jpg 900w, img/rig-desk.jpg 1600w"
+             sizes="(max-width:1120px) 100vw, 1080px" width="1600" height="1200" loading="lazy"
+             alt="The finished rig on a wooden desk: a bare Raspberry Pi 4, a small touchscreen showing Zynthian's mixer, and an ivory Maschine MK2 with all sixteen pads lit red and the eight group buttons lit in the channel colours.">
+      </div>
+      <figcaption><b>Forty minutes later.</b> A bare Pi 4, one USB cable, and the MK2 awake — sixteen pads lit
+      and the eight group buttons carrying the channel colours, warm for the drums and cool for the voices.
+      The touchscreen is showing Zynthian's own mixer; the keyboard behind is not part of the build.</figcaption>
+    </figure>
+
     <div class="pull">
       <q>The first boot looks broken. It is not.</q>
       <small>Zynthian's first boot is an initialisation pass: slow, and the touchscreen misbehaves while it runs. Wait it out — this is the one step worth being warned about, so here is the warning.</small>
@@ -698,7 +721,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 <section class="sec" id="s-d">
   <div class="wrap">
     <div class="sec-head">
-      <span class="sec-mark dead"><span class="v">SUBS</span></span>
+      <span class="sec-mark dead" aria-label="No cloud, no account, no subscription"><span class="v" aria-hidden="true">----</span></span>
       <h2>An instrument that will<br><em>never stop playing for you</em></h2>
     </div>
     <div class="grid2">
