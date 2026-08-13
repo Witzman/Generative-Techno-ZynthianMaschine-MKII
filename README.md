@@ -20,18 +20,6 @@ run each step yourself.
 
 ---
 
-## The guide
-
-| | Section | What it covers |
-|---|---|---|
-| | [Start here](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/) | What it is, the hardware bill, and which section to read |
-| 1 | [Fast installation](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/01-fast-installation.html) | Six actions, one command, about forty minutes |
-| 2 | [Features](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/02-features.html) | The eight channels, both generators, the five modes and every encoder |
-| 3 | [Playing](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/03-playing.html) | Placeholder — playing technique is not written yet |
-| 4 | [Manual installation](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html) | Sixteen steps, each with what it does, why, and how to confirm it |
-| 5 | [Internals](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/05-internals.html) | The control path, the `zynautoconnect` patch, the driver, the snapshot |
-| A | [Touchscreen patch](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/a1-touchscreen-patch.html) | Optional coordinate-scaling fix for mismatched panels |
-
 ## What the instrument does
 
 Eight channels are **always alive** — nothing is created or torn down while you
@@ -52,19 +40,6 @@ The factory snapshot arrives playing 124 BPM techno: four-on-the-floor across
 A-D, a drum kit walked by a Turing register on E, a frozen bass line on F, a lead
 at full random on G, and one long sustained note per 8-step loop on H — three
 different kinds of authorship, one per voice.
-
-## What is in here
-
-| Directory | Contents |
-|---|---|
-| [`docs/`](docs/) | The build guide as published — GitHub Pages serves it |
-| [`daemon/`](daemon/) | The Maschine MK2 HID daemon, Rust. Built on the Pi |
-| [`ctrldev/`](ctrldev/) | The Zynthian control-surface driver, plus 271 unit tests that need no Pi |
-| [`system/`](system/) | udev rule, systemd units, JACK connect and clock helpers, daemon config |
-| [`tools/`](tools/) | Preflight check, the `zynautoconnect` patcher, the snapshot builder |
-| [`snapshot/`](snapshot/) | The factory snapshot, `017-generative-techno.zss` |
-| [`bootstrap.sh`](bootstrap.sh) | One-command install for a fresh Pi |
-| [`install.sh`](install.sh) | The installer `bootstrap.sh` calls; runs standalone too |
 
 ## What you need
 
@@ -107,22 +82,6 @@ The unit tests need no Pi and no hardware:
 cd ctrldev && python3 -m unittest discover -s tests -q
 # → Ran 271 tests ... OK
 ```
-
-## Scope, stated plainly
-
-Verified on **one rig**: ZynthianOS `Oram-2601-1`, `zynthian-ui` on branch
-`oram-2601.1`, one Maschine MK2, audio on the Pi's built-in headphone output at
-48 kHz.
-
-The factory snapshot is **confirmed by ear** on that rig: its driver state was
-read back out of the file, and its patterns were checked at the panel against
-[section 4's verification](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html).
-
-One honest limit, also stated in the guide where it matters:
-
-- **The installation sections were written from a running instrument, not walked
-  from a fresh flash** — there was no spare SD card. Where a clean install could
-  differ, the guide gives a check rather than a promise.
 
 ## Credits
 
