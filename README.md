@@ -1,3 +1,5 @@
+<img src="docs/logo.svg" alt="" width="76" align="left" hspace="14" vspace="2">
+
 # Generative-Techno ZynthianMaschine MKII
 
 An eight-channel generative groovebox: **five euclidean drum channels and three

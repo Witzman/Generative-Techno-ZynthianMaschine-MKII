@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Generative-Techno ZynthianMaschine MKII — an eight-channel generative groovebox</title>
 <meta name="description" content="Five euclidean drum channels and three Turing-machine voices on a Raspberry Pi 4, played from a used Maschine MK2. About 180 to build, about 40 minutes to first sound.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Share+Tech+Mono&family=Spline+Sans:wght@300..700&display=swap" rel="stylesheet">
@@ -88,12 +89,14 @@ a{color:inherit}
 }
 .rail-in{display:flex;align-items:center;gap:1.25rem;min-height:52px;padding:.5rem 0;flex-wrap:wrap}
 .mark{
+  display:flex;align-items:center;gap:.6rem;
   font-family:var(--disp);font-variation-settings:'wdth' 125;
   font-weight:800;text-transform:uppercase;
   font-size:1.12rem;letter-spacing:.14em;
   color:var(--ink);text-decoration:none;line-height:1.22;
 }
-.mark span{display:block;color:var(--ink-2);font-weight:500;letter-spacing:.2em;font-size:.8rem}
+.rail-mark{flex:0 0 auto;color:var(--ink)}
+.mark .mark-txt span{display:block;color:var(--ink-2);font-weight:500;letter-spacing:.2em;font-size:.8rem}
 @media (max-width:560px){
   .mark{font-size:.92rem}
   .mark span{font-size:.68rem}
@@ -459,7 +462,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 
 <div class="rail">
   <div class="wrap rail-in">
-    <a class="mark" href="#top">Generative Techno<span>ZynthianMaschine MKII</span></a>
+    <a class="mark" href="#top"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="34" height="34" class="rail-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span class="mark-txt">Generative Techno<span>ZynthianMaschine MKII</span></span></a>
     <nav class="rail-nav" aria-label="Primary">
       <a href="00-start.html">Guide</a>
       <a href="01-fast-installation.html">Install</a>

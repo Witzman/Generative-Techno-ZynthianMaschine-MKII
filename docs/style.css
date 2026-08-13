@@ -30,6 +30,9 @@ body {
 }
 #site-header a { color: #a9a49a; text-decoration: none; }
 #site-header a:hover { color: #cfeaff; }
+/* the mark inherits the header's colour, so the hover carries it too */
+#site-header a { display: inline-flex; align-items: center; gap: 0.55rem; vertical-align: -0.35em; }
+.brand-mark { flex: 0 0 auto; }
 
 /* --- Layout --- */
 #layout { display: flex; min-height: calc(100vh - 42px); }
