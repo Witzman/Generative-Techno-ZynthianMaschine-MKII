@@ -90,10 +90,14 @@ a{color:inherit}
 .mark{
   font-family:var(--disp);font-variation-settings:'wdth' 125;
   font-weight:800;text-transform:uppercase;
-  font-size:.78rem;letter-spacing:.16em;
-  color:var(--ink);text-decoration:none;line-height:1.3;
+  font-size:1.12rem;letter-spacing:.14em;
+  color:var(--ink);text-decoration:none;line-height:1.22;
 }
-.mark span{display:block;color:var(--ink-2);font-weight:500;letter-spacing:.22em;font-size:.66rem}
+.mark span{display:block;color:var(--ink-2);font-weight:500;letter-spacing:.2em;font-size:.8rem}
+@media (max-width:560px){
+  .mark{font-size:.92rem}
+  .mark span{font-size:.68rem}
+}
 .rail-nav{margin-left:auto;display:flex;gap:1.4rem;flex-wrap:wrap}
 .rail-nav a{
   font-family:var(--disp);font-variation-settings:'wdth' 110;
@@ -142,52 +146,31 @@ a{color:inherit}
 .panel{padding:1.5rem 1.5rem 1.35rem;position:relative}
 @media (max-width:640px){ .panel{padding:1.1rem .9rem 1rem} }
 
-/* ---------- the eight buttons above the displays ----------
-   Optical only. Every MK2 owner recognises this row. */
-.btnrow{
-  display:grid;
-  grid-template-columns:auto auto repeat(8,1fr);
-  gap:.4rem;align-items:end;margin-bottom:.8rem;
+/* ---------- the carousel's own bar, inside the plate ---------- */
+.panel-bar{
+  display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+  margin-top:1.15rem;padding-top:.85rem;border-top:1px solid rgba(0,0,0,.16);
 }
-.btnrow .cap{
-  font-family:var(--disp);font-variation-settings:'wdth' 110;font-weight:700;
-  text-transform:uppercase;letter-spacing:.14em;font-size:.42rem;
-  color:var(--silkscreen);opacity:.75;margin-bottom:.15rem;display:block;
-  white-space:nowrap;
+.panel-bar .cap{
+  margin:0;flex:1 1 18rem;min-width:0;
+  font-family:var(--mono);font-size:.76rem;line-height:1.55;color:#5f5a4e;
 }
-.mbtn,.qbtn{height:19px;border-radius:3px;border:1px solid #a49d8d}
-.mbtn{
-  min-width:52px;
+.panel-bar .cap b{color:#2f2c25;font-weight:400}
+.tbtn{
+  flex:0 0 auto;width:31px;height:27px;border-radius:3px;cursor:pointer;
+  border:1px solid #a49d8d;
   background:linear-gradient(180deg,#ddd6c5,#c4bcaa);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.6), 0 1px 2px rgba(0,0,0,.22);
-  display:flex;align-items:center;justify-content:center;
-  font-family:var(--disp);font-variation-settings:'wdth' 108;font-weight:700;
-  font-size:.44rem;letter-spacing:.12em;color:#4a4640;text-transform:uppercase;
+  font-family:var(--mono);font-size:.8rem;line-height:1;color:#4a4640;
 }
-.qbtn{
-  background:linear-gradient(180deg,#ffffff,#f2f4f7 60%,#dfe6ee);
-  box-shadow:0 0 10px rgba(255,255,255,.55), inset 0 1px 0 #fff, 0 1px 2px rgba(0,0,0,.28);
-  border-color:#cfd4d8;
-}
-.mbtn.lit{
-  background:linear-gradient(180deg,#ffffff,#eef2f6);
-  border-color:#cfd4d8;
-  box-shadow:0 0 10px rgba(255,255,255,.55), inset 0 1px 0 #fff, 0 1px 2px rgba(0,0,0,.28);
-  color:#2c2e31;
-}
-@media (max-width:640px){
-  .btnrow{grid-template-columns:auto repeat(8,1fr);gap:.28rem}
-  .btnrow .bw.hide-sm{display:none}
-  .mbtn{min-width:40px;font-size:.4rem}
-  .mbtn,.qbtn{height:14px}
-}
+.tbtn:hover{background:linear-gradient(180deg,#fff,#eef2f6);border-color:#cfd4d8;color:#2c2e31}
 
-.panel-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.9rem;gap:1rem}
-.panel-top .badge{
-  font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;
-  color:var(--silkscreen);border:1px solid var(--ivory-edge);
-  padding:.1rem .45rem;border-radius:2px;white-space:nowrap;
-}
+/* the whole panel cross-fades between pages: headline, screens, knobs, caption */
+.panel-legend,.screens,.encoders,.panel-bar .cap{transition:opacity .3s ease}
+.panel.turning .panel-legend,
+.panel.turning .screens,
+.panel.turning .encoders,
+.panel.turning .panel-bar .cap{opacity:.12}
 
 /* ---------- the LCD ---------- */
 .screens{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
@@ -249,78 +232,7 @@ a{color:inherit}
 .enc.dead .knob{filter:saturate(.5) brightness(.9);opacity:.5}
 .enc .silk{font-size:.55rem;letter-spacing:.14em;text-align:center}
 
-/* ---------- page carousel bar under the plate ---------- */
-.pagebar{display:flex;align-items:center;gap:.75rem;margin-top:1rem;flex-wrap:wrap}
-.pagebar .cap{
-  font-family:var(--mono);font-size:.8rem;color:var(--lcd-dim);
-  flex:1 1 20rem;min-width:0;line-height:1.5;
-}
-.pagebar .cap b{color:var(--lcd-ink);font-weight:400}
-.pbtn{
-  font-family:var(--mono);font-size:.9rem;line-height:1;
-  background:var(--graphite-2);color:var(--ink);border:1px solid var(--hairline);
-  width:34px;height:34px;border-radius:3px;cursor:pointer;flex:0 0 auto;
-}
-.pbtn:hover{border-color:var(--lcd-dim);color:var(--lcd-ink)}
-.pdots{display:flex;gap:.4rem;flex:0 0 auto}
-.pdots button{width:26px;height:6px;border-radius:1px;border:0;cursor:pointer;background:var(--graphite-3);padding:0}
-.pdots button[aria-current="true"]{background:var(--lcd-ink)}
-
-/* ---------- lead + actions ---------- */
-.lead{max-width:62ch;margin:2.2rem 0 0;font-size:1.16rem;line-height:1.55;color:#dcd8ce}
-.lead b{color:#fff;font-weight:600}
-.hero-split{display:grid;grid-template-columns:1.1fr .9fr;gap:2.2rem;align-items:start;margin-top:1.6rem}
-@media (max-width:900px){ .hero-split{grid-template-columns:1fr;gap:1.6rem} }
-.photo-card{margin:0;padding:9px;border-radius:8px;position:relative}
-.photo-card img{
-  width:100%;height:clamp(240px,26vw,320px);object-fit:cover;object-position:center 58%;
-  border-radius:3px;display:block;
-}
-/* the caption sits on the photograph as a screen of its own, reading
-   parameters in the instrument's grammar rather than prose */
-.photo-card figcaption{
-  position:absolute;top:19px;right:19px;width:min(74%,20.5rem);
-  background:rgba(8,33,63,.88);border:1px solid var(--lcd-dim);border-radius:3px;
-  padding:.45rem .5rem .5rem;
-  font-family:var(--mono);letter-spacing:.01em;color:var(--lcd-ink);
-  box-shadow:0 0 20px rgba(0,0,0,.55), inset 0 0 22px rgba(80,180,255,.12);
-}
-.hc-tab{
-  border:1px solid var(--lcd-dim);background:var(--lcd-ink);color:var(--lcd-bg);
-  font-size:.58rem;letter-spacing:.06em;text-align:center;padding:.05rem 0;
-  border-radius:1px;margin-bottom:.42rem;
-}
-.hc-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem}
-.hc-col .l{font-size:.55rem;letter-spacing:.08em;color:var(--lcd-dim);white-space:nowrap}
-.hc-col .v{font-size:.98rem;line-height:1.15;text-shadow:0 0 10px rgba(140,205,255,.5);white-space:nowrap}
-.hc-col.dead .l{text-transform:lowercase}
-.hc-col.dead .v{color:var(--lcd-dim);text-shadow:none}
-.hc-col .m{display:flex;gap:1px;height:4px;margin-top:.22rem}
-.hc-col .m i{flex:1;background:var(--lcd-dim);opacity:.22;border-radius:1px}
-.hc-col .m i.on{opacity:1;background:var(--lcd-ink)}
-.hc-line{
-  margin:.5rem 0 0;padding-top:.4rem;border-top:1px solid rgba(79,131,176,.45);
-  font-size:.63rem;line-height:1.5;color:#bcd9f2;
-}
-.hc-line b{color:#fff;font-weight:400}
-.photo-card img,.photo-card figcaption{transition:opacity .45s ease}
-.photo-card.turning img,.photo-card.turning figcaption{opacity:.12}
-
-.hero-dots{
-  position:absolute;left:19px;bottom:19px;display:flex;gap:.3rem;
-  background:rgba(6,20,36,.78);border:1px solid rgba(79,131,176,.5);
-  border-radius:3px;padding:.28rem .34rem;
-}
-.hero-dots button{
-  width:18px;height:5px;border-radius:1px;border:0;padding:0;cursor:pointer;
-  background:rgba(207,234,255,.3);
-}
-.hero-dots button[aria-current="true"]{background:var(--lcd-ink)}
-@media (max-width:560px){
-  .photo-card figcaption{position:static;max-width:none;margin-top:9px}
-  .hero-dots{position:static;margin:.6rem 0 .1rem;justify-content:center}
-}
-.actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.8rem}
+/* ---------- buttons ---------- */
 .btn{
   font-family:var(--disp);font-variation-settings:'wdth' 112;font-weight:700;
   text-transform:uppercase;letter-spacing:.14em;font-size:.76rem;
@@ -344,12 +256,11 @@ a{color:inherit}
   flex:1 0 auto;min-width:98px;text-decoration:none;
   background:linear-gradient(180deg,#0d2b50,var(--lcd-bg));
   border:1px solid rgba(79,131,176,.45);border-radius:3px;
-  padding:.3rem .55rem .34rem;display:flex;flex-direction:column;gap:.05rem;
+  padding:.34rem .55rem .38rem;display:block;
   font-family:var(--mono);
   transition:border-color .15s ease, box-shadow .15s ease;
 }
-.rdg .l{font-size:.58rem;letter-spacing:.11em;color:var(--lcd-dim)}
-.rdg .v{font-size:.92rem;line-height:1.1;color:var(--lcd-ink)}
+.rdg .v{font-size:.98rem;line-height:1.1;letter-spacing:.08em;color:var(--lcd-ink)}
 .rdg.dead .v{color:var(--lcd-dim)}
 .rdg:hover{border-color:var(--lcd-ink);box-shadow:0 0 18px rgba(80,170,255,.3)}
 
@@ -358,15 +269,13 @@ a{color:inherit}
 .sec:last-of-type{padding-bottom:4.2rem}
 .sec-head{display:flex;align-items:flex-start;gap:1rem;margin-bottom:1.5rem}
 .sec-mark{
-  flex:0 0 auto;min-width:5.6rem;
-  display:flex;flex-direction:column;gap:.1rem;
+  flex:0 0 auto;display:block;
   background:linear-gradient(180deg,#0d3160,var(--lcd-bg));
   border:1px solid var(--lcd-dim);border-radius:3px;
-  padding:.34rem .55rem .4rem;font-family:var(--mono);
+  padding:.4rem .6rem .45rem;font-family:var(--mono);
   box-shadow:0 0 20px rgba(40,120,200,.22);
 }
-.sec-mark .l{font-size:.6rem;letter-spacing:.11em;color:var(--lcd-dim)}
-.sec-mark .v{font-size:1.2rem;line-height:1;color:var(--lcd-ink);text-shadow:0 0 12px rgba(140,205,255,.5)}
+.sec-mark .v{font-size:1.2rem;line-height:1;letter-spacing:.06em;color:var(--lcd-ink);text-shadow:0 0 12px rgba(140,205,255,.5)}
 .sec-mark.dead .v{color:var(--lcd-dim);text-shadow:none}
 .sec h2{
   margin:0;font-family:var(--disp);font-variation-settings:'wdth' 120;
@@ -389,16 +298,7 @@ a{color:inherit}
 }
 .pull small{display:block;margin-top:.5rem;color:var(--ink-2);font-size:.85rem;letter-spacing:.01em}
 
-.plate-table{padding:1.15rem 1.25rem;border-radius:6px}
-.plate-table h3{
-  margin:0 0 .75rem;font-family:var(--disp);font-variation-settings:'wdth' 118;
-  font-weight:800;text-transform:uppercase;letter-spacing:.14em;font-size:.72rem;color:var(--silkscreen);
-}
 table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:.92rem}
-.plate-table td{padding:.34rem 0;color:#2b2c2e;border-bottom:1px dotted rgba(0,0,0,.22)}
-.plate-table td:last-child{text-align:right;white-space:nowrap}
-.plate-table tr.total td{border-bottom:none;border-top:2px solid rgba(0,0,0,.35);padding-top:.6rem;font-size:1.15rem;color:#111}
-.plate-table .note{margin:.7rem 0 0;font-family:var(--body);font-size:.78rem;color:#5c574c;line-height:1.5}
 
 .facts{display:grid;gap:.55rem;margin:1.4rem 0 0;padding:0;list-style:none}
 .facts li{display:flex;gap:.9rem;align-items:baseline;border-bottom:1px solid var(--hairline);padding-bottom:.5rem}
@@ -523,27 +423,6 @@ input[type=range]::-moz-range-thumb{
 .modes th{color:var(--lcd-dim);font-weight:400;letter-spacing:.1em;text-transform:uppercase;font-size:.68rem}
 .modes td:first-child{color:#fff}
 
-/* ---------- gallery ---------- */
-.gal{margin-top:1.8rem}
-/* the photographs cross-fade in place; they do not slide */
-.rail-strip{display:grid;padding-bottom:.6rem}
-.shot{
-  grid-area:1 / 1;opacity:0;visibility:hidden;
-  transition:opacity .5s ease, visibility 0s linear .5s;
-}
-.shot.on{opacity:1;visibility:visible;transition:opacity .5s ease}
-.shot figure{margin:0}
-.shot .frame{border:1px solid var(--ivory-edge);border-radius:6px;overflow:hidden;background:#0b0b0d;box-shadow:0 20px 50px -25px rgba(0,0,0,.9)}
-.shot img{width:100%;height:clamp(240px,46vw,520px);object-fit:cover;object-position:center 55%}
-.shot figcaption{margin-top:.85rem;font-size:.9rem;color:var(--ink-2);max-width:64ch;line-height:1.55}
-.shot figcaption b{color:#fff;font-weight:600}
-.shot figcaption code{font-family:var(--mono);color:var(--lcd-ink)}
-.gal-bar{display:flex;align-items:center;gap:.8rem;margin-top:.9rem}
-.gal-count{font-family:var(--mono);font-size:.75rem;color:var(--lcd-ink);background:var(--lcd-bg);border:1px solid var(--lcd-dim);padding:.15rem .5rem;border-radius:2px}
-.gal-dots{display:flex;gap:.4rem;margin-left:auto}
-.gal-dots button{width:26px;height:6px;border-radius:1px;border:0;cursor:pointer;background:var(--graphite-3);padding:0}
-.gal-dots button[aria-current="true"]{background:var(--lcd-ink)}
-
 /* ---------- doc pads ---------- */
 .pads{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-top:1.6rem}
 @media (max-width:820px){ .pads{grid-template-columns:repeat(2,1fr)} }
@@ -603,22 +482,9 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       <span class="silk">Raspberry Pi 4 · Zynthian · Maschine MK2</span>
     </p>
 
-    <div class="plate panel">
+    <div class="plate panel" id="panel">
       <div class="panel-legend">
-        <h1 class="engrave">You steer the pattern.<br><em>You never draw it.</em></h1>
-      </div>
-
-      <!-- the row of buttons above the displays, as on the hardware -->
-      <div class="btnrow" aria-hidden="true">
-        <div class="bw hide-sm"><span class="cap">MIDI</span><div class="mbtn">Control</div></div>
-        <div class="bw"><span class="cap">Instance</span><div class="mbtn lit">Step</div></div>
-        <div class="qbtn"></div><div class="qbtn"></div><div class="qbtn"></div><div class="qbtn"></div>
-        <div class="qbtn"></div><div class="qbtn"></div><div class="qbtn"></div><div class="qbtn"></div>
-      </div>
-
-      <div class="panel-top">
-        <span class="silk">Display · left / right</span>
-        <span class="badge" id="pageBadge">THE PITCH</span>
+        <h1 class="engrave" id="pageTitle">You steer the pattern.<br><em>You never draw it.</em></h1>
       </div>
 
       <div class="screens" id="screens" aria-live="polite">
@@ -627,39 +493,12 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       </div>
 
       <div class="encoders" id="encoders" aria-hidden="true"></div>
-    </div>
 
-    <div class="pagebar">
-      <button class="pbtn" type="button" id="pagePrev" aria-label="Previous display page">&#9664;</button>
-      <button class="pbtn" type="button" id="pageNext" aria-label="Next display page">&#9654;</button>
-      <p class="cap" id="pageCap"></p>
-      <div class="pdots" id="pageDots" aria-label="Choose display page"></div>
-    </div>
-
-    <div class="hero-split">
-      <div>
-        <p class="lead">
-          Five euclidean drum channels and three Turing-machine voices, all eight always alive on a
-          Raspberry Pi 4 and a second-hand controller. You set hits, rotation and randomness; the
-          instrument writes the notes. <b>There is no step-entry screen to go back to.</b>
-        </p>
-        <p class="lead" style="font-size:1rem;margin-top:1rem;color:var(--ink-2)">
-          About <b>180</b> in parts. About <b>40 minutes</b> from flashing the card to first sound.
-          No cloud, no account, no subscription.
-        </p>
-        <div class="actions">
-          <a class="btn" href="01-fast-installation.html">Build it in 40 minutes</a>
-          <a class="btn ghost" href="#s-b">Play the generator</a>
-        </div>
+      <div class="panel-bar">
+        <button class="tbtn" type="button" id="pagePrev" aria-label="Previous display page">&#9664;</button>
+        <button class="tbtn" type="button" id="pageNext" aria-label="Next display page">&#9654;</button>
+        <p class="cap" id="pageCap"></p>
       </div>
-      <figure class="plate photo-card" id="heroCard">
-        <img id="heroImg" src="img/rig.jpg" srcset="img/rig-sm.jpg 900w, img/rig.jpg 1600w"
-             sizes="(max-width:900px) 100vw, 440px" width="1600" height="1200" fetchpriority="high"
-             alt="A bare Raspberry Pi 4, a small touchscreen showing the Zynthian mixer, and an ivory Maschine MK2 with all sixteen pads lit red, on a wooden desk.">
-        <figcaption id="heroCap"><b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the
-        panel above is drawn from. One USB cable between them, one supply behind.</figcaption>
-        <div class="hero-dots" id="heroDots" aria-label="Choose slide"></div>
-      </figure>
     </div>
   </div>
 </section>
@@ -667,14 +506,13 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 <!-- ===================== READOUT NAV ===================== -->
 <nav class="groups" aria-label="Sections">
   <div class="wrap groups-in">
-    <a class="rdg" href="#s-a"><span class="l">COST</span><span class="v">0180</span></a>
-    <a class="rdg" href="#s-b"><span class="l">HITS</span><span class="v">0004</span></a>
-    <a class="rdg" href="#s-c"><span class="l">SETUP</span><span class="v">0040</span></a>
-    <a class="rdg dead" href="#s-d"><span class="l">SUBS</span><span class="v">----</span></a>
-    <a class="rdg" href="#s-e"><span class="l">PSU</span><span class="v">0001</span></a>
-    <a class="rdg" href="#s-f"><span class="l">PHOTOS</span><span class="v">0003</span></a>
-    <a class="rdg" href="#s-g"><span class="l">CHANS</span><span class="v">0008</span></a>
-    <a class="rdg" href="#s-h"><span class="l">DOCS</span><span class="v">0007</span></a>
+    <a class="rdg" href="#s-b"><span class="v">HITS</span></a>
+    <a class="rdg" href="#s-g"><span class="v">CHANS</span></a>
+    <a class="rdg" href="#s-a"><span class="v">COST</span></a>
+    <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
+    <a class="rdg dead" href="#s-d"><span class="v">SUBS</span></a>
+    <a class="rdg" href="#s-e"><span class="v">PSU</span></a>
+    <a class="rdg" href="#s-h"><span class="v">DOCS</span></a>
   </div>
 </nav>
 
@@ -682,7 +520,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 <section class="sec" id="s-b">
   <div class="wrap">
     <div class="sec-head">
-      <span class="sec-mark"><span class="l">HITS</span><span class="v">0004</span></span>
+      <span class="sec-mark"><span class="v">HITS</span></span>
       <h2>Euclid on the drums,<br><em>a shift register on the voices</em></h2>
     </div>
 
@@ -736,209 +574,11 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   </div>
 </section>
 
-<!-- ===================== COST ===================== -->
-<section class="sec" id="s-a">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="sec-mark"><span class="l">COST</span><span class="v">0180</span></span>
-      <h2>Half the bill is a controller<br><em>its maker stopped supporting</em></h2>
-    </div>
-    <div class="grid2">
-      <div>
-        <p>
-          The Maschine MK2 is discontinued and out of its maker's current software. Used, it is the
-          single largest line on the parts list — and the reason this instrument exists at all. This
-          is scavenging, not a budget compromise: the surface is 16 pads, eight encoders, two
-          displays and a full set of lit buttons.
-        </p>
-        <div class="pull">
-          <q>The cheapest part is the computer.</q>
-          <small>A Raspberry Pi 4 at 40 undercuts every module, pedal and cable on the desk. The SD card costs more than the CPU.</small>
-        </div>
-        <ul class="facts">
-          <li><span class="k">Entry build</span><span class="v"><code>≈180</code> — MK2, Pi 4, SD card, PSU. A complete instrument; nothing about the concept is compromised.</span></li>
-          <li><span class="k">Headroom build</span><span class="v"><code>≈245</code> — a Pi 5 instead of the Pi 4. Room for more plugins and voices.</span></li>
-          <li><span class="k">Upgrade path</span><span class="v">Start at 180, swap the brain later for about 60. Same SD card, same instrument, no migration.</span></li>
-          <li><span class="k">If it breaks</span><span class="v">A dead Pi is 40 and an SD card. No RMA, no dead instrument.</span></li>
-        </ul>
-      </div>
-      <div class="plate plate-table">
-        <h3>Parts list · entry build</h3>
-        <table>
-          <tbody>
-            <tr><td>Maschine MK2, used</td><td>≈100</td></tr>
-            <tr><td>Raspberry Pi 4</td><td>40</td></tr>
-            <tr><td>SD card, fast</td><td>30</td></tr>
-            <tr><td>Power supply</td><td>10–15</td></tr>
-            <tr class="total"><td>Total</td><td>≈180</td></tr>
-          </tbody>
-        </table>
-        <p class="note">
-          Prices in EUR/USD; at this scale the two track closely enough to quote as one number. The
-          MK2 figure is a verified used price and moves with the second-hand market. Audio out is the
-          Pi's own headphone jack — every measurement in this project was taken on it.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== INSTALL ===================== -->
-<section class="sec" id="s-c">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="sec-mark"><span class="l">SETUP</span><span class="v">0040</span></span>
-      <h2>Forty minutes,<br><em>measured</em></h2>
-    </div>
-    <p>
-      One command. No soldering, no config files, no DAW. Ten minutes of the forty is this project's
-      part; the other thirty is Zynthian installing itself while you make coffee.
-    </p>
-    <div class="steps">
-      <div class="step">
-        <div class="t">30</div><div class="u">minutes</div>
-        <h3>Flash and first boot</h3>
-        <p>Write the ZynthianOS image to the SD card and let the Pi come up.</p>
-      </div>
-      <div class="step">
-        <div class="t">10</div><div class="u">minutes</div>
-        <h3>bootstrap.sh</h3>
-        <p>One command on the Pi. It fetches the driver, installs it and places the factory snapshot.</p>
-      </div>
-      <div class="step sum">
-        <div class="t">40</div><div class="u">minutes total</div>
-        <h3>Playing</h3>
-        <p>Load the snapshot, press play, turn HITS. That is the whole ceremony.</p>
-      </div>
-    </div>
-    <div class="pull">
-      <q>The first boot looks broken. It is not.</q>
-      <small>Zynthian's first boot is an initialisation pass: slow, and the touchscreen misbehaves while it runs. Wait it out — this is the one step worth being warned about, so here is the warning.</small>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== OPEN ===================== -->
-<section class="sec" id="s-d">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="sec-mark dead"><span class="l">SUBS</span><span class="v">----</span></span>
-      <h2>Nothing here can be<br><em>switched off from outside</em></h2>
-    </div>
-    <div class="grid2">
-      <div>
-        <p>
-          It is built on Zynthian, a maintained open-source synth platform with an active community
-          and official hardware kits if a boxed version is ever wanted. Every line is readable, every
-          part swappable, all of it yours to fork.
-        </p>
-        <div class="pull">
-          <q>It cannot be discontinued</q>
-          <small>No vendor can brick it with a firmware update or close a store it depends on. The controller it runs on was already discontinued — that is exactly why it was available.</small>
-        </div>
-      </div>
-      <div>
-        <ul class="facts">
-          <li><span class="k">Cloud</span><span class="v"><code>----</code> None. Nothing is uploaded.</span></li>
-          <li><span class="k">Account</span><span class="v"><code>----</code> None to create, none to lose.</span></li>
-          <li><span class="k">Subscription</span><span class="v"><code>----</code> No licence, no renewal. Buy the parts once.</span></li>
-          <li><span class="k">Telemetry</span><span class="v"><code>----</code> None.</span></li>
-          <li><span class="k">Network</span><span class="v">Needed during installation. After that it plays offline — a bunker, a train, a field.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== POWER ===================== -->
-<section class="sec" id="s-e">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="sec-mark"><span class="l">PSU</span><span class="v">0001</span></span>
-      <h2>One power supply<br><em>is the whole power story</em></h2>
-    </div>
-    <div class="grid2">
-      <div>
-        <p>
-          The Pi feeds itself and the controller runs off the Pi. That is the entire cabling diagram:
-          one supply in, one USB cable across, headphones out. Put the supply on a USB powerbank and
-          the instrument runs on a park bench.
-        </p>
-        <p>
-          Two objects in a bag. Setup time is unpacking time. Hands stay on pads and encoders and the
-          laptop stays at home — the absence of a computer is part of the point.
-        </p>
-      </div>
-      <div>
-        <ul class="facts">
-          <li><span class="k">Power in</span><span class="v">One PSU, or a USB powerbank.</span></li>
-          <li><span class="k">Between them</span><span class="v">One USB cable, Pi to controller.</span></li>
-          <li><span class="k">Audio out</span><span class="v">The Pi's headphone jack at 48 kHz. An external interface is optional and will sound better.</span></li>
-          <li><span class="k">Screen</span><span class="v">Any HDMI monitor works for Zynthian's own UI. A touchscreen is nicer to play but is not needed to install.</span></li>
-          <li><span class="k">It grows</span><span class="v">The same box takes touchscreens, multitrack USB interfaces and more MIDI gear. The ceiling is the platform's ceiling.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== PHOTOS ===================== -->
-<section class="sec" id="s-f">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="sec-mark"><span class="l">PHOTOS</span><span class="v">0003</span></span>
-      <h2>Three photographs,<br><em>taken at the desk</em></h2>
-    </div>
-    <p>Nothing here is a render. This is the instrument on a wooden desk, lit by itself.</p>
-
-    <div class="gal">
-      <div class="rail-strip" id="galRail" tabindex="0" role="group" aria-label="Photographs of the instrument">
-        <div class="shot on">
-          <figure>
-            <div class="frame">
-              <img src="img/rig.jpg" srcset="img/rig-sm.jpg 900w, img/rig.jpg 1600w"
-                   sizes="(max-width:1120px) 100vw, 1080px" width="1600" height="1200" loading="lazy"
-                   alt="A bare Raspberry Pi 4, a small touchscreen showing the Zynthian mixer, and an ivory Maschine MK2 with all sixteen pads lit red, on a wooden desk.">
-            </div>
-            <figcaption><b>That is the entire instrument.</b> A bare Pi 4, a small touchscreen showing Zynthian's mixer, and the MK2. One USB cable between them, one supply behind. The eight group buttons carry the eight channel colours: warm for the drums, cool for the voices.</figcaption>
-          </figure>
-        </div>
-        <div class="shot">
-          <figure>
-            <div class="frame">
-              <img src="img/step-drum.jpg" srcset="img/step-drum-sm.jpg 900w, img/step-drum.jpg 1600w"
-                   sizes="(max-width:1120px) 100vw, 1080px" width="1600" height="1200" loading="lazy"
-                   alt="Close-up of the Maschine MK2 displays in STEP mode on a drum channel, reading HITS 0008, ROTATE 0000, DIVIDE 1/16, LENGTH 0016.">
-            </div>
-            <figcaption><b>STEP on a drum channel.</b> <code>HITS 0008 · ROTATE 0000 · DIVIDE 1/16 · LENGTH 0016 · VELO 0110 · CHANCE 0100 · SWING 0050</code> — the seven knobs that write the beat. The eighth reads <code>ratchet ----</code>: no source on this page, so it draws dashes rather than a number the encoder cannot move.</figcaption>
-          </figure>
-        </div>
-        <div class="shot">
-          <figure>
-            <div class="frame">
-              <img src="img/step-voice.jpg" srcset="img/step-voice-sm.jpg 900w, img/step-voice.jpg 1600w"
-                   sizes="(max-width:1120px) 100vw, 1080px" width="1600" height="1200" loading="lazy"
-                   alt="Close-up of the Maschine MK2 displays in STEP mode on a voice channel, with RANDOM reading LOCK and the pads lit magenta and violet.">
-            </div>
-            <figcaption><b>STEP on a voice, with RANDOM at zero.</b> The readout says <code>LOCK</code> instead of <code>0000</code>: the shift register is frozen and the line repeats bit for bit until you turn it back up. Pads go magenta and violet — you are on the cool half of the panel.</figcaption>
-          </figure>
-        </div>
-      </div>
-      <div class="gal-bar">
-        <button class="gal-btn pbtn" type="button" id="galPrev" aria-label="Previous photograph">&#9664;</button>
-        <button class="gal-btn pbtn" type="button" id="galNext" aria-label="Next photograph">&#9654;</button>
-        <span class="gal-count" id="galCount">SCENE 1/3</span>
-        <div class="gal-dots" id="galDots" aria-label="Choose photograph"></div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- ===================== DETAIL ===================== -->
 <section class="sec" id="s-g">
   <div class="wrap">
     <div class="sec-head">
-      <span class="sec-mark"><span class="l">CHANS</span><span class="v">0008</span></span>
+      <span class="sec-mark"><span class="v">CHANS</span></span>
       <h2>Eight channels,<br><em>five modes, no song mode</em></h2>
     </div>
     <p>
@@ -978,11 +618,137 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   </div>
 </section>
 
+<!-- ===================== COST ===================== -->
+<section class="sec" id="s-a">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-mark"><span class="v">COST</span></span>
+      <h2>Half the bill is a controller<br><em>its maker stopped supporting</em></h2>
+    </div>
+    <p>
+      The Maschine MK2 is discontinued and out of its maker's current software. Used, it is the
+      single largest line on the parts list — and the reason this instrument exists at all. This
+      is scavenging, not a budget compromise: the surface is 16 pads, eight encoders, two
+      displays and a full set of lit buttons.
+    </p>
+    <div class="pull">
+      <q>The cheapest part is the computer.</q>
+      <small>A Raspberry Pi 4 at 40 undercuts every module, pedal and cable on the desk. The SD card costs more than the CPU.</small>
+    </div>
+    <ul class="facts">
+      <li><span class="k">Entry build</span><span class="v"><code>≈180</code> — MK2 used at ≈100, Pi 4 at 40, a fast SD card at 30, a supply at 10–15. A complete instrument; nothing about the concept is compromised.</span></li>
+      <li><span class="k">Headroom build</span><span class="v"><code>≈245</code> — a Pi 5 instead of the Pi 4. Room for more plugins and voices.</span></li>
+      <li><span class="k">Upgrade path</span><span class="v">Start at 180, swap the brain later for about 60. Same SD card, same instrument, no migration.</span></li>
+      <li><span class="k">If it breaks</span><span class="v">A dead Pi is 40 and an SD card. No RMA, no dead instrument.</span></li>
+      <li><span class="k">The figures</span><span class="v">EUR/USD; at this scale the two track closely enough to quote as one number. The MK2 price is a verified used one and moves with the second-hand market.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== INSTALL ===================== -->
+<section class="sec" id="s-c">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-mark"><span class="v">SETUP</span></span>
+      <h2>Forty minutes,<br><em>measured</em></h2>
+    </div>
+    <p>
+      One command. No soldering, no config files, no DAW. Ten minutes of the forty is this project's
+      part; the other thirty is Zynthian installing itself while you make coffee.
+    </p>
+    <div class="steps">
+      <div class="step">
+        <div class="t">30</div><div class="u">minutes</div>
+        <h3>Flash and first boot</h3>
+        <p>Write the ZynthianOS image to the SD card and let the Pi come up.</p>
+      </div>
+      <div class="step">
+        <div class="t">10</div><div class="u">minutes</div>
+        <h3>bootstrap.sh</h3>
+        <p>One command on the Pi. It fetches the driver, installs it and places the factory snapshot.</p>
+      </div>
+      <div class="step sum">
+        <div class="t">40</div><div class="u">minutes total</div>
+        <h3>Playing</h3>
+        <p>Load the snapshot, press play, turn HITS. That is the whole ceremony.</p>
+      </div>
+    </div>
+    <div class="pull">
+      <q>The first boot looks broken. It is not.</q>
+      <small>Zynthian's first boot is an initialisation pass: slow, and the touchscreen misbehaves while it runs. Wait it out — this is the one step worth being warned about, so here is the warning.</small>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== OPEN ===================== -->
+<section class="sec" id="s-d">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-mark dead"><span class="v">SUBS</span></span>
+      <h2>An instrument that will<br><em>never stop playing for you</em></h2>
+    </div>
+    <div class="grid2">
+      <div>
+        <p>
+          It is built on Zynthian, a maintained open-source synth platform with an active community
+          and official hardware kits if a boxed version is ever wanted. Every line is readable, every
+          part swappable, all of it yours to fork.
+        </p>
+        <div class="pull">
+          <q>It cannot be discontinued</q>
+          <small>No vendor can brick it with a firmware update or close a store it depends on. The controller it runs on was already discontinued — that is exactly why it was available.</small>
+        </div>
+      </div>
+      <div>
+        <ul class="facts">
+          <li><span class="k">Cloud</span><span class="v"><code>----</code> None. Nothing is uploaded.</span></li>
+          <li><span class="k">Account</span><span class="v"><code>----</code> None to create, none to lose.</span></li>
+          <li><span class="k">Subscription</span><span class="v"><code>----</code> No licence, no renewal. Buy the parts once.</span></li>
+          <li><span class="k">Telemetry</span><span class="v"><code>----</code> None.</span></li>
+          <li><span class="k">Network</span><span class="v">Needed during installation. After that it plays offline — a bunker, a train, a field.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== POWER ===================== -->
+<section class="sec" id="s-e">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-mark"><span class="v">PSU</span></span>
+      <h2>One power supply<br><em>is the whole power story</em></h2>
+    </div>
+    <div class="grid2">
+      <div>
+        <p>
+          The Pi feeds itself and the controller runs off the Pi. That is the entire cabling diagram:
+          one supply in, one USB cable across, headphones out. Put the supply on a USB powerbank and
+          the instrument runs on a park bench.
+        </p>
+        <p>
+          Two objects in a bag. Setup time is unpacking time. Hands stay on pads and encoders and the
+          laptop stays at home — the absence of a computer is part of the point.
+        </p>
+      </div>
+      <div>
+        <ul class="facts">
+          <li><span class="k">Power in</span><span class="v">One PSU, or a USB powerbank.</span></li>
+          <li><span class="k">Between them</span><span class="v">One USB cable, Pi to controller.</span></li>
+          <li><span class="k">Audio out</span><span class="v">The Pi's headphone jack at 48 kHz. An external interface is optional and will sound better.</span></li>
+          <li><span class="k">Screen</span><span class="v">Any HDMI monitor works for Zynthian's own UI. A touchscreen is nicer to play but is not needed to install.</span></li>
+          <li><span class="k">It grows</span><span class="v">The same box takes touchscreens, multitrack USB interfaces and more MIDI gear. The ceiling is the platform's ceiling.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===================== GUIDE ===================== -->
 <section class="sec" id="s-h">
   <div class="wrap">
     <div class="sec-head">
-      <span class="sec-mark"><span class="l">DOCS</span><span class="v">0007</span></span>
+      <span class="sec-mark"><span class="v">DOCS</span></span>
       <h2>The whole build guide,<br><em>seven pages</em></h2>
     </div>
     <div class="pads">
@@ -1021,8 +787,9 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 
 <script>
 /* ============================================================
-   The display carousel — one drawn panel, four real pages.
-   Pages 2, 3 and 4 are transcribed from the photographs below.
+   The display carousel — one drawn panel, six real pages, one per
+   mode. The headline turns with the screens: page one carries the
+   pitch, the other five are named by what the encoders are doing.
    ============================================================ */
 (function(){
   'use strict';
@@ -1031,36 +798,48 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   /* col: [label, value, unit, fill 0-8, dead] */
   var PAGES=[
     {
-      badge:'THE PITCH', tabs:[0,-1],
-      cap:'<b>The pitch.</b> A knob with no source draws dashes. Three of these have no source.',
-      L:[['COST','0180','EUR / USD',6],['SETUP','0040','MINUTES',3],['CHANS','0008','ALWAYS ON',8],['DRUMS','0005','EUCLIDEAN',5]],
-      R:[['VOICES','0003','TURING',3],['CLOUD','----','',0,1],['ACCOUNT','----','',0,1],['SUBS','----','',0,1]]
-    },
-    {
-      badge:'STEP · DRUM', tabs:[0,-1],
-      cap:'<b>STEP on a drum channel.</b> Seven knobs write the beat. The eighth has no source on this page, so it draws dashes.',
+      title:'You steer the pattern.<br><em>You never draw it.</em>', tabs:[0,-1],
+      cap:'<b>STEP · drum.</b> Seven knobs write the beat. The eighth has no source on this page, so it draws dashes.',
       L:[['HITS','0008','',4],['ROTATE','0000','',0],['DIVIDE','1/16','',3],['LENGTH','0016','',8]],
       R:[['VELO','0110','',7],['CHANCE','0100','',8],['SWING','0050','',4],['ratchet','----','',0,1]]
     },
     {
-      badge:'STEP · VOICE', tabs:[-1,2],
-      cap:'<b>STEP on a voice, RANDOM at zero.</b> The readout says LOCK rather than a number, because a number could be a coincidence.',
-      L:[['LENGTH','0008','',4],['DIVIDE','1/8','',5],['RANDOM','LOCK','',0],['GATE','0040','',3]],
-      R:[['OCTAVE','+00','',4],['RANGE','2','',2],['SWING','0050','',4],['VELO','0110','',7]]
+      title:'STEP on a voice,<br><em>RANDOM at zero.</em>', tabs:[-1,2],
+      cap:'The readout says LOCK rather than a number, because a number could be a coincidence. The shift register is frozen and the line repeats bit for bit.',
+      L:[['LENGTH','0016','',8],['DIVIDE','1/8','',5],['RANDOM','LOCK','',0],['GATE','0040','',3]],
+      R:[['OCTAVE','+00','',4],['RANGE','0002','',2],['DENSITY','0075','',6],['VELO','0110','',7]]
     },
     {
-      badge:'CONTROL · DRUM', tabs:[0,-1],
-      cap:'<b>CONTROL on a drum channel.</b> Lower-case labels are controls this engine does not expose — the column greys out instead of showing a number the encoder cannot move.',
+      title:'CONTROL<br><em>on a drum channel.</em>', tabs:[0,-1],
+      cap:'Lower-case labels are controls this engine does not expose — the column greys out instead of showing a number the encoder cannot move.',
       L:[['KIT','808','',5],['SAMPLE','808','',5],['tune','----','',0,1],['decay','----','',0,1]],
       R:[['filtr','----','',0,1],['LEVEL','0100','',8],['REVERB','0000','',0],['DELAY','0000','',0]]
+    },
+    {
+      title:'CONTROL<br><em>on a voice.</em>', tabs:[-1,1],
+      cap:'Eight live controls, no menu. The synth is played from the panel while it runs, not configured on the touchscreen between takes.',
+      L:[['PRESET','0012','',2],['CUTOFF','0068','',5],['RESO','0035','',3],['ENV','0050','',4]],
+      R:[['DECAY','0040','',3],['LEVEL','0100','',8],['REVERB','0020','',2],['DELAY','0015','',1]]
+    },
+    {
+      title:'ALL<br><em>moves the whole rig at once.</em>', tabs:[-1,-1],
+      cap:'Root, scale and tempo belong to every channel. Change the scale and all three voices follow, mid-bar, without stopping.',
+      L:[['ROOT','A','',3],['SCALE','MIN','',2],['BPM','0128','',5],['MASTER','0100','',8]],
+      R:[['REVSIZE','0060','',5],['REVTYPE','HALL','',3],['DLYTIME','3/16','',3],['DLYFBK','0040','',3]]
+    },
+    {
+      title:'MIXER<br><em>one control across all eight.</em>', tabs:[-1,-1],
+      cap:'The eight encoders become the eight channels: one gesture, whole mix. FILTER puts a cutoff on the same eight.',
+      L:[['A KICK','0075','',6],['B SNAR','0068','',5],['C CLAP','0055','',4],['D CHAT','0048','',4]],
+      R:[['E OHAT','0052','',4],['F BASS','0080','',6],['G LEAD','0064','',5],['H PADS','0058','',5]]
     }
   ];
   var TABS_L=['A KICK','B SNAR','C CLAP','D CHAT'];
   var TABS_R=['E OHAT','F BASS','G LEAD','H PADS'];
 
   var lcdL=document.getElementById('lcdL'), lcdR=document.getElementById('lcdR');
-  var encs=document.getElementById('encoders'), badge=document.getElementById('pageBadge');
-  var cap=document.getElementById('pageCap'), dots=document.getElementById('pageDots');
+  var encs=document.getElementById('encoders'), title=document.getElementById('pageTitle');
+  var cap=document.getElementById('pageCap'), plate=document.getElementById('panel');
   var cur=0, timer=null, held=false;
 
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
@@ -1098,129 +877,31 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   }
   function paint(){
     var p=PAGES[cur];
-    badge.textContent=p.badge;
+    title.innerHTML=p.title;
     screen(lcdL,p.L,p.tabs,TABS_L,p.tabs[0]);
     screen(lcdR,p.R,p.tabs,TABS_R,p.tabs[1]);
     encoders(p);
     cap.innerHTML=p.cap;
-    var bs=dots.querySelectorAll('button');
-    for(var i=0;i<bs.length;i++) bs[i].setAttribute('aria-current', i===cur?'true':'false');
   }
-  function go(i){ cur=(i+PAGES.length)%PAGES.length; paint(); }
+  /* the panel fades out, swaps, fades back — it never slides */
+  function go(i){
+    cur=(i+PAGES.length)%PAGES.length;
+    if(reduce){ paint(); return; }
+    plate.classList.add('turning');
+    setTimeout(function(){ paint(); plate.classList.remove('turning'); }, 280);
+  }
 
-  for(var i=0;i<PAGES.length;i++){
-    (function(i){
-      var b=document.createElement('button');
-      b.type='button';
-      b.setAttribute('aria-label','Display page '+(i+1)+': '+PAGES[i].badge);
-      b.addEventListener('click',function(){ go(i); rest(); });
-      dots.appendChild(b);
-    })(i);
-  }
   document.getElementById('pagePrev').addEventListener('click',function(){ go(cur-1); rest(); });
   document.getElementById('pageNext').addEventListener('click',function(){ go(cur+1); rest(); });
 
   function rest(){ if(timer){ clearInterval(timer); timer=null; } if(!reduce) start(); }
-  function start(){ timer=setInterval(function(){ if(!held) go(cur+1); }, 6000); }
+  function start(){ timer=setInterval(function(){ if(!held) go(cur+1); }, 7000); }
 
-  var plate=document.querySelector('.hero .plate.panel');
   ['mouseenter','focusin'].forEach(function(e){ plate.addEventListener(e,function(){ held=true; }); });
   ['mouseleave','focusout'].forEach(function(e){ plate.addEventListener(e,function(){ held=false; }); });
 
   paint();
   if(!reduce) start();
-})();
-</script>
-
-<script>
-/* ============================================================
-   The hero photograph is a slider: six screens, three photographs,
-   one argument per screen in the corner box. Same picture, new message.
-   ============================================================ */
-(function(){
-  'use strict';
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  var ALT={
-    rig:'A bare Raspberry Pi 4, a small touchscreen showing the Zynthian mixer, and an ivory Maschine MK2 with all sixteen pads lit red, on a wooden desk.',
-    'step-drum':'Close-up of the Maschine MK2 displays in STEP mode on a drum channel, reading HITS 0008, ROTATE 0000, DIVIDE 1/16, LENGTH 0016.',
-    'step-voice':'Close-up of the Maschine MK2 displays in STEP mode on a voice channel, with RANDOM reading LOCK and the pads lit magenta and violet.'
-  };
-
-  /* col: [label, value, unit-fill 0-6, dead] — the panel's own grammar */
-  var SLIDES=[
-    {img:'rig', pos:'center 58%', tab:'THE RIG',
-     cols:[['CHANS','0008',6],['DRUMS','0005',4],['VOICES','0003',3]],
-     line:'<b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the panel above is drawn from.'},
-    {img:'step-drum', pos:'center 42%', tab:'INSTALL',
-     cols:[['SETUP','0040',3],['SOFTWARE','0000',0],['LICENCE','----',0,1]],
-     line:'<b>A new instrument on hardware you already own.</b> The software is free and open; about forty minutes to first sound.'},
-    {img:'step-voice', pos:'center 45%', tab:'STEP · VOICE',
-     cols:[['RANDOM','LOCK',0],['LENGTH','0016',6],['DIVIDE','1/8',3]],
-     line:'<b>Generative is the default mode.</b> At RANDOM 0 the readout says LOCK and the loop freezes bit for bit.'},
-    {img:'rig', pos:'center 66%', tab:'COST',
-     cols:[['TOTAL','0180',6],['CPU','0040',2],['CARD','0030',1]],
-     line:'<b>The cheapest part is the computer.</b> A Pi 4 at 40 undercuts every module, pedal and cable on the desk.'},
-    {img:'step-drum', pos:'center 58%', tab:'THE SURFACE',
-     cols:[['MK2','0100',4],['PADS','0016',6],['ENCODERS','0008',5]],
-     line:'<b>Half the bill is a controller its maker stopped supporting.</b> Discontinued — which is exactly why it was there to be found.'},
-    {img:'step-voice', pos:'center 62%', tab:'OPEN',
-     cols:[['CLOUD','----',0,1],['ACCOUNT','----',0,1],['SUBS','----',0,1]],
-     line:'<b>Nothing here can be switched off from outside.</b> One supply is the whole power story; on a powerbank it plays on a park bench.'}
-  ];
-
-  var card=document.getElementById('heroCard'), img=document.getElementById('heroImg');
-  var cap=document.getElementById('heroCap'), dots=document.getElementById('heroDots');
-  if(!card) return;
-  var cur=0, timer=null, held=false;
-
-  for(var i=0;i<SLIDES.length;i++){
-    (function(i){
-      var b=document.createElement('button');
-      b.type='button';
-      b.setAttribute('aria-label','Slide '+(i+1)+' of '+SLIDES.length);
-      b.addEventListener('click',function(){ go(i); rest(); });
-      dots.appendChild(b);
-    })(i);
-  }
-
-  function meter(n){
-    var h='<div class="m">';
-    for(var i=0;i<6;i++) h+='<i'+(i<n?' class="on"':'')+'></i>';
-    return h+'</div>';
-  }
-  function apply(i){
-    var s=SLIDES[i];
-    img.src='img/'+s.img+'.jpg';
-    img.srcset='img/'+s.img+'-sm.jpg 900w, img/'+s.img+'.jpg 1600w';
-    img.alt=ALT[s.img];
-    img.style.objectPosition=s.pos;
-
-    var h='<div class="hc-tab">'+s.tab+'</div><div class="hc-cols">';
-    for(var c=0;c<s.cols.length;c++){
-      var col=s.cols[c];
-      h+='<div class="hc-col'+(col[3]?' dead':'')+'">'
-       +  '<div class="l">'+col[0]+'</div><div class="v">'+col[1]+'</div>'+meter(col[2])
-       + '</div>';
-    }
-    cap.innerHTML = h+'</div><p class="hc-line">'+s.line+'</p>';
-    var bs=dots.querySelectorAll('button');
-    for(var j=0;j<bs.length;j++) bs[j].setAttribute('aria-current', j===i?'true':'false');
-  }
-  function go(i){
-    cur=(i+SLIDES.length)%SLIDES.length;
-    if(reduce){ apply(cur); return; }
-    card.classList.add('turning');
-    setTimeout(function(){ apply(cur); card.classList.remove('turning'); }, 260);
-  }
-  function start(){ if(!reduce && !timer) timer=setInterval(function(){ if(!held) go(cur+1); }, 8000); }
-  function rest(){ if(timer){ clearInterval(timer); timer=null; } start(); }
-
-  ['mouseenter','focusin'].forEach(function(e){ card.addEventListener(e,function(){ held=true; }); });
-  ['mouseleave','focusout'].forEach(function(e){ card.addEventListener(e,function(){ held=false; }); });
-
-  apply(0);
-  start();
 })();
 </script>
 
@@ -1400,54 +1081,6 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 
   accent(); sync(); paintRead(); draw();
   requestAnimationFrame(tick);
-})();
-</script>
-
-<script>
-/* the photo gallery */
-(function(){
-  var rail=document.getElementById('galRail');
-  if(!rail) return;
-  var shots=rail.querySelectorAll('.shot');
-  var dots=document.getElementById('galDots');
-  var count=document.getElementById('galCount');
-  var cur=0;
-
-  for(var i=0;i<shots.length;i++){
-    (function(i){
-      var b=document.createElement('button');
-      b.type='button';
-      b.setAttribute('aria-label','Photograph '+(i+1)+' of '+shots.length);
-      b.addEventListener('click',function(){ go(i); rest(); });
-      dots.appendChild(b);
-    })(i);
-  }
-  function paint(){
-    var bs=dots.querySelectorAll('button');
-    for(var i=0;i<bs.length;i++) bs[i].setAttribute('aria-current', i===cur?'true':'false');
-    for(var s=0;s<shots.length;s++) shots[s].classList.toggle('on', s===cur);
-    count.textContent='SCENE '+(cur+1)+'/'+shots.length;
-  }
-  function go(i){
-    cur=Math.max(0,Math.min(shots.length-1,i));
-    paint();
-  }
-  /* auto-advance, 8s, wrapping. Held while the reader is on it. */
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var timer=null, held=false;
-  function start(){ if(!reduce && !timer) timer=setInterval(function(){ if(!held) go((cur+1)%shots.length); }, 8000); }
-  function rest(){ if(timer){ clearInterval(timer); timer=null; } start(); }
-  ['mouseenter','focusin'].forEach(function(e){ rail.addEventListener(e,function(){ held=true; }); });
-  ['mouseleave','focusout'].forEach(function(e){ rail.addEventListener(e,function(){ held=false; }); });
-
-  document.getElementById('galPrev').addEventListener('click',function(){ go(cur-1); rest(); });
-  document.getElementById('galNext').addEventListener('click',function(){ go(cur+1); rest(); });
-  rail.addEventListener('keydown',function(e){
-    if(e.key==='ArrowRight'){ e.preventDefault(); go(cur+1); rest(); }
-    if(e.key==='ArrowLeft'){ e.preventDefault(); go(cur-1); rest(); }
-  });
-  paint();
-  start();
 })();
 </script>
 
