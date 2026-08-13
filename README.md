@@ -16,6 +16,7 @@ run each step yourself.
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
 ![271 tests](https://img.shields.io/badge/tests-271%20passing-b4b4bc)
+[![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
 
