@@ -2,6 +2,7 @@
 
 # Generative-Techno ZynthianMaschine MKII
 
+
 An eight-channel generative groovebox: **five euclidean drum channels and three
 Turing-machine voices**, running on Zynthian on a Raspberry Pi 4, played entirely
 from a Native Instruments Maschine MK2 — its pads, its encoders, its two displays
