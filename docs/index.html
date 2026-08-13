@@ -553,14 +553,61 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 <!-- ===================== READOUT NAV ===================== -->
 <nav class="groups" aria-label="Sections">
   <div class="wrap groups-in">
+    <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
     <a class="rdg" href="#s-b"><span class="v">HITS</span></a>
     <a class="rdg" href="#s-g"><span class="v">CHANS</span></a>
-    <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
-    <a class="rdg dead" href="#s-d" aria-label="No cloud, no account, no subscription"><span class="v" aria-hidden="true">----</span></a>
     <a class="rdg" href="#s-e"><span class="v">PSU</span></a>
+    <a class="rdg dead" href="#s-d" aria-label="No cloud, no account, no subscription"><span class="v" aria-hidden="true">----</span></a>
     <a class="rdg" href="#s-h"><span class="v">DOCS</span></a>
   </div>
 </nav>
+
+<!-- ===================== INSTALL ===================== -->
+<section class="sec" id="s-c">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-mark"><span class="v">SETUP</span></span>
+      <h2>Forty minutes,<br><em>measured</em></h2>
+    </div>
+    <p>
+      One command. No soldering, no config files, no DAW. Ten minutes of the forty is this project's
+      part; the other thirty is Zynthian installing itself while you make coffee.
+    </p>
+    <div class="steps">
+      <div class="step">
+        <div class="t">30</div><div class="u">minutes</div>
+        <h3>Flash and first boot</h3>
+        <p>Write the ZynthianOS image to the SD card and let the Pi come up.</p>
+      </div>
+      <div class="step">
+        <div class="t">10</div><div class="u">minutes</div>
+        <h3>bootstrap.sh</h3>
+        <p>One command on the Pi. It fetches the driver, installs it and places the factory snapshot.</p>
+      </div>
+      <div class="step sum">
+        <div class="t">40</div><div class="u">minutes total</div>
+        <h3>Playing</h3>
+        <p>Load the snapshot, press play, turn HITS. That is the whole ceremony.</p>
+      </div>
+    </div>
+
+    <figure class="shotfig">
+      <div class="frame">
+        <img src="img/rig-desk.jpg" srcset="img/rig-desk-sm.jpg 900w, img/rig-desk.jpg 1600w"
+             sizes="(max-width:1120px) 100vw, 1080px" width="1600" height="1200" loading="lazy"
+             alt="The finished rig on a wooden desk: a bare Raspberry Pi 4, a small touchscreen showing Zynthian's mixer, and an ivory Maschine MK2 with all sixteen pads lit red and the eight group buttons lit in the channel colours.">
+      </div>
+      <figcaption><b>Forty minutes later.</b> A bare Pi 4, one USB cable, and the MK2 awake — sixteen pads lit
+      and the eight group buttons carrying the channel colours, warm for the drums and cool for the voices.
+      The touchscreen is showing Zynthian's own mixer; the keyboard behind is not part of the build.</figcaption>
+    </figure>
+
+    <div class="pull">
+      <q>The first boot looks broken. It is not.</q>
+      <small>Zynthian's first boot is an initialisation pass: slow, and the touchscreen misbehaves while it runs. Wait it out — this is the one step worth being warned about, so here is the warning.</small>
+    </div>
+  </div>
+</section>
 
 <!-- ===================== CONCEPT — THE PAD MACHINE ===================== -->
 <section class="sec" id="s-b">
@@ -670,49 +717,34 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
   </div>
 </section>
 
-<!-- ===================== INSTALL ===================== -->
-<section class="sec" id="s-c">
+<!-- ===================== POWER ===================== -->
+<section class="sec" id="s-e">
   <div class="wrap">
     <div class="sec-head">
-      <span class="sec-mark"><span class="v">SETUP</span></span>
-      <h2>Forty minutes,<br><em>measured</em></h2>
+      <span class="sec-mark"><span class="v">PSU</span></span>
+      <h2>One power supply<br><em>is the whole power story</em></h2>
     </div>
-    <p>
-      One command. No soldering, no config files, no DAW. Ten minutes of the forty is this project's
-      part; the other thirty is Zynthian installing itself while you make coffee.
-    </p>
-    <div class="steps">
-      <div class="step">
-        <div class="t">30</div><div class="u">minutes</div>
-        <h3>Flash and first boot</h3>
-        <p>Write the ZynthianOS image to the SD card and let the Pi come up.</p>
+    <div class="grid2">
+      <div>
+        <p>
+          The Pi feeds itself and the controller runs off the Pi. That is the entire cabling diagram:
+          one supply in, one USB cable across, headphones out. Put the supply on a USB powerbank and
+          the instrument runs on a park bench.
+        </p>
+        <p>
+          Two objects in a bag. Setup time is unpacking time. Hands stay on pads and encoders and the
+          laptop stays at home — the absence of a computer is part of the point.
+        </p>
       </div>
-      <div class="step">
-        <div class="t">10</div><div class="u">minutes</div>
-        <h3>bootstrap.sh</h3>
-        <p>One command on the Pi. It fetches the driver, installs it and places the factory snapshot.</p>
+      <div>
+        <ul class="facts">
+          <li><span class="k">Power in</span><span class="v">One PSU, or a USB powerbank.</span></li>
+          <li><span class="k">Between them</span><span class="v">One USB cable, Pi to controller.</span></li>
+          <li><span class="k">Audio out</span><span class="v">The Pi's headphone jack at 48 kHz. An external interface is optional and will sound better.</span></li>
+          <li><span class="k">Screen</span><span class="v">Any HDMI monitor works for Zynthian's own UI. A touchscreen is nicer to play but is not needed to install.</span></li>
+          <li><span class="k">It grows</span><span class="v">The same box takes touchscreens, multitrack USB interfaces and more MIDI gear. The ceiling is the platform's ceiling.</span></li>
+        </ul>
       </div>
-      <div class="step sum">
-        <div class="t">40</div><div class="u">minutes total</div>
-        <h3>Playing</h3>
-        <p>Load the snapshot, press play, turn HITS. That is the whole ceremony.</p>
-      </div>
-    </div>
-
-    <figure class="shotfig">
-      <div class="frame">
-        <img src="img/rig-desk.jpg" srcset="img/rig-desk-sm.jpg 900w, img/rig-desk.jpg 1600w"
-             sizes="(max-width:1120px) 100vw, 1080px" width="1600" height="1200" loading="lazy"
-             alt="The finished rig on a wooden desk: a bare Raspberry Pi 4, a small touchscreen showing Zynthian's mixer, and an ivory Maschine MK2 with all sixteen pads lit red and the eight group buttons lit in the channel colours.">
-      </div>
-      <figcaption><b>Forty minutes later.</b> A bare Pi 4, one USB cable, and the MK2 awake — sixteen pads lit
-      and the eight group buttons carrying the channel colours, warm for the drums and cool for the voices.
-      The touchscreen is showing Zynthian's own mixer; the keyboard behind is not part of the build.</figcaption>
-    </figure>
-
-    <div class="pull">
-      <q>The first boot looks broken. It is not.</q>
-      <small>Zynthian's first boot is an initialisation pass: slow, and the touchscreen misbehaves while it runs. Wait it out — this is the one step worth being warned about, so here is the warning.</small>
     </div>
   </div>
 </section>
@@ -743,38 +775,6 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
           <li><span class="k">Subscription</span><span class="v"><code>----</code> No licence, no renewal. Buy the parts once.</span></li>
           <li><span class="k">Telemetry</span><span class="v"><code>----</code> None.</span></li>
           <li><span class="k">Network</span><span class="v">Needed during installation. After that it plays offline — a bunker, a train, a field.</span></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== POWER ===================== -->
-<section class="sec" id="s-e">
-  <div class="wrap">
-    <div class="sec-head">
-      <span class="sec-mark"><span class="v">PSU</span></span>
-      <h2>One power supply<br><em>is the whole power story</em></h2>
-    </div>
-    <div class="grid2">
-      <div>
-        <p>
-          The Pi feeds itself and the controller runs off the Pi. That is the entire cabling diagram:
-          one supply in, one USB cable across, headphones out. Put the supply on a USB powerbank and
-          the instrument runs on a park bench.
-        </p>
-        <p>
-          Two objects in a bag. Setup time is unpacking time. Hands stay on pads and encoders and the
-          laptop stays at home — the absence of a computer is part of the point.
-        </p>
-      </div>
-      <div>
-        <ul class="facts">
-          <li><span class="k">Power in</span><span class="v">One PSU, or a USB powerbank.</span></li>
-          <li><span class="k">Between them</span><span class="v">One USB cable, Pi to controller.</span></li>
-          <li><span class="k">Audio out</span><span class="v">The Pi's headphone jack at 48 kHz. An external interface is optional and will sound better.</span></li>
-          <li><span class="k">Screen</span><span class="v">Any HDMI monitor works for Zynthian's own UI. A touchscreen is nicer to play but is not needed to install.</span></li>
-          <li><span class="k">It grows</span><span class="v">The same box takes touchscreens, multitrack USB interfaces and more MIDI gear. The ceiling is the platform's ceiling.</span></li>
         </ul>
       </div>
     </div>
