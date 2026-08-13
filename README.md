@@ -70,8 +70,10 @@ different kinds of authorship, one per voice.
 
 - **Raspberry Pi 4** running ZynthianOS `Oram-2601-1` (section 1 installs it)
 - **Native Instruments Maschine MK2**, over USB
-- An audio interface Zynthian supports, and a display for Zynthian's own UI —
-  snapshots are loaded there, so it is not optional
+- An audio interface Zynthian supports, and a screen for Zynthian's own UI — any
+  HDMI monitor or TV with a USB mouse and keyboard will do. A touchscreen is what
+  the instrument was built around, but it is not needed to install: the installer
+  loads the factory snapshot itself. Saving snapshots does need the screen
 - An SD card of 16 GB or more
 
 Third-party plugins and samples are **not** vendored here: Obxd, padthv1 and the

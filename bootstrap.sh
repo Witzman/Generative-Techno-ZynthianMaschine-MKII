@@ -10,7 +10,8 @@ set -eu
 
 REPO_URL=https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
 REPO_DIR=/root/Generative-Techno-ZynthianMaschine-MKII
-SNAP_DIR=/zynthian/zynthian-my-data/snapshots/000
+SNAP_ROOT=/zynthian/zynthian-my-data/snapshots
+SNAP_DIR="$SNAP_ROOT/000"
 SNAP=017-generative-techno.zss
 
 main() {
@@ -57,15 +58,36 @@ main() {
     fi
 
     # --- 3. the factory snapshot ---------------------------------------------
-    # The bank subdirectory is not optional: a snapshot at the snapshots root
-    # is invisible in the Zynthian UI.
-    echo "== Place the factory snapshot in bank 000"
+    # Two copies, for two different jobs.
+    #
+    # In bank 000 so it appears in the UI's snapshot list. The bank
+    # subdirectory is not optional: a snapshot at the snapshots root is
+    # invisible in the list.
+    #
+    # As default.zss so a fresh Pi boots straight into it. zynthian_gui.py
+    # restores last_state.zss first and falls back to default.zss when there is
+    # none - which is exactly the fresh-install case. default.zss is otherwise
+    # only written by an explicit "save as default", so seeding it destroys
+    # nothing, and a Pi that already has a last state keeps its own session.
+    echo "== Place the factory snapshot (bank 000, and as the default)"
     if [ "$DRY" = 1 ]; then
         echo "  [dry-run] mkdir -p $SNAP_DIR"
         echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP $SNAP_DIR/"
+        echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP $SNAP_ROOT/default.zss"
     else
         mkdir -p "$SNAP_DIR"
         install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_DIR/"
+        install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_ROOT/default.zss"
+    fi
+
+    # --- 4. restart the UI so it picks the snapshot up ------------------------
+    # install.sh already restarted, but that was before default.zss existed.
+    echo "== Restart the UI so it comes up in the instrument"
+    if [ "$DRY" = 1 ]; then
+        echo "  [dry-run] systemctl restart zynthian"
+    else
+        systemctl restart zynthian
+        sleep 20
     fi
 
     # --- 4. verify -----------------------------------------------------------
@@ -84,9 +106,13 @@ main() {
 
     cat <<'EOF'
 
-== Two things left, both on the touchscreen
-  1. Load the snapshot: Snapshots > into bank 000 > 017-generative-techno
-  2. Press Play.
+== Done. Press Play.
+The instrument should already be loaded: eight mixer strips on screen, both MK2
+displays drawing their tab rows, the Group buttons lit in channel colours.
+
+If instead you get an empty Zynthian, this Pi had a previous session, which
+takes priority over the factory snapshot. Load it by hand from the screen:
+  Snapshots > into bank 000 > 017-generative-techno
 
 If something is wrong, section 4 of the guide gives every step its own check:
 https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html

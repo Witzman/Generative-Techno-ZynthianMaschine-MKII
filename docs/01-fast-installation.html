@@ -56,7 +56,7 @@
 <main>
 <article>
 <h1 id="1--fast-installation">1 · Fast installation</h1>
-<p><strong>Recommended.</strong> Six actions. About forty minutes, most of it unattended.</p>
+<p><strong>Recommended.</strong> Five actions. About forty minutes, most of it unattended.</p>
 <p>At the end the instrument is running the factory snapshot: eight channels alive, the Maschine's pads lit in channel colours, both displays showing their tab rows, and a pattern playing the moment you press Play.</p>
 <p>Every step here is done by hand and explained in <a href="04-manual-installation.html">4 · Manual installation</a>. Come back to that page if something goes wrong, or if you would rather not run a script you have not read.</p>
 <hr>
@@ -76,18 +76,15 @@ md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
 <hr>
 <h2 id="4--run-one-command">4 — Run one command</h2>
 <pre><code class="language-bash">curl -sSL https://raw.githubusercontent.com/Witzman/Generative-Techno-ZynthianMaschine-MKII/main/bootstrap.sh | bash</code></pre>
-<p><strong>This takes about ten minutes and looks like it has hung.</strong> It compiles the HID daemon on the Pi. Do not interrupt it. When it finishes it prints the two remaining actions, which are the two below.</p>
+<p><strong>This takes about ten minutes and looks like it has hung.</strong> It compiles the HID daemon on the Pi. Do not interrupt it. It ends by loading the factory snapshot and restarting Zynthian's UI, so the instrument is playing-ready when it returns.</p>
 <hr>
-<h2 id="5--load-the-snapshot">5 — Load the snapshot</h2>
-<p>On the Zynthian <strong>touchscreen</strong>: open Snapshots, go <strong>into</strong> bank <code>000</code>, and tap <code>017-generative-techno</code>. Loading takes about fifteen seconds.</p>
-<blockquote><p><strong>Never save from webconf's Snapshots page.</strong> Its <strong>Name:</strong> field plus the checkmark <strong>renames the selected bank</strong> — it does not save a snapshot, and it has destroyed bank <code>000</code> on this rig once already. Loading from webconf is safe; saving from it is not.</p></blockquote>
-<hr>
-<h2 id="6--press-play">6 — Press Play</h2>
-<p>You should see this within fifteen seconds of the snapshot loading:</p>
+<h2 id="5--press-play">5 — Press Play</h2>
+<p><strong>The snapshot is already loaded.</strong> The installer places it as Zynthian's default snapshot and restarts the UI, so the instrument comes up by itself on a fresh Pi. Nothing to tap.</p>
+<p>You should see this:</p>
 <table><thead><tr><th>Where</th><th>What</th></tr></thead><tbody><tr><td>Touchscreen mixer</td><td>eight strips plus main</td></tr><tr><td>MK2 left display</td><td>tab row <code>A KICK</code>, <code>B SNAR</code>, <code>C CLAP</code>, <code>D CHAT</code></td></tr><tr><td>MK2 right display</td><td>tab row <code>E OHAT</code>, <code>F BASS</code>, <code>G LEAD</code>, <code>H PADS</code></td></tr><tr><td>MK2 Group buttons</td><td>lit in channel colours</td></tr><tr><td>MK2 mode buttons</td><td>exactly one lit — <strong>CONTROL</strong></td></tr></tbody></table>
 <hr>
 <h2 id="nothing-happened">Nothing happened?</h2>
-<table><thead><tr><th>What you see</th><th>What it means</th><th>What to do</th></tr></thead><tbody><tr><td>Pads dark, displays blank</td><td>The daemon is not running</td><td><code>systemctl status maschine-mk2</code>, then restart <strong>the daemon first and the UI second</strong> — the order matters</td></tr><tr><td>Pads lit, but nothing responds</td><td>The driver never bound to the daemon's port</td><td>Re-run the installer; it re-applies the <code>zynautoconnect</code> patch</td></tr><tr><td>A tab is <strong>dashed</strong></td><td>That channel is silent on purpose — muted, or its generator is set to never fire</td><td>Not a fault. The dashed tab is the instrument's way of explaining silence</td></tr></tbody></table>
+<table><thead><tr><th>What you see</th><th>What it means</th><th>What to do</th></tr></thead><tbody><tr><td>Pads dark, displays blank</td><td>The daemon is not running</td><td><code>systemctl status maschine-mk2</code>, then restart <strong>the daemon first and the UI second</strong> — the order matters</td></tr><tr><td>Pads lit, but nothing responds</td><td>The driver never bound to the daemon's port</td><td>Re-run the installer; it re-applies the <code>zynautoconnect</code> patch</td></tr><tr><td>A tab is <strong>dashed</strong></td><td>That channel is silent on purpose — muted, or its generator is set to never fire</td><td>Not a fault. The dashed tab is the instrument's way of explaining silence</td></tr><tr><td>Zynthian came up empty, no mixer strips</td><td>This Pi had a previous session. Zynthian restores its last state before falling back to the factory default</td><td>Load it by hand: <strong>Snapshots</strong> → into bank <code>000</code> → <code>017-generative-techno</code>. From the screen, or from webconf's Snapshots page</td></tr></tbody></table>
 <p>Anything else: work through <a href="04-manual-installation.html">4 · Manual installation</a>, which gives each step's own check.</p>
 </article>
 </main>
