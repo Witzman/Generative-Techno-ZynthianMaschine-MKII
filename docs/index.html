@@ -271,16 +271,38 @@ a{color:inherit}
 .lead b{color:#fff;font-weight:600}
 .hero-split{display:grid;grid-template-columns:1.1fr .9fr;gap:2.2rem;align-items:start;margin-top:1.6rem}
 @media (max-width:900px){ .hero-split{grid-template-columns:1fr;gap:1.6rem} }
-.photo-card{margin:0;padding:9px;border-radius:8px}
+.photo-card{margin:0;padding:9px;border-radius:8px;position:relative}
 .photo-card img{
-  width:100%;height:clamp(210px,22vw,282px);object-fit:cover;object-position:center 58%;
+  width:100%;height:clamp(240px,26vw,320px);object-fit:cover;object-position:center 58%;
   border-radius:3px;display:block;
 }
+/* the caption sits on the photograph, as a little screen in its corner */
 .photo-card figcaption{
-  font-family:var(--mono);font-size:.7rem;line-height:1.5;color:#4a463c;
-  padding:.6rem .3rem .15rem;letter-spacing:.01em;
+  position:absolute;top:19px;right:19px;max-width:min(62%,17rem);
+  background:rgba(8,33,63,.86);border:1px solid var(--lcd-dim);border-radius:3px;
+  padding:.5rem .6rem .55rem;
+  font-family:var(--mono);font-size:.66rem;line-height:1.55;letter-spacing:.01em;
+  color:var(--lcd-ink);
+  box-shadow:0 0 20px rgba(0,0,0,.55), inset 0 0 22px rgba(80,180,255,.12);
 }
-.photo-card figcaption b{color:#26241e}
+.photo-card figcaption b{display:block;color:#fff;font-weight:400;margin-bottom:.15rem}
+.photo-card img,.photo-card figcaption{transition:opacity .45s ease}
+.photo-card.turning img,.photo-card.turning figcaption{opacity:.12}
+
+.hero-dots{
+  position:absolute;left:19px;bottom:19px;display:flex;gap:.3rem;
+  background:rgba(6,20,36,.78);border:1px solid rgba(79,131,176,.5);
+  border-radius:3px;padding:.28rem .34rem;
+}
+.hero-dots button{
+  width:18px;height:5px;border-radius:1px;border:0;padding:0;cursor:pointer;
+  background:rgba(207,234,255,.3);
+}
+.hero-dots button[aria-current="true"]{background:var(--lcd-ink)}
+@media (max-width:560px){
+  .photo-card figcaption{position:static;max-width:none;margin-top:9px}
+  .hero-dots{position:static;margin:.6rem 0 .1rem;justify-content:center}
+}
 .actions{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:1.8rem}
 .btn{
   font-family:var(--disp);font-variation-settings:'wdth' 112;font-weight:700;
@@ -609,12 +631,13 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
           <a class="btn ghost" href="#s-b">Play the generator</a>
         </div>
       </div>
-      <figure class="plate photo-card">
-        <img src="img/rig.jpg" srcset="img/rig-sm.jpg 900w, img/rig.jpg 1600w"
+      <figure class="plate photo-card" id="heroCard">
+        <img id="heroImg" src="img/rig.jpg" srcset="img/rig-sm.jpg 900w, img/rig.jpg 1600w"
              sizes="(max-width:900px) 100vw, 440px" width="1600" height="1200" fetchpriority="high"
              alt="A bare Raspberry Pi 4, a small touchscreen showing the Zynthian mixer, and an ivory Maschine MK2 with all sixteen pads lit red, on a wooden desk.">
-        <figcaption><b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the
+        <figcaption id="heroCap"><b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the
         panel above is drawn from. One USB cable between them, one supply behind.</figcaption>
+        <div class="hero-dots" id="heroDots" aria-label="Choose slide"></div>
       </figure>
     </div>
   </div>
@@ -1090,6 +1113,78 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 
 <script>
 /* ============================================================
+   The hero photograph is a slider: six screens, three photographs,
+   one argument per screen in the corner box. Same picture, new message.
+   ============================================================ */
+(function(){
+  'use strict';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var ALT={
+    rig:'A bare Raspberry Pi 4, a small touchscreen showing the Zynthian mixer, and an ivory Maschine MK2 with all sixteen pads lit red, on a wooden desk.',
+    'step-drum':'Close-up of the Maschine MK2 displays in STEP mode on a drum channel, reading HITS 0008, ROTATE 0000, DIVIDE 1/16, LENGTH 0016.',
+    'step-voice':'Close-up of the Maschine MK2 displays in STEP mode on a voice channel, with RANDOM reading LOCK and the pads lit magenta and violet.'
+  };
+
+  var SLIDES=[
+    {img:'rig', pos:'center 58%',
+     cap:'<b>The whole instrument.</b> A bare Pi 4, a small touchscreen, and the MK2 the panel above is drawn from. One USB cable between them, one supply behind.'},
+    {img:'step-drum', pos:'center 42%',
+     cap:'<b>A new instrument on hardware you already own.</b> The software is free and open. About forty minutes from flashing the card to first sound.'},
+    {img:'step-voice', pos:'center 45%',
+     cap:'<b>Generative is the default mode.</b> Not a feature buried in a menu. Set RANDOM to zero and the readout says LOCK: the loop freezes bit for bit.'},
+    {img:'rig', pos:'center 66%',
+     cap:'<b>The cheapest part is the computer.</b> A Pi 4 at 40 undercuts every module, pedal and cable on the desk. About 180 for the lot.'},
+    {img:'step-drum', pos:'center 58%',
+     cap:'<b>Half the bill is a controller its maker stopped supporting.</b> Discontinued — which is exactly why it was there to be found.'},
+    {img:'step-voice', pos:'center 62%',
+     cap:'<b>No cloud, no account, no subscription.</b> One supply is the whole power story; on a USB powerbank it plays on a park bench.'}
+  ];
+
+  var card=document.getElementById('heroCard'), img=document.getElementById('heroImg');
+  var cap=document.getElementById('heroCap'), dots=document.getElementById('heroDots');
+  if(!card) return;
+  var cur=0, timer=null, held=false;
+
+  for(var i=0;i<SLIDES.length;i++){
+    (function(i){
+      var b=document.createElement('button');
+      b.type='button';
+      b.setAttribute('aria-label','Slide '+(i+1)+' of '+SLIDES.length);
+      b.addEventListener('click',function(){ go(i); rest(); });
+      dots.appendChild(b);
+    })(i);
+  }
+
+  function apply(i){
+    var s=SLIDES[i];
+    img.src='img/'+s.img+'.jpg';
+    img.srcset='img/'+s.img+'-sm.jpg 900w, img/'+s.img+'.jpg 1600w';
+    img.alt=ALT[s.img];
+    img.style.objectPosition=s.pos;
+    cap.innerHTML=s.cap;
+    var bs=dots.querySelectorAll('button');
+    for(var j=0;j<bs.length;j++) bs[j].setAttribute('aria-current', j===i?'true':'false');
+  }
+  function go(i){
+    cur=(i+SLIDES.length)%SLIDES.length;
+    if(reduce){ apply(cur); return; }
+    card.classList.add('turning');
+    setTimeout(function(){ apply(cur); card.classList.remove('turning'); }, 260);
+  }
+  function start(){ if(!reduce && !timer) timer=setInterval(function(){ if(!held) go(cur+1); }, 8000); }
+  function rest(){ if(timer){ clearInterval(timer); timer=null; } start(); }
+
+  ['mouseenter','focusin'].forEach(function(e){ card.addEventListener(e,function(){ held=true; }); });
+  ['mouseleave','focusout'].forEach(function(e){ card.addEventListener(e,function(){ held=false; }); });
+
+  apply(0);
+  start();
+})();
+</script>
+
+<script>
+/* ============================================================
    The pad machine — the generator, drawn on the 4x4 grid.
    Euclidean rhythms on the drums, a shift register on the voices.
    Step 0 is the top-left pad, as the instrument presents it.
@@ -1282,7 +1377,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
       var b=document.createElement('button');
       b.type='button';
       b.setAttribute('aria-label','Photograph '+(i+1)+' of '+shots.length);
-      b.addEventListener('click',function(){ go(i); });
+      b.addEventListener('click',function(){ go(i); rest(); });
       dots.appendChild(b);
     })(i);
   }
@@ -1296,11 +1391,19 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     rail.scrollTo({left: shots[cur].offsetLeft - rail.offsetLeft, behavior:'smooth'});
     paint();
   }
-  document.getElementById('galPrev').addEventListener('click',function(){ go(cur-1); });
-  document.getElementById('galNext').addEventListener('click',function(){ go(cur+1); });
+  /* auto-advance, 8s, wrapping. Held while the reader is on it. */
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var timer=null, held=false;
+  function start(){ if(!reduce && !timer) timer=setInterval(function(){ if(!held) go((cur+1)%shots.length); }, 8000); }
+  function rest(){ if(timer){ clearInterval(timer); timer=null; } start(); }
+  ['mouseenter','focusin'].forEach(function(e){ rail.addEventListener(e,function(){ held=true; }); });
+  ['mouseleave','focusout'].forEach(function(e){ rail.addEventListener(e,function(){ held=false; }); });
+
+  document.getElementById('galPrev').addEventListener('click',function(){ go(cur-1); rest(); });
+  document.getElementById('galNext').addEventListener('click',function(){ go(cur+1); rest(); });
   rail.addEventListener('keydown',function(e){
-    if(e.key==='ArrowRight'){ e.preventDefault(); go(cur+1); }
-    if(e.key==='ArrowLeft'){ e.preventDefault(); go(cur-1); }
+    if(e.key==='ArrowRight'){ e.preventDefault(); go(cur+1); rest(); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); go(cur-1); rest(); }
   });
   var t;
   rail.addEventListener('scroll',function(){
@@ -1316,6 +1419,7 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
     },90);
   });
   paint();
+  start();
 })();
 </script>
 
