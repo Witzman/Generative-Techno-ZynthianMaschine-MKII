@@ -9,8 +9,9 @@ and its LEDs.
 
 **<https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/>**
 
-Seven sections, from a blank SD card to a rig that plays. Markdown source in
-[`guide/`](guide/01-what-it-is.md).
+From a blank SD card to a rig that plays. Start with **Fast installation** — one
+command on the Pi — or work through **Manual installation** if you would rather
+run each step yourself.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
@@ -22,15 +23,13 @@ Seven sections, from a blank SD card to a rig that plays. Markdown source in
 
 | | Section | What it covers |
 |---|---|---|
-| 1 | [What It Is](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/01-what-it-is.html) | The channel table, the measured signal path, what it is *not*, the hardware bill |
-| 2 | [Install ZynthianOS](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/02-install-zynthianos.html) | Which image, checksum, flashing, SSH and webconf, version confirmation |
-| 3 | [Driver & Daemon](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/03-install-driver.html) | Ten steps, each with what breaks if you skip it. The trap-dense section |
-| 4 | [Prepare Zynthian](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-prepare-zynthian.html) | Plugins, the LV2 cache, drum kits, and the preflight script |
-| 5 | [Import Snapshot](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/05-import-snapshot.html) | Copy one file, load it, and what you should see within 15 seconds |
-| 6 | [Testing](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/06-testing.html) | Every command with its real output, then the by-ear checklist |
-| 7 | [Playing](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/07-playing.html) | Placeholder — playing technique is not written yet |
-| A1 | [How 017 Was Built](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/a1-how-017-was-built.html) | Chains, insert order, gain staging, the CC map, the constraints |
-| A2 | [Touchscreen Patch](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/a2-touchscreen-patch.html) | Optional coordinate-scaling fix for mismatched panels |
+| | [Start here](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/) | What it is, the hardware bill, and which section to read |
+| 1 | [Fast installation](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/01-fast-installation.html) | Six actions, one command, about forty minutes |
+| 2 | [Features](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/02-features.html) | The eight channels, both generators, the five modes and every encoder |
+| 3 | [Playing](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/03-playing.html) | Placeholder — playing technique is not written yet |
+| 4 | [Manual installation](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html) | Sixteen steps, each with what it does, why, and how to confirm it |
+| 5 | [Internals](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/05-internals.html) | The control path, the `zynautoconnect` patch, the driver, the snapshot |
+| A | [Touchscreen patch](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/a1-touchscreen-patch.html) | Optional coordinate-scaling fix for mismatched panels |
 
 ## What the instrument does
 
@@ -57,16 +56,18 @@ different kinds of authorship, one per voice.
 
 | Directory | Contents |
 |---|---|
-| [`guide/`](guide/) | The build guide, Markdown source. `docs/` is generated from it |
+| [`docs/`](docs/) | The build guide as published — GitHub Pages serves it |
 | [`daemon/`](daemon/) | The Maschine MK2 HID daemon, Rust. Built on the Pi |
 | [`ctrldev/`](ctrldev/) | The Zynthian control-surface driver, plus 271 unit tests that need no Pi |
 | [`system/`](system/) | udev rule, systemd units, JACK connect and clock helpers, daemon config |
-| [`tools/`](tools/) | Preflight check, the `zynautoconnect` patcher, the snapshot builder, the site generator |
+| [`tools/`](tools/) | Preflight check, the `zynautoconnect` patcher, the snapshot builder |
 | [`snapshot/`](snapshot/) | The factory snapshot, `017-generative-techno.zss` |
+| [`bootstrap.sh`](bootstrap.sh) | One-command install for a fresh Pi |
+| [`install.sh`](install.sh) | The installer `bootstrap.sh` calls; runs standalone too |
 
 ## What you need
 
-- **Raspberry Pi 4** running ZynthianOS `Oram-2601-1` (section 2 installs it)
+- **Raspberry Pi 4** running ZynthianOS `Oram-2601-1` (section 1 installs it)
 - **Native Instruments Maschine MK2**, over USB
 - An audio interface Zynthian supports, and a display for Zynthian's own UI —
   snapshots are loaded there, so it is not optional
@@ -88,7 +89,7 @@ bash tools/check-prereqs.sh     # what is missing, if anything
 ./install.sh --dry-run          # what the installer would do, changing nothing
 ```
 
-Read [section 3](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/03-install-driver.html)
+Read [section 4](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html)
 before running the installer for real. It documents the failures that are silent —
 a driver that loads as *Found* but never *Loaded*, a daemon restarted in the wrong
 order, a missing config flag that destroys the pad LEDs on first touch. The guide
@@ -109,13 +110,13 @@ Verified on **one rig**: ZynthianOS `Oram-2601-1`, `zynthian-ui` on branch
 
 The factory snapshot is **confirmed by ear** on that rig: its driver state was
 read back out of the file, and its patterns were checked at the panel against
-[section 6's checklist](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/06-testing.html).
+[section 4's verification](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html).
 
 One honest limit, also stated in the guide where it matters:
 
-- **Sections 2-5 were written from a running instrument, not walked from a fresh
-  flash** — there was no spare SD card. Where a clean install could differ, the
-  guide gives a check rather than a promise.
+- **The installation sections were written from a running instrument, not walked
+  from a fresh flash** — there was no spare SD card. Where a clean install could
+  differ, the guide gives a check rather than a promise.
 
 ## Credits
 

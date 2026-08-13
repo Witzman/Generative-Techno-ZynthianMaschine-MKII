@@ -9,7 +9,7 @@ patterns, the mixer levels, and the driver's own state — including every voice
 Turing register, which is why a frozen line comes back frozen and playing the
 same notes.
 
-Install it with [section 5](../guide/05-import-snapshot.md):
+Install it with [section 4](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html):
 
 ```bash
 scp snapshot/017-generative-techno.zss \
@@ -61,7 +61,7 @@ Two independent passes, because neither alone is sufficient.
 E, all eight channels `gen`-owned, the four voice states, the mixer levels.
 
 **The patterns were confirmed by ear at the panel**, against
-[section 6's checklist](../guide/06-testing.md). This pass is not optional and
+[section 4's verification](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html). This pass is not optional and
 cannot be automated: patterns, tempo, swing and play chance live inside
 `zynseq_riff_b64`, a 2,544-byte base64 RIFF blob, and nothing in this repository
 decodes it. A snapshot that loads without error is not a snapshot that plays the
@@ -73,7 +73,7 @@ surface.
 
 ## Rebuilding it
 
-[Appendix A1](../guide/a1-how-017-was-built.md) documents how the snapshot was
+[section 5](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/05-internals.html) documents how the snapshot was
 made: the chain table, the insert order as measured on the wire, the dry/wet
 values, the gain staging, and `tools/build-techno-snapshot.py`, which clones one
 channel's insert pair onto the other seven so sixteen instances are not placed by

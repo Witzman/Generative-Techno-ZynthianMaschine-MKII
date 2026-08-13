@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generative-Techno ZynthianMaschine MKII - installer.
-# Runs exactly what guide/03-install-driver.md documents, in the same order.
+# Runs exactly what section 4 of the guide documents, in the same order.
 # The guide is authoritative; this is a wrapper. --dry-run prints and changes
 # nothing.
 set -eu
