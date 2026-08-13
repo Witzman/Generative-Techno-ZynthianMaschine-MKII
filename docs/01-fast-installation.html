@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Fast installation — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17171b', primaryTextColor: '#f0f0f4',
+  primaryBorderColor: '#b4b4bc', lineColor: '#b4b4bc',
+  secondaryColor: '#1f1f24', tertiaryColor: '#131316',
+  actorBkg: '#17171b', actorTextColor: '#f0f0f4',
+  actorBorder: '#b4b4bc', actorLineColor: '#b4b4bc',
+  activationBkgColor: '#26262c', activationBorderColor: '#b4b4bc',
+  signalColor: '#b4b4bc', signalTextColor: '#17171b',
+  labelBoxBkgColor: '#17171b', labelBoxBorderColor: '#b4b4bc', labelTextColor: '#f0f0f4',
+  noteBkgColor: '#1f1f24', noteTextColor: '#f0f0f4', noteBorderColor: '#b4b4bc',
+  titleColor: '#f0f0f4',
+  clusterBkg: '#1f1f24', clusterBorder: '#b4b4bc', clusterTextColor: '#f0f0f4',
+  fillType0: '#17171b', fillType1: '#1f1f24', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Generative-Techno ZynthianMaschine MKII</a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="00-start.html">Start here</a></li>
+<li><a href="01-fast-installation.html" aria-current="page"><strong>1 · Fast installation</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html">6 · Testing</a></li>
+<li><a href="07-playing.html">7 · Playing</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="1--fast-installation">1 · Fast installation</h1>
+<p><strong>Recommended.</strong> Six actions. About forty minutes, most of it unattended.</p>
+<p>At the end the instrument is running the factory snapshot: eight channels alive, the Maschine's pads lit in channel colours, both displays showing their tab rows, and a pattern playing the moment you press Play.</p>
+<p>Every step here is done by hand and explained in <a href="04-manual-installation.html">4 · Manual installation</a>. Come back to that page if something goes wrong, or if you would rather not run a script you have not read.</p>
+<hr>
+<h2 id="1--flash-zynthianos">1 — Flash ZynthianOS</h2>
+<p>Download the image and its checksum, verify it, then write it to the card with Raspberry Pi Imager. A truncated download produces a Pi that boots most of the way and then behaves inexplicably.</p>
+<pre><code class="language-bash">curl -O https://os.zynthian.org/2026-01-27-zynthianos-oram-2601-stable.img.xz
+curl -O https://os.zynthian.org/2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
+md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
+# → 2026-01-27-zynthianos-oram-2601-stable.img.xz: OK</code></pre>
+<p>Use this exact build. Newer <code>vangelis</code> images are a different, still-beta release train and nothing here has been tested on them.</p>
+<hr>
+<h2 id="2--boot-the-pi">2 — Boot the Pi</h2>
+<p>Card in, display attached, network cable in, power on. ZynthianOS resizes its filesystem and starts its own UI. Read the Pi's IP address off the admin screen.</p>
+<hr>
+<h2 id="3--log-in-over-ssh">3 — Log in over SSH</h2>
+<pre><code class="language-bash">ssh root@192.168.2.123      # substitute your own address</code></pre>
+<hr>
+<h2 id="4--run-one-command">4 — Run one command</h2>
+<pre><code class="language-bash">curl -sSL https://raw.githubusercontent.com/Witzman/Generative-Techno-ZynthianMaschine-MKII/main/bootstrap.sh | bash</code></pre>
+<p><strong>This takes about ten minutes and looks like it has hung.</strong> It compiles the HID daemon on the Pi. Do not interrupt it. When it finishes it prints the two remaining actions, which are the two below.</p>
+<hr>
+<h2 id="5--load-the-snapshot">5 — Load the snapshot</h2>
+<p>On the Zynthian <strong>touchscreen</strong>: open Snapshots, go <strong>into</strong> bank <code>000</code>, and tap <code>017-generative-techno</code>. Loading takes about fifteen seconds.</p>
+<blockquote><p><strong>Never save from webconf's Snapshots page.</strong> Its <strong>Name:</strong> field plus the checkmark <strong>renames the selected bank</strong> — it does not save a snapshot, and it has destroyed bank <code>000</code> on this rig once already. Loading from webconf is safe; saving from it is not.</p></blockquote>
+<hr>
+<h2 id="6--press-play">6 — Press Play</h2>
+<p>You should see this within fifteen seconds of the snapshot loading:</p>
+<table><thead><tr><th>Where</th><th>What</th></tr></thead><tbody><tr><td>Touchscreen mixer</td><td>eight strips plus main</td></tr><tr><td>MK2 left display</td><td>tab row <code>A KICK</code>, <code>B SNAR</code>, <code>C CLAP</code>, <code>D CHAT</code></td></tr><tr><td>MK2 right display</td><td>tab row <code>E OHAT</code>, <code>F BASS</code>, <code>G LEAD</code>, <code>H PADS</code></td></tr><tr><td>MK2 Group buttons</td><td>lit in channel colours</td></tr><tr><td>MK2 mode buttons</td><td>exactly one lit — <strong>CONTROL</strong></td></tr></tbody></table>
+<hr>
+<h2 id="nothing-happened">Nothing happened?</h2>
+<table><thead><tr><th>What you see</th><th>What it means</th><th>What to do</th></tr></thead><tbody><tr><td>Pads dark, displays blank</td><td>The daemon is not running</td><td><code>systemctl status maschine-mk2</code>, then restart <strong>the daemon first and the UI second</strong> — the order matters</td></tr><tr><td>Pads lit, but nothing responds</td><td>The driver never bound to the daemon's port</td><td>Re-run the installer; it re-applies the <code>zynautoconnect</code> patch</td></tr><tr><td>A tab is <strong>dashed</strong></td><td>That channel is silent on purpose — muted, or its generator is set to never fire</td><td>Not a fault. The dashed tab is the instrument's way of explaining silence</td></tr></tbody></table>
+<p>Anything else: work through <a href="04-manual-installation.html">4 · Manual installation</a>, which gives each step's own check.</p>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

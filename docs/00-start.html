@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generative-Techno ZynthianMaschine MKII — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17171b', primaryTextColor: '#f0f0f4',
+  primaryBorderColor: '#b4b4bc', lineColor: '#b4b4bc',
+  secondaryColor: '#1f1f24', tertiaryColor: '#131316',
+  actorBkg: '#17171b', actorTextColor: '#f0f0f4',
+  actorBorder: '#b4b4bc', actorLineColor: '#b4b4bc',
+  activationBkgColor: '#26262c', activationBorderColor: '#b4b4bc',
+  signalColor: '#b4b4bc', signalTextColor: '#17171b',
+  labelBoxBkgColor: '#17171b', labelBoxBorderColor: '#b4b4bc', labelTextColor: '#f0f0f4',
+  noteBkgColor: '#1f1f24', noteTextColor: '#f0f0f4', noteBorderColor: '#b4b4bc',
+  titleColor: '#f0f0f4',
+  clusterBkg: '#1f1f24', clusterBorder: '#b4b4bc', clusterTextColor: '#f0f0f4',
+  fillType0: '#17171b', fillType1: '#1f1f24', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html">Generative-Techno ZynthianMaschine MKII</a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="00-start.html" aria-current="page"><strong>Start here</strong></a></li>
+<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Build (old)</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="01-what-it-is.html">1 · What It Is</a></li>
+<li><a href="02-install-zynthianos.html">2 · Install ZynthianOS</a></li>
+<li><a href="03-install-driver.html">3 · Driver & Daemon</a></li>
+<li><a href="04-prepare-zynthian.html">4 · Prepare Zynthian</a></li>
+<li><a href="05-import-snapshot.html">5 · Import Snapshot</a></li>
+<li><a href="06-testing.html">6 · Testing</a></li>
+<li><a href="07-playing.html">7 · Playing</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Appendices</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="a1-how-017-was-built.html">How 017 Was Built</a></li>
+<li><a href="a2-touchscreen-patch.html">Touchscreen Patch</a></li>
+</ul></div>
+</nav>
+<main>
+<article>
+<h1 id="generative-techno-zynthianmaschine-mkii">Generative-Techno ZynthianMaschine MKII</h1>
+<p>An eight-channel generative groovebox on Zynthian, played entirely from a Native Instruments Maschine MK2 — pads, encoders, both displays, LEDs. Five euclidean drum channels and three Turing-machine voices, all eight always alive; nothing is created or torn down while playing.</p>
+<p><strong>The generator owns the pattern.</strong> You do not draw a beat. You set hits, rotation and randomness, and the driver writes real notes into Zynthian's own sequencer — so patterns persist in snapshots and the touchscreen pattern editor mirrors exactly what the pads show.</p>
+<h2 id="where-to-go">Where to go</h2>
+<table><thead><tr><th>You are</th><th>Start at</th></tr></thead><tbody><tr><td>Here to play it — you have the hardware and want it running</td><td><a href="01-fast-installation.html">1 · Fast installation</a></td></tr><tr><td>Wondering what it actually does</td><td><a href="02-features.html">2 · Features</a></td></tr><tr><td>Installing by hand, or debugging an install that went wrong</td><td><a href="04-manual-installation.html">4 · Manual installation</a></td></tr><tr><td>Curious how it works inside</td><td><a href="05-internals.html">5 · Internals</a></td></tr></tbody></table>
+<h2 id="what-you-need">What you need</h2>
+<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>Computer</td><td>Raspberry Pi 4 (this is what the rig was built and measured on)</td></tr><tr><td>Surface</td><td>Native Instruments Maschine MK2, over USB</td></tr><tr><td>Audio</td><td>Any interface Zynthian supports. Every figure in this project was measured on the Pi's built-in headphone output at 48 kHz</td></tr><tr><td>Storage</td><td>SD card, 16 GB or more — the ZynthianOS image is about 7.5 GB compressed</td></tr><tr><td>Display</td><td>A screen for Zynthian's own UI. Snapshots are saved and loaded there, so it is not optional</td></tr><tr><td>Network</td><td>The Pi must reach the internet during installation</td></tr></tbody></table>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
