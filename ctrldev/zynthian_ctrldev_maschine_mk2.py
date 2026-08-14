@@ -1908,12 +1908,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if down:
             self._down_at["mod"] = (time.monotonic(), False)
             self.mod_held = True
+            self._render_mod()
             self._render_display()
             return
         went_down, _ = self._down_at.pop("mod", (None, False))
         self.mod_held = False
         if went_down is not None and (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
             self.mod_latched = not self.mod_latched
+        self._render_mod()
         self._render_display()
 
     def _act_play(self):
@@ -3631,6 +3633,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.leds.changed("solo", solo_state):
             self._send_osc(lib.button_osc("solo", solo_state[0], solo_state[1]))
 
+    def _render_mod(self):
+        """SWING lights while MOD is active, held or latched.
+
+        Same precedent as SOLO above: a latched modifier that is not lit is a
+        modifier nobody can find. MOD makes every pad inert and turns all
+        eight encoders into depth controls, and mod_latched survives the
+        finger leaving the button - so unlit it is an invisible mode that
+        looks exactly like a broken surface.
+
+        Diffed through self.leds like every other LED write: the device has
+        been flooded off the USB bus once."""
+
+        state = (0xFFFFFF, 1.0 if self.mod_down else 0.0)
+        if self.leds.changed("mod", state):
+            self._send_osc(lib.button_osc("swing", state[0], state[1]))
+
     # --- screens -------------------------------------------------------
     #
     # The two screens show what the LEDs cannot: which sample each group
@@ -3827,10 +3845,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             label, self.owner[self.group], self.rec_down,
             self._play_state(self.group) != zynseq_lib.SEQ_STOPPED)
         label = tlib.type_label(label, self.kind_override[self.group])
+        # MOD repurposes every encoder on whatever page is showing, so the
+        # page indicator has to say it is on.
+        mod = self.mod_down
+        label = tlib.mod_label(label, mod)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.
-            state = (self._tabs(screen), self._columns(screen), label)
+            #
+            # So does mod: without it both _render_display() calls in
+            # _act_mod() were literal no-ops, because nothing else in the
+            # tuple moves when MOD goes down, and a latched MOD made the pads
+            # inert and the encoders mean something else with no indication.
+            state = (self._tabs(screen), self._columns(screen), label, mod)
             if not self.leds.changed(f"disp{screen}", state):
                 continue
             for packet in lib.screen_packets(screen, state[0], state[1], state[2]):
@@ -3840,6 +3867,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_groups()
         self._render_transport()
         self._render_mutes()
+        self._render_mod()
         self._render_pads()
 
     def _on_progress(self, *args, **kwargs):
