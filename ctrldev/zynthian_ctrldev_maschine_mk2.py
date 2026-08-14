@@ -545,6 +545,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return (0.0, 100.0)
         return None
 
+    def _mod_column_span(self, channel, verb):
+        """This column's dashed modulation span as bar fractions (lo, hi), or
+        None when nothing is bound to this (channel, verb) - the caller
+        passes None straight to mark_modulated(), which leaves the column
+        alone."""
+        if verb is None:
+            return None
+        entry = self.mod.get(self._mod_key(channel, verb))
+        if entry is None:
+            return None
+        lo_hi = self._mod_range(channel, verb)
+        if lo_hi is None:
+            return None
+        return tlib.mod_span(entry["base"], entry["depth"], lo_hi[0], lo_hi[1])
+
     def _mod_zctrl(self, channel, verb):
         """The zynthian_controller behind a generated verb, or None.
 
@@ -3473,8 +3488,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         techno_lib.columns() decides names, values, greyed columns and the
         pending brackets in one tested place; this only translates its dicts
-        into the (name, value, bar kind, fraction) tuples screen_packets()
-        draws, and converts a segmented bar's (index, count) into a fraction."""
+        into the (name, value, bar kind, fraction, mod span) tuples
+        screen_packets() draws, converts a segmented bar's (index, count)
+        into a fraction, and stamps a modulated column via mark_modulated()
+        after the fact - columns() itself never learns what a modulator is."""
 
         desc = self._page()
         shape = desc["shape"]
@@ -3494,16 +3511,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         meter_page = shape == tlib.SHAPE_SPREAD and desc["verb"] == "level"
         out = []
         for offset, col in enumerate(cols[screen * 4:screen * 4 + 4]):
+            col_idx = screen * 4 + offset
+            # Same verb/channel resolution as _encoder_column, so MOD marks
+            # exactly the column the encoder would have bound.
+            if shape == tlib.SHAPE_SPREAD:
+                verb, channel = desc["verb"], col_idx
+            else:
+                verb, channel = desc["verbs"][col_idx], self.group
+            col = tlib.mark_modulated(col, self._mod_column_span(channel, verb))
             bar = BAR_KINDS[col["bar"]]
             frac = col["frac"]
             if bar == "s":
                 index, count = frac
                 frac = (index / (count - 1)) if count > 1 else 0.0
             if meter_page:
-                level = self._meter_frac(screen * 4 + offset)
+                level = self._meter_frac(col_idx)
                 if level is not None:
                     frac = level
-            out.append((col["name"], col["value"], bar, round(float(frac), 3)))
+            mod = col["mod"]
+            if mod is not None:
+                # Quantised against the bar's own pixel width BEFORE the
+                # change comparison below (self.leds.changed in
+                # _render_display) - see quantise_frac's docstring. Without
+                # this a steady modulator's span reports a new value every
+                # frame and floods the device at 5 Hz.
+                frac = tlib.quantise_frac(frac, self.METER_PIXELS)
+                mod = (tlib.quantise_frac(mod[0], self.METER_PIXELS),
+                       tlib.quantise_frac(mod[1], self.METER_PIXELS))
+            out.append((col["name"], col["value"], bar, round(float(frac), 3), mod))
         return tuple(out)
 
     def _generated_view(self, desc):

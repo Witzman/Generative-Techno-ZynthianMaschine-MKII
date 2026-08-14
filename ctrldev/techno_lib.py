@@ -588,11 +588,17 @@ class techno_lib:
         return f"{int(round(v)):04d}"
 
     @staticmethod
-    def _col(name, value, bar=None, frac=0.0, grey=False, pending=False):
+    def _col(name, value, bar=None, frac=0.0, grey=False, pending=False,
+             mod=None):
         if pending:
             value = f">{value}<"
+        if mod is not None:
+            # The tilde says "this value moves on its own". Truncate FIRST so
+            # the marker is never the character that falls off the end - a
+            # silently dropped marker is worse than no marker.
+            name = name[:techno_lib.NAME_CHARS - 1] + "~"
         return {"name": name, "value": value, "bar": bar, "frac": frac,
-                "grey": grey, "pending": pending}
+                "grey": grey, "pending": pending, "mod": mod}
 
     @staticmethod
     def _dead(name):
@@ -742,6 +748,23 @@ class techno_lib:
             return (0.0, 0.0)
         return ((a - float(lo)) / width, (b - float(lo)) / width)
 
+    @staticmethod
+    def mark_modulated(col, span):
+        """Stamp an already-built column as modulated.
+
+        Applied after columns() rather than threaded through it: columns()
+        fans out to three builders, and none of them should have to know what
+        a modulator is. Returns the column unchanged when span is None, so the
+        caller can apply it blindly."""
+        if span is None or col.get("grey"):
+            # A dead column stays dead - law L4 outranks a modulator that
+            # should not have been bindable there in the first place.
+            return col
+        out = dict(col)
+        out["name"] = col["name"][:techno_lib.NAME_CHARS - 1] + "~"
+        out["mod"] = span
+        return out
+
     # Generated pages address a plugin port directly, so their verb names carry
     # a prefix the driver's _verb() dispatches on:
     #   lv2:<symbol>          - the selected channel's synth processor
@@ -750,6 +773,8 @@ class techno_lib:
     VERB_FX = "fx:"
 
     PORT_LABEL_CHARS = 8
+
+    NAME_CHARS = 8           # what fits in a column's 5x8 name row
 
     # Note duration is gate/100, measured in STEPS. The old cap of 100 meant a
     # note could never outlast one step, so at the slowest division no note in
