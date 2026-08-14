@@ -74,6 +74,7 @@ md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
 <hr>
 <h2 id="3--find-it-on-the-network">3 — Find it on the network</h2>
 <p>The install runs over SSH, so the Pi has to be reachable first. A cable straight from the Pi to your computer is enough; so is a switch.</p>
+<p><strong>Boot the first time with a cable, or with a display.</strong> A fresh card holds no WiFi credentials and cannot be given any over WiFi — the admin menu needs a screen, webconf needs a network. Set the WiFi up once by either route, and the Pi is headless and cordless from then on.</p>
 <table><thead><tr><th>You have</th><th>How to reach it</th></tr></thead><tbody><tr><td>A display</td><td>The UI comes up on HDMI. <strong>Admin → Network Info</strong> shows the address</td></tr><tr><td>No display</td><td>Reach it by name: <code>zynthian.local</code>, or <code>zynthian.lan</code>. <code>http://zynthian.local</code> in a browser is webconf; <code>ssh root@zynthian.local</code> needs no address at all</td></tr></tbody></table>
 <p>If neither name resolves, your machine is not doing mDNS — WSL2 never does. Take the Pi's address off your router; every URL and command here accepts it in place of the name.</p>
 <table><thead><tr><th>What</th><th>Login</th></tr></thead><tbody><tr><td>webconf, in a browser</td><td>password <code>opensynth</code></td></tr><tr><td>SSH</td><td>user <code>root</code>, password <code>opensynth</code> — older images use <code>raspberry</code></td></tr></tbody></table>

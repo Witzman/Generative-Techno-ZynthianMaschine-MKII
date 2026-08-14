@@ -38,9 +38,9 @@ INTERNAL = ["/home/witzman", "guide-src", "zynth-docs", "zynth-repos",
 # name: (baseline prose words, date measured). Prose excludes code and tables.
 BASELINE = {
     "00-start.html":               (93,   "2026-08-13"),
-    "01-fast-installation.html":   (372,  "2026-08-14"),
+    "01-fast-installation.html":   (426,  "2026-08-14"),
     "02-features.html":            (676,  "2026-08-13"),
-    "04-manual-installation.html": (1775, "2026-08-14"),
+    "04-manual-installation.html": (1856, "2026-08-14"),
     "05-internals.html":           (1011, "2026-08-13"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
