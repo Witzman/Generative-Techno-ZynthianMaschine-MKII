@@ -62,6 +62,12 @@
 <pre><code class="language-bash">git clone https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
 cd Generative-Techno-ZynthianMaschine-MKII</code></pre>
 <hr>
+<h2 id="reaching-the-pi">Reaching the Pi</h2>
+<p>Everything below is typed on the Pi over SSH, so start by getting there. The network side is deliberately simple: an ethernet cable straight from the Pi to your computer works, and so does a switch. WiFi and a WiFi hotspot are in the Pi's own admin menu if there is no cable to be had — the hotspot takes about half a minute to come up and calls itself <code>zynthian</code>.</p>
+<table><thead><tr><th>Route</th><th>How</th></tr></thead><tbody><tr><td>Display attached</td><td>The UI comes up on HDMI. <strong>Admin → Network Info</strong> shows the address. It also appears on the error screen</td></tr><tr><td>No display</td><td><code>ssh root@zynthian.local</code>, or <code>http://zynthian.local</code> for webconf. <code>zynthian.lan</code> is the same machine under a second name</td></tr><tr><td>Neither name resolves</td><td>Your side is not doing mDNS. Some systems need it enabled; WSL2 never resolves <code>.local</code>. Take the address from your router and use it in place of the name</td></tr></tbody></table>
+<table><thead><tr><th>What</th><th>Login</th></tr></thead><tbody><tr><td>webconf</td><td>password <code>opensynth</code></td></tr><tr><td>SSH</td><td>user <code>root</code>, password <code>opensynth</code>. Older images use <code>raspberry</code></td></tr></tbody></table>
+<p>These are factory defaults, identical on every Zynthian. Change them in webconf before the instrument sits on a network you do not control.</p>
+<hr>
 <h2 id="before-you-start">Before you start</h2>
 <p>Confirm the machine is what the rest of this page assumes.</p>
 <table><thead><tr><th>Check</th><th>Command</th><th>Expected</th></tr></thead><tbody><tr><td>OS build</td><td><code>head -1 /zynthian/build_info.txt</code></td><td>contains <code>Oram-2601-1</code></td></tr><tr><td>UI branch</td><td><code>git -C /zynthian/zynthian-ui branch --show-current</code></td><td><code>oram-2601.1</code></td></tr><tr><td>webconf</td><td>open <code>http://&lt;pi&gt;</code></td><td>the configuration page loads</td></tr></tbody></table>
@@ -155,7 +161,8 @@ systemctl restart zynthian</code></pre>
 <hr>
 <h2 id="notes">Notes</h2>
 <h3 id="you-do-not-need-a-touchscreen">You do not need a touchscreen</h3>
-<p>The UI is ordinary HDMI: a monitor or TV with a USB mouse and keyboard drives it, and webconf's Snapshots page loads a snapshot from a browser with no screen attached at all. A touchscreen is what the instrument was built around and is far nicer to play — but <em>saving</em> a snapshot is the one thing that needs the screen.</p>
+<p>The UI is ordinary HDMI: a monitor or TV with a USB mouse and keyboard drives it, and webconf's Snapshots page loads a snapshot from a browser with no screen attached at all. A touchscreen is what the instrument was built around and is far nicer to play — but the rig runs headless, and only <em>saving</em> a snapshot needs the UI itself.</p>
+<p>Which does not have to be a physical screen. Zynthian ships a VNC server — webconf, <strong>INTERFACE → UI Options → Enable VNC Server</strong> — and the whole UI then runs in a browser at <code>http://zynthian.local:6080/vnc.html</code>, with the engines' own desktop on <code>:6081</code>. <strong>Confirmed working on this rig.</strong> That is the headless answer for anything the UI owns, snapshot saving included: a Pi with no display, no keyboard and no mouse is still fully driveable from the computer you installed from.</p>
 <h3 id="why-there-is-no-loaded-line">Why there is no "Loaded" line</h3>
 <p>Zynthian logs <code>Found ctrldev driver …</code> and <code>Loaded ctrldev driver …</code> at <strong>INFO</strong>, while <code>ZYNTHIAN_LOG_LEVEL</code> defaults to <code>WARNING</code> (30). On a stock rig neither line is ever written, whether the driver loaded or not, so <strong>their absence proves nothing</strong> — the JACK route in step 10 is the check that works as shipped.</p>
 <p>To see them, uncomment the line Zynthian ships for it in <code>/zynthian/zynthian-ui/zynthian.sh</code>, set it to 20, and restart the UI:</p>

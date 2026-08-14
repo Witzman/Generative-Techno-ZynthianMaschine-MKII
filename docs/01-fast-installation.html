@@ -57,7 +57,7 @@
 <main>
 <article>
 <h1 id="1--fast-installation">1 · Fast installation</h1>
-<p><strong>Recommended.</strong> Five actions. About forty minutes, most of it unattended.</p>
+<p><strong>Recommended.</strong> Six actions. About forty minutes, most of it unattended.</p>
 <p>At the end the instrument is running the factory snapshot: eight channels alive, the Maschine's pads lit in channel colours, both displays showing their tab rows, and a pattern playing the moment you press Play.</p>
 <p>Every step here is done by hand and explained in <a href="04-manual-installation.html">4 · Manual installation</a>. Come back to that page if something goes wrong, or if you would rather not run a script you have not read.</p>
 <hr>
@@ -70,16 +70,23 @@ md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
 <p>Use this exact build. Newer <code>vangelis</code> images are a different, still-beta release train and nothing here has been tested on them.</p>
 <hr>
 <h2 id="2--boot-the-pi">2 — Boot the Pi</h2>
-<p>Card in, display attached, network cable in, power on. ZynthianOS resizes its filesystem and starts its own UI. Read the Pi's IP address off the admin screen.</p>
+<p>Card in, network cable in, power on. A display is optional — see below. ZynthianOS resizes its filesystem and starts its own UI.</p>
 <hr>
-<h2 id="3--log-in-over-ssh">3 — Log in over SSH</h2>
+<h2 id="3--find-it-on-the-network">3 — Find it on the network</h2>
+<p>The install runs over SSH, so the Pi has to be reachable first. A cable straight from the Pi to your computer is enough; so is a switch.</p>
+<table><thead><tr><th>You have</th><th>How to reach it</th></tr></thead><tbody><tr><td>A display</td><td>The UI comes up on HDMI. <strong>Admin → Network Info</strong> shows the address</td></tr><tr><td>No display</td><td>Reach it by name: <code>zynthian.local</code>, or <code>zynthian.lan</code>. <code>http://zynthian.local</code> in a browser is webconf; <code>ssh root@zynthian.local</code> needs no address at all</td></tr></tbody></table>
+<p>If neither name resolves, your machine is not doing mDNS — WSL2 never does. Take the Pi's address off your router; every URL and command here accepts it in place of the name.</p>
+<table><thead><tr><th>What</th><th>Login</th></tr></thead><tbody><tr><td>webconf, in a browser</td><td>password <code>opensynth</code></td></tr><tr><td>SSH</td><td>user <code>root</code>, password <code>opensynth</code> — older images use <code>raspberry</code></td></tr></tbody></table>
+<p>Factory defaults, the same on every Zynthian. Change them in webconf before the instrument sits on a network you do not control.</p>
+<hr>
+<h2 id="4--log-in-over-ssh">4 — Log in over SSH</h2>
 <pre><code class="language-bash">ssh root@192.168.2.123      # substitute your own address</code></pre>
 <hr>
-<h2 id="4--run-one-command">4 — Run one command</h2>
+<h2 id="5--run-one-command">5 — Run one command</h2>
 <pre><code class="language-bash">curl -sSL https://raw.githubusercontent.com/Witzman/Generative-Techno-ZynthianMaschine-MKII/main/bootstrap.sh | bash</code></pre>
 <p><strong>This takes about ten minutes and looks like it has hung.</strong> It compiles the HID daemon on the Pi. Do not interrupt it. It ends by loading the factory snapshot and restarting Zynthian's UI, so the instrument is playing-ready when it returns.</p>
 <hr>
-<h2 id="5--press-play">5 — Press Play</h2>
+<h2 id="6--press-play">6 — Press Play</h2>
 <p><strong>The snapshot is already loaded.</strong> The installer places it as Zynthian's default snapshot and restarts the UI, so the instrument comes up by itself on a fresh Pi. Nothing to tap.</p>
 <p>You should see this:</p>
 <table><thead><tr><th>Where</th><th>What</th></tr></thead><tbody><tr><td>Touchscreen mixer</td><td>eight strips plus main</td></tr><tr><td>MK2 left display</td><td>tab row <code>A KICK</code>, <code>B SNAR</code>, <code>C CLAP</code>, <code>D CHAT</code></td></tr><tr><td>MK2 right display</td><td>tab row <code>E OHAT</code>, <code>F BASS</code>, <code>G LEAD</code>, <code>H PADS</code></td></tr><tr><td>MK2 Group buttons</td><td>lit in channel colours</td></tr><tr><td>MK2 mode buttons</td><td>exactly one lit — <strong>CONTROL</strong></td></tr></tbody></table>
