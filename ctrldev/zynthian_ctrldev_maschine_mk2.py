@@ -1543,7 +1543,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         A modulated parameter's live value is wherever the LFO happened to be
         when the snapshot was taken. The base is what the player set, and it
         is the only value worth restoring - the modulator is saved separately
-        and will start sweeping from it again."""
+        and will start sweeping from it again.
+
+        INERT TODAY, kept on purpose. Its only callers are gate and velo, and
+        neither is modulatable any more: both are written by regenerating the
+        whole pattern, so an LFO on either rewrote the pattern every 200 ms
+        and erased a player-owned take. If either verb ever becomes
+        modulatable again this is the guard that stops a saved snapshot
+        recording a sweep position instead of the value the player dialled
+        in - and it costs one dict lookup per save."""
 
         entry = self.mod.get(self._mod_key(channel, verb))
         return live if entry is None else entry["base"]
@@ -1613,10 +1621,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "ring": list(self.state[i]["ring"]),
                     "length": self.state[i]["length"],
                     "random": self.state[i]["random"],
-                    # SP10: gate and velo are modulatable timbre verbs. Their
-                    # live value is wherever an LFO swept them to at save
-                    # time, not what the player dialled in - _saved_param
-                    # substitutes the modulator's own base when one is bound.
+                    # SP10: gate and velo are NOT modulatable - both are
+                    # written by regenerating the pattern, so an LFO on
+                    # either rewrote the whole pattern every 200 ms.
+                    # _saved_param is therefore inert here and simply returns
+                    # the live value; it stays as the guard that would keep a
+                    # snapshot honest if either verb ever became modulatable
+                    # again. See its docstring.
                     "gate": self._saved_param(i, "gate", self.state[i]["gate"]),
                     "octave": self.state[i]["octave"],
                     "range": self.state[i]["range"],

@@ -1256,8 +1256,28 @@ class TestModulatorMaths(unittest.TestCase):
 
     def test_timbre_verbs_are_allowed(self):
         for verb in ("level", "reverb", "delay", "cutoff", "reso",
-                     "env", "decay", "gate", "velo"):
+                     "env", "decay"):
             self.assertTrue(tl.mod_allowed(verb), verb)
+
+    def test_gate_and_velo_are_refused(self):
+        # They read as timbre and were allowed once. Both are written by
+        # regenerating the WHOLE pattern (_apply_generator/_write_pattern: a
+        # clear() plus an addNote loop), so an LFO on either fired a full
+        # pattern rewrite every 200 ms forever - and on a player-owned DRUM
+        # channel the generator's drum branch has no ownership check, so it
+        # destroyed the recorded take over and over with nobody touching the
+        # panel.
+        for verb in ("gate", "velo"):
+            self.assertFalse(tl.mod_allowed(verb), verb)
+
+    def test_no_allowed_verb_rewrites_a_pattern(self):
+        # The set's whole contract in one assertion: everything in MOD_TIMBRE
+        # lands on a mixer strip or a plugin port. If a verb is added here it
+        # must be checked against _apply_generator/_write_pattern first.
+        rewrites = {"hits", "rotate", "div", "length", "density", "chance",
+                    "gate", "velo", "octave", "range", "random", "root",
+                    "scale", "kit", "preset", "sample"}
+        self.assertEqual(tl.MOD_TIMBRE & rewrites, frozenset())
 
     def test_generated_plugin_ports_are_allowed(self):
         self.assertTrue(tl.mod_allowed("lv2:surge_xt_a_filter1_cutoff"))

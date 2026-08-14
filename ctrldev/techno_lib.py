@@ -655,17 +655,25 @@ class techno_lib:
     MOD_RATES = (16.0, 8.0, 6.0, 4.0, 3.0, 2.0,
                  1.0, 0.75, 0.5, 0.25, 0.125, 0.0625)
 
-    # Verbs an LFO may drive. Timbre only - the left column of law L2, where
-    # a change is allowed to land instantly. Everything else rewrites the
-    # pattern, and an LFO on a pattern rewrite thrashes zynseq under a lock.
+    # Verbs an LFO may drive. This set contains ONLY verbs that do not rewrite
+    # a pattern: each one lands on a mixer strip or a plugin port, where a
+    # change is allowed to arrive instantly and costs nothing but a
+    # set_value(). Everything else rewrites the pattern, and an LFO on a
+    # pattern rewrite thrashes zynseq under a lock.
     #
-    # HITS, ROTATE, DENSITY and CHANCE are absent DELIBERATELY. They are the
-    # bar-rate DRIFT targets, and drift does not ship until the SP2 ownership
-    # rule is settled: drift rewrites exactly the handback verbs, so an
-    # unspecified drift silently erases a recorded take.
+    # GATE and VELO were in this set and are OUT. They read as timbre - note
+    # length and note loudness - but on this instrument they are written by
+    # regenerating the whole pattern (_apply_generator/_write_pattern: a
+    # clear() plus an addNote loop). An LFO on VELO fired that rewrite every
+    # 200 ms forever, and on a player-owned DRUM channel the generator's drum
+    # branch has no ownership check, so it destroyed the recorded take over
+    # and over with nobody touching the panel.
+    #
+    # HITS, ROTATE, DENSITY and CHANCE are absent for the same structural
+    # reason plus one more: they are the bar-rate DRIFT targets, and drift
+    # does not ship until the SP2 ownership rule is settled.
     MOD_TIMBRE = frozenset({
-        "level", "reverb", "delay", "cutoff", "reso",
-        "env", "decay", "gate", "velo"})
+        "level", "reverb", "delay", "cutoff", "reso", "env", "decay"})
 
     # Depth is a signed percentage. 100 sweeps half the verb's range each way,
     # so a centred base at full depth reaches both end stops and no further.
