@@ -2227,10 +2227,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """The verb's current surface value, or None when it has no source.
 
         One accessor for both kinds of verb, so nothing downstream has to ask
-        which kind it is holding."""
+        which kind it is holding.
+
+        LEVEL is read LIVE from the mixer, for exactly the reason _verb() reads
+        it live: the touchscreen and a snapshot both move the fader behind the
+        driver's back, so self.state's copy is routinely stale. Capturing that
+        stale copy as a modulator's base made the first tick after a bind on
+        the MIXER LEVEL spread page yank the fader back to wherever the driver
+        last thought it was."""
         if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
             return self._mod_percent_get(channel, verb)
+        if verb == "level":
+            level = self._live_level(channel)
+            if level is not None:
+                return level
         return self.param_get(channel, verb)
+
+    def _live_level(self, channel):
+        """This channel's fader as the 0-100 the surface shows, straight from
+        the mixer, or None when it has no strip."""
+        chan = self._mixer_chan(channel)
+        if chan is None:
+            return None
+        return int(round(self.state_manager.zynmixer.get_level(chan) * 100))
 
     def _mod_base_set(self, channel, verb, value):
         if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
