@@ -558,6 +558,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         lo_hi = self._mod_range(channel, verb)
         if lo_hi is None:
             return None
+        # IMPORTANT: This narrows the span via mod_span(), but the live tick
+        # (_mod_write) is normalised against the raw lo_hi width, not this
+        # narrowed span. If either normalisation changes without the other,
+        # the tick will no longer land visually inside this envelope.
         return tlib.mod_span(entry["base"], entry["depth"], lo_hi[0], lo_hi[1])
 
     def _mod_tick_frac(self, channel, verb):
@@ -2130,9 +2134,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Not the same pointer as the big encoder's 'last-touched parameter'
         (SP10 step 2) - keep the two names apart or they will be conflated.
 
-        Rows 1-2 (pads 0-7 in step order) are the sixteen rates, slowest
-        first. Rows 3-4 are the four shapes, repeated across the row so any
-        pad in a column picks the same shape."""
+        Pads 0-11 (three rows) pick a rate from techno_lib.MOD_RATES (twelve
+        entries, slowest first). Pads 12-15 (the last row) pick a shape from
+        techno_lib.MOD_SHAPES (four entries), so any pad in a column picks the
+        same shape."""
         if self.mod_last is None:
             return
         entry = self.mod.get(self.mod_last)
@@ -2198,6 +2203,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # given an unchanged base/depth and would put the tick dead on
             # the span's midpoint forever, showing no motion at all.
             width = span[1] - span[0]
+            # IMPORTANT: live is normalised against the raw span width from
+            # _mod_range, NOT the narrowed span from mod_span(). If either
+            # normalisation changes without the other, the tick will no longer
+            # land visually inside the dashed span envelope it is drawn in.
             entry["live"] = (value - span[0]) / width if width else 0.0
 
     # Range and step size per verb: (lo, hi, units per step).
