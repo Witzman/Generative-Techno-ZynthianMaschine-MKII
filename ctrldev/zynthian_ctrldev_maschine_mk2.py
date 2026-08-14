@@ -1533,6 +1533,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             out["ring"] = list(out["ring"])
         return out
 
+    def _saved_param(self, channel, verb, live):
+        """What the snapshot should record for a parameter.
+
+        A modulated parameter's live value is wherever the LFO happened to be
+        when the snapshot was taken. The base is what the player set, and it
+        is the only value worth restoring - the modulator is saved separately
+        and will start sweeping from it again."""
+
+        entry = self.mod.get(self._mod_key(channel, verb))
+        return live if entry is None else entry["base"]
+
     def get_state(self):
         """What the snapshot must carry that nothing else owns.
 
@@ -1564,16 +1575,48 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # is rebuilt from the pattern rather than trusted.
             "owners": {str(i): self.owner[i]
                        for i in range(len(tlib.CHANNELS))},
+            # SP10: modulators. Their own key, and saved from the first
+            # version deliberately - adding it later leaves every existing
+            # snapshot missing it with no way to tell.
+            #
+            # PHASE IS SAVED. Spread pages give eight independent LFOs whose
+            # phase comes from bind time; without the phase they all come back
+            # in lockstep and a saved jam does not sound like the saved jam.
+            #
+            # BASE IS SAVED. It is the driver's own truth: the chain holds
+            # wherever the LFO happened to be at save time, which is not the
+            # value the player dialled in.
+            "mods": {
+                f"{'' if ch is None else ch}|{verb}": {
+                    "depth": e["depth"], "rate": e["rate"],
+                    "shape": e["shape"],
+                    # The phase saved is the phase RIGHT NOW, not the phase0
+                    # the modulator was bound with. The beat clock restarts at
+                    # zero on load, so storing the bind-time offset would
+                    # rewind every modulator to where it started instead of
+                    # resuming it - and eight scattered LFOs would come back
+                    # scattered by the wrong amounts.
+                    "phase0": tlib.mod_pos(
+                        e["phase0"], self._elapsed_beats(),
+                        tlib.MOD_RATES[e["rate"]]) % 1.0,
+                    "base": e["base"], "seed": e["seed"],
+                }
+                for (ch, verb), e in self.mod.items()
+            },
             "voices": {
                 str(i): {
                     "register": self.state[i]["register"],
                     "ring": list(self.state[i]["ring"]),
                     "length": self.state[i]["length"],
                     "random": self.state[i]["random"],
-                    "gate": self.state[i]["gate"],
+                    # SP10: gate and velo are modulatable timbre verbs. Their
+                    # live value is wherever an LFO swept them to at save
+                    # time, not what the player dialled in - _saved_param
+                    # substitutes the modulator's own base when one is bound.
+                    "gate": self._saved_param(i, "gate", self.state[i]["gate"]),
                     "octave": self.state[i]["octave"],
                     "range": self.state[i]["range"],
-                    "velo": self.state[i]["velo"],
+                    "velo": self._saved_param(i, "velo", self.state[i]["velo"]),
                     "density": self.state[i]["density"],
                 }
                 # SP4: keyed on how the channel BEHAVES, not on the table. A
@@ -1615,6 +1658,47 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             if channel in self.owner and who in ("gen", "player"):
                 self.owner[channel] = who
+
+        # SP10: modulators. Validated rather than trusted - the lesson of
+        # 2026-08-11, when CHANCE and SWING were assumed on load and a channel
+        # saved at chance 0 came back silent while the surface read 100. A
+        # verb that is no longer modulatable, an unknown shape, an
+        # out-of-range rate, a non-dict entry, a zero depth or an unparseable
+        # channel is dropped here, never held.
+        self.mod = {}
+        for key, entry in (state.get("mods") or {}).items():
+            chan_s, _, verb = str(key).partition("|")
+            if not verb or not tlib.mod_allowed(verb):
+                # A verb that is no longer modulatable is dropped, not held.
+                # Never hold a binding that cannot be resolved.
+                continue
+            try:
+                channel = None if chan_s == "" else int(chan_s)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(entry, dict):
+                continue
+            shape = entry.get("shape")
+            rate = entry.get("rate")
+            if shape not in tlib.MOD_SHAPES:
+                continue
+            if not isinstance(rate, int) or not 0 <= rate < len(tlib.MOD_RATES):
+                continue
+            depth = entry.get("depth", 0)
+            if not isinstance(depth, int) or depth == 0:
+                continue
+            self.mod[(channel, verb)] = {
+                "depth": max(-tlib.MOD_DEPTH_MAX,
+                             min(tlib.MOD_DEPTH_MAX, depth)),
+                "rate": rate,
+                "shape": shape,
+                "phase0": float(entry.get("phase0", 0.0)),
+                "base": entry.get("base", 0),
+                "seed": int(entry.get("seed", 0)),
+            }
+        # A pointer into a dict that was just rebuilt from scratch is
+        # meaningless - MOD+pad has nothing held down across a snapshot load.
+        self.mod_last = None
 
         for key, kind in (state.get("kinds") or {}).items():
             try:
