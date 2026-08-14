@@ -379,6 +379,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # freeze the instrument - midi_event holds self.lock for the whole
         # event and a load blocks on a socket for seconds.
         self.gen_cache = {}
+        # Page-1 synth symbols, keyed by engine code. What a plugin publishes
+        # depends on the plugin and nothing else, so this needs no
+        # invalidation - a different engine is a different key.
+        self.sym_cache = {}
         self.globals = dict(root=9, scale=0, bpm=132, master=80,
                             revsize=25, revtype=3, dlytime=1, dlyfbk=35,
                             pending=set())
@@ -524,11 +528,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             view["sample"] = (self._sample_name(channel) or "----")[:4]
         else:
             view["preset"] = (self._preset_name(channel) or "----")[:4]
-        # SP4: a channel can behave as a voice while its chain runs a sampler.
-        # VOICE_SYMBOLS is keyed by engine code and has no LinuxSampler entry,
-        # so _set_voice_ctrl already bails out - the columns must say so.
-        view["has_synth_ctrl"] = bool(
-            tlib.VOICE_SYMBOLS.get(tlib.CHANNELS[channel][4]))
+        # Per column, because the four page-1 symbols come from the plugin that
+        # is actually loaded: a sampler behaving as a voice (SP4) publishes
+        # none of them, and a synth swapped in from the touchscreen may publish
+        # only some. Whatever _set_voice_ctrl cannot reach draws dead.
+        symbols = self._voice_symbols(channel)
+        view["synth_ctrl"] = tuple(bool(sym) for sym in symbols) \
+            if symbols else (False,) * 4
         return view
 
     def globals_view(self):
@@ -927,6 +933,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 return "drum"
         return kind
 
+    def _gen_engines(self, mode):
+        """The engine codes a generated ring is built from.
+
+        Part of the cache key, because the ring describes a plugin: swap the
+        synth on a chain from the touchscreen and nothing in the driver's own
+        signal path notices, so a ring keyed on (mode, kind, channel) alone
+        keeps serving the old plugin's ports until a preset, kit or snapshot
+        load happens to clear it. Reading eng_code is two attribute lookups
+        and reaches no engine, so it is safe on the MIDI thread."""
+
+        if mode == "CONTROL":
+            return getattr(self._voice_processor(self.group), "eng_code", None)
+        if mode == "ALL":
+            return tuple(getattr(self.fx_handle(0, which), "eng_code", None)
+                         for which in ("reverb", "delay"))
+        return None
+
     def _gen_pages(self, mode, kind):
         """Extra pages built from whatever the chain actually publishes.
 
@@ -935,15 +958,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         hand-written home are excluded so no parameter appears twice."""
 
         channel = self.group if mode == "CONTROL" else -1
-        key = (mode, kind, channel)
+        key = (mode, kind, channel, self._gen_engines(mode))
         if key in self.gen_cache:
             return self.gen_cache[key]
 
         pages = ()
         if mode == "CONTROL" and kind == "voice":
             proc = self._voice_processor(self.group)
-            engine = tlib.CHANNELS[self.group][4]
-            exclude = set(tlib.VOICE_SYMBOLS.get(engine, ()))
+            # Whatever page 1 already reaches, resolved the same way page 1
+            # resolves it, so no port shows up twice on a swapped-in engine.
+            exclude = {sym for sym in (self._voice_symbols(self.group) or ())
+                       if sym}
             pages = tlib.generated_pages(self._ports(proc), exclude,
                                          tlib.SHAPE_CHANNEL, tlib.VERB_LV2,
                                          "EXTRA")
@@ -1139,23 +1164,48 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_display()
 
+    def _voice_symbols(self, channel):
+        """The four page-1 symbols (CUTOFF, RESO, ENV, DECAY) for whatever this
+        channel is actually running, or None when it runs nothing.
+
+        Resolved from the processor's own eng_code, not from CHANNELS[channel],
+        because the table records what the snapshot loaded: swap a chain's
+        synth on the touchscreen and the table still names the old plugin, so
+        the four knobs address symbols nothing publishes and page 1 goes dead
+        with no explanation. Gate G2's measured table still wins for the three
+        engines it covers; anything else is matched against the ports the
+        plugin publishes.
+
+        Cached by engine code - the ports of a plugin are a property of the
+        plugin - so the port scan costs nothing at render rate."""
+
+        proc = self._voice_processor(channel)
+        if proc is None:
+            return None
+        eng_code = getattr(proc, "eng_code", None)
+        if eng_code is None:
+            return tlib.voice_symbols(None, self._ports(proc))
+        if eng_code not in self.sym_cache:
+            self.sym_cache[eng_code] = tlib.voice_symbols(
+                eng_code, self._ports(proc))
+        return self.sym_cache[eng_code]
+
     def _set_voice_ctrl(self, channel, column, value):
         """0-127 on the surface onto whatever range the engine's control has.
 
-        The symbol comes from gate G2's measured table, never from a guess,
-        and a symbol the engine does not publish leaves the knob dead rather
+        A role the loaded plugin has no symbol for leaves the knob dead rather
         than silently moving something else - law L4."""
 
-        engine = tlib.CHANNELS[channel][4]
-        symbols = tlib.VOICE_SYMBOLS.get(engine)
-        if not symbols:
+        symbols = self._voice_symbols(channel)
+        if not symbols or symbols[column] is None:
             return
         proc = self._voice_processor(channel)
         if proc is None:
             return
         zctrl = proc.controllers_dict.get(symbols[column])
         if zctrl is None:
-            logging.debug(f"Maschine: {engine} has no '{symbols[column]}'")
+            logging.debug(f"Maschine: {getattr(proc, 'eng_code', '?')} has no "
+                          f"'{symbols[column]}'")
             return
         span = zctrl.value_max - zctrl.value_min
         zctrl.set_value(zctrl.value_min + span * (value / 127.0), True)

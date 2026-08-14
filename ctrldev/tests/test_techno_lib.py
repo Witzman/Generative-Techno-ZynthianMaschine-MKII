@@ -1127,6 +1127,86 @@ class TestDeadSynthColumns(unittest.TestCase):
         live = [c["name"].upper() for c in cols if not c["grey"]]
         self.assertIn("CUTOFF", live)
 
+    def test_columns_die_one_at_a_time(self):
+        # A swapped-in engine may publish a filter and no envelope amount.
+        st = self._voice_state()
+        st["synth_ctrl"] = (True, True, False, True)
+        cols = {c["name"].upper(): c for c in
+                tl.columns(self._control_page(), "voice", st)}
+        self.assertFalse(cols["CUTOFF"]["grey"])
+        self.assertFalse(cols["RESO"]["grey"])
+        self.assertFalse(cols["DECAY"]["grey"])
+        self.assertTrue(cols["ENV"]["grey"])
+
+    def test_per_column_truth_beats_the_old_flag(self):
+        st = self._voice_state(False)
+        st["synth_ctrl"] = (True, True, True, True)
+        cols = tl.columns(self._control_page(), "voice", st)
+        live = [c["name"].upper() for c in cols if not c["grey"]]
+        self.assertIn("CUTOFF", live)
+
+
+class TestVoiceSymbolResolution(unittest.TestCase):
+    """Page 1's four synth columns must follow the plugin that is loaded, not
+    the engine named in the CHANNELS table."""
+
+    # A synth the measured table has never seen.
+    UNKNOWN = [
+        ("lv2_freewheel", 0.0, 1.0),
+        ("lfo1_freq", 0.0, 20.0),
+        ("filter_cutoff", 20.0, 20000.0),
+        ("filter_resonance", 0.0, 1.0),
+        ("filter_env_amount", -1.0, 1.0),
+        ("amp_decay", 0.0, 5.0),
+    ]
+
+    def test_the_measured_table_wins_over_any_guess(self):
+        # Gate G2 measured these; a pattern match must never override them.
+        self.assertEqual(tl.voice_symbols("JV/JC303", self.UNKNOWN),
+                         ("_cutoff", "_resonance", "_envmod", "_decay"))
+
+    def test_an_unknown_engine_is_resolved_from_its_own_ports(self):
+        self.assertEqual(
+            tl.voice_symbols("JV/MutatedInstrument", self.UNKNOWN),
+            ("filter_cutoff", "filter_resonance", "filter_env_amount",
+             "amp_decay"))
+
+    def test_the_filter_column_never_lands_on_an_lfo(self):
+        # 'freq' alone is not a cutoff. Only the LFO here publishes one.
+        symbols = tl.discover_voice_symbols([("lfo1_freq", 0.0, 20.0),
+                                             ("lfo1_depth", 0.0, 1.0)])
+        self.assertEqual(symbols, (None, None, None, None))
+
+    def test_a_role_never_steals_a_symbol_an_earlier_role_took(self):
+        ports = [("cutoff", 0.0, 1.0), ("filterenv_decay", 0.0, 1.0)]
+        cut, reso, env, decay = tl.discover_voice_symbols(ports)
+        self.assertEqual(cut, "cutoff")
+        self.assertIsNone(reso)
+        self.assertEqual(env, "filterenv_decay")
+        self.assertIsNone(decay)
+
+    def test_host_ports_are_never_offered_to_a_role(self):
+        # PORT_DENY drops these before matching, as it does on generated pages.
+        symbols = tl.discover_voice_symbols([("lv2_freewheel", 0.0, 1.0),
+                                             ("enabled", 0.0, 1.0),
+                                             ("vcf_freq", 20.0, 20000.0)])
+        self.assertEqual(symbols[0], "vcf_freq")
+
+    def test_a_port_with_no_range_is_not_offered_to_a_role(self):
+        symbols = tl.discover_voice_symbols([("cutoff", None, None),
+                                             ("dcf_freq", 20.0, 20000.0)])
+        self.assertEqual(symbols[0], "dcf_freq")
+
+    def test_a_sampler_publishes_nothing_and_stays_dead(self):
+        # LinuxSampler's _ctrls is empty - the SP4 case, unchanged.
+        self.assertEqual(tl.voice_symbols("LS/LinuxSampler", []),
+                         (None, None, None, None))
+
+    def test_flags_follow_the_resolved_symbols(self):
+        symbols = tl.voice_symbols("JV/Unknown", [("cutoff", 0.0, 1.0)])
+        flags = tl.synth_ctrl_flags({"synth_ctrl": [bool(s) for s in symbols]})
+        self.assertEqual(flags, (True, False, False, False))
+
 
 if __name__ == "__main__":
     unittest.main()

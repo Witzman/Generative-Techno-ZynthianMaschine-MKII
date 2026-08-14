@@ -358,6 +358,80 @@ class techno_lib:
         "JV/padthv1": ("DCF1_CUTOFF", "DCF1_RESO", "DCF1_ENVELOPE", "DCA1_ATTACK"),
     }
 
+    # Role patterns for a plugin the table has never seen. Swapping a chain's
+    # synth from the touchscreen is a normal thing to do, and until this
+    # existed the four page-1 columns kept pointing at the symbols of the
+    # engine named in CHANNELS - so a channel moved off JC303 drew four numbers
+    # whose knobs moved nothing.
+    #
+    # One tuple per role, patterns tried in order; a pattern matches a symbol
+    # when every fragment of it appears in the symbol, lower-cased. Order is
+    # the whole guard against a false positive: the unambiguous name is tried
+    # first, so a plugin publishing both `cutoff` and `lfo_freq` cannot land
+    # the filter column on its LFO.
+    VOICE_ROLE_PATTERNS = (
+        (("cutoff",), ("filter", "freq"), ("vcf", "freq"), ("dcf", "freq"),
+         ("flt", "freq")),
+        (("resonance",), ("reso",), ("vcf", "res"), ("dcf", "res"),
+         ("filter", "res"), ("flt", "res")),
+        (("envmod",), ("filterenv",), ("env", "mod"), ("env", "amount"),
+         ("dcf", "env"), ("vcf", "env"), ("filter", "env")),
+        (("decay",), ("attack",)),
+    )
+
+    @staticmethod
+    def discover_voice_symbols(ports):
+        """Guess (CUTOFF, RESO, ENV, DECAY) from what a plugin publishes.
+
+        Strictly the fallback: the measured table wins wherever it has an
+        entry, because a pattern match is a guess and gate G2's numbers are
+        not. A role that matches nothing comes back None so its column can
+        draw dead - law L4, never a number the knob cannot move - and a role
+        never steals a symbol an earlier role already took."""
+        usable = techno_lib.usable_ports(ports)
+        claimed = set()
+        found = []
+        for patterns in techno_lib.VOICE_ROLE_PATTERNS:
+            symbol = None
+            for fragments in patterns:
+                for candidate, _, _ in usable:
+                    if candidate in claimed:
+                        continue
+                    name = str(candidate).lower()
+                    if all(fragment in name for fragment in fragments):
+                        symbol = candidate
+                        break
+                if symbol is not None:
+                    break
+            if symbol is not None:
+                claimed.add(symbol)
+            found.append(symbol)
+        return tuple(found)
+
+    @staticmethod
+    def voice_symbols(eng_code, ports):
+        """The four page-1 synth symbols for a chain running `eng_code`.
+
+        Always four entries, any of which may be None. `eng_code` is the
+        processor's, never the CHANNELS table's - the table says what the
+        snapshot loaded, the processor says what is running now."""
+        measured = techno_lib.VOICE_SYMBOLS.get(eng_code)
+        if measured:
+            return tuple(measured)
+        return techno_lib.discover_voice_symbols(ports)
+
+    @staticmethod
+    def synth_ctrl_flags(state):
+        """Which of the four page-1 synth columns are reachable.
+
+        `synth_ctrl` is the per-column truth, `has_synth_ctrl` the
+        all-or-nothing flag that predates it, and an absent key means a synth
+        with all four - every caller before SP4 omitted it."""
+        flags = state.get("synth_ctrl")
+        if flags is not None:
+            return tuple(bool(flag) for flag in flags)[:4]
+        return (bool(state.get("has_synth_ctrl", True)),) * 4
+
     # --------------------------------------------------------------------- FX
 
     # role -> (plugin symbol, lo, hi). Gates G1 and G3 between them left exactly
@@ -678,20 +752,21 @@ class techno_lib:
                     c("SAMPLE", state["sample"], "seg", (0, 1), pending="sample" in p),
                     dead("tune"), dead("decay"), dead("filtr"),
                 ] + tail
+            # A column is live only where the running plugin publishes a
+            # symbol for that role. Per column, not per channel: a sampler
+            # behaving as a voice has none of the four (SP4), and a synth the
+            # measured table has never seen may publish three of them.
+            # Law L4 - draw dead, never a number the knob cannot move.
+            live = techno_lib.synth_ctrl_flags(state)
             return [
                 c("PRESET", state["preset"], "seg", (0, 1), pending="preset" in p),
-            ] + ([
-                c("CUTOFF", n(state["cutoff"]), "uni", state["cutoff"] / 127.0),
-                c("RESO", n(state["reso"]), "uni", state["reso"] / 127.0),
-                c("ENV", n(state["env"]), "uni", state["env"] / 127.0),
-                c("DECAY", n(state["decay"]), "uni", state["decay"] / 127.0),
-            ] if state.get("has_synth_ctrl", True) else [
-                # SP4: a sampler chain behaving as a voice has no filter
-                # controls to reach - VOICE_SYMBOLS has no LinuxSampler entry,
-                # so _set_voice_ctrl bails out and the knob moves nothing.
-                # Law L4 - draw dead, never a number the knob cannot move.
-                dead("cutoff"), dead("reso"), dead("env"), dead("decay"),
-            ]) + tail
+            ] + [
+                c(label, n(state[key]), "uni", state[key] / 127.0)
+                if live[index] else dead(key)
+                for index, (label, key) in enumerate((
+                    ("CUTOFF", "cutoff"), ("RESO", "reso"),
+                    ("ENV", "env"), ("DECAY", "decay")))
+            ] + tail
 
         # STEP
         if kind == "drum":
