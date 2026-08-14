@@ -2125,6 +2125,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if verb is None:
             return                        # greyed column, dead knob, honestly
         if self.mod_down:
+            # A column with a verb can still be drawn dead - a voice CONTROL
+            # column for a port its synth does not publish. Binding there
+            # produced an invisible modulator, because the tilde and the span
+            # are refused on a grey column.
+            if self._column_dead(column):
+                return
             self._mod_encoder(verb, channel, cc_num, cc_val)
             return
         self._verb(verb, channel, cc_num, cc_val)
@@ -3762,6 +3768,42 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         group == self.group, silent))
         return tuple(out)
 
+    def _page_columns(self, desc):
+        """The eight column dicts techno_lib.columns() builds for a page.
+
+        Split out of _columns() so _encoder_column can ask the RENDERER's own
+        question - is this column drawn dead? - instead of a second
+        approximation of it that would drift from what is on the glass."""
+
+        shape = desc["shape"]
+        if desc.get("generated"):
+            return tlib.columns(desc, None, self._generated_view(desc))
+        if shape == tlib.SHAPE_SPREAD:
+            views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
+                     for i in range(len(tlib.CHANNELS))]
+            return tlib.columns(desc, None, views)
+        if shape == tlib.SHAPE_GLOBAL:
+            return tlib.columns(desc, None, self.globals_view())
+        channel = self.group
+        return tlib.columns(desc, self.channel_kind(channel),
+                            self.state_view(channel))
+
+    def _column_dead(self, column):
+        """True when this column is drawn dead (law L4): greyed, showing ----,
+        with an encoder that does nothing.
+
+        A verb name is not enough to tell. A voice CONTROL column whose synth
+        publishes no such port carries a perfectly good verb and only
+        synth_ctrl says it is dead - so MOD bound a modulator there happily,
+        mark_modulated() then correctly refused to mark a grey column, and the
+        result was a modulator that swept an absent port, drew no tilde and no
+        span, was persisted into the snapshot and had mod_last pointing at it."""
+
+        cols = self._page_columns(self._page())
+        if not 0 <= column < len(cols):
+            return False
+        return bool(cols[column].get("grey"))
+
     def _columns(self, screen):
         """Four columns for one screen, taken from the page model.
 
@@ -3776,18 +3818,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         desc = self._page()
         shape = desc["shape"]
-        if desc.get("generated"):
-            cols = tlib.columns(desc, None, self._generated_view(desc))
-        elif shape == tlib.SHAPE_SPREAD:
-            views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
-                     for i in range(len(tlib.CHANNELS))]
-            cols = tlib.columns(desc, None, views)
-        elif shape == tlib.SHAPE_GLOBAL:
-            cols = tlib.columns(desc, None, self.globals_view())
-        else:
-            channel = self.group
-            cols = tlib.columns(desc, self.channel_kind(channel),
-                                self.state_view(channel))
+        cols = self._page_columns(desc)
 
         meter_page = shape == tlib.SHAPE_SPREAD and desc["verb"] == "level"
         out = []
