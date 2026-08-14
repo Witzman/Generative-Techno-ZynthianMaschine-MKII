@@ -704,6 +704,19 @@ class techno_lib:
         return verb in techno_lib.MOD_TIMBRE
 
     @staticmethod
+    def mod_is_global(verb):
+        """True when a modulator on this verb addresses ONE object however
+        many channels exist, so its key must not carry a channel.
+
+        `fx:` verbs do: the driver resolves them through fx_handle(0, which) -
+        a single insert, ganged across every channel - so keying one by the
+        selected group hid its tilde and its span the moment the group
+        changed, and let a second modulator be bound to the same port to fight
+        the first. `lv2:` verbs do NOT: they address the selected channel's
+        own synth processor and stay per channel."""
+        return bool(verb) and verb.startswith(techno_lib.VERB_FX)
+
+    @staticmethod
     def mod_pos(phase0, elapsed_beats, rate_bars, beats_per_bar=4):
         """Unwrapped position in cycles: the integer part is the cycle count
         (which sample-and-hold needs) and the fraction is the phase.

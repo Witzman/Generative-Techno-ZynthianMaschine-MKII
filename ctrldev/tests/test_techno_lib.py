@@ -1298,6 +1298,23 @@ class TestModulatorMaths(unittest.TestCase):
     def test_none_is_refused(self):
         self.assertFalse(tl.mod_allowed(None))
 
+    def test_no_modulatable_verb_hands_the_pattern_back(self):
+        # A modulated verb is steered at its base and never reaches the
+        # handback check, so nothing in this set may be a handback verb.
+        for kind in tl.KINDS:
+            for verb in tl.MOD_TIMBRE:
+                self.assertFalse(tl.hands_back(kind, verb, 100), (kind, verb))
+
+    def test_fx_verbs_are_global_and_lv2_verbs_are_not(self):
+        # An fx: insert is ganged across every channel, so its modulator must
+        # be keyed with no channel: keyed per group it went invisible the
+        # moment the selected group changed, and a second modulator could be
+        # bound to the same port.
+        self.assertTrue(tl.mod_is_global("fx:reverb:decay"))
+        self.assertFalse(tl.mod_is_global("lv2:surge_xt_a_filter1_cutoff"))
+        self.assertFalse(tl.mod_is_global("cutoff"))
+        self.assertFalse(tl.mod_is_global(None))
+
     def test_phase_advances_one_cycle_per_rate_in_bars(self):
         # 2 bars per cycle, 8 beats elapsed at 4 beats to the bar = one cycle.
         self.assertAlmostEqual(tl.mod_pos(0.0, 8.0, 2.0), 1.0)

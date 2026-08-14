@@ -527,7 +527,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _mod_key(self, channel, verb):
         """Modulators on a global verb carry channel None; everything else is
         per channel. Same shape as the (channel, verb) pair _verb() already
-        takes, so nothing has to translate."""
+        takes, so nothing has to translate.
+
+        An `fx:` verb IS a global verb, whatever channel the gesture arrived
+        on. _verb_fx and _mod_zctrl both resolve it through fx_handle(0, which)
+        - one insert, ganged across every channel - so keying it by the
+        selected group meant binding on group A and then switching to group C
+        hid the tilde and the span, and let a second modulator be bound to the
+        same port to fight the first. `lv2:` verbs stay per channel: they
+        address the selected channel's own synth processor.
+
+        Channel None is a real input here, not only a real output: set_state
+        feeds this the channel it parsed back out of a saved key, and a saved
+        `fx:` key carries an empty channel field."""
+        if tlib.mod_is_global(verb):
+            return (None, verb)
         return (None if channel is None else int(channel), verb)
 
     def _mod_range(self, channel, verb):
@@ -2098,10 +2112,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._mod_clear(self._mod_key(channel, verb))
             self._render_display()
             return
+        key = self._mod_key(channel, verb)
+        # Everything below addresses the modulator by the KEY's channel, not
+        # by the channel the gesture arrived on: an `fx:` verb is global and
+        # its key channel is None whichever group is selected.
+        channel = key[0]
         span = self._mod_range(channel, verb)
         if span is None:
             return
-        key = self._mod_key(channel, verb)
         entry = self.mod.get(key)
         # 200 units of travel across -100..+100, so a full sweep of the
         # encoder covers the whole bipolar range once.
