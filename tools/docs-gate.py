@@ -39,12 +39,16 @@ INTERNAL = ["/home/witzman", "guide-src", "zynth-docs", "zynth-repos",
 BASELINE = {
     "00-start.html":               (93,   "2026-08-13"),
     "01-fast-installation.html":   (505,  "2026-08-14"),
-    "02-features.html":            (676,  "2026-08-13"),
+    # +145: the drum-filter claim was wrong (there is no drum filter) and the
+    # controls-follow-the-plugin behaviour was undocumented. 2026-08-14.
+    "02-features.html":            (821,  "2026-08-14"),
+    # Section 3 was written 2026-08-14; this is its first measurement.
+    "03-playing.html":             (2547, "2026-08-14"),
     "04-manual-installation.html": (1856, "2026-08-14"),
     "05-internals.html":           (1011, "2026-08-13"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
-SKIP_BUDGET = {"03-playing.html", "index.html"}
+SKIP_BUDGET = {"index.html"}
 HEADROOM = 1.15
 UNIT_CAP = 300   # any h2/h3 section; long asides belong in their own section
 

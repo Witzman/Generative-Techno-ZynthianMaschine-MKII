@@ -81,8 +81,13 @@
 <p><strong>Recording adds, it does not overwrite.</strong> The generated line freezes and the played note goes on top; played-in steps light amber. A captured note makes you the owner of that channel's pattern and the generator stops writing it. Two gestures hand it back, both destructive — ERASE with a Group button, or turning any knob that rewrites the pattern.</p>
 <hr>
 <h2 id="per-channel-sound">Per-channel sound</h2>
-<p>Every channel of both kinds has LEVEL, REVERB and DELAY on encoders 6, 7 and 8 — the same three, in the same place, in either mode. Sixteen post-fader inserts carry the reverb and delay sends, and each drum chain has its own filter.</p>
+<p>Every channel of both kinds has LEVEL, REVERB and DELAY on encoders 6, 7 and 8 — the same three, in the same place, in either mode. Sixteen post-fader inserts carry the reverb and delay sends.</p>
+<p>FILTER spreads CUTOFF and RESO across the row, but only the three voices answer it: the drum channels run a sampler with no filter to reach, so their columns draw dead. A drum filter is not in this version.</p>
 <p>The ALL page holds the global reach: root, scale, BPM, master level, reverb size and type, delay time and feedback.</p>
+<hr>
+<h2 id="the-controls-follow-the-plugin">The controls follow the plugin</h2>
+<p>A voice's CUTOFF, RESO, ENV and DECAY are bound to the synth that is <em>actually loaded</em>, not to the one the snapshot shipped with. Swap a chain's engine from the touchscreen and those four columns rebind to the new plugin's own ports; a role the plugin has no port for draws dead rather than pretending.</p>
+<p>Everything else a plugin publishes fills further CONTROL pages, eight ports per page, in the plugin's own order — so a synth with forty parameters is reachable from the surface without anything here knowing its name. Host plumbing is filtered out, and each port is driven as a percentage of its own range.</p>
 <hr>
 <h2 id="the-surface-talks-back">The surface talks back</h2>
 <p>Both displays carry a tab row: <code>A KICK B SNAR C CLAP D CHAT</code> on the left, <code>E OHAT F BASS G LEAD H PADS</code> on the right, with four encoder columns under each. Group buttons light in channel colours, brightness tracking each channel's level. Peak meters run live.</p>

@@ -57,18 +57,134 @@
 <main>
 <article>
 <h1 id="3--playing">3 · Playing</h1>
-<p><strong>This section is a placeholder.</strong> The instrument is built and installed by the sections around it; how to <em>play</em> it is not written yet. It will be written once the surface stops changing — an earlier draft described a prototype that has since gained two modes, live capture and channel-kind switching, and publishing it would mislead rather than help.</p>
-<p>Until then, <a href="02-features.html">2 · Features</a> lists what every mode and encoder does, which is most of what a manual would tell you.</p>
+<p>What the surface does under your hands. This assumes the rig is installed and the factory snapshot is loaded — if it is not, start at <a href="01-fast-installation.html">1 · Fast installation</a>. What the instrument <em>is</em> rather than how it is played is <a href="02-features.html">2 · Features</a>.</p>
 <hr>
-<h2 id="what-will-go-here">What will go here</h2>
-<p><strong>The euclidean model.</strong> Hits spread as evenly as the grid allows, then rotated. Why 4 in 16 is four-on-the-floor, 5 in 16 is the clave, 3 in 8 is tresillo. Why pattern length moves in whole <em>beats</em> while the display counts <em>steps</em>, and why 1, 5, 7, 11 and 13 steps are unreachable.</p>
-<p><strong>The Turing machine, and <code>LOCK</code> as the central gesture.</strong> A register clocked once per pass, mutated one bit at a time, read as pitch. The workflow the instrument is built around: set <code>RANDOM</code> to 20-40, let the voice fish for a phrase, and snap it to 0 the moment you hear one worth keeping — the cell reads <code>LOCK</code>, a word rather than a number that could be a coincidence. Then <code>DUPLICATE</code> as the undo for the phrase the wrap took before your hand arrived, four registers deep.</p>
-<p><strong>The five modes and the page rings.</strong> What CONTROL, STEP, ALL, MIXER and FILTER each make the eight encoders mean, why encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel of both kinds, and why a knob with no source is greyed and dead rather than quietly doing nothing.</p>
-<p><strong>REC and ownership.</strong> Holding REC overdubs into the same pattern the generator writes; the note's length is how long the pad was held. A captured note makes the player the owner of that channel's pattern and the generator stops writing it. Two gestures hand it back, both destructive, and knowing which knobs those are is the difference between keeping a take and losing it.</p>
-<p><strong>SHIFT + GRID.</strong> Switching a channel between drum and voice behaviour without swapping its engine: a drum kit gets the Turing generator, a synth gets euclid as a root pulse. Why the register walks a <em>kit's own note list</em> on a sampler instead of quantising to a scale.</p>
-<p><strong>Performing.</strong> Mute and solo, tap versus hold, ERASE as a hold-only gesture, what each LED colour means, and reading the display's tab row — including the dashed tab, which is the only thing that ever explains silence.</p>
+<h2 id="your-first-two-minutes">Your first two minutes</h2>
+<p>Press <strong>Play</strong>. All eight channels start together, and the factory snapshot already holds a beat and three voices.</p>
+<p>Press <strong>Group A</strong> to select KICK, then <strong>STEP</strong>. Encoder 1 is HITS: turn it to 4 and you have four-on-the-floor. Encoder 2 is ROTATE — turn it and the same four hits slide around the bar without changing how many there are.</p>
+<p>Press <strong>Group F</strong> for BASS, still in STEP. Encoder 3 is RANDOM. Turn it to roughly 30 and the bassline starts mutating a note at a time. When a phrase goes past that you want, turn RANDOM back to 0: the cell reads <code>LOCK</code> and that line is now frozen, bit for bit, until you move the knob again.</p>
+<p>Press <strong>CONTROL</strong> and the same eight encoders become what the channel <em>sounds</em> like instead of what it plays. That is the whole instrument in miniature — a mode decides what the knobs mean, the channel decides what they act on.</p>
+<p>Nothing you have touched is destructive, and nothing needs saving to keep playing. When you do want to keep it, see <a href="#saving-a-set">Saving a set</a>.</p>
 <hr>
-<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="02-features.html">2 · Features</a></p>
+<h2 id="selecting-modes-and-pages">Selecting, modes and pages</h2>
+<p><strong>Group A-H</strong> selects the channel. Pads, tabs and all eight encoders follow immediately, and the inverted tab on the display — never a Group LED — says which one is selected.</p>
+<p>Five buttons latch a mode. Exactly one is lit at any time.</p>
+<table><thead><tr><th>Button on the panel</th><th>Mode</th><th>The eight encoders become</th></tr></thead><tbody>
+<tr><td>CONTROL</td><td>CONTROL</td><td>what the selected channel sounds like</td></tr>
+<tr><td>STEP</td><td>STEP</td><td>what the selected channel plays</td></tr>
+<tr><td>ALL</td><td>ALL</td><td>the machine's globals</td></tr>
+<tr><td>VOLUME</td><td>MIXER</td><td>one level across all eight channels</td></tr>
+<tr><td>AUTO</td><td>FILTER</td><td>one filter control across all eight channels</td></tr>
+</tbody></table>
+<p>A mode can carry more than one page. The <strong>arrows beside the display</strong> step through that mode's ring and wrap; the page name sits in the middle of the display. STEP adds SWING and CHANCE spread pages (and DENSITY on a voice), MIXER rings LEVEL → REVERB → DELAY, FILTER rings CUTOFF → RESO. Each mode remembers its own page separately for drum and voice channels, so switching channels does not throw you to a page you were not on.</p>
+<p>All eight encoders are endless and have no detents. They report movement, not position, so a value belongs to the channel rather than to the knob — selecting another channel moves nothing.</p>
+<hr>
+<h2 id="the-drums">The drums</h2>
+<p>Select A-E. The five drum channels are euclidean generators: given a step count and a hit count, hits are spread as evenly as the grid allows, then rotated.</p>
+<table><thead><tr><th>Hits / steps</th><th>What it is</th></tr></thead><tbody>
+<tr><td>4 in 16</td><td>four-on-the-floor</td></tr>
+<tr><td>5 in 16</td><td>the clave</td></tr>
+<tr><td>3 in 8</td><td>tresillo</td></tr>
+<tr><td>7 in 16</td><td>the busy one that still swings</td></tr>
+</tbody></table>
+<p>The drum STEP page is HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, SWING. HITS and ROTATE are the two you play with; the rest set the frame.</p>
+<p><strong>LENGTH is measured in beats and displayed in steps.</strong> The sequencer stores a pattern as whole beats, so the reachable step counts are whole beats times the steps in a beat — which means 1, 5, 7, 11 and 13 steps cannot be asked for. Turning LENGTH lands on the nearest count that exists.</p>
+<p><strong>Structure lands on the bar, timbre lands instantly.</strong> DIVIDE and LENGTH on a drum show in angle brackets — <code>&gt;1/8&lt;</code> — until the channel's own next wrap takes them, so a change of grid can never trip the groove mid-bar. VELO, CHANCE and SWING land the moment you turn them.</p>
+<p>CHANCE is the probability that a step actually fires, per pass. At 0 the channel is silent and its tab draws dashed — that is the instrument telling you why, not a fault.</p>
+<hr>
+<h2 id="the-voices-and-lock">The voices, and LOCK</h2>
+<p>Select F, G or H. Each voice owns a shift register that is clocked once per pass and mutated with probability RANDOM; the register's value is read as pitch, quantised to ROOT and SCALE from the ALL page and placed by OCTAVE and RANGE.</p>
+<p>The voice STEP page is LENGTH, DIVIDE, RANDOM, GATE, OCTAVE, RANGE, DENSITY, VELO. LENGTH here is the register's length in steps, not a bar count. GATE is how long each note holds — up to eight steps, so a pad can be a drone. DENSITY is how many of the steps sound at all; drop it and the line thins out without changing its notes.</p>
+<p><strong>RANDOM is the instrument's main gesture.</strong> Set it to 20-40 and the voice fishes: every pass mutates one bit, so the line keeps turning into a neighbouring line. Snap it to 0 the moment you hear one worth keeping. The cell reads <code>LOCK</code> rather than a number, because a number could be a coincidence — <code>LOCK</code> means nothing will rewrite that pattern at all.</p>
+<p><strong>DUPLICATE is the undo</strong> for the phrase the wrap took a moment before your hand arrived. It restores the previous register, forces RANDOM to 0 and rewrites the line now — four registers deep. On a drum channel it does nothing.</p>
+<hr>
+<h2 id="pads-are-the-instrument">Pads are the instrument</h2>
+<p>In CONTROL, ALL, MIXER and FILTER the sixteen pads <strong>play</strong> the selected channel. On a voice they are notes. On a drum every pad triggers that channel's own sound, because a drum channel <em>is</em> one sound — hearing CLAP while playing KICK would be the silent-channel confusion in a new costume.</p>
+<p>In <strong>STEP</strong> the pads are the step editor instead. A tap toggles that step, and the velocity of the tap becomes the step's velocity, so accents are played in rather than dialled. Step 0 is the <strong>top-left</strong> pad and the grid reads left to right, top to bottom.</p>
+<table><thead><tr><th>Pad</th><th>Means</th></tr></thead><tbody>
+<tr><td>dim</td><td>empty step</td></tr>
+<tr><td>bright</td><td>active step</td></tr>
+<tr><td>amber</td><td>a step you played in while recording</td></tr>
+<tr><td>white</td><td>the playhead</td></tr>
+<tr><td>dark</td><td>beyond the pattern's length</td></tr>
+</tbody></table>
+<p>Holding <strong>ERASE</strong> and tapping a pad clears that step. A pad that is already empty is left alone rather than toggled on, so a sweep across the grid clears without seeding.</p>
+<hr>
+<h2 id="rec-capturing-a-take">REC: capturing a take</h2>
+<p>Hold <strong>REC</strong> and play the pads. Strikes are captured into the same pattern the generator writes, quantised to the <em>nearest</em> step and wrapping at the end of the bar — nearest rather than next, so a strike that lands a hair early is not pushed a step late.</p>
+<p>A note's length is <strong>how long you held the pad</strong>, clamped to what is left of the pattern. Releasing REC ends the take; it does not cut off notes that are still sounding.</p>
+<p><strong>Recording adds, it does not overwrite.</strong> The generated line freezes where it is and your note goes on top, so a recorded step can hold two notes. The pads show it: a step you played in lights amber while its generated note is still there.</p>
+<p>The page indicator reads <code>REC</code> while you are capturing. If the transport is stopped it reads <code>REC-STOP</code> instead — nothing is being captured, and the instrument says so rather than letting you play into nothing.</p>
+<hr>
+<h2 id="who-owns-the-pattern">Who owns the pattern</h2>
+<p>The first captured note makes <strong>you</strong> the owner of that channel's pattern, and the generator stops rewriting it. The page indicator reads <code>PLAY</code> for as long as that holds — including after a snapshot reload, because ownership is saved.</p>
+<p>Handing the pattern back to the generator is deliberate and destructive: your take is gone the moment it happens. There are two ways, and knowing which knobs do it is the difference between keeping a take and losing it.</p>
+<table><thead><tr><th>Route</th><th>On a drum</th><th>On a voice</th></tr></thead><tbody>
+<tr><td>Gesture</td><td colspan="2">ERASE + the channel's Group button</td></tr>
+<tr><td>Knobs that hand back</td><td>HITS, ROTATE, DIVIDE</td><td>LENGTH, DIVIDE, RANDOM</td></tr>
+<tr><td>Knobs that keep the take</td><td>LENGTH, VELO, CHANCE, SWING</td><td>GATE, OCTAVE, RANGE, DENSITY, VELO</td></tr>
+</tbody></table>
+<p>Two details worth carrying: a drum's LENGTH keeps the take, because shortening a pattern preserves the steps that still fit; and RANDOM only hands back when it moves <em>off</em> <code>LOCK</code>, since a locked voice rewrites nothing and could not undo your recording anyway. A knob has to actually move — brushing one does nothing.</p>
+<hr>
+<h2 id="switching-a-channels-kind">SHIFT + GRID — switching a channel's kind</h2>
+<p>Hold <strong>SHIFT</strong> and press <strong>GRID</strong> to switch the selected channel between drum and voice behaviour. <strong>The engine is never swapped</strong>: a drum kit gets the Turing generator, and a synth gets euclid.</p>
+<p>On a sampler the register walks the <strong>kit's own note list</strong> rather than ROOT and SCALE, because there a note selects a sample and scale-quantising would land most steps on empty keys. On a synth, euclid becomes a <strong>root pulse</strong> — ROOT plus that channel's OCTAVE, on every hit.</p>
+<p>Each channel keeps a separate set of parameters per kind, so switching back and forth does not cost you your settings. Pattern length and division deliberately do <em>not</em> move: they are pattern time, not kind, and the groove must not jump under a switch. Hand-edited steps do not survive, for the same reason turning HITS does not — switching rewrites the line from the generator. The page indicator marks a switched channel <code>DRM</code> or <code>VOX</code>; switching back to what the chain actually runs clears the mark.</p>
+<p>A bare GRID press does nothing at all, on purpose.</p>
+<hr>
+<h2 id="sound-kits-presets-and-plugins">Sound: kits, presets and plugins</h2>
+<p>CONTROL is the sound page. On a drum it is KIT and SAMPLE; on a voice it is PRESET, CUTOFF, RESO, ENV and DECAY. Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on <em>every</em> channel of both kinds — the same three controls in the same place, always.</p>
+<p>The <strong>two buttons beside the big encoder</strong> step the sound of the selected channel: the previous or next sample within the kit on a drum, the previous or next engine preset on a voice. A preset load takes a moment and happens off the playing path, so the music does not stall.</p>
+<p><strong>The four synth knobs follow the plugin that is loaded</strong>, not the one the snapshot shipped with. Change a chain's engine from the touchscreen and CUTOFF, RESO, ENV and DECAY rebind to the new plugin's own ports; a role the plugin has nothing for draws dead rather than pretending. Anything else the plugin publishes fills further CONTROL pages, eight ports to a page, reached with the display arrows.</p>
+<p><strong>A knob with no source is greyed and dead.</strong> A dead column shows a lower-case name, <code>----</code> in the value cell and no bar, and the encoder under it does nothing. Three columns are dead on the drum CONTROL page. That is thin and honest; a knob that lies is not.</p>
+<hr>
+<h2 id="space-the-mixer-and-the-globals">Space, the mixer and the globals</h2>
+<p>Every channel has its own reverb and delay send on encoders 7 and 8, feeding two shared effects. The sends are <strong>post-fader</strong>, so pulling a channel down takes its tail with it.</p>
+<p><strong>MIXER</strong> puts one control across all eight channels at once — LEVEL, then REVERB, then DELAY as you step the ring. It is the page for balancing, and the page to reach for when one channel is too loud in a room rather than in the mix.</p>
+<p><strong>FILTER</strong> spreads CUTOFF and RESO the same way, but only the three voices answer: the drum channels run a sampler with no filter to reach, and their columns draw dead.</p>
+<p><strong>ALL</strong> holds what belongs to the machine rather than a channel: ROOT, SCALE, BPM, MASTER, REVSIZE, REVTYPE, DLYTIME, DLYFBK. ROOT and SCALE wait for the bar before they land, so a key change arrives on the one instead of halfway through a phrase. DLYTIME is a musical division and tracks the tempo. Further ALL pages carry whatever the reverb and delay plugins publish beyond those, ganged across all sixteen inserts at once.</p>
+<hr>
+<h2 id="mute-solo-and-erase">Mute, solo and erase</h2>
+<p><strong>F1-F8 mute channels A-H</strong>, regardless of which channel is selected. F3 always mutes CLAP. Tap and it latches; hold past a quarter of a second and it is momentary, back on release. Same button, both gestures: momentary is how you play a gesture, latched is how you make a decision. An F button is lit while its channel is muted.</p>
+<p>The mute is on the mixer strip rather than the sequencer track, which is why it survives a snapshot, shows on the touchscreen mixer, and cuts the channel's reverb and delay tail with it.</p>
+<p><strong>SOLO</strong> works the same two ways: hold it and the F row is momentary solo, tap it and the F row <em>is</em> solo until you tap again. Solo is <strong>additive</strong> — a second solo joins the first rather than replacing it. To get out, unsolo each channel, or tap SOLO to hand the F row back to muting.</p>
+<p><strong>ERASE does nothing on a bare press.</strong> Hold it and add a target: a pad clears that step, a Group button silences that channel. Silencing sets the generator to silence rather than wiping notes — HITS to 0 on a drum, play chance to 0 on a voice. On a voice the gesture toggles back; on a drum you turn HITS up again.</p>
+<hr>
+<h2 id="transport">Transport</h2>
+<p><strong>Play</strong> starts or stops all eight channels together. The decision is taken once and applied to all eight, so they cannot drift into opposite states. The button is lit while anything runs.</p>
+<p><strong>Restart</strong> jumps every playhead to step 0 without stopping — for pulling channels back onto the one after a length change has phased them apart.</p>
+<p>Press Play once after loading a snapshot. Loop mode is re-asserted on every transport start, and a fresh load is the one moment it may need it.</p>
+<hr>
+<h2 id="reading-the-surface">Reading the surface</h2>
+<p>Both displays carry a tab row across the top — A-D on the left, E-H on the right — with four encoder columns under each. The <strong>inverted</strong> tab is the selected channel. A <strong>dashed</strong> tab means that channel is not sounding, whether it is muted at the mixer or silenced by its own generator. It is the one mechanism this instrument has for explaining silence, so read the tab row before assuming a fault.</p>
+<table><thead><tr><th>Surface</th><th>What it says</th></tr></thead><tbody>
+<tr><td>Group A-H</td><td>hue is the channel, brightness is its level, dark means it is not sounding</td></tr>
+<tr><td>Mode buttons</td><td>exactly one lit, always — it cannot disagree with the display</td></tr>
+<tr><td>F1-F8</td><td>lit means muted; while SOLO is active, lit means soloed</td></tr>
+<tr><td>SOLO</td><td>lit means the F row means solo</td></tr>
+<tr><td>Play</td><td>lit while anything is running</td></tr>
+<tr><td>Everything else</td><td>dark, deliberately — a dark button hides no surprises</td></tr>
+</tbody></table>
+<p>Value cells are four characters and hard-truncated. Angle brackets around a value — <code>&gt;1/8&lt;</code> — mean it is waiting for the bar. A bar under a value fills from the left for a level, from the centre for a bipolar control, and in blocks for a setting with a handful of positions.</p>
+<hr>
+<h2 id="saving-a-set">Saving a set</h2>
+<p>Save from the touchscreen: inside a bank, the first entry is <strong>Save as new snapshot</strong>. Do not use the Name field on webconf's Snapshots page — it renames the bank rather than saving anything.</p>
+<p>The snapshot carries the patterns themselves, chance and swing, mixer levels and mutes, the effect sends, each channel's kit or preset, and the driver's own state: every voice's Turing register and its four-deep undo ring, the voice parameters, the globals, which channels you switched kind on, who owns each pattern, and the mode and page you were in.</p>
+<p>Two things it does not carry. <strong>Euclidean rotation</strong> cannot be read back out of a pattern, so it resumes wherever the driver last set it — hits, division and length are recovered correctly. And nothing you are <em>holding</em> survives a reload, by definition.</p>
+<p>A locked voice comes back playing the same line, because the driver rewrites each voice's pattern from its restored register on load — a locked voice would never write one on its own.</p>
+<hr>
+<h2 id="when-it-goes-quiet">When it goes quiet</h2>
+<p>Work down this list before suspecting the rig. Four of the five are things you did.</p>
+<table><thead><tr><th>Check</th><th>What it looks like</th></tr></thead><tbody>
+<tr><td>Is the tab dashed?</td><td>the channel is muted or its generator is silent</td></tr>
+<tr><td>HITS on a drum</td><td>0 hits is a silent channel, not a broken one</td></tr>
+<tr><td>CHANCE on a drum, DENSITY on a voice</td><td>at 0 nothing fires</td></tr>
+<tr><td>Is something soloed?</td><td>every non-soloed Group button goes dark</td></tr>
+<tr><td>MASTER on the ALL page</td><td>the global level, easy to leave down</td></tr>
+</tbody></table>
+<p>A voice that is <em>locked</em> is not silent — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">5 · Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">4 · Manual installation</a> for the checks that catch a stale MIDI route.</p>
+<hr>
+<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="02-features.html">2 · Features</a> · <strong>Next:</strong> <a href="04-manual-installation.html">4 · Manual installation</a></p>
 </article>
 </main>
 <div id="toc-column"></div>
