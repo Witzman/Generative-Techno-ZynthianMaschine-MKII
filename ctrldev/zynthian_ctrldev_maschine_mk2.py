@@ -2038,6 +2038,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         self.apply(channel, verb, value)
 
+    def _mod_write(self):
+        """Advance every modulator and write base+offset.
+
+        Runs on the poll thread and NEVER on the MIDI thread: midi_event holds
+        the lock for the whole event, and a parameter write can block."""
+        if not self.mod:
+            return
+        beats = self._elapsed_beats()
+        for key, entry in list(self.mod.items()):
+            channel, verb = key
+            span = self._mod_range(channel, verb)
+            if span is None:
+                continue
+            pos = tlib.mod_pos(entry["phase0"], beats,
+                               tlib.MOD_RATES[entry["rate"]])
+            wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
+            value = tlib.mod_value(entry["base"], wave, entry["depth"],
+                                   span[0], span[1])
+            # set_value() already returns early on an unchanged value and
+            # integer controls dedupe for free, so a slow or parked modulator
+            # costs a function call and nothing else.
+            self._mod_base_set(channel, verb, value)
+
     # Range and step size per verb: (lo, hi, units per step).
     # Fine controls sweep across the encoder's 128 units; coarse ones use a
     # flat 8 units per detent, because spreading a handful of settings over
@@ -3261,6 +3284,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # Tempo can move from the touchscreen or from a snapshot,
                     # and the delay's musical division has to follow it.
                     self._push_delay_time()
+                if tick % VOLUME_POLL_TICKS == 0:
+                    # ~200ms. Deliberately the existing sub-rate: an unthrottled
+                    # 30 Hz modulator is 30 writes/s per moving target, each
+                    # reaching engine.send_controller_value(). Raise this only
+                    # for a target that proves it needs more.
+                    self._mod_write()
                 with self.lock:
                     head = self._playhead()
                     if head != self.head_shown:
