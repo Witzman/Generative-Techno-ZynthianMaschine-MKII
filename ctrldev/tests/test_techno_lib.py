@@ -6,7 +6,6 @@ from collections import deque
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from techno_lib import techno_lib as tl  # noqa: E402
-from techno_lib import techno_lib  # noqa: E402
 
 
 class TestTuringRegister(unittest.TestCase):
@@ -1212,29 +1211,29 @@ class TestVoiceSymbolResolution(unittest.TestCase):
 class TestButtonTables(unittest.TestCase):
 
     def test_no_cc_is_claimed_twice(self):
-        self.assertEqual(techno_lib.button_conflicts(), [])
+        self.assertEqual(tl.button_conflicts(), [])
 
     def test_stateful_and_press_are_disjoint(self):
-        both = set(techno_lib.BUTTONS_STATEFUL) & set(techno_lib.BUTTONS_PRESS)
+        both = set(tl.BUTTONS_STATEFUL) & set(tl.BUTTONS_PRESS)
         self.assertEqual(both, set())
 
     def test_measured_bindings_are_preserved(self):
         # The shipped chain, transcribed. A change here is a surface change.
-        self.assertEqual(techno_lib.BUTTONS_STATEFUL[2], "erase")
-        self.assertEqual(techno_lib.BUTTONS_STATEFUL[3], "rec")
-        self.assertEqual(techno_lib.BUTTONS_STATEFUL[49], "shift")
-        self.assertEqual(techno_lib.BUTTONS_STATEFUL[31], "solo")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[1], "play")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[4], "grid")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[7], "restart")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[29], "duplicate")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[47], "page_prev")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[48], "page_next")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[13], "sound_prev")
-        self.assertEqual(techno_lib.BUTTONS_PRESS[14], "sound_next")
+        self.assertEqual(tl.BUTTONS_STATEFUL[2], "erase")
+        self.assertEqual(tl.BUTTONS_STATEFUL[3], "rec")
+        self.assertEqual(tl.BUTTONS_STATEFUL[49], "shift")
+        self.assertEqual(tl.BUTTONS_STATEFUL[31], "solo")
+        self.assertEqual(tl.BUTTONS_PRESS[1], "play")
+        self.assertEqual(tl.BUTTONS_PRESS[4], "grid")
+        self.assertEqual(tl.BUTTONS_PRESS[7], "restart")
+        self.assertEqual(tl.BUTTONS_PRESS[29], "duplicate")
+        self.assertEqual(tl.BUTTONS_PRESS[47], "page_prev")
+        self.assertEqual(tl.BUTTONS_PRESS[48], "page_next")
+        self.assertEqual(tl.BUTTONS_PRESS[13], "sound_prev")
+        self.assertEqual(tl.BUTTONS_PRESS[14], "sound_next")
 
     def test_no_button_lands_on_an_encoder_or_a_group_or_an_f_button(self):
-        for cc in list(techno_lib.BUTTONS_STATEFUL) + list(techno_lib.BUTTONS_PRESS):
+        for cc in list(tl.BUTTONS_STATEFUL) + list(tl.BUTTONS_PRESS):
             self.assertNotIn(cc, range(16, 24), f"CC {cc} is an encoder")
             self.assertNotIn(cc, range(39, 47), f"CC {cc} is an F button")
             self.assertNotIn(cc, range(80, 88), f"CC {cc} is a Group button")
@@ -1243,8 +1242,8 @@ class TestButtonTables(unittest.TestCase):
         # Measured free at G4 and re-verified 2026-08-14. SWING 50 is claimed
         # by MOD in task 4 and is deliberately NOT in this list.
         for cc in (5, 6, 12, 25, 26, 30, 34):
-            self.assertNotIn(cc, techno_lib.BUTTONS_STATEFUL)
-            self.assertNotIn(cc, techno_lib.BUTTONS_PRESS)
+            self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
+            self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
 
 if __name__ == "__main__":
