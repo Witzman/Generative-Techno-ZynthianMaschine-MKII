@@ -1454,5 +1454,100 @@ class TestModBaseOr(unittest.TestCase):
         self.assertEqual(tl.mod_base_or(mods, (0, "reso"), 99), 99)
 
 
+class TestModSteer(unittest.TestCase):
+    """A hand turn on a modulated verb steers the BASE, not the engine.
+
+    Written as the whole loop rather than one helper in isolation: the defect
+    this guards against was invisible to a helper test, because every piece
+    was correct on its own and only the wiring - reading `current` back out of
+    the store _mod_write() had just swept - was wrong."""
+
+    KEY = (0, "cutoff")
+    LO, HI = 0, 127
+
+    def _mods(self, base=64, depth=50):
+        return {self.KEY: {"base": base, "depth": depth, "rate": 6,
+                           "shape": "tri", "phase0": 0.0, "seed": 1}}
+
+    def _tick(self, mods, beats):
+        """One _mod_write() tick: what the engine is given, in surface units."""
+        e = mods[self.KEY]
+        pos = tl.mod_pos(e["phase0"], beats, tl.MOD_RATES[e["rate"]])
+        wave = tl.mod_wave(e["shape"], pos, e["seed"])
+        return tl.mod_value(e["base"], wave, e["depth"], self.LO, self.HI)
+
+    def test_an_unmodulated_verb_still_goes_to_the_engine(self):
+        value, to_base = tl.mod_steer({}, self.KEY, 40, 5, self.LO, self.HI)
+        self.assertEqual(value, 45)
+        self.assertFalse(to_base)
+
+    def test_a_modulated_verb_steers_the_base_and_writes_nothing(self):
+        mods = self._mods(base=64)
+        value, to_base = tl.mod_steer(mods, self.KEY, None, 5, self.LO, self.HI)
+        self.assertEqual(value, 69)
+        self.assertTrue(to_base)
+
+    def test_the_swept_value_can_never_become_the_starting_point(self):
+        # THE DEFECT. _mod_write stores base+offset into the driver's own
+        # parameter store, and the encoder path used to read it straight back
+        # as `current`. Even handed that swept number, the turn must start
+        # from the base.
+        mods = self._mods(base=64)
+        swept = self._tick(mods, beats=1.7)
+        self.assertNotEqual(swept, 64)          # the LFO really has moved it
+        value, _ = tl.mod_steer(mods, self.KEY, swept, 5, self.LO, self.HI)
+        self.assertEqual(value, 69)
+
+    def test_the_knob_walks_and_the_lfo_never_walks_it_back(self):
+        # Turn, tick, turn, tick. Ten detents up must be ten detents up,
+        # whatever the modulator did in between - the shipped bug made every
+        # turn start from wherever the sweep was, so the base wandered.
+        mods = self._mods(base=64)
+        beats = 0.0
+        for _ in range(10):
+            value, to_base = tl.mod_steer(mods, self.KEY, self._tick(mods, beats),
+                                          1, self.LO, self.HI)
+            self.assertTrue(to_base)
+            mods[self.KEY]["base"] = value
+            beats += 0.37                       # a tick lands between turns
+        self.assertEqual(mods[self.KEY]["base"], 74)
+
+    def test_ticking_on_its_own_never_moves_the_base(self):
+        mods = self._mods(base=64)
+        for i in range(50):
+            self._tick(mods, beats=i * 0.21)
+        self.assertEqual(mods[self.KEY]["base"], 64)
+
+    def test_the_display_follows_the_knob_not_the_sweep(self):
+        # mod_base_or is what state_view()/_generated_view() substitute with.
+        mods = self._mods(base=64)
+        value, _ = tl.mod_steer(mods, self.KEY, None, 5, self.LO, self.HI)
+        mods[self.KEY]["base"] = value
+        swept = self._tick(mods, beats=1.7)
+        self.assertEqual(tl.mod_base_or(mods, self.KEY, swept), 69)
+
+    def test_the_base_is_clamped_to_the_verbs_own_range(self):
+        mods = self._mods(base=125)
+        self.assertEqual(
+            tl.mod_steer(mods, self.KEY, None, 20, self.LO, self.HI)[0], 127)
+        mods = self._mods(base=3)
+        self.assertEqual(
+            tl.mod_steer(mods, self.KEY, None, -20, self.LO, self.HI)[0], 0)
+
+    def test_no_readable_source_steers_nothing(self):
+        value, to_base = tl.mod_steer({}, self.KEY, None, 5, self.LO, self.HI)
+        self.assertIsNone(value)
+        self.assertFalse(to_base)
+
+
+class TestModLabel(unittest.TestCase):
+
+    def test_mod_is_named_on_the_page_indicator(self):
+        self.assertEqual(tl.mod_label("CUTOFF 1/2", True), "CUTOFF 1/2 MOD")
+
+    def test_nothing_is_added_when_mod_is_off(self):
+        self.assertEqual(tl.mod_label("CUTOFF 1/2", False), "CUTOFF 1/2")
+
+
 if __name__ == "__main__":
     unittest.main()

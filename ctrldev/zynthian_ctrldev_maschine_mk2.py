@@ -2246,7 +2246,56 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "range": (1, 4, ENC_UNITS_DISCRETE),
     }
 
+    def _mod_steer(self, key, cc_num, cc_val):
+        """A hand turn on a verb that already carries a modulator steers the
+        modulator's BASE, and writes nothing to the engine.
+
+        Without this the knob is dead. _mod_write() writes base+offset through
+        _mod_base_set() -> apply(), which stores into self.state and the mixer
+        - the driver's own parameter store - and the ordinary path below then
+        reads that swept number back as `current`. Every turn started from
+        wherever the LFO happened to be and was overwritten inside 200 ms, so
+        the encoder read as erratic and then dead.
+
+        Nothing is written to the engine here on purpose: _mod_write() is the
+        only writer of a modulated parameter, and it picks the new base up on
+        its own next tick. The display already substitutes the base through
+        mod_base_or(), so the value cell follows the knob immediately.
+
+        Encoder feel matches the ordinary path exactly - the same range, the
+        same units per step - or the same verb would move at two different
+        speeds depending on whether a modulator happened to be bound."""
+
+        channel, verb = key
+        span = self._mod_range(channel, verb)
+        if span is None:
+            return
+        lo, hi = span
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            # Generated verbs are steered as a percentage, the same 0-100 the
+            # column shows and _mod_percent_set() scales onto the port.
+            delta = self._enc_steps(cc_num, cc_val, 101)
+        else:
+            units = self.VERB_RANGES[verb][2]
+            delta = (self._enc_steps_fixed(cc_num, cc_val, units) if units
+                     else self._enc_steps(cc_num, cc_val, hi - lo + 1))
+        if delta == 0:
+            return
+        value, to_base = tlib.mod_steer(self.mod, key, None, delta, lo, hi)
+        if value is None or not to_base:
+            return
+        self.mod[key]["base"] = value
+        with self.lock:
+            self._render_display()
+
     def _verb(self, verb, channel, cc_num, cc_val):
+        # A modulated verb is steered at its base and never at the engine.
+        # First, before every other dispatch below, because a generated port
+        # carries a modulator exactly as a memorable verb does.
+        key = self._mod_key(channel, verb)
+        if key in self.mod:
+            self._mod_steer(key, cc_num, cc_val)
+            return
         # Generated pages address a plugin port directly and have no entry in
         # any of the tables below, so they are resolved first.
         if verb.startswith(tlib.VERB_LV2):

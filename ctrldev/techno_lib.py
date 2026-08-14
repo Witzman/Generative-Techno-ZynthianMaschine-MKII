@@ -320,6 +320,17 @@ class techno_lib:
         return label
 
     @staticmethod
+    def mod_label(label, active):
+        """The page indicator says so while MOD is active.
+
+        MOD makes the pads inert and turns all eight encoders from "set this
+        value" into "set how it moves". A modifier that changes what every
+        knob on the panel does, with nothing on the surface saying it is on,
+        is the unexplained-behaviour law in another form - and MOD latches, so
+        it can be on with nobody touching it."""
+        return f"{label} MOD" if active else label
+
+    @staticmethod
     def owner_label(label, owner, recording, playing):
         """The page indicator also carries who owns the channel and whether a
         take is being captured.
@@ -771,6 +782,29 @@ class techno_lib:
         engine untouched."""
         entry = mods.get(key)
         return value if entry is None else entry["base"]
+
+    @staticmethod
+    def mod_steer(mods, key, current, delta, lo, hi):
+        """Where an encoder turn on a possibly-modulated verb lands.
+
+        Returns (value, to_base). `to_base` True means the number belongs in
+        the modulator's own `base` field and must NOT be written to the engine
+        here - the modulator's own tick writes base+offset on its own.
+
+        This is the whole of the rule, and it lives here because the driver
+        cannot be imported off the Pi. Without it the knob is dead: _mod_write
+        stores base+offset into self.state / the mixer, so reading `current`
+        back from there hands the encoder the LFO's own output, and the turn
+        is overwritten inside 200 ms.
+
+        Returns (None, False) when there is nothing to steer, so the caller's
+        existing "no readable source" path is unchanged."""
+        entry = mods.get(key)
+        base = current if entry is None else entry.get("base")
+        if base is None:
+            return (None, False)
+        value = min(hi, max(lo, base + delta))
+        return (value, entry is not None)
 
     @staticmethod
     def mark_modulated(col, span):
