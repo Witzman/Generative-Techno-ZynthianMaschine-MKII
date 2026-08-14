@@ -82,7 +82,10 @@ md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
 <p><strong>This is the step that traps newcomers</strong> — everything after it assumes the Pi answers. If it does not, <a href="04-manual-installation.html#reaching-the-pi">Reaching the Pi</a> in section 4 works through it at length: both ways out of the WiFi deadlock, the switch and direct-cable wiring, and what to do when the names do not resolve.</p>
 <hr>
 <h2 id="4--log-in-over-ssh">4 — Log in over SSH</h2>
-<pre><code class="language-bash">ssh root@192.168.2.123      # substitute your own address</code></pre>
+<pre><code class="language-bash">ssh root@192.168.2.123      # substitute your own address
+# or, if the name resolves:  ssh root@zynthian.local
+# password: opensynth       # older images: raspberry</code></pre>
+<p><strong>As <code>root</code>, not as a user with <code>sudo</code>.</strong> That is how ZynthianOS is administered — the installer checks, and refuses to run as anyone else.</p>
 <hr>
 <h2 id="5--run-one-command">5 — Run one command</h2>
 <pre><code class="language-bash">curl -sSL https://raw.githubusercontent.com/Witzman/Generative-Techno-ZynthianMaschine-MKII/main/bootstrap.sh | bash</code></pre>
