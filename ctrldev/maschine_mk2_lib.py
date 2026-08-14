@@ -338,7 +338,7 @@ class maschine_mk2_lib:
             [int(screen), int(x), int(y), int(w), int(h), int(style)])
 
     @staticmethod
-    def bar_packets(screen, x, w, kind, frac, mod=None):
+    def bar_packets(screen, x, w, kind, frac, mod=None, tick=None):
         """Indicator bar under one encoder column.
 
         kind 'u' fills from the left (hits, length, expression, volume),
@@ -348,11 +348,16 @@ class maschine_mk2_lib:
         continuous). '' draws nothing - encoder 7 carries nothing.
 
         mod, when not None, is (lo, hi) bar fractions - the range an active
-        modulator can reach. Drawn as a dashed span plus a 2 px tick at
-        `frac` marking the base inside it, inside the same inner geometry
-        (ix, iy, iw, ih) the fill above already uses. The caller is expected
-        to have quantised both frac and mod already; this draws whatever it
-        is given."""
+        modulator can reach. Drawn as a dashed span, inside the same inner
+        geometry (ix, iy, iw, ih) the fill above already uses.
+
+        tick is a SEPARATE bar fraction - where the wave currently sits -
+        drawn as a 2 px filled mark inside the span. It is deliberately not
+        `frac`: mod_span is symmetric about the base, so frac would sit dead
+        on the span's midpoint every frame and never move. Falls back to
+        `frac` when None, so a bare mod with no tick still draws something
+        sane. The caller is expected to have quantised frac, mod and tick
+        already; this draws whatever it is given."""
 
         cls = maschine_mk2_lib
         if not kind:
@@ -388,7 +393,8 @@ class maschine_mk2_lib:
             span_x = ix + int(iw * lo)
             span_w = max(1, int(iw * (hi - lo)))
             out.append(cls.display_rect_osc(screen, span_x, iy, span_w, ih, cls.RECT_DASHED))
-            tick_x = min(ix + max(0, iw - 2), ix + int(iw * frac))
+            tick_frac = frac if tick is None else min(1.0, max(0.0, float(tick)))
+            tick_x = min(ix + max(0, iw - 2), ix + int(iw * tick_frac))
             out.append(cls.display_rect_osc(screen, tick_x, iy, 2, ih, cls.RECT_FILL))
         return out
 
@@ -397,10 +403,11 @@ class maschine_mk2_lib:
         """Every OSC packet for one screen, in draw order.
 
         tabs: four (letter, name, selected, muted)
-        cols: four (name, value, bar kind, bar fraction) or (name, value,
-              bar kind, bar fraction, mod span). The 4-tuple form still
-              works so every existing caller and test is untouched; mod
-              defaults to None.
+        cols: four (name, value, bar kind, bar fraction), optionally extended
+              with a mod span and a tick: (..., mod span) or
+              (..., mod span, tick). Shorter forms still work so every
+              existing caller and test is untouched; mod and tick default to
+              None.
         label: the page indicator, e.g. "LEVEL 1/3". Empty draws nothing."""
 
         cls = maschine_mk2_lib
@@ -425,13 +432,14 @@ class maschine_mk2_lib:
         for i, col in enumerate(cols):
             name, value, kind, frac = col[:4]
             mod = col[4] if len(col) > 4 else None
+            tick = col[5] if len(col) > 5 else None
             x = i * cls.SCREEN_COL + 3
             if name:
                 out.append(cls.display_text_osc(screen, x, cls.NAME_Y, 1, False, name))
             if value:
                 out.append(cls.display_text_osc(
                     screen, x, cls.VALUE_Y, 2, False, str(value)[:cls.VALUE_CHARS]))
-            out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod))
+            out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod, tick))
         return out
 
     led_cache = None  # bound below to avoid a forward reference

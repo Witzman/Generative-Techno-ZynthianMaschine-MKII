@@ -1411,5 +1411,28 @@ class TestModulationMarks(unittest.TestCase):
         self.assertEqual(col["name"], "CUTOFF")
 
 
+class TestModBaseOr(unittest.TestCase):
+    """The view-substitution rule state_view() and _generated_view() both
+    call through _mod_override(): a modulated verb's display must read the
+    base the knob is set to, never the value _mod_write() just swept it to.
+    Exercised here directly, not just through _col(), so a regression on the
+    substitution itself - as opposed to the tilde/span cosmetics - fails a
+    test rather than only showing up on hardware."""
+
+    def test_value_passes_through_when_nothing_is_bound(self):
+        self.assertEqual(tl.mod_base_or({}, (0, "cutoff"), 42), 42)
+
+    def test_a_bound_key_reports_its_base_not_the_passed_value(self):
+        mods = {(0, "cutoff"): {"base": 64, "depth": 50}}
+        # 99 stands in for whatever the swept/live value currently is - it
+        # must never come back out.
+        self.assertEqual(tl.mod_base_or(mods, (0, "cutoff"), 99), 64)
+
+    def test_only_the_exact_key_is_overridden(self):
+        mods = {(0, "cutoff"): {"base": 64}}
+        self.assertEqual(tl.mod_base_or(mods, (1, "cutoff"), 99), 99)
+        self.assertEqual(tl.mod_base_or(mods, (0, "reso"), 99), 99)
+
+
 if __name__ == "__main__":
     unittest.main()

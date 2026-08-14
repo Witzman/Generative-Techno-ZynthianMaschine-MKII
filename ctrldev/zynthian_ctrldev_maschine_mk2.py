@@ -560,6 +560,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return None
         return tlib.mod_span(entry["base"], entry["depth"], lo_hi[0], lo_hi[1])
 
+    def _mod_tick_frac(self, channel, verb):
+        """Where the modulator's wave currently sits, as a bar fraction, or
+        None when nothing is bound to (channel, verb) or the poll thread has
+        not sampled it yet (entry has no "live" the instant after bind).
+
+        mod_span is symmetric about the base, so its midpoint never moves -
+        drawing the tick there would show a static point forever. This reads
+        the fraction _mod_write() stashed at its own ~200 ms rate instead, so
+        the tick is the one thing on screen that actually sweeps."""
+        entry = self.mod.get(self._mod_key(channel, verb))
+        if entry is None:
+            return None
+        return entry.get("live")
+
+    def _mod_override(self, channel, verb, value):
+        """The verb's BASE when a modulator is bound to (channel, verb), else
+        `value` unchanged. Thin plumbing over tlib.mod_base_or, which carries
+        the actual (and unit tested) substitution rule - this method's only
+        job is building the key and handing over self.mod.
+
+        Substitutes only in the VIEW layer that columns() reads - state_view()
+        and _generated_view() call this after computing their normal value, so
+        the display always shows what the knob is set to, never where the LFO
+        has swept it to at this instant. _mod_write() is untouched by this:
+        the engine still gets the swept value: only what the display reads
+        back changes here."""
+        return tlib.mod_base_or(self.mod, self._mod_key(channel, verb), value)
+
     def _mod_zctrl(self, channel, verb):
         """The zynthian_controller behind a generated verb, or None.
 
@@ -651,6 +679,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         symbols = self._voice_symbols(channel)
         view["synth_ctrl"] = tuple(bool(sym) for sym in symbols) \
             if symbols else (False,) * 4
+        # A modulated verb reads back as its BASE here, never the live swept
+        # value _mod_write() just wrote into self.state / the mixer - the
+        # value cell shows what the knob is set to, not where the LFO is.
+        for verb in tlib.MOD_TIMBRE:
+            if verb in view:
+                view[verb] = self._mod_override(channel, verb, view[verb])
         return view
 
     def globals_view(self):
@@ -2075,6 +2109,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # integer controls dedupe for free, so a slow or parked modulator
             # costs a function call and nothing else.
             self._mod_base_set(channel, verb, value)
+            # The display's tick needs where the wave IS, sampled at this
+            # ~200 ms write rate - mod_span (the dashed envelope) is static
+            # given an unchanged base/depth and would put the tick dead on
+            # the span's midpoint forever, showing no motion at all.
+            width = span[1] - span[0]
+            entry["live"] = (value - span[0]) / width if width else 0.0
 
     # Range and step size per verb: (lo, hi, units per step).
     # Fine controls sweep across the encoder's 128 units; coarse ones use a
@@ -3488,10 +3528,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         techno_lib.columns() decides names, values, greyed columns and the
         pending brackets in one tested place; this only translates its dicts
-        into the (name, value, bar kind, fraction, mod span) tuples
+        into the (name, value, bar kind, fraction, mod span, tick) tuples
         screen_packets() draws, converts a segmented bar's (index, count)
         into a fraction, and stamps a modulated column via mark_modulated()
-        after the fact - columns() itself never learns what a modulator is."""
+        after the fact - columns() itself never learns what a modulator is.
+        `tick` is None on an unmodulated column and the live wave position
+        (distinct from `frac`, which stays the base) on a modulated one."""
 
         desc = self._page()
         shape = desc["shape"]
@@ -3529,6 +3571,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if level is not None:
                     frac = level
             mod = col["mod"]
+            tick = None
             if mod is not None:
                 # Quantised against the bar's own pixel width BEFORE the
                 # change comparison below (self.leds.changed in
@@ -3538,7 +3581,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 frac = tlib.quantise_frac(frac, self.METER_PIXELS)
                 mod = (tlib.quantise_frac(mod[0], self.METER_PIXELS),
                        tlib.quantise_frac(mod[1], self.METER_PIXELS))
-            out.append((col["name"], col["value"], bar, round(float(frac), 3), mod))
+                # The tick is a DIFFERENT quantity from frac (frac is the
+                # base; mod_span's midpoint never moves) - it is where
+                # _mod_write() last sampled the wave, sourced separately and
+                # quantised the same way so it repaints only on a real pixel
+                # move. Nothing sampled yet (just bound) falls back to the
+                # base's own position rather than drawing at 0.
+                live = self._mod_tick_frac(channel, verb)
+                tick = round(float(tlib.quantise_frac(
+                    live if live is not None else frac, self.METER_PIXELS)), 3)
+            out.append((col["name"], col["value"], bar, round(float(frac), 3),
+                       mod, tick))
         return tuple(out)
 
     def _generated_view(self, desc):
@@ -3564,7 +3617,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             span = zctrl.value_max - zctrl.value_min
             if span <= 0:
                 continue
-            view[verb] = int(round((zctrl.value - zctrl.value_min) / span * 100.0))
+            percent = int(round((zctrl.value - zctrl.value_min) / span * 100.0))
+            # Same substitution as state_view(): a modulated port shows its
+            # base, not the live value _mod_write() just swept it to.
+            view[verb] = self._mod_override(self.group, verb, percent)
         return view
 
     # Peak metering. Two mixer APIs exist and the Pi runs the older one -

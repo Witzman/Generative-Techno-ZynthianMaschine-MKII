@@ -749,6 +749,22 @@ class techno_lib:
         return ((a - float(lo)) / width, (b - float(lo)) / width)
 
     @staticmethod
+    def mod_base_or(mods, key, value):
+        """`value`, unless `key` has a live entry in `mods`, in which case
+        that entry's base instead.
+
+        Pure, so the substitution rule is unit tested here rather than only
+        through the driver's untestable state_view()/_generated_view(). The
+        driver's job is only to build `key` (its own (channel, verb) shape,
+        via _mod_key) and hand over its own self.mod - never to decide the
+        substitution itself. This is what keeps a modulated verb's display
+        reading the base the knob is set to, never the live value the LFO
+        just swept it to; _mod_write() still writes the swept value to the
+        engine untouched."""
+        entry = mods.get(key)
+        return value if entry is None else entry["base"]
+
+    @staticmethod
     def mark_modulated(col, span):
         """Stamp an already-built column as modulated.
 
