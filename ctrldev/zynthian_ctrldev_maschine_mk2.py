@@ -1921,7 +1921,87 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             channel = self.group
         if verb is None:
             return                        # greyed column, dead knob, honestly
+        if self.mod_down:
+            self._mod_encoder(verb, channel, cc_num, cc_val)
+            return
         self._verb(verb, channel, cc_num, cc_val)
+
+    def _mod_encoder(self, verb, channel, cc_num, cc_val):
+        """MOD held: the encoder sets modulation DEPTH on this verb, not its
+        value. Bipolar, centre is off.
+
+        A refused verb draws dead and does nothing - it never silently sets a
+        depth that will not be honoured."""
+        if not tlib.mod_allowed(verb):
+            return
+        span = self._mod_range(channel, verb)
+        if span is None:
+            return
+        key = self._mod_key(channel, verb)
+        entry = self.mod.get(key)
+        # 200 units of travel across -100..+100, so a full sweep of the
+        # encoder covers the whole bipolar range once.
+        delta = self._enc_steps(cc_num, cc_val, 2 * tlib.MOD_DEPTH_MAX + 1)
+        if delta == 0:
+            return
+        if entry is None:
+            self.mod_seed += 1
+            rate_idx = tlib.MOD_RATES.index(1.0)
+            # PHASE COMES FROM BIND TIME. phase0 is chosen so the modulator is
+            # at position 0 the instant it is bound - which is what makes eight
+            # LFOs bound one after another on a spread page run scattered
+            # rather than in lockstep. Setting phase0 to a flat 0.0 would put
+            # every same-rate modulator in phase no matter when it was bound.
+            elapsed = self._elapsed_beats()
+            entry = {
+                "depth": 0,
+                "rate": rate_idx,
+                "shape": "tri",
+                "phase0": (-tlib.mod_pos(0.0, elapsed,
+                                         tlib.MOD_RATES[rate_idx])) % 1.0,
+                # The base is captured ONCE, at bind, from the value the
+                # player has dialled in. Re-reading it later would read the
+                # LFO's own output back and the parameter would walk away.
+                "base": self._mod_base_get(channel, verb),
+                "seed": self.mod_seed,
+            }
+            if entry["base"] is None:
+                return                    # no readable source: bind nothing
+            self.mod[key] = entry
+        entry["depth"] = max(-tlib.MOD_DEPTH_MAX,
+                             min(tlib.MOD_DEPTH_MAX, entry["depth"] + delta))
+        self.mod_last = key
+        if entry["depth"] == 0:
+            # Centre is off, and off means gone: leaving a zero-depth entry
+            # behind would keep writing base over the top of the touchscreen.
+            self._mod_clear(key)
+        self._render_display()
+
+    def _mod_clear(self, key):
+        """Drop a modulator and restore its base, so the parameter is left
+        where the player put it rather than wherever the LFO stopped."""
+        entry = self.mod.pop(key, None)
+        if entry is None:
+            return
+        channel, verb = key
+        self._mod_base_set(channel, verb, entry["base"])
+        if self.mod_last == key:
+            self.mod_last = None
+
+    def _mod_base_get(self, channel, verb):
+        """The verb's current surface value, or None when it has no source.
+
+        One accessor for both kinds of verb, so nothing downstream has to ask
+        which kind it is holding."""
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            return self._mod_percent_get(channel, verb)
+        return self.param_get(channel, verb)
+
+    def _mod_base_set(self, channel, verb, value):
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            self._mod_percent_set(channel, verb, value)
+            return
+        self.apply(channel, verb, value)
 
     # Range and step size per verb: (lo, hi, units per step).
     # Fine controls sweep across the encoder's 128 units; coarse ones use a
