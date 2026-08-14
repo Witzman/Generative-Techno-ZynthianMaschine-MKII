@@ -1245,6 +1245,12 @@ class TestButtonTables(unittest.TestCase):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
+    def test_mod_lives_on_swing_not_auto(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[50], "mod")
+        # AUTO is CC_MODE_FILTER. Binding MOD there would shadow a mode.
+        self.assertNotIn(37, tl.BUTTONS_STATEFUL)
+        self.assertNotIn(37, tl.BUTTONS_PRESS)
+
 
 class TestModulatorMaths(unittest.TestCase):
 

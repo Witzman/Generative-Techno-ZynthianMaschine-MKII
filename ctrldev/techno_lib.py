@@ -484,6 +484,11 @@ class techno_lib:
     # CC numbers are MEASURED (gate G4, 2026-08-11, aseqdump). The daemon's
     # token names sit on the opposite physical buttons from what they suggest -
     # never re-derive these from the daemon source.
+    #
+    # MOD lives on SWING (CC 50), NOT on AUTO (CC 37). AUTO is CC_MODE_FILTER
+    # today and is only free after FILTER moves into the SPREAD ring - which
+    # is the three-focus collapse, and that is deferred. Putting MOD on SWING
+    # is what makes the collapse optional instead of a prerequisite.
 
     # Buttons whose release is also an event: the driver tracks them across
     # press and release, so they are dispatched before the press-only filter.
@@ -492,6 +497,7 @@ class techno_lib:
         3: "rec",
         49: "shift",
         31: "solo",
+        50: "mod",              # SWING. Verified free and unreferenced.
     }
 
     # Buttons that act on press only.

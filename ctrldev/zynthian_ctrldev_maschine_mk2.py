@@ -412,6 +412,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # that is the short-lived mutex between threads and clears itself after
         # every write, so it cannot carry an ownership that survives a snapshot.
         self.owner = {i: "gen" for i in range(len(tlib.CHANNELS))}
+        # SP10: modulators, keyed by (channel, verb).
+        #
+        # KEYED BY VERB, never by (mode, page, encoder position). A future SP9
+        # layout switch would otherwise orphan every modulator, or worse,
+        # re-point it at whatever verb now sits in that slot.
+        #
+        # Each value: {"depth", "rate", "shape", "phase0", "base", "seed"}.
+        # `base` is the driver's own truth for the parameter - the LFO writes
+        # base+offset and never reads its own output back.
+        self.mod = {}
+        self.mod_held = False         # MOD physically down
+        self.mod_latched = False      # MOD tapped on
+        self.mod_last = None          # the key MOD+pad edits
+        self.mod_seed = 0             # bumped per bind, so two S&H differ
+        self._t0 = time.monotonic()   # the modulator clock's origin
         # Which kind a channel behaves as, when the player has said so.
         # None means "ask the chain" - never a stored copy of it.
         self.kind_override = {i: None for i in range(len(tlib.CHANNELS))}
@@ -445,6 +460,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.solo_down = False
         self.solo_mode = False           # latched: the F row means solo
         self._down_at = {}
+
+    @property
+    def mod_down(self):
+        """MOD is active either way round: held, or tapped on."""
+        return self.mod_held or self.mod_latched
 
     # --- plumbing ------------------------------------------------------
 
@@ -503,6 +523,87 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 return value * lib.DIVISIONS[self.div[channel]][1]
             return value
         return self.state[channel].get(param)
+
+    def _mod_key(self, channel, verb):
+        """Modulators on a global verb carry channel None; everything else is
+        per channel. Same shape as the (channel, verb) pair _verb() already
+        takes, so nothing has to translate."""
+        return (None if channel is None else int(channel), verb)
+
+    def _mod_range(self, channel, verb):
+        """(lo, hi) in SURFACE units for a verb, or None when this driver has
+        no range for it.
+
+        Generated plugin ports report (0, 100): _verb_lv2 (line 649) already
+        drives them as a percentage scaled onto the port's own range, and a
+        modulator must speak the same units as the knob beside it or the two
+        would disagree about what depth 50 means."""
+        span = self.VERB_RANGES.get(verb)
+        if span is not None:
+            return (span[0], span[1])
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            return (0.0, 100.0)
+        return None
+
+    def _mod_zctrl(self, channel, verb):
+        """The zynthian_controller behind a generated verb, or None.
+
+        Resolved the same way _verb_lv2 and _verb_fx resolve it - through
+        `proc.controllers_dict[symbol]`. Do NOT reach for
+        zynthian_lv2.get_plugin_ports(): it returns a dict keyed by port
+        INDEX, not by symbol, so a membership test against symbols silently
+        returns nothing and looks exactly like an absent plugin."""
+        if verb.startswith(tlib.VERB_LV2):
+            proc = self._voice_processor(channel)
+            symbol = verb[len(tlib.VERB_LV2):]
+        elif verb.startswith(tlib.VERB_FX):
+            which, _, symbol = verb[len(tlib.VERB_FX):].partition(":")
+            proc = self.fx_handle(0, which)
+        else:
+            return None
+        if proc is None:
+            return None
+        return proc.controllers_dict.get(symbol)
+
+    def _mod_percent_get(self, channel, verb):
+        """A generated port's current value as the 0-100 the surface uses."""
+        zctrl = self._mod_zctrl(channel, verb)
+        if zctrl is None:
+            return None
+        span = zctrl.value_max - zctrl.value_min
+        if span <= 0:
+            return None
+        return (zctrl.value - zctrl.value_min) / span * 100.0
+
+    def _elapsed_beats(self):
+        """Beats since the driver started.
+
+        Derived from BPM rather than from seconds so every modulator is
+        bar-synced and follows a tempo change without being told about it.
+
+        Defined HERE rather than with the poll-thread writer because Task 4
+        binds a modulator's phase from it - a definition in Task 6 would leave
+        Task 4 calling a method that does not exist, and py_compile cannot see
+        that on WSL."""
+        bpm = self.globals_view().get("bpm") or 120
+        return (time.monotonic() - self._t0) * (float(bpm) / 60.0)
+
+    def _mod_percent_set(self, channel, verb, percent):
+        """Write a generated port from a 0-100 surface value, using the same
+        scaling _verb_lv2 uses so a modulated port and a turned knob land on
+        identical numbers."""
+        zctrl = self._mod_zctrl(channel, verb)
+        if zctrl is None:
+            return
+        span = zctrl.value_max - zctrl.value_min
+        if span <= 0:
+            return
+        percent = min(100.0, max(0.0, float(percent)))
+        target = zctrl.value_min + span * (percent / 100.0)
+        if tlib.port_is_discrete(zctrl.value_min, zctrl.value_max,
+                                 getattr(zctrl, "is_integer", True)):
+            target = round(target)
+        zctrl.set_value(target, True)
 
     def state_view(self, channel):
         """The state techno_lib.columns() reads: the dict, the four parameters
@@ -1643,6 +1744,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     def _act_solo(self, down):
         self._solo_button(down)
+
+    def _act_mod(self, down):
+        # Tap latches, hold is momentary - the same 250ms rule _solo_button
+        # (line 2102) already implements. Without the latch, MOD + a Group
+        # button needs two hands and cannot be played.
+        if down:
+            self._down_at["mod"] = (time.monotonic(), False)
+            self.mod_held = True
+            self._render_display()
+            return
+        went_down, _ = self._down_at.pop("mod", (None, False))
+        self.mod_held = False
+        if went_down is not None and (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
+            self.mod_latched = not self.mod_latched
+        self._render_display()
 
     def _act_play(self):
         self._toggle_transport()
