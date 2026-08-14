@@ -1246,5 +1246,118 @@ class TestButtonTables(unittest.TestCase):
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
 
+class TestModulatorMaths(unittest.TestCase):
+
+    def test_timbre_verbs_are_allowed(self):
+        for verb in ("level", "reverb", "delay", "cutoff", "reso",
+                     "env", "decay", "gate", "velo"):
+            self.assertTrue(tl.mod_allowed(verb), verb)
+
+    def test_generated_plugin_ports_are_allowed(self):
+        self.assertTrue(tl.mod_allowed("lv2:surge_xt_a_filter1_cutoff"))
+        self.assertTrue(tl.mod_allowed("fx:reverb:decay"))
+
+    def test_structure_verbs_are_refused(self):
+        # These rewrite the pattern. An LFO on one of them thrashes zynseq.
+        for verb in ("div", "length", "kit", "preset", "sample",
+                     "root", "scale", "octave", "range"):
+            self.assertFalse(tl.mod_allowed(verb), verb)
+
+    def test_generation_verbs_are_refused_in_v1(self):
+        # HITS/ROTATE/DENSITY/CHANCE are the DRIFT targets. Drift is deferred
+        # and blocked on the SP2-ownership rule, so MOD refuses them for now.
+        for verb in ("hits", "rotate", "density", "chance"):
+            self.assertFalse(tl.mod_allowed(verb), verb)
+
+    def test_none_is_refused(self):
+        self.assertFalse(tl.mod_allowed(None))
+
+    def test_phase_advances_one_cycle_per_rate_in_bars(self):
+        # 2 bars per cycle, 8 beats elapsed at 4 beats to the bar = one cycle.
+        self.assertAlmostEqual(tl.mod_pos(0.0, 8.0, 2.0), 1.0)
+        self.assertAlmostEqual(tl.mod_pos(0.25, 8.0, 2.0), 1.25)
+
+    def test_triangle_runs_from_minus_one_up_and_back(self):
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.0), -1.0)
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.25), 0.0)
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.5), 1.0)
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.75), 0.0)
+
+    def test_ramp_and_square(self):
+        self.assertAlmostEqual(tl.mod_wave("ramp", 0.0), -1.0)
+        self.assertAlmostEqual(tl.mod_wave("ramp", 0.5), 0.0)
+        self.assertAlmostEqual(tl.mod_wave("squ", 0.25), 1.0)
+        self.assertAlmostEqual(tl.mod_wave("squ", 0.75), -1.0)
+
+    def test_every_shape_stays_inside_minus_one_to_one(self):
+        for shape in tl.MOD_SHAPES:
+            for i in range(0, 400):
+                v = tl.mod_wave(shape, i / 97.0, seed=7)
+                self.assertGreaterEqual(v, -1.0)
+                self.assertLessEqual(v, 1.0)
+
+    def test_sample_and_hold_is_deterministic_and_holds(self):
+        # Same (seed, cycle) always gives the same value, so a saved jam
+        # reloads sounding identical. Within a cycle it does not move.
+        a = tl.mod_wave("s&h", 3.1, seed=42)
+        b = tl.mod_wave("s&h", 3.9, seed=42)
+        self.assertEqual(a, b)
+        self.assertEqual(a, tl.mod_wave("s&h", 3.5, seed=42))
+        self.assertNotEqual(a, tl.mod_wave("s&h", 4.1, seed=42))
+
+    def test_depth_zero_never_moves_the_value(self):
+        for wave in (-1.0, -0.3, 0.0, 0.6, 1.0):
+            self.assertEqual(tl.mod_value(64, wave, 0, 0, 127), 64)
+
+    def test_full_depth_sweeps_half_the_range_each_way(self):
+        # depth is -100..100 percent. At 100 the offset is half the span.
+        self.assertAlmostEqual(
+            tl.mod_value(64, 1.0, 100, 0, 127), 127.0)
+        self.assertAlmostEqual(
+            tl.mod_value(64, -1.0, 100, 0, 127), 0.5)
+
+    def test_value_is_clamped_to_the_verbs_own_range(self):
+        self.assertEqual(tl.mod_value(120, 1.0, 100, 0, 127), 127)
+        self.assertEqual(tl.mod_value(4, -1.0, 100, 0, 127), 0)
+
+    def test_negative_depth_mirrors_positive(self):
+        up = tl.mod_value(64, 0.5, 50, 0, 127)
+        down = tl.mod_value(64, 0.5, -50, 0, 127)
+        self.assertAlmostEqual(up - 64, 64 - down)
+
+    def test_span_is_the_range_the_bar_should_draw_dashed(self):
+        lo, hi = tl.mod_span(64, 50, 0, 127)
+        self.assertAlmostEqual(lo, (64 - 31.75) / 127.0)
+        self.assertAlmostEqual(hi, (64 + 31.75) / 127.0)
+
+    def test_span_clamps_at_the_ends_rather_than_running_off(self):
+        lo, hi = tl.mod_span(0, 100, 0, 127)
+        self.assertAlmostEqual(lo, 0.0)
+        self.assertAlmostEqual(hi, 0.5)
+
+    def test_span_of_zero_depth_is_a_point(self):
+        lo, hi = tl.mod_span(64, 0, 0, 127)
+        self.assertAlmostEqual(lo, hi)
+
+    def test_twelve_rates_and_four_shapes_fill_the_sixteen_pads(self):
+        # Every table entry must be reachable from a pad. A table with more
+        # entries than pads is a table that lies about what the surface can do.
+        self.assertEqual(len(tl.MOD_RATES), 12)
+        self.assertEqual(len(tl.MOD_SHAPES), 4)
+        self.assertEqual(
+            len(tl.MOD_RATES) + len(tl.MOD_SHAPES), 16)
+
+    def test_rates_run_slowest_first_and_are_all_positive(self):
+        self.assertEqual(sorted(tl.MOD_RATES, reverse=True),
+                         list(tl.MOD_RATES))
+        for rate in tl.MOD_RATES:
+            self.assertGreater(rate, 0.0)
+
+    def test_one_bar_is_in_the_rate_table(self):
+        # The default rate at bind. Absent, the driver would index a rate that
+        # does not exist.
+        self.assertIn(1.0, tl.MOD_RATES)
+
+
 if __name__ == "__main__":
     unittest.main()

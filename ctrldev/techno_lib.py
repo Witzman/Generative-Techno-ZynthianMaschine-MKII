@@ -625,6 +625,117 @@ class techno_lib:
             return frac
         return round(frac * steps) / steps
 
+    # ---------------------------------------------------------- modulation
+    #
+    # SP10 step 1. A modulator is (depth, rate, shape, phase0, base, seed)
+    # against one verb on one channel. Everything below is pure: the driver
+    # owns the store and the clock, this owns the shape of the motion.
+
+    MOD_SHAPES = ("tri", "ramp", "squ", "s&h")
+
+    # Bars per cycle, slowest first. TWELVE, not sixteen: the sixteen pads
+    # carry twelve rates (pads 0-11) and four shapes (pads 12-15), and an
+    # entry no pad can reach is a table that lies about the surface.
+    #
+    # Bar-synced rather than free-running so a modulator lines up with the
+    # pattern it is colouring - this instrument already lands structure on
+    # the bar everywhere else.
+    MOD_RATES = (16.0, 8.0, 6.0, 4.0, 3.0, 2.0,
+                 1.0, 0.75, 0.5, 0.25, 0.125, 0.0625)
+
+    # Verbs an LFO may drive. Timbre only - the left column of law L2, where
+    # a change is allowed to land instantly. Everything else rewrites the
+    # pattern, and an LFO on a pattern rewrite thrashes zynseq under a lock.
+    #
+    # HITS, ROTATE, DENSITY and CHANCE are absent DELIBERATELY. They are the
+    # bar-rate DRIFT targets, and drift does not ship until the SP2 ownership
+    # rule is settled: drift rewrites exactly the handback verbs, so an
+    # unspecified drift silently erases a recorded take.
+    MOD_TIMBRE = frozenset({
+        "level", "reverb", "delay", "cutoff", "reso",
+        "env", "decay", "gate", "velo"})
+
+    # Depth is a signed percentage. 100 sweeps half the verb's range each way,
+    # so a centred base at full depth reaches both end stops and no further.
+    MOD_DEPTH_MAX = 100
+
+    @staticmethod
+    def mod_allowed(verb):
+        """True when MOD may bind a modulator to this verb.
+
+        A refused verb is drawn dead (law L4) rather than silently ignoring
+        the gesture - a knob that does nothing without saying so is the one
+        thing this surface must never do."""
+        if not verb:
+            return False
+        if verb.startswith(techno_lib.VERB_LV2) or verb.startswith(techno_lib.VERB_FX):
+            return True
+        return verb in techno_lib.MOD_TIMBRE
+
+    @staticmethod
+    def mod_pos(phase0, elapsed_beats, rate_bars, beats_per_bar=4):
+        """Unwrapped position in cycles: the integer part is the cycle count
+        (which sample-and-hold needs) and the fraction is the phase.
+
+        Driven by BEATS, not seconds, so every modulator follows the tempo
+        without being told the tempo changed."""
+        span = float(rate_bars) * float(beats_per_bar)
+        if span <= 0.0:
+            return float(phase0)
+        return float(phase0) + float(elapsed_beats) / span
+
+    @staticmethod
+    def mod_sh(seed, cycle):
+        """Deterministic sample-and-hold in -1.0..1.0.
+
+        The same (seed, cycle) always gives the same value, so a saved jam
+        reloads sounding identical. A random() here would make the snapshot a
+        lie, which is exactly the CHANCE/SWING mistake of 2026-08-11."""
+        h = (int(seed) * 6364136223846793005
+             + int(cycle) * 1442695040888963407) & 0xFFFFFFFFFFFFFFFF
+        h ^= h >> 33
+        h = (h * 0xFF51AFD7ED558CCD) & 0xFFFFFFFFFFFFFFFF
+        h ^= h >> 33
+        return (h / float(0xFFFFFFFFFFFFFFFF)) * 2.0 - 1.0
+
+    @staticmethod
+    def mod_wave(shape, pos, seed=0):
+        """The modulator's output at `pos`, bipolar -1.0..1.0."""
+        p = float(pos) % 1.0
+        if shape == "tri":
+            return 4.0 * p - 1.0 if p < 0.5 else 3.0 - 4.0 * p
+        if shape == "ramp":
+            return 2.0 * p - 1.0
+        if shape == "squ":
+            return 1.0 if p < 0.5 else -1.0
+        if shape == "s&h":
+            return techno_lib.mod_sh(seed, int(float(pos) // 1))
+        return 0.0
+
+    @staticmethod
+    def mod_value(base, wave, depth, lo, hi):
+        """`base` displaced by `wave` at `depth`, clamped to the verb's range.
+
+        The BASE is the driver's own truth and is never read back from the
+        plugin: an LFO caught mid-sweep would otherwise write its own position
+        into the snapshot and the knob would have nothing to return to."""
+        half = (float(hi) - float(lo)) / 2.0
+        out = float(base) + float(wave) * (float(depth) / 100.0) * half
+        return max(float(lo), min(float(hi), out))
+
+    @staticmethod
+    def mod_span(base, depth, lo, hi):
+        """(low, high) as bar fractions 0..1 - the dashed span the indicator
+        bar draws to say a value is moving on its own."""
+        half = (float(hi) - float(lo)) / 2.0
+        reach = abs(float(depth) / 100.0) * half
+        a = max(float(lo), min(float(hi), float(base) - reach))
+        b = max(float(lo), min(float(hi), float(base) + reach))
+        width = float(hi) - float(lo)
+        if width <= 0.0:
+            return (0.0, 0.0)
+        return ((a - float(lo)) / width, (b - float(lo)) / width)
+
     # Generated pages address a plugin port directly, so their verb names carry
     # a prefix the driver's _verb() dispatches on:
     #   lv2:<symbol>          - the selected channel's synth processor
