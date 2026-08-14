@@ -645,9 +645,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Defined HERE rather than with the poll-thread writer because Task 4
         binds a modulator's phase from it - a definition in Task 6 would leave
         Task 4 calling a method that does not exist, and py_compile cannot see
-        that on WSL."""
-        bpm = self.globals_view().get("bpm") or 120
-        return (time.monotonic() - self._t0) * (float(bpm) / 60.0)
+        that on WSL.
+
+        THE TEMPO READ HOLDS THE LOCK, and nothing else here does. This used
+        to go through globals_view(), which calls libseq.getTempo() - an
+        unlocked zynseq call, reached from _mod_write on the poll thread and
+        from get_state on whichever thread saves. libzynseq is not thread-safe
+        and an unlocked reach into it once took the whole UI down with SIGSEGV
+        mid-jam.
+
+        The lock is taken for the tempo read ALONE rather than around
+        _mod_write's parameter writes, which is why the read is not simply
+        moved into the caller's locked section: a parameter write can block on
+        a socket for seconds and must never hold this lock. self.lock is an
+        RLock, so the MIDI thread - which already holds it for the whole event
+        - can call this without deadlocking. A cached tempo was the
+        alternative and was rejected: it needs a refresh site of its own and
+        goes stale exactly when the tempo moves, which is the one thing this
+        clock exists to follow."""
+        with self.lock:
+            bpm = self.libseq.getTempo()
+        return (time.monotonic() - self._t0) * (float(bpm or 120) / 60.0)
 
     def _mod_percent_set(self, channel, verb, percent):
         """Write a generated port from a 0-100 surface value, using the same
@@ -1580,6 +1598,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         deliberately: adding it later leaves every existing snapshot missing
         it, with no way to tell."""
 
+        # Once, outside the comprehension below: it takes the lock for a
+        # tempo read, and asking eight modulators for it eight times would
+        # take the lock eight times for one answer.
+        beats = self._elapsed_beats()
         return {
             "globals": {k: v for k, v in self.globals.items() if k != "pending"},
             "mode": self.mode,
@@ -1627,8 +1649,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         tlib.MOD_RATES[e["rate"]]) % 1.0,
                     "base": e["base"], "seed": e["seed"],
                 }
-                for (ch, verb), e in self.mod.items()
+                # list() because this iterates on whichever thread is saving
+                # while the MIDI thread can bind or clear a modulator: a bare
+                # .items() raises RuntimeError: dictionary changed size during
+                # iteration, and takes the whole snapshot save with it.
+                for (ch, verb), e in list(self.mod.items())
             },
+            # The seed counter itself. Without it a load restarts it at 0 and
+            # the next bind collides with a restored entry's seed - two
+            # sample-and-holds on the same rate would then step in lockstep,
+            # which is the one thing the seed exists to prevent.
+            "mod_seed": self.mod_seed,
             "voices": {
                 str(i): {
                     "register": self.state[i]["register"],
