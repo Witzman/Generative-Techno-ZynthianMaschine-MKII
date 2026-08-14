@@ -1663,6 +1663,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # inside _pad_up finds nothing and this is a no-op.
                 self._pad_up(step)
                 return True
+            if self.mod_down:
+                # Ahead of the STEP branch deliberately. In STEP mode a pad
+                # hit goes to _toggle_step, so intercepting further down in
+                # _pad_down would let MOD+pad silently edit the pattern
+                # instead of setting a rate - a destructive surprise from a
+                # gesture that is supposed to be inert.
+                self._mod_pad(step)
+                return True
             if self.mode == "STEP":
                 # The step editor stays bound to NoteOn only, so dropping the
                 # note-off filter cannot make it toggle twice per strike.
@@ -1934,6 +1942,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         depth that will not be honoured."""
         if not tlib.mod_allowed(verb):
             return
+        if self.erase_down:
+            # MOD + ERASE + encoder clears. Destructive, so it is two-key and
+            # it obeys law L3: no single press destroys anything.
+            self._mod_clear(self._mod_key(channel, verb))
+            self._render_display()
+            return
         span = self._mod_range(channel, verb)
         if span is None:
             return
@@ -1975,6 +1989,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Centre is off, and off means gone: leaving a zero-depth entry
             # behind would keep writing base over the top of the touchscreen.
             self._mod_clear(key)
+        self._render_display()
+
+    def _mod_pad(self, pad):
+        """MOD + pad: rate and shape for the MOST RECENTLY BOUND modulator.
+
+        Not the same pointer as the big encoder's 'last-touched parameter'
+        (SP10 step 2) - keep the two names apart or they will be conflated.
+
+        Rows 1-2 (pads 0-7 in step order) are the sixteen rates, slowest
+        first. Rows 3-4 are the four shapes, repeated across the row so any
+        pad in a column picks the same shape."""
+        if self.mod_last is None:
+            return
+        entry = self.mod.get(self.mod_last)
+        if entry is None:
+            self.mod_last = None
+            return
+        if pad < len(tlib.MOD_RATES):
+            entry["rate"] = pad
+        else:
+            entry["shape"] = tlib.MOD_SHAPES[pad - len(tlib.MOD_RATES)]
         self._render_display()
 
     def _mod_clear(self, key):
