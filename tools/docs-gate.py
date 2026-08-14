@@ -107,13 +107,26 @@ def main():
           f"{'' if check_only else ' (rebuilt)'}")
 
     # --- G1 links ------------------------------------------------------------
+    # Fragments count. A link to a heading that no longer carries that id lands
+    # the reader at the top of the right page and looks like it worked, so it is
+    # exactly the kind of rot that survives a read-through.
+    ids = {p.name: set(re.findall(r'id="([^"]+)"', p.read_text(encoding="utf-8")))
+           for p in DOCS.glob("*.html")}
     broken = set()
     for f in list(pages) + [DOCS / "index.html"]:
         if not f.exists():
             continue
-        for href in re.findall(r'href="([^"#:]+\.html)"', f.read_text(encoding="utf-8")):
-            if not (DOCS / href).exists():
+        for href in re.findall(r'href="([^"]+)"', f.read_text(encoding="utf-8")):
+            if "://" in href or href.startswith("mailto:"):
+                continue
+            path, _, frag = href.partition("#")
+            target = path or f.name          # a bare #id points at this page
+            if not target.endswith(".html"):
+                continue                     # style.css, favicon.svg and friends
+            if target not in ids:
                 broken.add(f"{f.name} -> {href}")
+            elif frag and frag not in ids[target]:
+                broken.add(f"{f.name} -> {href} (no such id)")
     print(f"  G1  internal links    {'ok' if not broken else sorted(broken)}")
     if broken:
         fail.append(f"G1 broken links: {sorted(broken)}")
