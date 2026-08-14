@@ -1639,13 +1639,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "depth": e["depth"], "rate": e["rate"],
                     "shape": e["shape"],
                     # The phase saved is the phase RIGHT NOW, not the phase0
-                    # the modulator was bound with. The beat clock restarts at
-                    # zero on load, so storing the bind-time offset would
-                    # rewind every modulator to where it started instead of
-                    # resuming it - and eight scattered LFOs would come back
-                    # scattered by the wrong amounts.
+                    # the modulator was bound with.
+                    #
+                    # WHAT ACTUALLY HAPPENS ON LOAD: the beat clock does NOT
+                    # restart. self._t0 is set once, at construction, and
+                    # set_state never touches it - so a restored phase0 is
+                    # immediately advanced by however many beats have elapsed
+                    # since the driver started, and no modulator resumes at
+                    # the exact phase it was saved at. What survives is the
+                    # RELATIVE scatter between modulators running at the same
+                    # rate, because they all advance by the same amount, and
+                    # that scatter is the thing worth keeping: it is why eight
+                    # spread-page LFOs chase each other rather than breathing
+                    # together. Saving the bind-time offset instead would lose
+                    # even that.
                     "phase0": tlib.mod_pos(
-                        e["phase0"], self._elapsed_beats(),
+                        e["phase0"], beats,
                         tlib.MOD_RATES[e["rate"]]) % 1.0,
                     "base": e["base"], "seed": e["seed"],
                 }
@@ -1747,15 +1756,40 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             depth = entry.get("depth", 0)
             if not isinstance(depth, int) or depth == 0:
                 continue
-            self.mod[(channel, verb)] = {
+            base = entry.get("base")
+            # The base is arithmetic on every single tick. A None or a string
+            # out of a hand-edited snapshot raises inside _mod_write, and
+            # _playhead_loop's except-and-return then kills the playhead, the
+            # kit and preset commits, the volume poll, the display refresh AND
+            # all modulation for the rest of the session - one bad character
+            # in a JSON file taking the whole instrument silent.
+            if isinstance(base, bool) or not isinstance(base, (int, float)):
+                continue
+            if base != base or base in (float("inf"), float("-inf")):
+                continue
+            # _mod_key, not the parsed pair: a snapshot written before `fx:`
+            # verbs were keyed globally carries a real channel on one, and it
+            # has to normalise to None here or it comes back invisible.
+            self.mod[self._mod_key(channel, verb)] = {
                 "depth": max(-tlib.MOD_DEPTH_MAX,
                              min(tlib.MOD_DEPTH_MAX, depth)),
                 "rate": rate,
                 "shape": shape,
                 "phase0": float(entry.get("phase0", 0.0)),
-                "base": entry.get("base", 0),
+                "base": base,
                 "seed": int(entry.get("seed", 0)),
             }
+        # The seed counter. Restored, and floored at the highest seed actually
+        # in use - _mod_encoder increments before it reads, so the next bind
+        # lands one past every restored entry. The floor is what makes a
+        # snapshot written before this key existed safe too: without it the
+        # counter restarted at 0 and the next bind handed out a seed a
+        # restored modulator already held, and two sample-and-holds on the
+        # same rate then step as one, which is what the seed exists to stop.
+        saved_seed = state.get("mod_seed")
+        self.mod_seed = saved_seed if isinstance(saved_seed, int) else 0
+        for entry in self.mod.values():
+            self.mod_seed = max(self.mod_seed, entry["seed"])
         # A pointer into a dict that was just rebuilt from scratch is
         # meaningless - MOD+pad has nothing held down across a snapshot load.
         self.mod_last = None
@@ -2202,10 +2236,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Not the same pointer as the big encoder's 'last-touched parameter'
         (SP10 step 2) - keep the two names apart or they will be conflated.
 
-        Pads 0-11 (three rows) pick a rate from techno_lib.MOD_RATES (twelve
-        entries, slowest first). Pads 12-15 (the last row) pick a shape from
-        techno_lib.MOD_SHAPES (four entries), so any pad in a column picks the
-        same shape."""
+        Pads 0-11 (the top three rows) pick a rate from techno_lib.MOD_RATES
+        (twelve entries, slowest first, so the rate speeds up left to right
+        and top to bottom). Pads 12-15 - the bottom row alone - are the four
+        techno_lib.MOD_SHAPES in order, one shape per pad."""
         if self.mod_last is None:
             return
         entry = self.mod.get(self.mod_last)
@@ -2263,12 +2297,40 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         self.apply(channel, verb, value)
 
+    def _snapshot_busy(self):
+        """True while the state manager is inside a snapshot load or save.
+
+        Read from the state manager's own busy set rather than a flag of our
+        own. A flag would need a signal at the START of a load and there is
+        none - SS_LOAD_SNAPSHOT is sent after everything, including
+        set_state_drivers - so the flag could only be raised on the wrong edge
+        and would risk suppressing modulation for the rest of the session.
+        This set is emptied by end_busy() whatever happens, including on a
+        load that fails, so it cannot latch on.
+
+        The clid is 'load snapshot' on the main path and 'load_snapshot' on
+        another, so the test is a substring; 'save snapshot' matches too,
+        which is harmless and mildly useful."""
+
+        try:
+            busy = getattr(self.state_manager, "busy", None) or ()
+            return any("snapshot" in str(clid) for clid in busy)
+        except Exception:
+            return False
+
     def _mod_write(self):
         """Advance every modulator and write base+offset.
 
         Runs on the poll thread and NEVER on the MIDI thread: midi_event holds
         the lock for the whole event, and a parameter write can block."""
         if not self.mod:
+            return
+        if self._snapshot_busy():
+            # A load rewrites every chain and every mixer strip, and set_state
+            # - which is what replaces self.mod - runs at the END of it.
+            # Without this the poll thread gets a ~200 ms tick in the middle
+            # and writes a modulator belonging to the OUTGOING snapshot over a
+            # value that was just restored.
             return
         beats = self._elapsed_beats()
         for key, entry in list(self.mod.items()):

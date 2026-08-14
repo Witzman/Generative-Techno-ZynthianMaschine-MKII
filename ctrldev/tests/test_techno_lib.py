@@ -1405,7 +1405,8 @@ class TestModulatorMaths(unittest.TestCase):
 class TestModulationMarks(unittest.TestCase):
 
     def test_a_modulated_column_gets_a_tilde_on_its_name(self):
-        col = tl._col("CUTOFF", "0064", "uni", 0.5, mod=(0.25, 0.75))
+        col = tl.mark_modulated(tl._col("CUTOFF", "0064", "uni", 0.5),
+                                (0.25, 0.75))
         self.assertTrue(col["name"].endswith("~"))
         self.assertEqual(col["mod"], (0.25, 0.75))
 
@@ -1415,13 +1416,15 @@ class TestModulationMarks(unittest.TestCase):
         self.assertIsNone(col["mod"])
 
     def test_the_tilde_does_not_push_the_name_past_the_cell(self):
-        col = tl._col("LFO1_ENAB", "0064", "uni", 0.5, mod=(0.0, 1.0))
+        col = tl.mark_modulated(tl._col("LFO1_ENAB", "0064", "uni", 0.5),
+                                (0.0, 1.0))
         self.assertLessEqual(len(col["name"]), tl.NAME_CHARS)
         self.assertTrue(col["name"].endswith("~"))
 
     def test_the_value_cell_still_shows_the_base(self):
         # Not the modulated value: the base is the thing the knob steers.
-        col = tl._col("CUTOFF", "0064", "uni", 0.5, mod=(0.1, 0.9))
+        col = tl.mark_modulated(tl._col("CUTOFF", "0064", "uni", 0.5),
+                                (0.1, 0.9))
         self.assertEqual(col["value"], "0064")
 
     def test_a_dead_column_carries_no_modulation(self):

@@ -599,17 +599,14 @@ class techno_lib:
         return f"{int(round(v)):04d}"
 
     @staticmethod
-    def _col(name, value, bar=None, frac=0.0, grey=False, pending=False,
-             mod=None):
+    def _col(name, value, bar=None, frac=0.0, grey=False, pending=False):
+        # No `mod` parameter: the tilde and the span are stamped afterwards by
+        # mark_modulated(), which is the one path production uses. A second
+        # copy of that logic here was used by nothing but its own tests.
         if pending:
             value = f">{value}<"
-        if mod is not None:
-            # The tilde says "this value moves on its own". Truncate FIRST so
-            # the marker is never the character that falls off the end - a
-            # silently dropped marker is worse than no marker.
-            name = name[:techno_lib.NAME_CHARS - 1] + "~"
         return {"name": name, "value": value, "bar": bar, "frac": frac,
-                "grey": grey, "pending": pending, "mod": mod}
+                "grey": grey, "pending": pending, "mod": None}
 
     @staticmethod
     def _dead(name):
