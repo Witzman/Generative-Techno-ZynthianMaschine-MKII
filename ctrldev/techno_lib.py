@@ -474,6 +474,62 @@ class techno_lib:
 
     MODES = ("CONTROL", "STEP", "ALL", "MIXER", "FILTER")
 
+    # ------------------------------------------------- button dispatch tables
+    #
+    # SP10 step 0 / SP9 section 7. The driver's midi_event used to carry these
+    # as a chain of `if cc_num == CC_X`. Moving them here buys one thing that
+    # matters: a test can prove no two buttons claim the same CC, which is how
+    # two bindings were wrong for four days in 2026-08.
+    #
+    # CC numbers are MEASURED (gate G4, 2026-08-11, aseqdump). The daemon's
+    # token names sit on the opposite physical buttons from what they suggest -
+    # never re-derive these from the daemon source.
+
+    # Buttons whose release is also an event: the driver tracks them across
+    # press and release, so they are dispatched before the press-only filter.
+    BUTTONS_STATEFUL = {
+        2: "erase",
+        3: "rec",
+        49: "shift",
+        31: "solo",
+    }
+
+    # Buttons that act on press only.
+    BUTTONS_PRESS = {
+        1: "play",
+        4: "grid",
+        7: "restart",
+        13: "sound_prev",
+        14: "sound_next",
+        29: "duplicate",
+        47: "page_prev",
+        48: "page_next",
+    }
+
+    # CCs that belong to something other than a named button. A named button
+    # landing on one of these would be swallowed by the range check above it.
+    RESERVED_CCS = frozenset(
+        list(range(16, 24))          # the eight encoders
+        + list(range(39, 47))        # F1..F8
+        + list(range(80, 88))        # Groups A..H
+        + [11, 32, 38, 51, 37])      # CONTROL, STEP, ALL, MIXER(VOLUME), FILTER(AUTO)
+
+    @staticmethod
+    def button_conflicts():
+        """Every CC claimed by more than one thing, as readable strings.
+
+        Returns [] when the map is sound. A non-empty list is a surface bug:
+        the second claimant is unreachable and there is no runtime symptom."""
+        problems = []
+        for cc in sorted(set(techno_lib.BUTTONS_STATEFUL)
+                         & set(techno_lib.BUTTONS_PRESS)):
+            problems.append(f"CC {cc}: stateful and press-only")
+        for table, label in ((techno_lib.BUTTONS_STATEFUL, "stateful"),
+                             (techno_lib.BUTTONS_PRESS, "press")):
+            for cc in sorted(set(table) & techno_lib.RESERVED_CCS):
+                problems.append(f"CC {cc}: {label} button on a reserved CC")
+        return problems
+
     # A page's shape decides what encoder n means. This is the whole trick:
     # three layouts, one dispatch.
     #   channel - 8 verbs, one selected channel      (today's CONTROL and STEP)

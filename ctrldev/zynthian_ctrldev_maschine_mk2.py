@@ -1584,21 +1584,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Buttons that carry state across press and release come first:
             # the press-only filter below throws releases away, and for a
             # momentary gesture the release IS the event.
-            if cc_num == CC_ERASE:
-                self.erase_down = down
-                return True
-            if cc_num == CC_REC:
-                # Held, and it overdubs: release ends the take. Held notes are
-                # NOT released here - letting go of REC stops capturing, it
-                # does not stop the instrument sounding.
-                self.rec_down = down
-                self._render_display()
-                return True
-            if cc_num == CC_SHIFT:
-                self.shift_down = down
-                return True
-            if cc_num == CC_SOLO:
-                self._solo_button(down)
+            action = tlib.BUTTONS_STATEFUL.get(cc_num)
+            if action is not None:
+                getattr(self, "_act_" + action)(down)
                 return True
             fbtn = cc_num - CC_F1
             if 0 <= fbtn < 8:
@@ -1610,40 +1598,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if cc_num in MODE_BUTTONS:
                 self._set_mode(MODE_BUTTONS[cc_num])
                 return True
-            if cc_num == CC_GRID:
-                # A bare GRID press is swallowed and does nothing. Deliberate:
-                # it stays free for a later feature and cannot fall through to
-                # something else that reacts to it - which is exactly what an
-                # unbound CC 3 was doing before SP2 claimed it.
-                if self.shift_down:
-                    self._toggle_kind()
-                return True
-            if cc_num == CC_DUPLICATE:
-                self._duplicate()
-                return True
-            if cc_num == CC_PLAY:
-                self._toggle_transport()
-                return True
-            if cc_num in (CC_DL, CC_DR):
-                # Page within the current mode's ring, wrapping.
-                self._step_page(-1 if cc_num == CC_DL else 1)
-                return True
-            if cc_num in (CC_ML, CC_MR):
-                # Previous / next SOUND for the selected channel: a sample
-                # within the kit on a drum, an engine preset on a voice.
-                # Unconditionally cycling the sample resolved a GM percussion
-                # fallback on a voice and collapsed its whole line onto one
-                # note.
-                delta = -1 if cc_num == CC_ML else 1
-                if self.channel_kind(self.group) == "voice":
-                    self._nudge_preset(self.group, delta)
-                else:
-                    self._cycle_sample(delta)
-                return True
-            if cc_num == CC_RESTART:
-                for group in range(8):
-                    # Installed signature: setPlayPosition(bank, sequence, clock)
-                    self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+            action = tlib.BUTTONS_PRESS.get(cc_num)
+            if action is not None:
+                getattr(self, "_act_" + action)()
                 return True
             group = cc_num - GROUP_CC_FIRST
             if 0 <= group < 8:
@@ -1664,6 +1621,69 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return False
 
     # --- actions -------------------------------------------------------
+
+    # --- button actions -------------------------------------------------
+    #
+    # One method per entry in techno_lib.BUTTONS_*. Stateful actions take
+    # `down`; press-only actions take none. Keeping them as methods rather
+    # than inline lambdas is what makes the table swappable later (SP9).
+
+    def _act_erase(self, down):
+        self.erase_down = down
+
+    def _act_rec(self, down):
+        # Held, and it overdubs: release ends the take. Held notes are NOT
+        # released here - letting go of REC stops capturing, it does not stop
+        # the instrument sounding.
+        self.rec_down = down
+        self._render_display()
+
+    def _act_shift(self, down):
+        self.shift_down = down
+
+    def _act_solo(self, down):
+        self._solo_button(down)
+
+    def _act_play(self):
+        self._toggle_transport()
+
+    def _act_grid(self):
+        # A bare GRID press is swallowed and does nothing. Deliberate: it stays
+        # free for a later feature and cannot fall through to something else
+        # that reacts to it - which is exactly what an unbound CC 3 was doing
+        # before SP2 claimed it.
+        if self.shift_down:
+            self._toggle_kind()
+
+    def _act_duplicate(self):
+        self._duplicate()
+
+    def _act_restart(self):
+        for group in range(8):
+            # Installed signature: setPlayPosition(bank, sequence, clock)
+            self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+
+    def _act_page_prev(self):
+        self._step_page(-1)
+
+    def _act_page_next(self):
+        self._step_page(1)
+
+    def _act_sound_prev(self):
+        self._sound_step(-1)
+
+    def _act_sound_next(self):
+        self._sound_step(1)
+
+    def _sound_step(self, delta):
+        # Previous / next SOUND for the selected channel: a sample within the
+        # kit on a drum, an engine preset on a voice. Unconditionally cycling
+        # the sample resolved a GM percussion fallback on a voice and collapsed
+        # its whole line onto one note.
+        if self.channel_kind(self.group) == "voice":
+            self._nudge_preset(self.group, delta)
+        else:
+            self._cycle_sample(delta)
 
     def _select_group(self, group):
         self._release_all()          # the pads are about to mean another sound
