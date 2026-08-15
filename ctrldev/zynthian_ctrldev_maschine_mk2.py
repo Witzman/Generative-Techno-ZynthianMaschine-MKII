@@ -427,6 +427,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.mod_last = None          # the key MOD+pad edits
         self.mod_seed = 0             # bumped per bind, so two S&H differ
         self._t0 = time.monotonic()   # the modulator clock's origin
+        # (channel, verb, base) restores owed by _mod_clear_all, drained on
+        # the poll thread. The MIDI thread must not write parameters.
+        self._mod_restore_due = []
         # Which kind a channel behaves as, when the player has said so.
         # None means "ask the chain" - never a stored copy of it.
         self.kind_override = {i: None for i in range(len(tlib.CHANNELS))}
@@ -1735,6 +1738,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # out-of-range rate, a non-dict entry, a zero depth or an unparseable
         # channel is dropped here, never held.
         self.mod = {}
+        # Any restore still owed belongs to the OUTGOING snapshot. Applying it
+        # after this load would write a stale base over a value the snapshot
+        # just restored.
+        self._mod_restore_due = []
         for key, entry in (state.get("mods") or {}).items():
             chan_s, _, verb = str(key).partition("|")
             if not verb or not tlib.mod_allowed(verb):
@@ -1931,6 +1938,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
             if not down:                         # everything else: press only
                 return False
+            if cc_num == CC_MODE_ALL and self.mod_down and self.erase_down:
+                # MOD + ERASE + ALL clears every modulator. Three keys and
+                # two of them modifiers, because it is destructive and the
+                # standing law is that nothing destructive happens on a
+                # single press. ALL keeps its ordinary meaning in every
+                # other combination.
+                self._mod_clear_all()
+                return True
             if cc_num in MODE_BUTTONS:
                 self._set_mode(MODE_BUTTONS[cc_num])
                 return True
@@ -2263,6 +2278,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.mod_last == key:
             self.mod_last = None
 
+    def _mod_clear_all(self):
+        """MOD + ERASE + ALL: drop every modulator at once.
+
+        The bases are NOT restored here. _mod_clear writes the parameter, and
+        for a generated lv2:/fx: verb that reaches the plugin - this runs on
+        the MIDI thread with self.lock held, where a write can block on a
+        socket for seconds. One such write is what the single-modulator clear
+        already costs; doing twenty in one event is the shape of the freeze
+        that this instrument has already suffered once.
+
+        So the dict work happens here, which is cheap, and the restores are
+        queued for the poll thread - the same deferral _commit_kit,
+        _commit_preset and the note-map rebuilds all use."""
+        if not self.mod:
+            return
+        for (channel, verb), entry in list(self.mod.items()):
+            self._mod_restore_due.append((channel, verb, entry["base"]))
+        self.mod.clear()
+        self.mod_last = None
+        self._render_display()
+
     def _mod_base_get(self, channel, verb):
         """The verb's current surface value, or None when it has no source.
 
@@ -2323,7 +2359,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         Runs on the poll thread and NEVER on the MIDI thread: midi_event holds
         the lock for the whole event, and a parameter write can block."""
-        if not self.mod:
+        if not self.mod and not self._mod_restore_due:
             return
         if self._snapshot_busy():
             # A load rewrites every chain and every mixer strip, and set_state
@@ -2332,6 +2368,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # and writes a modulator belonging to the OUTGOING snapshot over a
             # value that was just restored.
             return
+        # Bases owed by MOD + ERASE + ALL. Drained before the sweep so a
+        # cleared parameter lands on the value the player set and is not
+        # overwritten in the same tick by a modulator still in the dict.
+        while self._mod_restore_due:
+            channel, verb, base = self._mod_restore_due.pop(0)
+            self._mod_base_set(channel, verb, base)
         beats = self._elapsed_beats()
         for key, entry in list(self.mod.items()):
             channel, verb = key
