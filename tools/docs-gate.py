@@ -44,7 +44,10 @@ BASELINE = {
     "01-fast-installation.html":   (505,  "2026-08-14"),
     # +145: the drum-filter claim was wrong (there is no drum filter) and the
     # controls-follow-the-plugin behaviour was undocumented. 2026-08-14.
-    "02-features.html":            (821,  "2026-08-14"),
+    # +78: the project description moved here from the landing page when that
+    # became Requirements. This page is now where "what is this" lives, so it
+    # is the right home for it. 2026-08-15.
+    "02-features.html":            (899,  "2026-08-15"),
     # Section 3 was written 2026-08-14; this is its first measurement.
     "03-playing.html":             (2547, "2026-08-14"),
     # +235: step 10's check was rewritten. The published `grep -A3` form
