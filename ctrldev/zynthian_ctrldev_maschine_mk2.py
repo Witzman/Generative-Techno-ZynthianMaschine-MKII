@@ -1229,15 +1229,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._render_all()
 
     def _set_mode(self, name):
-        """Latched, mutually exclusive, five of them. Pressing the lit mode
-        returns to CONTROL, which is home; pressing CONTROL while lit does
-        nothing. The mode buttons are deliberately NOT subject to the tap/hold
-        law - a momentary mode is a mode you cannot two-hand."""
+        """Latched, mutually exclusive, five of them. Pressing the mode that is
+        already lit takes you HOME - back to page 1 of that same mode - rather
+        than switching you anywhere.
+
+        It used to bounce you to CONTROL instead, which meant a mode button did
+        two different things depending on state, and losing your place was the
+        price of a mis-hit. Now every mode button means the same thing twice
+        over: 'this mode, from the top'.
+
+        The mode buttons are deliberately NOT subject to the tap/hold law - a
+        momentary mode is a mode you cannot two-hand."""
 
         if name == self.mode:
-            if name == "CONTROL":
-                return
-            name = "CONTROL"
+            # Home: page 1 of the ring this mode shows for this channel kind.
+            # Keyed through tlib.ring_key, exactly as _page and _step_page do -
+            # a hand-rolled tuple would miss the entry they actually use and
+            # this would silently do nothing.
+            key = tlib.ring_key(name, self.channel_kind(self.group))
+            if self.page_idx.get(key, 0) != 0:
+                self.page_idx[key] = 0
+                self._invalidate_gen_cache()
+                self._recentre_encoders()
+                self.enc_carry.clear()
+                with self.lock:
+                    self._render_all()
+            return
         # A pad held across a mode change stops being an instrument mid-note.
         self._release_all()
         self.mode = name
@@ -3811,6 +3828,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.leds.changed("solo", solo_state):
             self._send_osc(lib.button_osc("solo", solo_state[0], solo_state[1]))
 
+    # Buttons that are lit whenever the instrument is running, because they
+    # always do the same thing and a dark button reads as a dead one. The
+    # daemon token names are on the LEFT; the physical button each one lights
+    # was MEASURED 2026-08-15, one index at a time, because this project has
+    # twice shipped an LED table that was inferred and wrong.
+    #
+    #   page_left / page_right  -> the two arrows beside the display
+    #   nav_left  / nav_right   -> the two below the big encoder (preset step)
+    #   step_left / step_right  -> the two transport STEP arrows
+    #   stop                    -> ERASE   (the daemon calls Erase "stop")
+    #   shift                   -> SHIFT
+    STATIC_LEDS = ("page_left", "page_right", "nav_left", "nav_right",
+                   "step_left", "step_right", "stop", "shift")
+    BRIGHT_STATIC = 1.0
+
+    def _render_static_leds(self):
+        """Light the always-on buttons.
+
+        Diffed through self.leds like every other LED write - these never
+        change, so after the first paint this costs one dict lookup each and
+        puts nothing on the wire. The device has been flooded off the USB bus
+        once by unthrottled writes."""
+
+        state = (0xFFFFFF, self.BRIGHT_STATIC)
+        for name in self.STATIC_LEDS:
+            if self.leds.changed(f"static_{name}", state):
+                self._send_osc(lib.button_osc(name, state[0], state[1]))
+
     def _render_mod(self):
         """SWING lights while MOD is active, held or latched.
 
@@ -4071,6 +4116,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_transport()
         self._render_mutes()
         self._render_mod()
+        self._render_static_leds()
         self._render_pads()
 
     def _on_progress(self, *args, **kwargs):
