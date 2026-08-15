@@ -118,8 +118,18 @@ fi
 # because those do come through, and they are worth seeing after a deploy.
 if [ "$RESTART" = 1 ] && [ "$DRY" = 0 ]; then
     say "Verify"
+    # NOT `grep -A3 "Pads MIDI"`. That form reports a HEALTHY rig as a broken
+    # one: it matches the Pads port twice - once as a port, once as another
+    # port's connection - and then prints unrelated ports that sit at the left
+    # margin, so a working rig shows four devN_in lines under a header saying
+    # "want exactly one". A verify step that cries wolf on every deploy trains
+    # you to ignore the one check that catches a real duplicate route, and a
+    # real duplicate route recurred on 2026-08-15. Indentation is the whole
+    # distinction: a route is indented under its port, a port is not.
     echo "-- Pads MIDI routing (want exactly one devN_in):"
-    ssh "$PI" 'jack_lsp -c | grep -A3 "Pads MIDI"' || echo "  (port not found)"
+    ssh "$PI" 'jack_lsp -c | awk "/\(capture\): Pads MIDI/{f=1;next} /^[^ \t]/{f=0} f{print}"' \
+        || echo "  (port not found)"
+    echo "   two or more means a stale route - restart the daemon, then the UI"
     echo "-- driver warnings, if any (INFO is invisible at the default log level):"
     ssh "$PI" 'journalctl -u zynthian --since -2min | grep -i "ctrldev_maschine" | tail -5' \
         || echo "  (none - not an error)"
