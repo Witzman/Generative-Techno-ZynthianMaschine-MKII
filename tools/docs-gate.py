@@ -75,6 +75,24 @@ BASELINE = {
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
 SKIP_BUDGET = {"index.html"}
+
+# Tutorials are exempt from UNIT_CAP. A "Try it" walkthrough is legitimately
+# long, and splitting one invents headings that serve the gate rather than the
+# reader - the MOD publication was split five ways for exactly that reason.
+# Page-level budgets STILL apply to these pages; only the per-section cap is
+# lifted. Everything else keeps it, because that check caught Section 4's steps
+# at 228 and 201 words while the page total looked fine, which is the failure a
+# page budget cannot see.
+SKIP_UNIT_CAP = {
+    "modulation.html",
+    "generating-patterns.html",
+    "playing-and-recording.html",
+    "sound-and-presets.html",
+    "deep-parameters.html",
+    "mixing-and-effects.html",
+    "the-surface.html",
+    "saving.html",
+}
 HEADROOM = 1.15
 UNIT_CAP = 300   # any h2/h3 section; long asides belong in their own section
 
@@ -219,7 +237,7 @@ def main():
         for m in re.finditer(r"<h[23][^>]*>.*?(?=<h[23][^>]*>|$)", art_html, re.S):
             unit = m.group(0)
             n = len(prose_words(unit))
-            if n > UNIT_CAP:
+            if n > UNIT_CAP and f.name not in SKIP_UNIT_CAP:
                 head = strip_tags(re.match(r"<h[23][^>]*>(.*?)</h[23]>", unit, re.S).group(1))
                 fail.append(f"G5 {f.name}: section over {UNIT_CAP} words ({n}): {head}")
 
