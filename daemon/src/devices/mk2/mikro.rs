@@ -852,15 +852,27 @@ impl Maschine for Mikro {
             MaschineButton::Swing => idx = 26,
             MaschineButton::Tempo => idx = 27,
 
-            // Noterepeat, Enter, Navright and Navleft previously held 17-20,
-            // which the measurement shows belong to the Scene/Pattern/Pad
-            // Mode/Navigate column. Their real indices are unknown, so they
-            // fall through to the catch-all below and light nothing. That is
-            // deliberate: no LED is better than another button's LED.
+            // MEASURED 2026-08-15: the master-section pair below the big
+            // encoder, which emit CC 13 and 14 and step a voice's presets.
+            // They previously pointed at 19/20, which the measurement shows
+            // belong to the Pad Mode / Navigate column.
+            MaschineButton::Navleft => idx = 28,
+            MaschineButton::Navright => idx = 29,
+
+            // Noterepeat and Enter previously held 17-18, which the
+            // measurement shows belong to the Scene/Pattern column. Their real
+            // indices are unknown, so they fall through to the catch-all below
+            // and light nothing. That is deliberate: no LED is better than
+            // another button's LED.
 
             // Group A-H are handled above as RGB triplets, not here.
-            MaschineButton::Shift => idx2 = 55,
-            MaschineButton::Erase => idx2 = 56,
+            // MEASURED 2026-08-15: these two were SWAPPED. 55 lights ERASE and
+            // 56 lights SHIFT, confirmed one index at a time on the hardware.
+            // Restart 49, transport left 50 and transport right 51 were all
+            // checked at the same time and were already correct - so this is a
+            // swapped pair, not an offset across the block.
+            MaschineButton::Erase => idx2 = 55,
+            MaschineButton::Shift => idx2 = 56,
             MaschineButton::Rec => idx2 = 54,
             MaschineButton::Play => idx2 = 53,
             MaschineButton::Grid => idx2 = 52,
