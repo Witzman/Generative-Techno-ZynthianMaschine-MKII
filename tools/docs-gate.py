@@ -80,8 +80,8 @@ BASELINE = {
     # broken links. Each baseline is re-set when its tutorial is written.
     "generating-patterns.html":    (750,  "2026-08-16"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
-    "sound-and-presets.html":      (30,   "2026-08-16"),
-    "deep-parameters.html":        (30,   "2026-08-16"),
+    "sound-and-presets.html":      (699,  "2026-08-16"),
+    "deep-parameters.html":        (426,  "2026-08-16"),
     "mixing-and-effects.html":     (30,   "2026-08-16"),
     "the-surface.html":            (33,   "2026-08-16"),
     "saving.html":                 (30,   "2026-08-16"),
