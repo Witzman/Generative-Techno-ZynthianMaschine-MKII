@@ -518,7 +518,11 @@ class techno_lib:
         7: "restart",
         13: "sound_prev",
         14: "sound_next",
-        29: "duplicate",
+        # NOTE REPEAT, master section, right of the big encoder. CC 10
+        # MEASURED 2026-08-15 by capture, not read off the daemon's token
+        # name. It carries the Turing register undo, which used to sit on
+        # DUPLICATE (CC 29) - that button is now free surface.
+        10: "register_undo",
         47: "page_prev",
         48: "page_next",
     }
