@@ -2020,6 +2020,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._down_at["mod"] = (time.monotonic(), False)
             self.mod_held = True
             self._render_mod()
+            self._render_rec()
             self._render_display()
             return
         went_down, _ = self._down_at.pop("mod", (None, False))
@@ -2027,6 +2028,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if went_down is not None and (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
             self.mod_latched = not self.mod_latched
         self._render_mod()
+        self._render_rec()
         self._render_display()
 
     def _act_play(self):
@@ -3701,6 +3703,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         self._move_playhead(head)
                     if tick % VOLUME_POLL_TICKS == 0:
                         self._render_groups()
+                        # GRID blinks while the selected channel is on an
+                        # overridden kind, so it needs a periodic writer
+                        # rather than an event-driven one. Same sub-rate as
+                        # everything else here; the LED cache still swallows
+                        # every repeat, so a steady GRID costs nothing.
+                        self._render_grid()
                         # Volume, pan and the mutes can all move on the
                         # touchscreen with nothing signalling it, so the
                         # screens are polled on the same tick.
@@ -3856,6 +3864,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if self.leds.changed(f"static_{name}", state):
                 self._send_osc(lib.button_osc(name, state[0], state[1]))
         self._render_register_undo()
+        self._render_rec()
+        self._render_grid()
 
     def _render_register_undo(self):
         """NOTE REPEAT lights only while the selected channel behaves as a
@@ -3878,6 +3888,55 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         state = (0xFFFFFF, self.BRIGHT_STATIC if lit else 0.0)
         if self.leds.changed("register_undo", state):
             self._send_osc(lib.button_osc("note_repeat", state[0], state[1]))
+
+    # GRID blink: half-period in seconds. 0.5 gives a 1 Hz blink, which reads
+    # as deliberate rather than as a fault.
+    GRID_BLINK_S = 0.5
+
+    def _render_grid(self):
+        """GRID is lit whenever it does something - which is always, since
+        SHIFT + GRID switches the selected channel's kind on any channel.
+
+        It BLINKS while that channel is on an overridden kind, because a
+        channel behaving as something its engine is not is the surface's most
+        surprising state, and the page indicator's DRM/VOX marker is easy to
+        miss mid-jam. The blink stops the moment the override clears - which
+        switching back does by itself, since _toggle_kind sets the override to
+        None rather than pinning it.
+
+        The phase comes from the clock, not from a counter, so any caller
+        computes the same state and no phase has to be carried around. Driven
+        from the poll thread's sub-rate tick; the LED cache swallows every
+        unchanged repeat, so a steady GRID puts nothing on the wire.
+
+        GRID is index 52, measured 2026-08-15."""
+
+        overridden = self.kind_override[self.group] is not None
+        if overridden:
+            on = int(time.monotonic() / self.GRID_BLINK_S) % 2 == 0
+        else:
+            on = True
+        state = (0xFFFFFF, self.BRIGHT_STATIC if on else 0.0)
+        if self.leds.changed("grid", state):
+            self._send_osc(lib.button_osc("grid", state[0], state[1]))
+
+    def _render_rec(self):
+        """REC lights while holding it would actually capture something.
+
+        Recording hangs off _pad_down, and a pad reaches it only when the mode
+        is not STEP - where the pads are the step editor - and MOD is not
+        active, where they pick a modulator's rate and shape. In either case
+        holding REC does nothing at all, and a lit REC would be promising a
+        take it cannot make.
+
+        REC is index 54, measured 2026-08-15. Repainted from _render_all, so
+        it follows a mode change, and from both edges of _act_mod, so it
+        follows MOD being held or latched."""
+
+        lit = self.mode != "STEP" and not self.mod_down
+        state = (0xFFFFFF, self.BRIGHT_STATIC if lit else 0.0)
+        if self.leds.changed("rec_possible", state):
+            self._send_osc(lib.button_osc("rec", state[0], state[1]))
 
     def _render_mod(self):
         """SWING lights while MOD is active, held or latched.
