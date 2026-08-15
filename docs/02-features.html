@@ -67,60 +67,33 @@
 <h1 id="2--features">Features</h1>
 <p>An eight-channel generative groovebox on Zynthian, played entirely from a Native Instruments Maschine MK2 — pads, encoders, both displays, LEDs. Five euclidean drum channels and three Turing-machine voices, all eight always alive; nothing is created or torn down while playing.</p>
 <p><strong>The generator owns the pattern.</strong> You do not draw a beat. You set hits, rotation and randomness, and the driver writes real notes into Zynthian's own sequencer — so patterns persist in snapshots and the touchscreen pattern editor mirrors exactly what the pads show.</p>
-<p>What the instrument does. How you operate it is <a href="03-playing.html">Playing</a>; how it is built is <a href="05-internals.html">Internals</a>.</p>
+<p>How to play it starts at <a href="03-playing.html">Quick start</a>; how it is built is <a href="05-internals.html">Internals</a>.</p>
 <hr>
 <h2 id="the-eight-channels">The eight channels</h2>
 <table><thead><tr><th>Group</th><th>Name</th><th>Kind</th><th>Engine</th><th>MIDI ch</th><th>Colour</th></tr></thead><tbody><tr><td>A</td><td>KICK</td><td>drum</td><td>LinuxSampler, an SFZ drum machine</td><td>1</td><td>red</td></tr><tr><td>B</td><td>SNAR</td><td>drum</td><td>LinuxSampler</td><td>2</td><td>orange</td></tr><tr><td>C</td><td>CLAP</td><td>drum</td><td>LinuxSampler</td><td>3</td><td>amber</td></tr><tr><td>D</td><td>CHAT</td><td>drum</td><td>LinuxSampler</td><td>4</td><td>yellow-green</td></tr><tr><td>E</td><td>OHAT</td><td>drum</td><td>LinuxSampler</td><td>5</td><td>green</td></tr><tr><td>F</td><td>BASS</td><td>voice</td><td>JC303</td><td>6</td><td>blue</td></tr><tr><td>G</td><td>LEAD</td><td>voice</td><td>Obxd</td><td>7</td><td>violet</td></tr><tr><td>H</td><td>PADS</td><td>voice</td><td>padthv1</td><td>8</td><td>cyan</td></tr></tbody></table>
 <p>Drums are warm colours and voices cool, so the seam between the halves is visible on the panel without reading anything. All eight are always alive — nothing is created or torn down while playing.</p>
 <p><strong>The factory snapshot ships one channel against that grain.</strong> <strong>E · OHAT</strong> keeps its Simmons kit and its sampler, but arrives switched to <em>voice</em> behaviour: the Turing register walks the kit's own samples rather than euclid placing them. It is there so the switch below is audible the moment you plug in. Its tab reads <code>VOX</code>, and GRID blinks while it is selected.</p>
 <hr>
-<h2 id="the-generator-owns-the-pattern">The generator owns the pattern</h2>
-<p>You do not draw a beat. You set hits, rotation, chance and swing, and the driver writes real notes into Zynthian's own sequencer. Because they are real notes in the real sequencer, patterns persist in snapshots and the touchscreen pattern editor mirrors exactly what the pads show.</p>
-<p>The five drum channels are <strong>euclidean</strong>: hits spread as evenly as the grid allows, then rotate. Four hits in sixteen is four-on-the-floor; five is the clave.</p>
-<p>The three voices are <strong>Turing machines</strong>. Each owns a shift register, clocked once per pass and mutated with probability <code>RANDOM</code>, and the register's value becomes pitch. Set <code>RANDOM</code> to zero and the loop you are hearing freezes bit for bit, for as long as you leave it there — the display reads <code>LOCK</code> rather than a number, because a number could be a coincidence.</p>
-<hr>
-<h2 id="five-modes-and-what-the-encoders-mean-in-each">Five modes, and what the encoders mean in each</h2>
-<table><thead><tr><th>Mode</th><th>Encoder 1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr></thead><tbody><tr><td>CONTROL · drum</td><td>KIT</td><td>SAMPLE</td><td>—</td><td>—</td><td>—</td><td>LEVEL</td><td>REVERB</td><td>DELAY</td></tr><tr><td>CONTROL · voice</td><td>PRESET</td><td>CUTOFF</td><td>RESO</td><td>ENV</td><td>DECAY</td><td>LEVEL</td><td>REVERB</td><td>DELAY</td></tr><tr><td>STEP · drum</td><td>HITS</td><td>ROTATE</td><td>DIVIDE</td><td>LENGTH</td><td>VELO</td><td>CHANCE</td><td>SWING</td><td>—</td></tr><tr><td>STEP · voice</td><td>LENGTH</td><td>DIVIDE</td><td>RANDOM</td><td>GATE</td><td>OCTAVE</td><td>RANGE</td><td>DENSITY</td><td>VELO</td></tr><tr><td>ALL</td><td>ROOT</td><td>SCALE</td><td>BPM</td><td>MASTER</td><td>REVSIZE</td><td>REVTYPE</td><td>DLYTIME</td><td>DLYFBK</td></tr><tr><td>MIXER</td><td>eight channels at once — LEVEL, then REVERB, then DELAY</td></tr><tr><td>FILTER</td><td>eight channels at once — CUTOFF, then RESO</td></tr></tbody></table>
-<p>MIXER and FILTER are <strong>spread</strong> pages: one control across all eight channels rather than eight controls on one channel. STEP and MIXER carry more than one page; the arrows beside the display step through the ring, and each mode remembers its own page per channel kind.</p>
-<p><strong>A knob with no source draws dead.</strong> Where a control does not exist — a drum channel has no CUTOFF — the column greys out rather than showing a number the encoder cannot move.</p>
-<hr>
-<h2 id="a-channels-kind-is-switchable">A channel's kind is switchable</h2>
-<p><strong>SHIFT + GRID</strong> switches the selected channel between drum and voice behaviour. <strong>The engine is never swapped.</strong> A drum kit gets the Turing generator, and on a sampler the register walks the <em>kit's own note list</em> rather than a scale, because there a note selects a sample and scale-quantising would land most steps on empty keys. Euclid on a synth becomes a root pulse. Switching back clears the override; pattern length and division deliberately do not move, because they are pattern time rather than kind.</p>
-<p><strong>The surface says when a channel is not itself.</strong> The page indicator reads <code>VOX</code> or <code>DRM</code>, and <strong>GRID blinks</strong> for as long as the selected channel is on an overridden kind. A channel behaving as something its engine is not is the most surprising state this instrument has, so it does not keep quiet about it.</p>
-<hr>
-<h2 id="live-capture">Live capture</h2>
-<p>Pads are the instrument in every mode but STEP. <strong>Holding REC overdubs</strong> into the same pattern the generator writes: strikes quantise to the nearest step, and a note's length is how long you held the pad.</p>
-<p><strong>Recording adds, it does not overwrite.</strong> The generated line freezes and the played note goes on top; played-in steps light amber. A captured note makes you the owner of that channel's pattern and the generator stops writing it. Two gestures hand it back, both destructive — ERASE with a Group button, or turning any knob that rewrites the pattern.</p>
-<hr>
-<h2 id="per-channel-sound">Per-channel sound</h2>
-<p>Every channel of both kinds has LEVEL, REVERB and DELAY on encoders 6, 7 and 8 — the same three, in the same place, in either mode. Sixteen post-fader inserts carry the reverb and delay sends.</p>
-<p>FILTER spreads CUTOFF and RESO across the row, but only the three voices answer it: the drum channels run a sampler with no filter to reach, so their columns draw dead. A drum filter is not in this version.</p>
-<p>The ALL page holds the global reach: root, scale, BPM, master level, reverb size and type, delay time and feedback.</p>
-<hr>
-<h2 id="the-controls-follow-the-plugin">The controls follow the plugin</h2>
-<p>A voice's CUTOFF, RESO, ENV and DECAY are bound to the synth that is <em>actually loaded</em>, not to the one the snapshot shipped with. Swap a chain's engine from the touchscreen and those four columns rebind to the new plugin's own ports; a role the plugin has no port for draws dead rather than pretending.</p>
-<p>Everything else a plugin publishes fills further CONTROL pages, eight ports per page, in the plugin's own order — so a synth with forty parameters is reachable from the surface without anything here knowing its name. Host plumbing is filtered out, and each port is driven as a percentage of its own range.</p>
-<hr>
-<h2 id="modulation">Values that move on their own</h2>
-<p><strong>MOD is the SWING button.</strong> Hold it and every encoder stops setting a value and starts setting <em>how that value moves</em>. Tap it instead and it latches, so both hands are free. It is not a mode: it adds no page, no ring entry, and nothing to remember. The map of parameters you already know does not change — MOD gives every one of them a second dimension in the same place.</p>
-<table><thead><tr><th>Gesture</th><th>Sets</th></tr></thead><tbody>
-<tr><td>MOD + an encoder</td><td>modulation <strong>depth</strong> on whatever that column carries. Bipolar, and centre is off</td></tr>
-<tr><td>MOD + pads 1-12</td><td><strong>rate</strong>, bar-synced, from sixteen bars per cycle down to a sixteenth</td></tr>
-<tr><td>MOD + pads 13-16</td><td><strong>shape</strong> — triangle, ramp, square, sample-and-hold</td></tr>
-<tr><td>MOD + ERASE + an encoder</td><td>clears it, and puts the value back where you left it</td></tr>
-<tr><td>MOD + ERASE + ALL</td><td>clears <strong>every</strong> modulator at once, every value back where you set it</td></tr>
-</tbody></table>
-<p><strong>What answers:</strong> LEVEL, REVERB, DELAY, CUTOFF, RESO, ENV and DECAY, plus any port a plugin publishes on a generated page. <strong>What refuses:</strong> everything that rewrites the pattern — HITS, ROTATE, DENSITY, CHANCE, VELO, GATE, DIVIDE, LENGTH, KIT, PRESET, ROOT and SCALE. Those columns draw dead under MOD, the same way a knob with no source does.</p>
-<p>The refusal is the design, not a gap. A modulator writes several times a second; a knob that rewrites the pattern would tear the line up continuously, and on a channel you had recorded onto it would destroy the take with nothing on the surface saying why. Generation moving on its own is a later feature with its own answer to that question.</p>
-<hr>
-<h2 id="reading-modulation">Seeing a value move</h2>
-<p><strong>Reading it.</strong> A modulated column's name gains a trailing <code>~</code>, and its bar grows a dashed span across the range the modulator covers with a small tick travelling inside it. The value cell keeps showing the <em>base</em> — the number the knob still steers — rather than chasing the sweep. A fast modulator blurs into a static span, which is honest: the span is the truth and the tick is a courtesy.</p>
-<p><strong>The pads belong to MOD while it is active</strong>, so they neither sound nor record until you let go. REC unlights whenever recording is impossible — under MOD, and in STEP mode.</p>
-<p>It costs nothing. No plugin is added, no chain changes, and nothing is created or destroyed while you play.</p>
-<hr>
-<h2 id="the-surface-talks-back">The surface talks back</h2>
-<p>Both displays carry a tab row: <code>A KICK B SNAR C CLAP D CHAT</code> on the left, <code>E OHAT F BASS G LEAD H PADS</code> on the right, with four encoder columns under each. Group buttons light in channel colours, brightness tracking each channel's level. Peak meters run live.</p>
-<p><strong>A dashed tab means that channel is not sounding</strong> — muted at the mixer, or silenced by its own generator. It is the instrument's one mechanism for explaining silence, so read the tab row before assuming a fault.</p>
+<h2 id="what-it-does">What it does</h2>
+<p>Each of these has a page with a walkthrough on the real instrument.</p>
+<dl class="featindex">
+<dt><a href="generating-patterns.html">Generating patterns</a></dt>
+<dd>Euclidean drums and Turing-machine voices. You set hits, rotation and randomness; the generator writes the notes and you steer it.</dd>
+<dt><a href="playing-and-recording.html">Playing and recording</a></dt>
+<dd>The pads are the instrument. Hold REC and what you play is captured into the same pattern the generator writes — and the pattern becomes yours.</dd>
+<dt><a href="modulation.html">Modulation</a></dt>
+<dd>Hold MOD and every encoder stops setting a value and starts setting how that value moves. Saved with the set, still running tomorrow.</dd>
+<dt><a href="sound-and-presets.html">Sound and presets</a></dt>
+<dd>Kits, samples and engine presets, changed while the rig plays — and switching what a channel behaves as without swapping its engine.</dd>
+<dt><a href="deep-parameters.html">Deep parameter control</a></dt>
+<dd>Eight knobs reaching a synth's fortieth parameter, on pages built from whatever the plugin publishes.</dd>
+<dt><a href="mixing-and-effects.html">Mixing and effects</a></dt>
+<dd>One control across all eight channels, two post-fader inserts on every one, and the globals that belong to the machine.</dd>
+<dt><a href="the-surface.html">The surface</a></dt>
+<dd>Every button, both displays, what each light means, and the list to work down when a channel goes quiet.</dd>
+<dt><a href="saving.html">Saving your work</a></dt>
+<dd>What a snapshot carries, what it cannot, and the one control in the web interface that looks like a save button and is not.</dd>
+</dl>
 <hr>
 <h2 id="what-it-is-not">What it is not</h2>
 <p>No song mode, no pattern chaining, no sampling, no audio recording. Eight channels, always alive. It is an instrument for playing a single evolving pattern, not a workstation for arranging one.</p>
