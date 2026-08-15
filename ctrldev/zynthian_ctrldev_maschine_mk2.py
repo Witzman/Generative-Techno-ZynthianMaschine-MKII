@@ -2040,7 +2040,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.shift_down:
             self._toggle_kind()
 
-    def _act_duplicate(self):
+    def _act_register_undo(self):
         self._duplicate()
 
     def _act_restart(self):
@@ -3855,6 +3855,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for name in self.STATIC_LEDS:
             if self.leds.changed(f"static_{name}", state):
                 self._send_osc(lib.button_osc(name, state[0], state[1]))
+        self._render_register_undo()
+
+    def _render_register_undo(self):
+        """NOTE REPEAT lights only while the selected channel behaves as a
+        voice, because that is the only kind the register undo can act on.
+
+        _duplicate returns immediately on a drum channel - it restores a Turing
+        shift register, and a euclidean channel has none. An always-lit button
+        that silently does nothing on five of the eight channels is the same
+        lie as a knob showing a number it cannot move, which law L4 already
+        forbids elsewhere on this surface.
+
+        NOTE REPEAT is index 31, MEASURED 2026-08-15. It had no working LED at
+        all before: the daemon had it at 17, which belongs to SCENE.
+
+        Repainted from _render_all, which both _select_group and _toggle_kind
+        end with - so it follows a change of channel and a change of kind
+        without either of them knowing about this button."""
+
+        lit = self.channel_kind(self.group) == "voice"
+        state = (0xFFFFFF, self.BRIGHT_STATIC if lit else 0.0)
+        if self.leds.changed("register_undo", state):
+            self._send_osc(lib.button_osc("note_repeat", state[0], state[1]))
 
     def _render_mod(self):
         """SWING lights while MOD is active, held or latched.

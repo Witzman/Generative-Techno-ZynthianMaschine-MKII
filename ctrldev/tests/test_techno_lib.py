@@ -1226,7 +1226,7 @@ class TestButtonTables(unittest.TestCase):
         self.assertEqual(tl.BUTTONS_PRESS[1], "play")
         self.assertEqual(tl.BUTTONS_PRESS[4], "grid")
         self.assertEqual(tl.BUTTONS_PRESS[7], "restart")
-        self.assertEqual(tl.BUTTONS_PRESS[29], "duplicate")
+        self.assertEqual(tl.BUTTONS_PRESS[10], "register_undo")
         self.assertEqual(tl.BUTTONS_PRESS[47], "page_prev")
         self.assertEqual(tl.BUTTONS_PRESS[48], "page_next")
         self.assertEqual(tl.BUTTONS_PRESS[13], "sound_prev")
@@ -1240,8 +1240,10 @@ class TestButtonTables(unittest.TestCase):
 
     def test_the_free_ccs_stay_free(self):
         # Measured free at G4 and re-verified 2026-08-14. SWING 50 is claimed
-        # by MOD in task 4 and is deliberately NOT in this list.
-        for cc in (5, 6, 12, 25, 26, 30, 34):
+        # by MOD, and NOTE REPEAT 10 by the register undo, so neither is here.
+        # DUPLICATE 29 joined the list 2026-08-15 when the register undo moved
+        # off it onto NOTE REPEAT.
+        for cc in (5, 6, 12, 25, 26, 29, 30, 34):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 

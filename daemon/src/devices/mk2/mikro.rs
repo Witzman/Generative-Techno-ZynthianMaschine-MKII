@@ -859,11 +859,11 @@ impl Maschine for Mikro {
             MaschineButton::Navleft => idx = 28,
             MaschineButton::Navright => idx = 29,
 
-            // Noterepeat and Enter previously held 17-18, which the
-            // measurement shows belong to the Scene/Pattern column. Their real
-            // indices are unknown, so they fall through to the catch-all below
-            // and light nothing. That is deliberate: no LED is better than
-            // another button's LED.
+            // MEASURED 2026-08-15, completing the master section. Both used to
+            // point at 17-18, which the measurement shows belong to the
+            // Scene/Pattern column.
+            MaschineButton::Enter => idx = 30,
+            MaschineButton::Noterepeat => idx = 31,
 
             // Group A-H are handled above as RGB triplets, not here.
             // MEASURED 2026-08-15: these two were SWAPPED. 55 lights ERASE and
