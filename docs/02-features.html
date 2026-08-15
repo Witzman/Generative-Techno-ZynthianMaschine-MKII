@@ -91,6 +91,23 @@
 <p>A voice's CUTOFF, RESO, ENV and DECAY are bound to the synth that is <em>actually loaded</em>, not to the one the snapshot shipped with. Swap a chain's engine from the touchscreen and those four columns rebind to the new plugin's own ports; a role the plugin has no port for draws dead rather than pretending.</p>
 <p>Everything else a plugin publishes fills further CONTROL pages, eight ports per page, in the plugin's own order — so a synth with forty parameters is reachable from the surface without anything here knowing its name. Host plumbing is filtered out, and each port is driven as a percentage of its own range.</p>
 <hr>
+<h2 id="modulation">Values that move on their own</h2>
+<p><strong>MOD is the SWING button.</strong> Hold it and every encoder stops setting a value and starts setting <em>how that value moves</em>. Tap it instead and it latches, so both hands are free. It is not a mode: it adds no page, no ring entry, and nothing to remember. The map of parameters you already know does not change — MOD gives every one of them a second dimension in the same place.</p>
+<table><thead><tr><th>Gesture</th><th>Sets</th></tr></thead><tbody>
+<tr><td>MOD + an encoder</td><td>modulation <strong>depth</strong> on whatever that column carries. Bipolar, and centre is off</td></tr>
+<tr><td>MOD + pads 1-12</td><td><strong>rate</strong>, bar-synced, from sixteen bars per cycle down to a sixteenth</td></tr>
+<tr><td>MOD + pads 13-16</td><td><strong>shape</strong> — triangle, ramp, square, sample-and-hold</td></tr>
+<tr><td>MOD + ERASE + an encoder</td><td>clears it, and puts the value back where you left it</td></tr>
+<tr><td>MOD + ERASE + ALL</td><td>clears <strong>every</strong> modulator at once, every value back where you set it</td></tr>
+</tbody></table>
+<p><strong>What answers:</strong> LEVEL, REVERB, DELAY, CUTOFF, RESO, ENV and DECAY, plus any port a plugin publishes on a generated page. <strong>What refuses:</strong> everything that rewrites the pattern — HITS, ROTATE, DENSITY, CHANCE, VELO, GATE, DIVIDE, LENGTH, KIT, PRESET, ROOT and SCALE. Those columns draw dead under MOD, the same way a knob with no source does.</p>
+<p>The refusal is the design, not a gap. A modulator writes several times a second; a knob that rewrites the pattern would tear the line up continuously, and on a channel you had recorded onto it would destroy the take with nothing on the surface saying why. Generation moving on its own is a later feature with its own answer to that question.</p>
+<hr>
+<h2 id="reading-modulation">Seeing a value move</h2>
+<p><strong>Reading it.</strong> A modulated column's name gains a trailing <code>~</code>, and its bar grows a dashed span across the range the modulator covers with a small tick travelling inside it. The value cell keeps showing the <em>base</em> — the number the knob still steers — rather than chasing the sweep. A fast modulator blurs into a static span, which is honest: the span is the truth and the tick is a courtesy.</p>
+<p><strong>The pads belong to MOD while it is active</strong>, so they neither sound nor record until you let go. REC unlights whenever recording is impossible — under MOD, and in STEP mode.</p>
+<p>It costs nothing. No plugin is added, no chain changes, and nothing is created or destroyed while you play.</p>
+<hr>
 <h2 id="the-surface-talks-back">The surface talks back</h2>
 <p>Both displays carry a tab row: <code>A KICK B SNAR C CLAP D CHAT</code> on the left, <code>E OHAT F BASS G LEAD H PADS</code> on the right, with four encoder columns under each. Group buttons light in channel colours, brightness tracking each channel's level. Peak meters run live.</p>
 <p><strong>A dashed tab means that channel is not sounding</strong> — muted at the mixer, or silenced by its own generator. It is the instrument's one mechanism for explaining silence, so read the tab row before assuming a fault.</p>

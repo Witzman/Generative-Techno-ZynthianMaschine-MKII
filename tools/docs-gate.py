@@ -47,9 +47,16 @@ BASELINE = {
     # +78: the project description moved here from the landing page when that
     # became Requirements. This page is now where "what is this" lives, so it
     # is the right home for it. 2026-08-15.
-    "02-features.html":            (899,  "2026-08-15"),
+    # +327: MOD published. Two sections - what modulation is, and how it reads
+    # on 1-bit glass. Split in two rather than waiving the 300-word unit cap.
+    # Every claim was verified on the hardware gate of 2026-08-15. 2026-08-15.
+    "02-features.html":            (1226, "2026-08-15"),
     # Section 3 was written 2026-08-14; this is its first measurement.
-    "03-playing.html":             (2547, "2026-08-14"),
+    # +617: MOD published, as three sections - binding one, steering and
+    # clearing, and what it refuses. Split rather than waiving the unit cap.
+    # Backed by the hardware gate of 2026-08-15: 19 of 20 checks passed, and
+    # nothing here rests on the one that was not executable. 2026-08-15.
+    "03-playing.html":             (3164, "2026-08-15"),
     # +235: step 10's check was rewritten. The published `grep -A3` form
     # reports a HEALTHY rig as broken - it matches the Pads port twice and
     # then prints unrelated ports at the left margin, so a reader sees four

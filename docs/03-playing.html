@@ -139,6 +139,22 @@
 <p><strong>The four synth knobs follow the plugin that is loaded</strong>, not the one the snapshot shipped with. Change a chain's engine from the touchscreen and CUTOFF, RESO, ENV and DECAY rebind to the new plugin's own ports; a role the plugin has nothing for draws dead rather than pretending. Anything else the plugin publishes fills further CONTROL pages, eight ports to a page, reached with the display arrows.</p>
 <p><strong>A knob with no source is greyed and dead.</strong> A dead column shows a lower-case name, <code>----</code> in the value cell and no bar, and the encoder under it does nothing. Three columns are dead on the drum CONTROL page. That is thin and honest; a knob that lies is not.</p>
 <hr>
+<h2 id="mod">MOD — making a value move</h2>
+<p>Select a voice, press CONTROL, and find CUTOFF. Now hold <strong>SWING</strong> — that is MOD — and turn that encoder. The column's name gains a <code>~</code> and its bar grows a dashed span: you are setting how far the cutoff will travel, not where it sits. Let go of MOD and listen. It sweeps.</p>
+<p>Depth is bipolar and <strong>centre is off</strong>. Turning back to the middle does not leave a dormant modulator behind, it removes it — so the fastest way to stop something moving is to put its depth back where it started.</p>
+<p><strong>Rate and shape live on the pads.</strong> Keep MOD held and tap a pad: the first twelve are rates, slowest first, all locked to the bar — sixteen bars per cycle at one end, a sixteenth at the other. The last four are shapes: triangle, ramp, square, and sample-and-hold, which jumps to a new value each cycle and holds it. They apply to the modulator you touched last.</p>
+<hr>
+<h2 id="mod-steering">Steering and clearing modulation</h2>
+<p><strong>The knob still works.</strong> Let go of MOD and turn that same encoder and you steer the <em>base</em> — the centre the sweep moves around — and the sweep follows you there. This is why the value cell shows the base rather than the moving number: the base is the thing your hand owns.</p>
+<p><strong>To clear one:</strong> hold MOD and ERASE together and turn the encoder. The modulation stops and the value returns to where you set it, not to wherever the sweep happened to stop. Two keys, because it is destructive.</p>
+<p><strong>To clear them all:</strong> hold MOD and ERASE and press <strong>ALL</strong>. Every modulator goes, and every value lands back where you put it. The markers vanish the instant you press it; the values themselves settle a beat later, because the instrument will not write twenty parameters inside a single button press.</p>
+<p><strong>On a spread page it is eight at once.</strong> MIXER or FILTER, then MOD and each encoder in turn, and every channel gets its own modulator on the same control. They do not run in lockstep: each starts its cycle when you bind it, so binding them one after another spreads them around the bar and the row breathes rather than pumping.</p>
+<p><strong>While MOD is active the pads are not the instrument.</strong> They pick a modulator's rate and shape, so they do not sound and they do not record — holding REC with MOD latched captures nothing. The REC button goes dark to say so, the same way it does in STEP mode where the pads belong to the step editor. Tap MOD off and the pads play again.</p>
+<hr>
+<h2 id="mod-limits">What modulation will not touch</h2>
+<p><strong>What will not take one.</strong> Anything that rewrites the pattern refuses and draws dead: HITS, ROTATE, DENSITY, CHANCE, VELO, GATE, DIVIDE, LENGTH, KIT, PRESET, ROOT, SCALE. If you have recorded a take onto a channel, nothing MOD can do will touch it.</p>
+<p><strong>It is saved.</strong> Modulators go into the snapshot with their depth, rate, shape and position, and the value stored is the base you set rather than wherever the sweep was at the moment you saved. Reload and they pick up where they were, still spread apart.</p>
+<hr>
 <h2 id="space-the-mixer-and-the-globals">Space, the mixer and the globals</h2>
 <p>Every channel has its own reverb and delay send on encoders 7 and 8, feeding two shared effects. The sends are <strong>post-fader</strong>, so pulling a channel down takes its tail with it.</p>
 <p><strong>MIXER</strong> puts one control across all eight channels at once — LEVEL, then REVERB, then DELAY as you step the ring. It is the page for balancing, and the page to reach for when one channel is too loud in a room rather than in the mix.</p>
