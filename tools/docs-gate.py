@@ -72,6 +72,10 @@ BASELINE = {
     # Measured on the Pi 2026-08-15, not derived. 2026-08-15.
     "04-manual-installation.html": (2091, "2026-08-15"),
     "05-internals.html":           (1011, "2026-08-13"),
+    # New 2026-08-16: the Modulation tutorial, first of eight. Its content
+    # moves from Features and Playing, which keep their copies until they are
+    # cut down last - so the site stays correct at every commit between.
+    "modulation.html":             (845,  "2026-08-16"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
 SKIP_BUDGET = {"index.html"}

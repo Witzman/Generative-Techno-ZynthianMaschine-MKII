@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modulation — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="05-internals.html" aria-current="page"><strong>Internals</strong></a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Playing</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="modulation">Modulation</h1>
+<p>Set how a value moves instead of what it is. <a href="03-playing.html">Quick start</a> gets you playing; this page is the second dimension underneath every knob you already know.</p>
+<hr>
+<h2 id="what-it-is">What it is</h2>
+<p><strong>MOD is the SWING button.</strong> Hold it and every encoder stops setting a value and starts setting <em>how that value moves</em>. Tap it instead and it latches, so both hands are free.</p>
+<p>It is not a mode. It adds no page, no ring entry, and nothing to memorise: the map of parameters you already know does not change, and MOD gives every one of them a second dimension in the same place. It costs no plugin instances, and nothing is created or destroyed while you play.</p>
+<hr>
+<h2 id="try-it">Try it</h2>
+<ol>
+<li><strong>Press Play</strong> and select a voice — <strong>Group G</strong> is LEAD.</li>
+<li><strong>Press CONTROL.</strong> Encoder 2 is CUTOFF.</li>
+<li><strong>Hold SWING</strong> — that is MOD — <strong>and turn encoder 2.</strong> The column's name gains a <code>~</code> and its bar grows a dashed span. You are setting how far the cutoff will travel, not where it sits. A small turn gives a narrow sweep; a bigger turn a broader one.</li>
+<li><strong>Let go of SWING and listen.</strong> The filter sweeps on its own.</li>
+<li><strong>Keep MOD held and tap pad 1</strong>, then <strong>pad 12</strong>. Pads 1&ndash;12 are the rates, slowest first: sixteen bars per cycle at one end, a sixteenth at the other. You should hear the sweep speed up dramatically between the two.</li>
+<li><strong>Tap pads 13&ndash;16</strong> for the four shapes — triangle, ramp, square, and sample-and-hold, which jumps to a new value each cycle and holds it there.</li>
+<li><strong>Release MOD and turn encoder 2 again.</strong> Now you are steering the <em>base</em> — the centre the sweep moves around — and the sweep follows you there.</li>
+<li><strong>Hold SWING and ERASE together and turn encoder 2.</strong> The modulation stops and the value returns to where you set it, not to wherever the sweep happened to stop.</li>
+</ol>
+<figure class="lcdfig">
+  <div class="lcd">
+    <div class="tabrow">
+      <span class="tab">E OHAT</span><span class="tab">F BASS</span><span class="tab on">G LEAD</span><span class="tab">H PADS</span>
+    </div>
+    <div class="cols">
+      <div class="col"><div class="lab">PRESET</div><div class="val">BA01</div><div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
+      <div class="col"><div class="lab">CUTOFF~</div><div class="val">0064</div><div class="meter"><i></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div><div class="unit"></div></div>
+      <div class="col"><div class="lab">RESO</div><div class="val">0032</div><div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
+      <div class="col"><div class="lab">ENV</div><div class="val">0048</div><div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
+    </div>
+  </div>
+  <figcaption>CUTOFF carries a modulator: the name gains a <code>~</code>, the bar shows the range it sweeps, and the value cell still reads the base — the number your hand owns.</figcaption>
+</figure>
+<hr>
+<h2 id="how-it-works">How it works</h2>
+<p><strong>Depth is bipolar, and centre is off.</strong> Turning back to the middle does not leave a dormant modulator behind — it removes it. The fastest way to stop something moving is to put its depth back where it started.</p>
+<p><strong>Rates are locked to the bar</strong>, so a modulator lines up with the pattern it is colouring rather than drifting against it. Twelve rates and four shapes fill the sixteen pads exactly, with nothing unreachable.</p>
+<p><strong>The value cell always shows the base.</strong> Motion lives on the indicator bar: a dashed span across the range the modulator covers, and a small tick travelling inside it. A fast modulator blurs into a static span, and that is honest — the span is the truth, the tick is a courtesy. On 1-bit glass refreshing five times a second, animating the number would just make it unreadable.</p>
+<p><strong>On a spread page it is eight at once.</strong> Press VOLUME for the mixer, then MOD and each encoder in turn, and every channel gets its own modulator on the same control. They do not run in lockstep: each starts its cycle at the moment you bind it, so binding them one after another spreads them around the bar and the row breathes rather than pumps.</p>
+<p><strong>It is saved.</strong> Modulators go into the snapshot with their depth, rate, shape and position, and the value stored is the base you set rather than wherever the sweep happened to be. Load the set tomorrow and they are still running, still spread apart.</p>
+<hr>
+<h2 id="what-it-refuses">What it refuses, and why</h2>
+<p>MOD will not bind to anything that rewrites the pattern. Those columns draw dead under MOD, the same way a knob with no source does:</p>
+<p><strong>HITS · ROTATE · DENSITY · CHANCE · VELO · GATE · DIVIDE · LENGTH · KIT · PRESET · ROOT · SCALE</strong></p>
+<p>The refusal is the design, not a gap. A modulator writes several times a second. A knob that rewrites the pattern would tear the line up continuously — and on a channel you had recorded onto, it would destroy your take with nothing on the surface explaining why. <strong>Nothing MOD can do will touch a recorded take.</strong></p>
+<p>Generation moving on its own is a genuinely good idea and it is coming, but it needs its own answer to that question first.</p>
+<hr>
+<h2 id="clear-everything">Clearing everything at once</h2>
+<p>Hold <strong>MOD and ERASE</strong> and press <strong>ALL</strong>. Every modulator goes, and every value lands back where you put it.</p>
+<p>The markers vanish the instant you press it; the values themselves settle a moment later. That gap is deliberate — the instrument will not write twenty parameters inside a single button press, because doing that on the button thread once froze the whole machine.</p>
+<hr>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="02-features.html">Features</a> — everything the instrument does, in one list</li>
+<li><a href="03-playing.html">Quick start</a> — your first two minutes</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
