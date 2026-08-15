@@ -1208,5 +1208,366 @@ class TestVoiceSymbolResolution(unittest.TestCase):
         self.assertEqual(flags, (True, False, False, False))
 
 
+class TestButtonTables(unittest.TestCase):
+
+    def test_no_cc_is_claimed_twice(self):
+        self.assertEqual(tl.button_conflicts(), [])
+
+    def test_stateful_and_press_are_disjoint(self):
+        both = set(tl.BUTTONS_STATEFUL) & set(tl.BUTTONS_PRESS)
+        self.assertEqual(both, set())
+
+    def test_measured_bindings_are_preserved(self):
+        # The shipped chain, transcribed. A change here is a surface change.
+        self.assertEqual(tl.BUTTONS_STATEFUL[2], "erase")
+        self.assertEqual(tl.BUTTONS_STATEFUL[3], "rec")
+        self.assertEqual(tl.BUTTONS_STATEFUL[49], "shift")
+        self.assertEqual(tl.BUTTONS_STATEFUL[31], "solo")
+        self.assertEqual(tl.BUTTONS_PRESS[1], "play")
+        self.assertEqual(tl.BUTTONS_PRESS[4], "grid")
+        self.assertEqual(tl.BUTTONS_PRESS[7], "restart")
+        self.assertEqual(tl.BUTTONS_PRESS[29], "duplicate")
+        self.assertEqual(tl.BUTTONS_PRESS[47], "page_prev")
+        self.assertEqual(tl.BUTTONS_PRESS[48], "page_next")
+        self.assertEqual(tl.BUTTONS_PRESS[13], "sound_prev")
+        self.assertEqual(tl.BUTTONS_PRESS[14], "sound_next")
+
+    def test_no_button_lands_on_an_encoder_or_a_group_or_an_f_button(self):
+        for cc in list(tl.BUTTONS_STATEFUL) + list(tl.BUTTONS_PRESS):
+            self.assertNotIn(cc, range(16, 24), f"CC {cc} is an encoder")
+            self.assertNotIn(cc, range(39, 47), f"CC {cc} is an F button")
+            self.assertNotIn(cc, range(80, 88), f"CC {cc} is a Group button")
+
+    def test_the_free_ccs_stay_free(self):
+        # Measured free at G4 and re-verified 2026-08-14. SWING 50 is claimed
+        # by MOD in task 4 and is deliberately NOT in this list.
+        for cc in (5, 6, 12, 25, 26, 30, 34):
+            self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
+            self.assertNotIn(cc, tl.BUTTONS_PRESS)
+
+    def test_mod_lives_on_swing_not_auto(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[50], "mod")
+        # AUTO is CC_MODE_FILTER. Binding MOD there would shadow a mode.
+        self.assertNotIn(37, tl.BUTTONS_STATEFUL)
+        self.assertNotIn(37, tl.BUTTONS_PRESS)
+
+
+class TestModulatorMaths(unittest.TestCase):
+
+    def test_timbre_verbs_are_allowed(self):
+        for verb in ("level", "reverb", "delay", "cutoff", "reso",
+                     "env", "decay"):
+            self.assertTrue(tl.mod_allowed(verb), verb)
+
+    def test_gate_and_velo_are_refused(self):
+        # They read as timbre and were allowed once. Both are written by
+        # regenerating the WHOLE pattern (_apply_generator/_write_pattern: a
+        # clear() plus an addNote loop), so an LFO on either fired a full
+        # pattern rewrite every 200 ms forever - and on a player-owned DRUM
+        # channel the generator's drum branch has no ownership check, so it
+        # destroyed the recorded take over and over with nobody touching the
+        # panel.
+        for verb in ("gate", "velo"):
+            self.assertFalse(tl.mod_allowed(verb), verb)
+
+    def test_no_allowed_verb_rewrites_a_pattern(self):
+        # The set's whole contract in one assertion: everything in MOD_TIMBRE
+        # lands on a mixer strip or a plugin port. If a verb is added here it
+        # must be checked against _apply_generator/_write_pattern first.
+        rewrites = {"hits", "rotate", "div", "length", "density", "chance",
+                    "gate", "velo", "octave", "range", "random", "root",
+                    "scale", "kit", "preset", "sample"}
+        self.assertEqual(tl.MOD_TIMBRE & rewrites, frozenset())
+
+    def test_generated_plugin_ports_are_allowed(self):
+        self.assertTrue(tl.mod_allowed("lv2:surge_xt_a_filter1_cutoff"))
+        self.assertTrue(tl.mod_allowed("fx:reverb:decay"))
+
+    def test_structure_verbs_are_refused(self):
+        # These rewrite the pattern. An LFO on one of them thrashes zynseq.
+        for verb in ("div", "length", "kit", "preset", "sample",
+                     "root", "scale", "octave", "range"):
+            self.assertFalse(tl.mod_allowed(verb), verb)
+
+    def test_generation_verbs_are_refused_in_v1(self):
+        # HITS/ROTATE/DENSITY/CHANCE are the DRIFT targets. Drift is deferred
+        # and blocked on the SP2-ownership rule, so MOD refuses them for now.
+        for verb in ("hits", "rotate", "density", "chance"):
+            self.assertFalse(tl.mod_allowed(verb), verb)
+
+    def test_none_is_refused(self):
+        self.assertFalse(tl.mod_allowed(None))
+
+    def test_no_modulatable_verb_hands_the_pattern_back(self):
+        # A modulated verb is steered at its base and never reaches the
+        # handback check, so nothing in this set may be a handback verb.
+        for kind in tl.KINDS:
+            for verb in tl.MOD_TIMBRE:
+                self.assertFalse(tl.hands_back(kind, verb, 100), (kind, verb))
+
+    def test_fx_verbs_are_global_and_lv2_verbs_are_not(self):
+        # An fx: insert is ganged across every channel, so its modulator must
+        # be keyed with no channel: keyed per group it went invisible the
+        # moment the selected group changed, and a second modulator could be
+        # bound to the same port.
+        self.assertTrue(tl.mod_is_global("fx:reverb:decay"))
+        self.assertFalse(tl.mod_is_global("lv2:surge_xt_a_filter1_cutoff"))
+        self.assertFalse(tl.mod_is_global("cutoff"))
+        self.assertFalse(tl.mod_is_global(None))
+
+    def test_phase_advances_one_cycle_per_rate_in_bars(self):
+        # 2 bars per cycle, 8 beats elapsed at 4 beats to the bar = one cycle.
+        self.assertAlmostEqual(tl.mod_pos(0.0, 8.0, 2.0), 1.0)
+        self.assertAlmostEqual(tl.mod_pos(0.25, 8.0, 2.0), 1.25)
+
+    def test_triangle_runs_from_minus_one_up_and_back(self):
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.0), -1.0)
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.25), 0.0)
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.5), 1.0)
+        self.assertAlmostEqual(tl.mod_wave("tri", 0.75), 0.0)
+
+    def test_ramp_and_square(self):
+        self.assertAlmostEqual(tl.mod_wave("ramp", 0.0), -1.0)
+        self.assertAlmostEqual(tl.mod_wave("ramp", 0.5), 0.0)
+        self.assertAlmostEqual(tl.mod_wave("squ", 0.25), 1.0)
+        self.assertAlmostEqual(tl.mod_wave("squ", 0.75), -1.0)
+
+    def test_every_shape_stays_inside_minus_one_to_one(self):
+        for shape in tl.MOD_SHAPES:
+            for i in range(0, 400):
+                v = tl.mod_wave(shape, i / 97.0, seed=7)
+                self.assertGreaterEqual(v, -1.0)
+                self.assertLessEqual(v, 1.0)
+
+    def test_sample_and_hold_is_deterministic_and_holds(self):
+        # Same (seed, cycle) always gives the same value, so a saved jam
+        # reloads sounding identical. Within a cycle it does not move.
+        a = tl.mod_wave("s&h", 3.1, seed=42)
+        b = tl.mod_wave("s&h", 3.9, seed=42)
+        self.assertEqual(a, b)
+        self.assertEqual(a, tl.mod_wave("s&h", 3.5, seed=42))
+        self.assertNotEqual(a, tl.mod_wave("s&h", 4.1, seed=42))
+
+    def test_depth_zero_never_moves_the_value(self):
+        for wave in (-1.0, -0.3, 0.0, 0.6, 1.0):
+            self.assertEqual(tl.mod_value(64, wave, 0, 0, 127), 64)
+
+    def test_full_depth_sweeps_half_the_range_each_way(self):
+        # depth is -100..100 percent. At 100 the offset is half the span.
+        self.assertAlmostEqual(
+            tl.mod_value(64, 1.0, 100, 0, 127), 127.0)
+        self.assertAlmostEqual(
+            tl.mod_value(64, -1.0, 100, 0, 127), 0.5)
+
+    def test_value_is_clamped_to_the_verbs_own_range(self):
+        self.assertEqual(tl.mod_value(120, 1.0, 100, 0, 127), 127)
+        self.assertEqual(tl.mod_value(4, -1.0, 100, 0, 127), 0)
+
+    def test_negative_depth_mirrors_positive(self):
+        up = tl.mod_value(64, 0.5, 50, 0, 127)
+        down = tl.mod_value(64, 0.5, -50, 0, 127)
+        self.assertAlmostEqual(up - 64, 64 - down)
+
+    def test_span_is_the_range_the_bar_should_draw_dashed(self):
+        lo, hi = tl.mod_span(64, 50, 0, 127)
+        self.assertAlmostEqual(lo, (64 - 31.75) / 127.0)
+        self.assertAlmostEqual(hi, (64 + 31.75) / 127.0)
+
+    def test_span_clamps_at_the_ends_rather_than_running_off(self):
+        lo, hi = tl.mod_span(0, 100, 0, 127)
+        self.assertAlmostEqual(lo, 0.0)
+        self.assertAlmostEqual(hi, 0.5)
+
+    def test_span_of_zero_depth_is_a_point(self):
+        lo, hi = tl.mod_span(64, 0, 0, 127)
+        self.assertAlmostEqual(lo, hi)
+
+    def test_twelve_rates_and_four_shapes_fill_the_sixteen_pads(self):
+        # Every table entry must be reachable from a pad. A table with more
+        # entries than pads is a table that lies about what the surface can do.
+        self.assertEqual(len(tl.MOD_RATES), 12)
+        self.assertEqual(len(tl.MOD_SHAPES), 4)
+        self.assertEqual(
+            len(tl.MOD_RATES) + len(tl.MOD_SHAPES), 16)
+
+    def test_rates_run_slowest_first_and_are_all_positive(self):
+        self.assertEqual(sorted(tl.MOD_RATES, reverse=True),
+                         list(tl.MOD_RATES))
+        for rate in tl.MOD_RATES:
+            self.assertGreater(rate, 0.0)
+
+    def test_one_bar_is_in_the_rate_table(self):
+        # The default rate at bind. Absent, the driver would index a rate that
+        # does not exist.
+        self.assertIn(1.0, tl.MOD_RATES)
+
+
+class TestModulationMarks(unittest.TestCase):
+
+    def test_a_modulated_column_gets_a_tilde_on_its_name(self):
+        col = tl.mark_modulated(tl._col("CUTOFF", "0064", "uni", 0.5),
+                                (0.25, 0.75))
+        self.assertTrue(col["name"].endswith("~"))
+        self.assertEqual(col["mod"], (0.25, 0.75))
+
+    def test_an_unmodulated_column_is_unchanged(self):
+        col = tl._col("CUTOFF", "0064", "uni", 0.5)
+        self.assertEqual(col["name"], "CUTOFF")
+        self.assertIsNone(col["mod"])
+
+    def test_the_tilde_does_not_push_the_name_past_the_cell(self):
+        col = tl.mark_modulated(tl._col("LFO1_ENAB", "0064", "uni", 0.5),
+                                (0.0, 1.0))
+        self.assertLessEqual(len(col["name"]), tl.NAME_CHARS)
+        self.assertTrue(col["name"].endswith("~"))
+
+    def test_the_value_cell_still_shows_the_base(self):
+        # Not the modulated value: the base is the thing the knob steers.
+        col = tl.mark_modulated(tl._col("CUTOFF", "0064", "uni", 0.5),
+                                (0.1, 0.9))
+        self.assertEqual(col["value"], "0064")
+
+    def test_a_dead_column_carries_no_modulation(self):
+        self.assertIsNone(tl._dead("CUTOFF")["mod"])
+
+    def test_marking_adds_the_span_and_the_tilde(self):
+        col = tl._col("CUTOFF", "0064", "uni", 0.5)
+        out = tl.mark_modulated(col, (0.25, 0.75))
+        self.assertEqual(out["mod"], (0.25, 0.75))
+        self.assertTrue(out["name"].endswith("~"))
+
+    def test_marking_with_no_span_returns_the_column_untouched(self):
+        col = tl._col("CUTOFF", "0064", "uni", 0.5)
+        self.assertIs(tl.mark_modulated(col, None), col)
+
+    def test_a_dead_column_refuses_the_mark(self):
+        dead = tl._dead("CUTOFF")
+        self.assertIs(tl.mark_modulated(dead, (0.1, 0.9)), dead)
+
+    def test_marking_does_not_mutate_the_original(self):
+        col = tl._col("CUTOFF", "0064", "uni", 0.5)
+        tl.mark_modulated(col, (0.25, 0.75))
+        self.assertIsNone(col["mod"])
+        self.assertEqual(col["name"], "CUTOFF")
+
+
+class TestModBaseOr(unittest.TestCase):
+    """The view-substitution rule state_view() and _generated_view() both
+    call through _mod_override(): a modulated verb's display must read the
+    base the knob is set to, never the value _mod_write() just swept it to.
+    Exercised here directly, not just through _col(), so a regression on the
+    substitution itself - as opposed to the tilde/span cosmetics - fails a
+    test rather than only showing up on hardware."""
+
+    def test_value_passes_through_when_nothing_is_bound(self):
+        self.assertEqual(tl.mod_base_or({}, (0, "cutoff"), 42), 42)
+
+    def test_a_bound_key_reports_its_base_not_the_passed_value(self):
+        mods = {(0, "cutoff"): {"base": 64, "depth": 50}}
+        # 99 stands in for whatever the swept/live value currently is - it
+        # must never come back out.
+        self.assertEqual(tl.mod_base_or(mods, (0, "cutoff"), 99), 64)
+
+    def test_only_the_exact_key_is_overridden(self):
+        mods = {(0, "cutoff"): {"base": 64}}
+        self.assertEqual(tl.mod_base_or(mods, (1, "cutoff"), 99), 99)
+        self.assertEqual(tl.mod_base_or(mods, (0, "reso"), 99), 99)
+
+
+class TestModSteer(unittest.TestCase):
+    """A hand turn on a modulated verb steers the BASE, not the engine.
+
+    Written as the whole loop rather than one helper in isolation: the defect
+    this guards against was invisible to a helper test, because every piece
+    was correct on its own and only the wiring - reading `current` back out of
+    the store _mod_write() had just swept - was wrong."""
+
+    KEY = (0, "cutoff")
+    LO, HI = 0, 127
+
+    def _mods(self, base=64, depth=50):
+        return {self.KEY: {"base": base, "depth": depth, "rate": 6,
+                           "shape": "tri", "phase0": 0.0, "seed": 1}}
+
+    def _tick(self, mods, beats):
+        """One _mod_write() tick: what the engine is given, in surface units."""
+        e = mods[self.KEY]
+        pos = tl.mod_pos(e["phase0"], beats, tl.MOD_RATES[e["rate"]])
+        wave = tl.mod_wave(e["shape"], pos, e["seed"])
+        return tl.mod_value(e["base"], wave, e["depth"], self.LO, self.HI)
+
+    def test_an_unmodulated_verb_still_goes_to_the_engine(self):
+        value, to_base = tl.mod_steer({}, self.KEY, 40, 5, self.LO, self.HI)
+        self.assertEqual(value, 45)
+        self.assertFalse(to_base)
+
+    def test_a_modulated_verb_steers_the_base_and_writes_nothing(self):
+        mods = self._mods(base=64)
+        value, to_base = tl.mod_steer(mods, self.KEY, None, 5, self.LO, self.HI)
+        self.assertEqual(value, 69)
+        self.assertTrue(to_base)
+
+    def test_the_swept_value_can_never_become_the_starting_point(self):
+        # THE DEFECT. _mod_write stores base+offset into the driver's own
+        # parameter store, and the encoder path used to read it straight back
+        # as `current`. Even handed that swept number, the turn must start
+        # from the base.
+        mods = self._mods(base=64)
+        swept = self._tick(mods, beats=1.7)
+        self.assertNotEqual(swept, 64)          # the LFO really has moved it
+        value, _ = tl.mod_steer(mods, self.KEY, swept, 5, self.LO, self.HI)
+        self.assertEqual(value, 69)
+
+    def test_the_knob_walks_and_the_lfo_never_walks_it_back(self):
+        # Turn, tick, turn, tick. Ten detents up must be ten detents up,
+        # whatever the modulator did in between - the shipped bug made every
+        # turn start from wherever the sweep was, so the base wandered.
+        mods = self._mods(base=64)
+        beats = 0.0
+        for _ in range(10):
+            value, to_base = tl.mod_steer(mods, self.KEY, self._tick(mods, beats),
+                                          1, self.LO, self.HI)
+            self.assertTrue(to_base)
+            mods[self.KEY]["base"] = value
+            beats += 0.37                       # a tick lands between turns
+        self.assertEqual(mods[self.KEY]["base"], 74)
+
+    def test_ticking_on_its_own_never_moves_the_base(self):
+        mods = self._mods(base=64)
+        for i in range(50):
+            self._tick(mods, beats=i * 0.21)
+        self.assertEqual(mods[self.KEY]["base"], 64)
+
+    def test_the_display_follows_the_knob_not_the_sweep(self):
+        # mod_base_or is what state_view()/_generated_view() substitute with.
+        mods = self._mods(base=64)
+        value, _ = tl.mod_steer(mods, self.KEY, None, 5, self.LO, self.HI)
+        mods[self.KEY]["base"] = value
+        swept = self._tick(mods, beats=1.7)
+        self.assertEqual(tl.mod_base_or(mods, self.KEY, swept), 69)
+
+    def test_the_base_is_clamped_to_the_verbs_own_range(self):
+        mods = self._mods(base=125)
+        self.assertEqual(
+            tl.mod_steer(mods, self.KEY, None, 20, self.LO, self.HI)[0], 127)
+        mods = self._mods(base=3)
+        self.assertEqual(
+            tl.mod_steer(mods, self.KEY, None, -20, self.LO, self.HI)[0], 0)
+
+    def test_no_readable_source_steers_nothing(self):
+        value, to_base = tl.mod_steer({}, self.KEY, None, 5, self.LO, self.HI)
+        self.assertIsNone(value)
+        self.assertFalse(to_base)
+
+
+class TestModLabel(unittest.TestCase):
+
+    def test_mod_is_named_on_the_page_indicator(self):
+        self.assertEqual(tl.mod_label("CUTOFF 1/2", True), "CUTOFF 1/2 MOD")
+
+    def test_nothing_is_added_when_mod_is_off(self):
+        self.assertEqual(tl.mod_label("CUTOFF 1/2", False), "CUTOFF 1/2")
+
+
 if __name__ == "__main__":
     unittest.main()

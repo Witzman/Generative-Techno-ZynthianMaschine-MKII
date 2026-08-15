@@ -320,6 +320,17 @@ class techno_lib:
         return label
 
     @staticmethod
+    def mod_label(label, active):
+        """The page indicator says so while MOD is active.
+
+        MOD makes the pads inert and turns all eight encoders from "set this
+        value" into "set how it moves". A modifier that changes what every
+        knob on the panel does, with nothing on the surface saying it is on,
+        is the unexplained-behaviour law in another form - and MOD latches, so
+        it can be on with nobody touching it."""
+        return f"{label} MOD" if active else label
+
+    @staticmethod
     def owner_label(label, owner, recording, playing):
         """The page indicator also carries who owns the channel and whether a
         take is being captured.
@@ -474,6 +485,68 @@ class techno_lib:
 
     MODES = ("CONTROL", "STEP", "ALL", "MIXER", "FILTER")
 
+    # ------------------------------------------------- button dispatch tables
+    #
+    # SP10 step 0 / SP9 section 7. The driver's midi_event used to carry these
+    # as a chain of `if cc_num == CC_X`. Moving them here buys one thing that
+    # matters: a test can prove no two buttons claim the same CC, which is how
+    # two bindings were wrong for four days in 2026-08.
+    #
+    # CC numbers are MEASURED (gate G4, 2026-08-11, aseqdump). The daemon's
+    # token names sit on the opposite physical buttons from what they suggest -
+    # never re-derive these from the daemon source.
+    #
+    # MOD lives on SWING (CC 50), NOT on AUTO (CC 37). AUTO is CC_MODE_FILTER
+    # today and is only free after FILTER moves into the SPREAD ring - which
+    # is the three-focus collapse, and that is deferred. Putting MOD on SWING
+    # is what makes the collapse optional instead of a prerequisite.
+
+    # Buttons whose release is also an event: the driver tracks them across
+    # press and release, so they are dispatched before the press-only filter.
+    BUTTONS_STATEFUL = {
+        2: "erase",
+        3: "rec",
+        49: "shift",
+        31: "solo",
+        50: "mod",              # SWING. Verified free and unreferenced.
+    }
+
+    # Buttons that act on press only.
+    BUTTONS_PRESS = {
+        1: "play",
+        4: "grid",
+        7: "restart",
+        13: "sound_prev",
+        14: "sound_next",
+        29: "duplicate",
+        47: "page_prev",
+        48: "page_next",
+    }
+
+    # CCs that belong to something other than a named button. A named button
+    # landing on one of these would be swallowed by the range check above it.
+    RESERVED_CCS = frozenset(
+        list(range(16, 24))          # the eight encoders
+        + list(range(39, 47))        # F1..F8
+        + list(range(80, 88))        # Groups A..H
+        + [11, 32, 38, 51, 37])      # CONTROL, STEP, ALL, MIXER(VOLUME), FILTER(AUTO)
+
+    @staticmethod
+    def button_conflicts():
+        """Every CC claimed by more than one thing, as readable strings.
+
+        Returns [] when the map is sound. A non-empty list is a surface bug:
+        the second claimant is unreachable and there is no runtime symptom."""
+        problems = []
+        for cc in sorted(set(techno_lib.BUTTONS_STATEFUL)
+                         & set(techno_lib.BUTTONS_PRESS)):
+            problems.append(f"CC {cc}: stateful and press-only")
+        for table, label in ((techno_lib.BUTTONS_STATEFUL, "stateful"),
+                             (techno_lib.BUTTONS_PRESS, "press")):
+            for cc in sorted(set(table) & techno_lib.RESERVED_CCS):
+                problems.append(f"CC {cc}: {label} button on a reserved CC")
+        return problems
+
     # A page's shape decides what encoder n means. This is the whole trick:
     # three layouts, one dispatch.
     #   channel - 8 verbs, one selected channel      (today's CONTROL and STEP)
@@ -527,10 +600,13 @@ class techno_lib:
 
     @staticmethod
     def _col(name, value, bar=None, frac=0.0, grey=False, pending=False):
+        # No `mod` parameter: the tilde and the span are stamped afterwards by
+        # mark_modulated(), which is the one path production uses. A second
+        # copy of that logic here was used by nothing but its own tests.
         if pending:
             value = f">{value}<"
         return {"name": name, "value": value, "bar": bar, "frac": frac,
-                "grey": grey, "pending": pending}
+                "grey": grey, "pending": pending, "mod": None}
 
     @staticmethod
     def _dead(name):
@@ -569,6 +645,194 @@ class techno_lib:
             return frac
         return round(frac * steps) / steps
 
+    # ---------------------------------------------------------- modulation
+    #
+    # SP10 step 1. A modulator is (depth, rate, shape, phase0, base, seed)
+    # against one verb on one channel. Everything below is pure: the driver
+    # owns the store and the clock, this owns the shape of the motion.
+
+    MOD_SHAPES = ("tri", "ramp", "squ", "s&h")
+
+    # Bars per cycle, slowest first. TWELVE, not sixteen: the sixteen pads
+    # carry twelve rates (pads 0-11) and four shapes (pads 12-15), and an
+    # entry no pad can reach is a table that lies about the surface.
+    #
+    # Bar-synced rather than free-running so a modulator lines up with the
+    # pattern it is colouring - this instrument already lands structure on
+    # the bar everywhere else.
+    MOD_RATES = (16.0, 8.0, 6.0, 4.0, 3.0, 2.0,
+                 1.0, 0.75, 0.5, 0.25, 0.125, 0.0625)
+
+    # Verbs an LFO may drive. This set contains ONLY verbs that do not rewrite
+    # a pattern: each one lands on a mixer strip or a plugin port, where a
+    # change is allowed to arrive instantly and costs nothing but a
+    # set_value(). Everything else rewrites the pattern, and an LFO on a
+    # pattern rewrite thrashes zynseq under a lock.
+    #
+    # GATE and VELO were in this set and are OUT. They read as timbre - note
+    # length and note loudness - but on this instrument they are written by
+    # regenerating the whole pattern (_apply_generator/_write_pattern: a
+    # clear() plus an addNote loop). An LFO on VELO fired that rewrite every
+    # 200 ms forever, and on a player-owned DRUM channel the generator's drum
+    # branch has no ownership check, so it destroyed the recorded take over
+    # and over with nobody touching the panel.
+    #
+    # HITS, ROTATE, DENSITY and CHANCE are absent for the same structural
+    # reason plus one more: they are the bar-rate DRIFT targets, and drift
+    # does not ship until the SP2 ownership rule is settled.
+    MOD_TIMBRE = frozenset({
+        "level", "reverb", "delay", "cutoff", "reso", "env", "decay"})
+
+    # Depth is a signed percentage. 100 sweeps half the verb's range each way,
+    # so a centred base at full depth reaches both end stops and no further.
+    MOD_DEPTH_MAX = 100
+
+    @staticmethod
+    def mod_allowed(verb):
+        """True when MOD may bind a modulator to this verb.
+
+        A refused verb is drawn dead (law L4) rather than silently ignoring
+        the gesture - a knob that does nothing without saying so is the one
+        thing this surface must never do."""
+        if not verb:
+            return False
+        if verb.startswith(techno_lib.VERB_LV2) or verb.startswith(techno_lib.VERB_FX):
+            return True
+        return verb in techno_lib.MOD_TIMBRE
+
+    @staticmethod
+    def mod_is_global(verb):
+        """True when a modulator on this verb addresses ONE object however
+        many channels exist, so its key must not carry a channel.
+
+        `fx:` verbs do: the driver resolves them through fx_handle(0, which) -
+        a single insert, ganged across every channel - so keying one by the
+        selected group hid its tilde and its span the moment the group
+        changed, and let a second modulator be bound to the same port to fight
+        the first. `lv2:` verbs do NOT: they address the selected channel's
+        own synth processor and stay per channel."""
+        return bool(verb) and verb.startswith(techno_lib.VERB_FX)
+
+    @staticmethod
+    def mod_pos(phase0, elapsed_beats, rate_bars, beats_per_bar=4):
+        """Unwrapped position in cycles: the integer part is the cycle count
+        (which sample-and-hold needs) and the fraction is the phase.
+
+        Driven by BEATS, not seconds, so every modulator follows the tempo
+        without being told the tempo changed."""
+        span = float(rate_bars) * float(beats_per_bar)
+        if span <= 0.0:
+            return float(phase0)
+        return float(phase0) + float(elapsed_beats) / span
+
+    @staticmethod
+    def mod_sh(seed, cycle):
+        """Deterministic sample-and-hold in -1.0..1.0.
+
+        The same (seed, cycle) always gives the same value, so a saved jam
+        reloads sounding identical. A random() here would make the snapshot a
+        lie, which is exactly the CHANCE/SWING mistake of 2026-08-11."""
+        h = (int(seed) * 6364136223846793005
+             + int(cycle) * 1442695040888963407) & 0xFFFFFFFFFFFFFFFF
+        h ^= h >> 33
+        h = (h * 0xFF51AFD7ED558CCD) & 0xFFFFFFFFFFFFFFFF
+        h ^= h >> 33
+        return (h / float(0xFFFFFFFFFFFFFFFF)) * 2.0 - 1.0
+
+    @staticmethod
+    def mod_wave(shape, pos, seed=0):
+        """The modulator's output at `pos`, bipolar -1.0..1.0."""
+        p = float(pos) % 1.0
+        if shape == "tri":
+            return 4.0 * p - 1.0 if p < 0.5 else 3.0 - 4.0 * p
+        if shape == "ramp":
+            return 2.0 * p - 1.0
+        if shape == "squ":
+            return 1.0 if p < 0.5 else -1.0
+        if shape == "s&h":
+            return techno_lib.mod_sh(seed, int(float(pos) // 1))
+        return 0.0
+
+    @staticmethod
+    def mod_value(base, wave, depth, lo, hi):
+        """`base` displaced by `wave` at `depth`, clamped to the verb's range.
+
+        The BASE is the driver's own truth and is never read back from the
+        plugin: an LFO caught mid-sweep would otherwise write its own position
+        into the snapshot and the knob would have nothing to return to."""
+        half = (float(hi) - float(lo)) / 2.0
+        out = float(base) + float(wave) * (float(depth) / 100.0) * half
+        return max(float(lo), min(float(hi), out))
+
+    @staticmethod
+    def mod_span(base, depth, lo, hi):
+        """(low, high) as bar fractions 0..1 - the dashed span the indicator
+        bar draws to say a value is moving on its own."""
+        half = (float(hi) - float(lo)) / 2.0
+        reach = abs(float(depth) / 100.0) * half
+        a = max(float(lo), min(float(hi), float(base) - reach))
+        b = max(float(lo), min(float(hi), float(base) + reach))
+        width = float(hi) - float(lo)
+        if width <= 0.0:
+            return (0.0, 0.0)
+        return ((a - float(lo)) / width, (b - float(lo)) / width)
+
+    @staticmethod
+    def mod_base_or(mods, key, value):
+        """`value`, unless `key` has a live entry in `mods`, in which case
+        that entry's base instead.
+
+        Pure, so the substitution rule is unit tested here rather than only
+        through the driver's untestable state_view()/_generated_view(). The
+        driver's job is only to build `key` (its own (channel, verb) shape,
+        via _mod_key) and hand over its own self.mod - never to decide the
+        substitution itself. This is what keeps a modulated verb's display
+        reading the base the knob is set to, never the live value the LFO
+        just swept it to; _mod_write() still writes the swept value to the
+        engine untouched."""
+        entry = mods.get(key)
+        return value if entry is None else entry["base"]
+
+    @staticmethod
+    def mod_steer(mods, key, current, delta, lo, hi):
+        """Where an encoder turn on a possibly-modulated verb lands.
+
+        Returns (value, to_base). `to_base` True means the number belongs in
+        the modulator's own `base` field and must NOT be written to the engine
+        here - the modulator's own tick writes base+offset on its own.
+
+        This is the whole of the rule, and it lives here because the driver
+        cannot be imported off the Pi. Without it the knob is dead: _mod_write
+        stores base+offset into self.state / the mixer, so reading `current`
+        back from there hands the encoder the LFO's own output, and the turn
+        is overwritten inside 200 ms.
+
+        Returns (None, False) when there is nothing to steer, so the caller's
+        existing "no readable source" path is unchanged."""
+        entry = mods.get(key)
+        base = current if entry is None else entry.get("base")
+        if base is None:
+            return (None, False)
+        value = min(hi, max(lo, base + delta))
+        return (value, entry is not None)
+
+    @staticmethod
+    def mark_modulated(col, span):
+        """Stamp an already-built column as modulated.
+
+        Applied after columns() rather than threaded through it: columns()
+        fans out to three builders, and none of them should have to know what
+        a modulator is. Returns the column unchanged when span is None, so the
+        caller can apply it blindly."""
+        if span is None or col.get("grey"):
+            # A dead column stays dead - law L4 outranks a modulator that
+            # should not have been bindable there in the first place.
+            return col
+        out = dict(col)
+        out["name"] = col["name"][:techno_lib.NAME_CHARS - 1] + "~"
+        out["mod"] = span
+        return out
+
     # Generated pages address a plugin port directly, so their verb names carry
     # a prefix the driver's _verb() dispatches on:
     #   lv2:<symbol>          - the selected channel's synth processor
@@ -577,6 +841,8 @@ class techno_lib:
     VERB_FX = "fx:"
 
     PORT_LABEL_CHARS = 8
+
+    NAME_CHARS = 8           # what fits in a column's 5x8 name row
 
     # Note duration is gate/100, measured in STEPS. The old cap of 100 meant a
     # note could never outlast one step, so at the slowest division no note in

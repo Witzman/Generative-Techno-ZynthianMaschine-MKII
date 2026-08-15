@@ -338,14 +338,36 @@ class maschine_mk2_lib:
             [int(screen), int(x), int(y), int(w), int(h), int(style)])
 
     @staticmethod
-    def bar_packets(screen, x, w, kind, frac):
+    def bar_packets(screen, x, w, kind, frac, mod=None, tick=None):
         """Indicator bar under one encoder column.
 
         kind 'u' fills from the left (hits, length, expression, volume),
         'b' fills from the centre (pan, where the middle is the neutral
         position and which way it went matters), 's' lights discrete
         segments (rotation and division, which are counts and not
-        continuous). '' draws nothing - encoder 7 carries nothing."""
+        continuous). '' draws nothing - encoder 7 carries nothing.
+
+        mod, when not None, is (lo, hi) bar fractions - the range an active
+        modulator can reach. Drawn inside the same inner geometry (ix, iy, iw,
+        ih) the fill above already uses.
+
+        tick is a SEPARATE bar fraction - where the wave currently sits -
+        drawn as a 2 px mark inside the span. It is deliberately not `frac`:
+        mod_span is symmetric about the base, so frac would sit dead on the
+        span's midpoint every frame and never move. Falls back to `frac` when
+        None, so a bare mod with no tick still draws something sane. The
+        caller is expected to have quantised frac, mod and tick already; this
+        draws whatever it is given.
+
+        BOTH MARKS HAVE TO READ AGAINST FILLED AND UNFILLED BACKGROUND. Every
+        modulatable verb draws bar kind 'u', a solid bar from the left out to
+        `frac`, and the span is centred on `frac` - so half the span and the
+        whole negative half of the tick's travel stand on already-lit pixels.
+        A dashed outline there sets pixels that are already set and a filled
+        tick there is a filled block inside a filled block: both were
+        invisible for half of every cycle. The tick is therefore INVERTED,
+        and the span is split at the fill's own edge - inverted where it
+        stands on fill, dashed where it stands on empty background."""
 
         cls = maschine_mk2_lib
         if not kind:
@@ -372,6 +394,28 @@ class maschine_mk2_lib:
                     screen, ix + i * seg_w, iy, seg_w - 1, ih, style))
         else:
             raise ValueError(f"unknown bar kind: {kind}")
+        if mod is not None:
+            lo, hi = mod
+            lo = min(1.0, max(0.0, float(lo)))
+            hi = min(1.0, max(0.0, float(hi)))
+            if hi < lo:
+                lo, hi = hi, lo
+            span_x = ix + int(iw * lo)
+            span_w = max(1, int(iw * (hi - lo)))
+            # Where the solid fill ends. Only kind 'u' fills from the left, so
+            # only there is the split meaningful; the others keep the plain
+            # dashed span they have always drawn.
+            fill_end = ix + max(1, int(iw * frac)) if kind == "u" else ix
+            lit = max(0, min(span_x + span_w, fill_end) - span_x)
+            if lit > 0:
+                out.append(cls.display_rect_osc(
+                    screen, span_x, iy, lit, ih, cls.RECT_INVERT))
+            if span_w - lit > 0:
+                out.append(cls.display_rect_osc(
+                    screen, span_x + lit, iy, span_w - lit, ih, cls.RECT_DASHED))
+            tick_frac = frac if tick is None else min(1.0, max(0.0, float(tick)))
+            tick_x = min(ix + max(0, iw - 2), ix + int(iw * tick_frac))
+            out.append(cls.display_rect_osc(screen, tick_x, iy, 2, ih, cls.RECT_INVERT))
         return out
 
     @staticmethod
@@ -379,7 +423,11 @@ class maschine_mk2_lib:
         """Every OSC packet for one screen, in draw order.
 
         tabs: four (letter, name, selected, muted)
-        cols: four (name, value, bar kind, bar fraction)
+        cols: four (name, value, bar kind, bar fraction), optionally extended
+              with a mod span and a tick: (..., mod span) or
+              (..., mod span, tick). Shorter forms still work so every
+              existing caller and test is untouched; mod and tick default to
+              None.
         label: the page indicator, e.g. "LEVEL 1/3". Empty draws nothing."""
 
         cls = maschine_mk2_lib
@@ -401,14 +449,17 @@ class maschine_mk2_lib:
             screen, 0, cls.RULE_Y, cls.SCREEN_W, 1, cls.RECT_DOTTED))
         if label:
             out.append(cls.display_text_osc(screen, 3, cls.LABEL_Y, 1, False, label))
-        for i, (name, value, kind, frac) in enumerate(cols):
+        for i, col in enumerate(cols):
+            name, value, kind, frac = col[:4]
+            mod = col[4] if len(col) > 4 else None
+            tick = col[5] if len(col) > 5 else None
             x = i * cls.SCREEN_COL + 3
             if name:
                 out.append(cls.display_text_osc(screen, x, cls.NAME_Y, 1, False, name))
             if value:
                 out.append(cls.display_text_osc(
                     screen, x, cls.VALUE_Y, 2, False, str(value)[:cls.VALUE_CHARS]))
-            out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac))
+            out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod, tick))
         return out
 
     led_cache = None  # bound below to avoid a forward reference

@@ -315,6 +315,100 @@ class TestScreenLayout(unittest.TestCase):
                          lib.bar_packets(0, 0, 56, "u", 0.0))
 
 
+class TestModulationBar(unittest.TestCase):
+    """The span and the tick have to be visible against a filled bar.
+
+    Every modulatable verb draws bar kind 'u' - solid from the left out to
+    the base - and the span is centred on the base, so its lower half and the
+    whole negative half of the tick's travel stand on already-lit pixels. A
+    dashed outline there sets pixels that are already set, and a filled tick
+    there is a filled block inside a filled block: both were drawn every
+    frame and neither could be seen for half of every cycle."""
+
+    X, W, FRAC = 0, 56, 0.5
+
+    # x=1, width 54 inner; fill runs 1..27 inclusive, so the fill edge is 28.
+    IX, IW = 1, 54
+    IY, IH = lib.BAR_Y + 2, lib.BAR_H - 4
+    FILL_END = 28
+
+    def _packets(self, mod, tick=None):
+        return lib.bar_packets(0, self.X, self.W, "u", self.FRAC,
+                               mod=mod, tick=tick)
+
+    def test_the_tick_is_inverted_not_filled(self):
+        packets = self._packets((0.25, 0.75), tick=0.3)
+        tick_x = self.IX + int(self.IW * 0.3)     # 0.3 < 0.5: stands on fill
+        self.assertLess(tick_x, self.FILL_END)
+        self.assertIn(
+            lib.display_rect_osc(0, tick_x, self.IY, 2, self.IH, lib.RECT_INVERT),
+            packets)
+        self.assertNotIn(
+            lib.display_rect_osc(0, tick_x, self.IY, 2, self.IH, lib.RECT_FILL),
+            packets)
+
+    def test_the_tick_is_inverted_above_the_fill_too(self):
+        # One style for the whole sweep, so the mark does not change
+        # appearance as it crosses the base.
+        packets = self._packets((0.25, 0.75), tick=0.7)
+        tick_x = self.IX + int(self.IW * 0.7)
+        self.assertGreater(tick_x, self.FILL_END)
+        self.assertIn(
+            lib.display_rect_osc(0, tick_x, self.IY, 2, self.IH, lib.RECT_INVERT),
+            packets)
+
+    def test_the_span_is_split_at_the_fill_edge(self):
+        packets = self._packets((0.25, 0.75))
+        span_x = self.IX + int(self.IW * 0.25)
+        span_w = int(self.IW * 0.5)
+        lit = self.FILL_END - span_x
+        self.assertIn(
+            lib.display_rect_osc(0, span_x, self.IY, lit, self.IH, lib.RECT_INVERT),
+            packets)
+        self.assertIn(
+            lib.display_rect_osc(0, self.FILL_END, self.IY, span_w - lit,
+                                 self.IH, lib.RECT_DASHED),
+            packets)
+        # And never the old single dashed rect across the whole span, whose
+        # lower half landed inside the fill and vanished.
+        self.assertNotIn(
+            lib.display_rect_osc(0, span_x, self.IY, span_w, self.IH,
+                                 lib.RECT_DASHED),
+            packets)
+
+    def test_a_span_entirely_inside_the_fill_is_all_inverted(self):
+        packets = self._packets((0.0, 0.2))
+        span_w = int(self.IW * 0.2)
+        self.assertIn(
+            lib.display_rect_osc(0, self.IX, self.IY, span_w, self.IH,
+                                 lib.RECT_INVERT),
+            packets)
+        # Nothing dashed at all: every pixel of this span stands on fill.
+        self.assertNotIn(
+            lib.display_rect_osc(0, self.IX, self.IY, span_w, self.IH,
+                                 lib.RECT_DASHED),
+            packets)
+        self.assertEqual(len(packets), 4)   # outline, fill, span, tick
+
+    def test_a_span_entirely_above_the_fill_stays_dashed(self):
+        packets = self._packets((0.7, 0.9))
+        span_x = self.IX + int(self.IW * 0.7)
+        span_w = int(self.IW * 0.2)
+        self.assertIn(
+            lib.display_rect_osc(0, span_x, self.IY, span_w, self.IH,
+                                 lib.RECT_DASHED),
+            packets)
+        self.assertNotIn(
+            lib.display_rect_osc(0, span_x, self.IY, span_w, self.IH,
+                                 lib.RECT_INVERT),
+            packets)
+
+    def test_an_unmodulated_bar_is_untouched(self):
+        self.assertEqual(lib.bar_packets(0, self.X, self.W, "u", self.FRAC),
+                         lib.bar_packets(0, self.X, self.W, "u", self.FRAC,
+                                         None, None))
+
+
 class TestSfzParsing(unittest.TestCase):
 
     KIT = r"""<group>

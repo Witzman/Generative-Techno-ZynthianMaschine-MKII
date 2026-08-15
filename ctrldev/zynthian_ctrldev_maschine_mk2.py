@@ -412,6 +412,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # that is the short-lived mutex between threads and clears itself after
         # every write, so it cannot carry an ownership that survives a snapshot.
         self.owner = {i: "gen" for i in range(len(tlib.CHANNELS))}
+        # SP10: modulators, keyed by (channel, verb).
+        #
+        # KEYED BY VERB, never by (mode, page, encoder position). A future SP9
+        # layout switch would otherwise orphan every modulator, or worse,
+        # re-point it at whatever verb now sits in that slot.
+        #
+        # Each value: {"depth", "rate", "shape", "phase0", "base", "seed"}.
+        # `base` is the driver's own truth for the parameter - the LFO writes
+        # base+offset and never reads its own output back.
+        self.mod = {}
+        self.mod_held = False         # MOD physically down
+        self.mod_latched = False      # MOD tapped on
+        self.mod_last = None          # the key MOD+pad edits
+        self.mod_seed = 0             # bumped per bind, so two S&H differ
+        self._t0 = time.monotonic()   # the modulator clock's origin
         # Which kind a channel behaves as, when the player has said so.
         # None means "ask the chain" - never a stored copy of it.
         self.kind_override = {i: None for i in range(len(tlib.CHANNELS))}
@@ -445,6 +460,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.solo_down = False
         self.solo_mode = False           # latched: the F row means solo
         self._down_at = {}
+
+    @property
+    def mod_down(self):
+        """MOD is active either way round: held, or tapped on."""
+        return self.mod_held or self.mod_latched
 
     # --- plumbing ------------------------------------------------------
 
@@ -504,6 +524,166 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return value
         return self.state[channel].get(param)
 
+    def _mod_key(self, channel, verb):
+        """Modulators on a global verb carry channel None; everything else is
+        per channel. Same shape as the (channel, verb) pair _verb() already
+        takes, so nothing has to translate.
+
+        An `fx:` verb IS a global verb, whatever channel the gesture arrived
+        on. _verb_fx and _mod_zctrl both resolve it through fx_handle(0, which)
+        - one insert, ganged across every channel - so keying it by the
+        selected group meant binding on group A and then switching to group C
+        hid the tilde and the span, and let a second modulator be bound to the
+        same port to fight the first. `lv2:` verbs stay per channel: they
+        address the selected channel's own synth processor.
+
+        Channel None is a real input here, not only a real output: set_state
+        feeds this the channel it parsed back out of a saved key, and a saved
+        `fx:` key carries an empty channel field."""
+        if tlib.mod_is_global(verb):
+            return (None, verb)
+        return (None if channel is None else int(channel), verb)
+
+    def _mod_range(self, channel, verb):
+        """(lo, hi) in SURFACE units for a verb, or None when this driver has
+        no range for it.
+
+        Generated plugin ports report (0, 100): _verb_lv2 (line 649) already
+        drives them as a percentage scaled onto the port's own range, and a
+        modulator must speak the same units as the knob beside it or the two
+        would disagree about what depth 50 means."""
+        span = self.VERB_RANGES.get(verb)
+        if span is not None:
+            return (span[0], span[1])
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            return (0.0, 100.0)
+        return None
+
+    def _mod_column_span(self, channel, verb):
+        """This column's dashed modulation span as bar fractions (lo, hi), or
+        None when nothing is bound to this (channel, verb) - the caller
+        passes None straight to mark_modulated(), which leaves the column
+        alone."""
+        if verb is None:
+            return None
+        entry = self.mod.get(self._mod_key(channel, verb))
+        if entry is None:
+            return None
+        lo_hi = self._mod_range(channel, verb)
+        if lo_hi is None:
+            return None
+        # IMPORTANT: This narrows the span via mod_span(), but the live tick
+        # (_mod_write) is normalised against the raw lo_hi width, not this
+        # narrowed span. If either normalisation changes without the other,
+        # the tick will no longer land visually inside this envelope.
+        return tlib.mod_span(entry["base"], entry["depth"], lo_hi[0], lo_hi[1])
+
+    def _mod_tick_frac(self, channel, verb):
+        """Where the modulator's wave currently sits, as a bar fraction, or
+        None when nothing is bound to (channel, verb) or the poll thread has
+        not sampled it yet (entry has no "live" the instant after bind).
+
+        mod_span is symmetric about the base, so its midpoint never moves -
+        drawing the tick there would show a static point forever. This reads
+        the fraction _mod_write() stashed at its own ~200 ms rate instead, so
+        the tick is the one thing on screen that actually sweeps."""
+        entry = self.mod.get(self._mod_key(channel, verb))
+        if entry is None:
+            return None
+        return entry.get("live")
+
+    def _mod_override(self, channel, verb, value):
+        """The verb's BASE when a modulator is bound to (channel, verb), else
+        `value` unchanged. Thin plumbing over tlib.mod_base_or, which carries
+        the actual (and unit tested) substitution rule - this method's only
+        job is building the key and handing over self.mod.
+
+        Substitutes only in the VIEW layer that columns() reads - state_view()
+        and _generated_view() call this after computing their normal value, so
+        the display always shows what the knob is set to, never where the LFO
+        has swept it to at this instant. _mod_write() is untouched by this:
+        the engine still gets the swept value: only what the display reads
+        back changes here."""
+        return tlib.mod_base_or(self.mod, self._mod_key(channel, verb), value)
+
+    def _mod_zctrl(self, channel, verb):
+        """The zynthian_controller behind a generated verb, or None.
+
+        Resolved the same way _verb_lv2 and _verb_fx resolve it - through
+        `proc.controllers_dict[symbol]`. Do NOT reach for
+        zynthian_lv2.get_plugin_ports(): it returns a dict keyed by port
+        INDEX, not by symbol, so a membership test against symbols silently
+        returns nothing and looks exactly like an absent plugin."""
+        if verb.startswith(tlib.VERB_LV2):
+            proc = self._voice_processor(channel)
+            symbol = verb[len(tlib.VERB_LV2):]
+        elif verb.startswith(tlib.VERB_FX):
+            which, _, symbol = verb[len(tlib.VERB_FX):].partition(":")
+            proc = self.fx_handle(0, which)
+        else:
+            return None
+        if proc is None:
+            return None
+        return proc.controllers_dict.get(symbol)
+
+    def _mod_percent_get(self, channel, verb):
+        """A generated port's current value as the 0-100 the surface uses."""
+        zctrl = self._mod_zctrl(channel, verb)
+        if zctrl is None:
+            return None
+        span = zctrl.value_max - zctrl.value_min
+        if span <= 0:
+            return None
+        return (zctrl.value - zctrl.value_min) / span * 100.0
+
+    def _elapsed_beats(self):
+        """Beats since the driver started.
+
+        Derived from BPM rather than from seconds so every modulator is
+        bar-synced and follows a tempo change without being told about it.
+
+        Defined HERE rather than with the poll-thread writer because Task 4
+        binds a modulator's phase from it - a definition in Task 6 would leave
+        Task 4 calling a method that does not exist, and py_compile cannot see
+        that on WSL.
+
+        THE TEMPO READ HOLDS THE LOCK, and nothing else here does. This used
+        to go through globals_view(), which calls libseq.getTempo() - an
+        unlocked zynseq call, reached from _mod_write on the poll thread and
+        from get_state on whichever thread saves. libzynseq is not thread-safe
+        and an unlocked reach into it once took the whole UI down with SIGSEGV
+        mid-jam.
+
+        The lock is taken for the tempo read ALONE rather than around
+        _mod_write's parameter writes, which is why the read is not simply
+        moved into the caller's locked section: a parameter write can block on
+        a socket for seconds and must never hold this lock. self.lock is an
+        RLock, so the MIDI thread - which already holds it for the whole event
+        - can call this without deadlocking. A cached tempo was the
+        alternative and was rejected: it needs a refresh site of its own and
+        goes stale exactly when the tempo moves, which is the one thing this
+        clock exists to follow."""
+        with self.lock:
+            bpm = self.libseq.getTempo()
+        return (time.monotonic() - self._t0) * (float(bpm or 120) / 60.0)
+
+    def _mod_percent_set(self, channel, verb, percent):
+        """Write a generated port from a 0-100 surface value, using the same
+        scaling _verb_lv2 uses so a modulated port and a turned knob land on
+        identical numbers."""
+        zctrl = self._mod_zctrl(channel, verb)
+        if zctrl is None:
+            return
+        span = zctrl.value_max - zctrl.value_min
+        if span <= 0:
+            return
+        percent = min(100.0, max(0.0, float(percent)))
+        target = zctrl.value_min + span * (percent / 100.0)
+        if tlib.port_is_discrete(zctrl.value_min, zctrl.value_max,
+                                 getattr(zctrl, "is_integer", True)):
+            target = round(target)
+        zctrl.set_value(target, True)
+
     def state_view(self, channel):
         """The state techno_lib.columns() reads: the dict, the four parameters
         that live in the legacy arrays, and the values owned by the mixer and
@@ -535,6 +715,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         symbols = self._voice_symbols(channel)
         view["synth_ctrl"] = tuple(bool(sym) for sym in symbols) \
             if symbols else (False,) * 4
+        # A modulated verb reads back as its BASE here, never the live swept
+        # value _mod_write() just wrote into self.state / the mixer - the
+        # value cell shows what the knob is set to, not where the LFO is.
+        for verb in tlib.MOD_TIMBRE:
+            if verb in view:
+                view[verb] = self._mod_override(channel, verb, view[verb])
         return view
 
     def globals_view(self):
@@ -1383,6 +1569,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             out["ring"] = list(out["ring"])
         return out
 
+    def _saved_param(self, channel, verb, live):
+        """What the snapshot should record for a parameter.
+
+        A modulated parameter's live value is wherever the LFO happened to be
+        when the snapshot was taken. The base is what the player set, and it
+        is the only value worth restoring - the modulator is saved separately
+        and will start sweeping from it again.
+
+        INERT TODAY, kept on purpose. Its only callers are gate and velo, and
+        neither is modulatable any more: both are written by regenerating the
+        whole pattern, so an LFO on either rewrote the pattern every 200 ms
+        and erased a player-owned take. If either verb ever becomes
+        modulatable again this is the guard that stops a saved snapshot
+        recording a sweep position instead of the value the player dialled
+        in - and it costs one dict lookup per save."""
+
+        entry = self.mod.get(self._mod_key(channel, verb))
+        return live if entry is None else entry["base"]
+
     def get_state(self):
         """What the snapshot must carry that nothing else owns.
 
@@ -1393,6 +1598,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         deliberately: adding it later leaves every existing snapshot missing
         it, with no way to tell."""
 
+        # Once, outside the comprehension below: it takes the lock for a
+        # tempo read, and asking eight modulators for it eight times would
+        # take the lock eight times for one answer.
+        beats = self._elapsed_beats()
         return {
             "globals": {k: v for k, v in self.globals.items() if k != "pending"},
             "mode": self.mode,
@@ -1414,16 +1623,69 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # is rebuilt from the pattern rather than trusted.
             "owners": {str(i): self.owner[i]
                        for i in range(len(tlib.CHANNELS))},
+            # SP10: modulators. Their own key, and saved from the first
+            # version deliberately - adding it later leaves every existing
+            # snapshot missing it with no way to tell.
+            #
+            # PHASE IS SAVED. Spread pages give eight independent LFOs whose
+            # phase comes from bind time; without the phase they all come back
+            # in lockstep and a saved jam does not sound like the saved jam.
+            #
+            # BASE IS SAVED. It is the driver's own truth: the chain holds
+            # wherever the LFO happened to be at save time, which is not the
+            # value the player dialled in.
+            "mods": {
+                f"{'' if ch is None else ch}|{verb}": {
+                    "depth": e["depth"], "rate": e["rate"],
+                    "shape": e["shape"],
+                    # The phase saved is the phase RIGHT NOW, not the phase0
+                    # the modulator was bound with.
+                    #
+                    # WHAT ACTUALLY HAPPENS ON LOAD: the beat clock does NOT
+                    # restart. self._t0 is set once, at construction, and
+                    # set_state never touches it - so a restored phase0 is
+                    # immediately advanced by however many beats have elapsed
+                    # since the driver started, and no modulator resumes at
+                    # the exact phase it was saved at. What survives is the
+                    # RELATIVE scatter between modulators running at the same
+                    # rate, because they all advance by the same amount, and
+                    # that scatter is the thing worth keeping: it is why eight
+                    # spread-page LFOs chase each other rather than breathing
+                    # together. Saving the bind-time offset instead would lose
+                    # even that.
+                    "phase0": tlib.mod_pos(
+                        e["phase0"], beats,
+                        tlib.MOD_RATES[e["rate"]]) % 1.0,
+                    "base": e["base"], "seed": e["seed"],
+                }
+                # list() because this iterates on whichever thread is saving
+                # while the MIDI thread can bind or clear a modulator: a bare
+                # .items() raises RuntimeError: dictionary changed size during
+                # iteration, and takes the whole snapshot save with it.
+                for (ch, verb), e in list(self.mod.items())
+            },
+            # The seed counter itself. Without it a load restarts it at 0 and
+            # the next bind collides with a restored entry's seed - two
+            # sample-and-holds on the same rate would then step in lockstep,
+            # which is the one thing the seed exists to prevent.
+            "mod_seed": self.mod_seed,
             "voices": {
                 str(i): {
                     "register": self.state[i]["register"],
                     "ring": list(self.state[i]["ring"]),
                     "length": self.state[i]["length"],
                     "random": self.state[i]["random"],
-                    "gate": self.state[i]["gate"],
+                    # SP10: gate and velo are NOT modulatable - both are
+                    # written by regenerating the pattern, so an LFO on
+                    # either rewrote the whole pattern every 200 ms.
+                    # _saved_param is therefore inert here and simply returns
+                    # the live value; it stays as the guard that would keep a
+                    # snapshot honest if either verb ever became modulatable
+                    # again. See its docstring.
+                    "gate": self._saved_param(i, "gate", self.state[i]["gate"]),
                     "octave": self.state[i]["octave"],
                     "range": self.state[i]["range"],
-                    "velo": self.state[i]["velo"],
+                    "velo": self._saved_param(i, "velo", self.state[i]["velo"]),
                     "density": self.state[i]["density"],
                 }
                 # SP4: keyed on how the channel BEHAVES, not on the table. A
@@ -1465,6 +1727,72 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             if channel in self.owner and who in ("gen", "player"):
                 self.owner[channel] = who
+
+        # SP10: modulators. Validated rather than trusted - the lesson of
+        # 2026-08-11, when CHANCE and SWING were assumed on load and a channel
+        # saved at chance 0 came back silent while the surface read 100. A
+        # verb that is no longer modulatable, an unknown shape, an
+        # out-of-range rate, a non-dict entry, a zero depth or an unparseable
+        # channel is dropped here, never held.
+        self.mod = {}
+        for key, entry in (state.get("mods") or {}).items():
+            chan_s, _, verb = str(key).partition("|")
+            if not verb or not tlib.mod_allowed(verb):
+                # A verb that is no longer modulatable is dropped, not held.
+                # Never hold a binding that cannot be resolved.
+                continue
+            try:
+                channel = None if chan_s == "" else int(chan_s)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(entry, dict):
+                continue
+            shape = entry.get("shape")
+            rate = entry.get("rate")
+            if shape not in tlib.MOD_SHAPES:
+                continue
+            if not isinstance(rate, int) or not 0 <= rate < len(tlib.MOD_RATES):
+                continue
+            depth = entry.get("depth", 0)
+            if not isinstance(depth, int) or depth == 0:
+                continue
+            base = entry.get("base")
+            # The base is arithmetic on every single tick. A None or a string
+            # out of a hand-edited snapshot raises inside _mod_write, and
+            # _playhead_loop's except-and-return then kills the playhead, the
+            # kit and preset commits, the volume poll, the display refresh AND
+            # all modulation for the rest of the session - one bad character
+            # in a JSON file taking the whole instrument silent.
+            if isinstance(base, bool) or not isinstance(base, (int, float)):
+                continue
+            if base != base or base in (float("inf"), float("-inf")):
+                continue
+            # _mod_key, not the parsed pair: a snapshot written before `fx:`
+            # verbs were keyed globally carries a real channel on one, and it
+            # has to normalise to None here or it comes back invisible.
+            self.mod[self._mod_key(channel, verb)] = {
+                "depth": max(-tlib.MOD_DEPTH_MAX,
+                             min(tlib.MOD_DEPTH_MAX, depth)),
+                "rate": rate,
+                "shape": shape,
+                "phase0": float(entry.get("phase0", 0.0)),
+                "base": base,
+                "seed": int(entry.get("seed", 0)),
+            }
+        # The seed counter. Restored, and floored at the highest seed actually
+        # in use - _mod_encoder increments before it reads, so the next bind
+        # lands one past every restored entry. The floor is what makes a
+        # snapshot written before this key existed safe too: without it the
+        # counter restarted at 0 and the next bind handed out a seed a
+        # restored modulator already held, and two sample-and-holds on the
+        # same rate then step as one, which is what the seed exists to stop.
+        saved_seed = state.get("mod_seed")
+        self.mod_seed = saved_seed if isinstance(saved_seed, int) else 0
+        for entry in self.mod.values():
+            self.mod_seed = max(self.mod_seed, entry["seed"])
+        # A pointer into a dict that was just rebuilt from scratch is
+        # meaningless - MOD+pad has nothing held down across a snapshot load.
+        self.mod_last = None
 
         for key, kind in (state.get("kinds") or {}).items():
             try:
@@ -1562,6 +1890,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # inside _pad_up finds nothing and this is a no-op.
                 self._pad_up(step)
                 return True
+            if self.mod_down:
+                # Ahead of the STEP branch deliberately. In STEP mode a pad
+                # hit goes to _toggle_step, so intercepting further down in
+                # _pad_down would let MOD+pad silently edit the pattern
+                # instead of setting a rate - a destructive surprise from a
+                # gesture that is supposed to be inert.
+                self._mod_pad(step)
+                return True
             if self.mode == "STEP":
                 # The step editor stays bound to NoteOn only, so dropping the
                 # note-off filter cannot make it toggle twice per strike.
@@ -1584,21 +1920,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Buttons that carry state across press and release come first:
             # the press-only filter below throws releases away, and for a
             # momentary gesture the release IS the event.
-            if cc_num == CC_ERASE:
-                self.erase_down = down
-                return True
-            if cc_num == CC_REC:
-                # Held, and it overdubs: release ends the take. Held notes are
-                # NOT released here - letting go of REC stops capturing, it
-                # does not stop the instrument sounding.
-                self.rec_down = down
-                self._render_display()
-                return True
-            if cc_num == CC_SHIFT:
-                self.shift_down = down
-                return True
-            if cc_num == CC_SOLO:
-                self._solo_button(down)
+            action = tlib.BUTTONS_STATEFUL.get(cc_num)
+            if action is not None:
+                getattr(self, "_act_" + action)(down)
                 return True
             fbtn = cc_num - CC_F1
             if 0 <= fbtn < 8:
@@ -1610,40 +1934,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if cc_num in MODE_BUTTONS:
                 self._set_mode(MODE_BUTTONS[cc_num])
                 return True
-            if cc_num == CC_GRID:
-                # A bare GRID press is swallowed and does nothing. Deliberate:
-                # it stays free for a later feature and cannot fall through to
-                # something else that reacts to it - which is exactly what an
-                # unbound CC 3 was doing before SP2 claimed it.
-                if self.shift_down:
-                    self._toggle_kind()
-                return True
-            if cc_num == CC_DUPLICATE:
-                self._duplicate()
-                return True
-            if cc_num == CC_PLAY:
-                self._toggle_transport()
-                return True
-            if cc_num in (CC_DL, CC_DR):
-                # Page within the current mode's ring, wrapping.
-                self._step_page(-1 if cc_num == CC_DL else 1)
-                return True
-            if cc_num in (CC_ML, CC_MR):
-                # Previous / next SOUND for the selected channel: a sample
-                # within the kit on a drum, an engine preset on a voice.
-                # Unconditionally cycling the sample resolved a GM percussion
-                # fallback on a voice and collapsed its whole line onto one
-                # note.
-                delta = -1 if cc_num == CC_ML else 1
-                if self.channel_kind(self.group) == "voice":
-                    self._nudge_preset(self.group, delta)
-                else:
-                    self._cycle_sample(delta)
-                return True
-            if cc_num == CC_RESTART:
-                for group in range(8):
-                    # Installed signature: setPlayPosition(bank, sequence, clock)
-                    self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+            action = tlib.BUTTONS_PRESS.get(cc_num)
+            if action is not None:
+                getattr(self, "_act_" + action)()
                 return True
             group = cc_num - GROUP_CC_FIRST
             if 0 <= group < 8:
@@ -1664,6 +1957,86 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return False
 
     # --- actions -------------------------------------------------------
+
+    # --- button actions -------------------------------------------------
+    #
+    # One method per entry in techno_lib.BUTTONS_*. Stateful actions take
+    # `down`; press-only actions take none. Keeping them as methods rather
+    # than inline lambdas is what makes the table swappable later (SP9).
+
+    def _act_erase(self, down):
+        self.erase_down = down
+
+    def _act_rec(self, down):
+        # Held, and it overdubs: release ends the take. Held notes are NOT
+        # released here - letting go of REC stops capturing, it does not stop
+        # the instrument sounding.
+        self.rec_down = down
+        self._render_display()
+
+    def _act_shift(self, down):
+        self.shift_down = down
+
+    def _act_solo(self, down):
+        self._solo_button(down)
+
+    def _act_mod(self, down):
+        # Tap latches, hold is momentary - the same 250ms rule _solo_button
+        # (line 2102) already implements. Without the latch, MOD + a Group
+        # button needs two hands and cannot be played.
+        if down:
+            self._down_at["mod"] = (time.monotonic(), False)
+            self.mod_held = True
+            self._render_mod()
+            self._render_display()
+            return
+        went_down, _ = self._down_at.pop("mod", (None, False))
+        self.mod_held = False
+        if went_down is not None and (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
+            self.mod_latched = not self.mod_latched
+        self._render_mod()
+        self._render_display()
+
+    def _act_play(self):
+        self._toggle_transport()
+
+    def _act_grid(self):
+        # A bare GRID press is swallowed and does nothing. Deliberate: it stays
+        # free for a later feature and cannot fall through to something else
+        # that reacts to it - which is exactly what an unbound CC 3 was doing
+        # before SP2 claimed it.
+        if self.shift_down:
+            self._toggle_kind()
+
+    def _act_duplicate(self):
+        self._duplicate()
+
+    def _act_restart(self):
+        for group in range(8):
+            # Installed signature: setPlayPosition(bank, sequence, clock)
+            self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+
+    def _act_page_prev(self):
+        self._step_page(-1)
+
+    def _act_page_next(self):
+        self._step_page(1)
+
+    def _act_sound_prev(self):
+        self._sound_step(-1)
+
+    def _act_sound_next(self):
+        self._sound_step(1)
+
+    def _sound_step(self, delta):
+        # Previous / next SOUND for the selected channel: a sample within the
+        # kit on a drum, an engine preset on a voice. Unconditionally cycling
+        # the sample resolved a GM percussion fallback on a voice and collapsed
+        # its whole line onto one note.
+        if self.channel_kind(self.group) == "voice":
+            self._nudge_preset(self.group, delta)
+        else:
+            self._cycle_sample(delta)
 
     def _select_group(self, group):
         self._release_all()          # the pads are about to mean another sound
@@ -1785,7 +2158,205 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             channel = self.group
         if verb is None:
             return                        # greyed column, dead knob, honestly
+        if self.mod_down:
+            # A column with a verb can still be drawn dead - a voice CONTROL
+            # column for a port its synth does not publish. Binding there
+            # produced an invisible modulator, because the tilde and the span
+            # are refused on a grey column.
+            if self._column_dead(column):
+                return
+            self._mod_encoder(verb, channel, cc_num, cc_val)
+            return
         self._verb(verb, channel, cc_num, cc_val)
+
+    def _mod_encoder(self, verb, channel, cc_num, cc_val):
+        """MOD held: the encoder sets modulation DEPTH on this verb, not its
+        value. Bipolar, centre is off.
+
+        A refused verb draws dead and does nothing - it never silently sets a
+        depth that will not be honoured."""
+        if not tlib.mod_allowed(verb):
+            return
+        if self.erase_down:
+            # MOD + ERASE + encoder clears. Destructive, so it is two-key and
+            # it obeys law L3: no single press destroys anything.
+            self._mod_clear(self._mod_key(channel, verb))
+            self._render_display()
+            return
+        key = self._mod_key(channel, verb)
+        # Everything below addresses the modulator by the KEY's channel, not
+        # by the channel the gesture arrived on: an `fx:` verb is global and
+        # its key channel is None whichever group is selected.
+        channel = key[0]
+        span = self._mod_range(channel, verb)
+        if span is None:
+            return
+        entry = self.mod.get(key)
+        # 200 units of travel across -100..+100, so a full sweep of the
+        # encoder covers the whole bipolar range once.
+        delta = self._enc_steps(cc_num, cc_val, 2 * tlib.MOD_DEPTH_MAX + 1)
+        if delta == 0:
+            return
+        if entry is None:
+            self.mod_seed += 1
+            rate_idx = tlib.MOD_RATES.index(1.0)
+            # PHASE COMES FROM BIND TIME. phase0 is chosen so the modulator is
+            # at position 0 the instant it is bound - which is what makes eight
+            # LFOs bound one after another on a spread page run scattered
+            # rather than in lockstep. Setting phase0 to a flat 0.0 would put
+            # every same-rate modulator in phase no matter when it was bound.
+            elapsed = self._elapsed_beats()
+            entry = {
+                "depth": 0,
+                "rate": rate_idx,
+                "shape": "tri",
+                "phase0": (-tlib.mod_pos(0.0, elapsed,
+                                         tlib.MOD_RATES[rate_idx])) % 1.0,
+                # The base is captured ONCE, at bind, from the value the
+                # player has dialled in. Re-reading it later would read the
+                # LFO's own output back and the parameter would walk away.
+                "base": self._mod_base_get(channel, verb),
+                "seed": self.mod_seed,
+            }
+            if entry["base"] is None:
+                return                    # no readable source: bind nothing
+            self.mod[key] = entry
+        entry["depth"] = max(-tlib.MOD_DEPTH_MAX,
+                             min(tlib.MOD_DEPTH_MAX, entry["depth"] + delta))
+        self.mod_last = key
+        if entry["depth"] == 0:
+            # Centre is off, and off means gone: leaving a zero-depth entry
+            # behind would keep writing base over the top of the touchscreen.
+            self._mod_clear(key)
+        self._render_display()
+
+    def _mod_pad(self, pad):
+        """MOD + pad: rate and shape for the MOST RECENTLY BOUND modulator.
+
+        Not the same pointer as the big encoder's 'last-touched parameter'
+        (SP10 step 2) - keep the two names apart or they will be conflated.
+
+        Pads 0-11 (the top three rows) pick a rate from techno_lib.MOD_RATES
+        (twelve entries, slowest first, so the rate speeds up left to right
+        and top to bottom). Pads 12-15 - the bottom row alone - are the four
+        techno_lib.MOD_SHAPES in order, one shape per pad."""
+        if self.mod_last is None:
+            return
+        entry = self.mod.get(self.mod_last)
+        if entry is None:
+            self.mod_last = None
+            return
+        if pad < len(tlib.MOD_RATES):
+            entry["rate"] = pad
+        else:
+            entry["shape"] = tlib.MOD_SHAPES[pad - len(tlib.MOD_RATES)]
+        self._render_display()
+
+    def _mod_clear(self, key):
+        """Drop a modulator and restore its base, so the parameter is left
+        where the player put it rather than wherever the LFO stopped."""
+        entry = self.mod.pop(key, None)
+        if entry is None:
+            return
+        channel, verb = key
+        self._mod_base_set(channel, verb, entry["base"])
+        if self.mod_last == key:
+            self.mod_last = None
+
+    def _mod_base_get(self, channel, verb):
+        """The verb's current surface value, or None when it has no source.
+
+        One accessor for both kinds of verb, so nothing downstream has to ask
+        which kind it is holding.
+
+        LEVEL is read LIVE from the mixer, for exactly the reason _verb() reads
+        it live: the touchscreen and a snapshot both move the fader behind the
+        driver's back, so self.state's copy is routinely stale. Capturing that
+        stale copy as a modulator's base made the first tick after a bind on
+        the MIXER LEVEL spread page yank the fader back to wherever the driver
+        last thought it was."""
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            return self._mod_percent_get(channel, verb)
+        if verb == "level":
+            level = self._live_level(channel)
+            if level is not None:
+                return level
+        return self.param_get(channel, verb)
+
+    def _live_level(self, channel):
+        """This channel's fader as the 0-100 the surface shows, straight from
+        the mixer, or None when it has no strip."""
+        chan = self._mixer_chan(channel)
+        if chan is None:
+            return None
+        return int(round(self.state_manager.zynmixer.get_level(chan) * 100))
+
+    def _mod_base_set(self, channel, verb, value):
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            self._mod_percent_set(channel, verb, value)
+            return
+        self.apply(channel, verb, value)
+
+    def _snapshot_busy(self):
+        """True while the state manager is inside a snapshot load or save.
+
+        Read from the state manager's own busy set rather than a flag of our
+        own. A flag would need a signal at the START of a load and there is
+        none - SS_LOAD_SNAPSHOT is sent after everything, including
+        set_state_drivers - so the flag could only be raised on the wrong edge
+        and would risk suppressing modulation for the rest of the session.
+        This set is emptied by end_busy() whatever happens, including on a
+        load that fails, so it cannot latch on.
+
+        The clid is 'load snapshot' on the main path and 'load_snapshot' on
+        another, so the test is a substring; 'save snapshot' matches too,
+        which is harmless and mildly useful."""
+
+        try:
+            busy = getattr(self.state_manager, "busy", None) or ()
+            return any("snapshot" in str(clid) for clid in busy)
+        except Exception:
+            return False
+
+    def _mod_write(self):
+        """Advance every modulator and write base+offset.
+
+        Runs on the poll thread and NEVER on the MIDI thread: midi_event holds
+        the lock for the whole event, and a parameter write can block."""
+        if not self.mod:
+            return
+        if self._snapshot_busy():
+            # A load rewrites every chain and every mixer strip, and set_state
+            # - which is what replaces self.mod - runs at the END of it.
+            # Without this the poll thread gets a ~200 ms tick in the middle
+            # and writes a modulator belonging to the OUTGOING snapshot over a
+            # value that was just restored.
+            return
+        beats = self._elapsed_beats()
+        for key, entry in list(self.mod.items()):
+            channel, verb = key
+            span = self._mod_range(channel, verb)
+            if span is None:
+                continue
+            pos = tlib.mod_pos(entry["phase0"], beats,
+                               tlib.MOD_RATES[entry["rate"]])
+            wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
+            value = tlib.mod_value(entry["base"], wave, entry["depth"],
+                                   span[0], span[1])
+            # set_value() already returns early on an unchanged value and
+            # integer controls dedupe for free, so a slow or parked modulator
+            # costs a function call and nothing else.
+            self._mod_base_set(channel, verb, value)
+            # The display's tick needs where the wave IS, sampled at this
+            # ~200 ms write rate - mod_span (the dashed envelope) is static
+            # given an unchanged base/depth and would put the tick dead on
+            # the span's midpoint forever, showing no motion at all.
+            width = span[1] - span[0]
+            # IMPORTANT: live is normalised against the raw span width from
+            # _mod_range, NOT the narrowed span from mod_span(). If either
+            # normalisation changes without the other, the tick will no longer
+            # land visually inside the dashed span envelope it is drawn in.
+            entry["live"] = (value - span[0]) / width if width else 0.0
 
     # Range and step size per verb: (lo, hi, units per step).
     # Fine controls sweep across the encoder's 128 units; coarse ones use a
@@ -1813,7 +2384,56 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "range": (1, 4, ENC_UNITS_DISCRETE),
     }
 
+    def _mod_steer(self, key, cc_num, cc_val):
+        """A hand turn on a verb that already carries a modulator steers the
+        modulator's BASE, and writes nothing to the engine.
+
+        Without this the knob is dead. _mod_write() writes base+offset through
+        _mod_base_set() -> apply(), which stores into self.state and the mixer
+        - the driver's own parameter store - and the ordinary path below then
+        reads that swept number back as `current`. Every turn started from
+        wherever the LFO happened to be and was overwritten inside 200 ms, so
+        the encoder read as erratic and then dead.
+
+        Nothing is written to the engine here on purpose: _mod_write() is the
+        only writer of a modulated parameter, and it picks the new base up on
+        its own next tick. The display already substitutes the base through
+        mod_base_or(), so the value cell follows the knob immediately.
+
+        Encoder feel matches the ordinary path exactly - the same range, the
+        same units per step - or the same verb would move at two different
+        speeds depending on whether a modulator happened to be bound."""
+
+        channel, verb = key
+        span = self._mod_range(channel, verb)
+        if span is None:
+            return
+        lo, hi = span
+        if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
+            # Generated verbs are steered as a percentage, the same 0-100 the
+            # column shows and _mod_percent_set() scales onto the port.
+            delta = self._enc_steps(cc_num, cc_val, 101)
+        else:
+            units = self.VERB_RANGES[verb][2]
+            delta = (self._enc_steps_fixed(cc_num, cc_val, units) if units
+                     else self._enc_steps(cc_num, cc_val, hi - lo + 1))
+        if delta == 0:
+            return
+        value, to_base = tlib.mod_steer(self.mod, key, None, delta, lo, hi)
+        if value is None or not to_base:
+            return
+        self.mod[key]["base"] = value
+        with self.lock:
+            self._render_display()
+
     def _verb(self, verb, channel, cc_num, cc_val):
+        # A modulated verb is steered at its base and never at the engine.
+        # First, before every other dispatch below, because a generated port
+        # carries a modulator exactly as a memorable verb does.
+        key = self._mod_key(channel, verb)
+        if key in self.mod:
+            self._mod_steer(key, cc_num, cc_val)
+            return
         # Generated pages address a plugin port directly and have no entry in
         # any of the tables below, so they are resolved first.
         if verb.startswith(tlib.VERB_LV2):
@@ -3010,6 +3630,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # Tempo can move from the touchscreen or from a snapshot,
                     # and the delay's musical division has to follow it.
                     self._push_delay_time()
+                if tick % VOLUME_POLL_TICKS == 0:
+                    # ~200ms. Deliberately the existing sub-rate: an unthrottled
+                    # 30 Hz modulator is 30 writes/s per moving target, each
+                    # reaching engine.send_controller_value(). Raise this only
+                    # for a target that proves it needs more.
+                    self._mod_write()
                 with self.lock:
                     head = self._playhead()
                     if head != self.head_shown:
@@ -3143,6 +3769,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.leds.changed("solo", solo_state):
             self._send_osc(lib.button_osc("solo", solo_state[0], solo_state[1]))
 
+    def _render_mod(self):
+        """SWING lights while MOD is active, held or latched.
+
+        Same precedent as SOLO above: a latched modifier that is not lit is a
+        modifier nobody can find. MOD makes every pad inert and turns all
+        eight encoders into depth controls, and mod_latched survives the
+        finger leaving the button - so unlit it is an invisible mode that
+        looks exactly like a broken surface.
+
+        Diffed through self.leds like every other LED write: the device has
+        been flooded off the USB bus once."""
+
+        state = (0xFFFFFF, 1.0 if self.mod_down else 0.0)
+        if self.leds.changed("mod", state):
+            self._send_osc(lib.button_osc("swing", state[0], state[1]))
+
     # --- screens -------------------------------------------------------
     #
     # The two screens show what the LEDs cannot: which sample each group
@@ -3188,42 +3830,100 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         group == self.group, silent))
         return tuple(out)
 
+    def _page_columns(self, desc):
+        """The eight column dicts techno_lib.columns() builds for a page.
+
+        Split out of _columns() so _encoder_column can ask the RENDERER's own
+        question - is this column drawn dead? - instead of a second
+        approximation of it that would drift from what is on the glass."""
+
+        shape = desc["shape"]
+        if desc.get("generated"):
+            return tlib.columns(desc, None, self._generated_view(desc))
+        if shape == tlib.SHAPE_SPREAD:
+            views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
+                     for i in range(len(tlib.CHANNELS))]
+            return tlib.columns(desc, None, views)
+        if shape == tlib.SHAPE_GLOBAL:
+            return tlib.columns(desc, None, self.globals_view())
+        channel = self.group
+        return tlib.columns(desc, self.channel_kind(channel),
+                            self.state_view(channel))
+
+    def _column_dead(self, column):
+        """True when this column is drawn dead (law L4): greyed, showing ----,
+        with an encoder that does nothing.
+
+        A verb name is not enough to tell. A voice CONTROL column whose synth
+        publishes no such port carries a perfectly good verb and only
+        synth_ctrl says it is dead - so MOD bound a modulator there happily,
+        mark_modulated() then correctly refused to mark a grey column, and the
+        result was a modulator that swept an absent port, drew no tilde and no
+        span, was persisted into the snapshot and had mod_last pointing at it."""
+
+        cols = self._page_columns(self._page())
+        if not 0 <= column < len(cols):
+            return False
+        return bool(cols[column].get("grey"))
+
     def _columns(self, screen):
         """Four columns for one screen, taken from the page model.
 
         techno_lib.columns() decides names, values, greyed columns and the
         pending brackets in one tested place; this only translates its dicts
-        into the (name, value, bar kind, fraction) tuples screen_packets()
-        draws, and converts a segmented bar's (index, count) into a fraction."""
+        into the (name, value, bar kind, fraction, mod span, tick) tuples
+        screen_packets() draws, converts a segmented bar's (index, count)
+        into a fraction, and stamps a modulated column via mark_modulated()
+        after the fact - columns() itself never learns what a modulator is.
+        `tick` is None on an unmodulated column and the live wave position
+        (distinct from `frac`, which stays the base) on a modulated one."""
 
         desc = self._page()
         shape = desc["shape"]
-        if desc.get("generated"):
-            cols = tlib.columns(desc, None, self._generated_view(desc))
-        elif shape == tlib.SHAPE_SPREAD:
-            views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
-                     for i in range(len(tlib.CHANNELS))]
-            cols = tlib.columns(desc, None, views)
-        elif shape == tlib.SHAPE_GLOBAL:
-            cols = tlib.columns(desc, None, self.globals_view())
-        else:
-            channel = self.group
-            cols = tlib.columns(desc, self.channel_kind(channel),
-                                self.state_view(channel))
+        cols = self._page_columns(desc)
 
         meter_page = shape == tlib.SHAPE_SPREAD and desc["verb"] == "level"
         out = []
         for offset, col in enumerate(cols[screen * 4:screen * 4 + 4]):
+            col_idx = screen * 4 + offset
+            # Same verb/channel resolution as _encoder_column, so MOD marks
+            # exactly the column the encoder would have bound.
+            if shape == tlib.SHAPE_SPREAD:
+                verb, channel = desc["verb"], col_idx
+            else:
+                verb, channel = desc["verbs"][col_idx], self.group
+            col = tlib.mark_modulated(col, self._mod_column_span(channel, verb))
             bar = BAR_KINDS[col["bar"]]
             frac = col["frac"]
             if bar == "s":
                 index, count = frac
                 frac = (index / (count - 1)) if count > 1 else 0.0
             if meter_page:
-                level = self._meter_frac(screen * 4 + offset)
+                level = self._meter_frac(col_idx)
                 if level is not None:
                     frac = level
-            out.append((col["name"], col["value"], bar, round(float(frac), 3)))
+            mod = col["mod"]
+            tick = None
+            if mod is not None:
+                # Quantised against the bar's own pixel width BEFORE the
+                # change comparison below (self.leds.changed in
+                # _render_display) - see quantise_frac's docstring. Without
+                # this a steady modulator's span reports a new value every
+                # frame and floods the device at 5 Hz.
+                frac = tlib.quantise_frac(frac, self.METER_PIXELS)
+                mod = (tlib.quantise_frac(mod[0], self.METER_PIXELS),
+                       tlib.quantise_frac(mod[1], self.METER_PIXELS))
+                # The tick is a DIFFERENT quantity from frac (frac is the
+                # base; mod_span's midpoint never moves) - it is where
+                # _mod_write() last sampled the wave, sourced separately and
+                # quantised the same way so it repaints only on a real pixel
+                # move. Nothing sampled yet (just bound) falls back to the
+                # base's own position rather than drawing at 0.
+                live = self._mod_tick_frac(channel, verb)
+                tick = round(float(tlib.quantise_frac(
+                    live if live is not None else frac, self.METER_PIXELS)), 3)
+            out.append((col["name"], col["value"], bar, round(float(frac), 3),
+                       mod, tick))
         return tuple(out)
 
     def _generated_view(self, desc):
@@ -3249,7 +3949,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             span = zctrl.value_max - zctrl.value_min
             if span <= 0:
                 continue
-            view[verb] = int(round((zctrl.value - zctrl.value_min) / span * 100.0))
+            percent = int(round((zctrl.value - zctrl.value_min) / span * 100.0))
+            # Same substitution as state_view(): a modulated port shows its
+            # base, not the live value _mod_write() just swept it to.
+            view[verb] = self._mod_override(self.group, verb, percent)
         return view
 
     # Peak metering. Two mixer APIs exist and the Pi runs the older one -
@@ -3303,10 +4006,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             label, self.owner[self.group], self.rec_down,
             self._play_state(self.group) != zynseq_lib.SEQ_STOPPED)
         label = tlib.type_label(label, self.kind_override[self.group])
+        # MOD repurposes every encoder on whatever page is showing, so the
+        # page indicator has to say it is on.
+        mod = self.mod_down
+        label = tlib.mod_label(label, mod)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.
-            state = (self._tabs(screen), self._columns(screen), label)
+            #
+            # So does mod: without it both _render_display() calls in
+            # _act_mod() were literal no-ops, because nothing else in the
+            # tuple moves when MOD goes down, and a latched MOD made the pads
+            # inert and the encoders mean something else with no indication.
+            state = (self._tabs(screen), self._columns(screen), label, mod)
             if not self.leds.changed(f"disp{screen}", state):
                 continue
             for packet in lib.screen_packets(screen, state[0], state[1], state[2]):
@@ -3316,6 +4028,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_groups()
         self._render_transport()
         self._render_mutes()
+        self._render_mod()
         self._render_pads()
 
     def _on_progress(self, *args, **kwargs):
