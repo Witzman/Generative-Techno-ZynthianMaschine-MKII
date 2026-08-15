@@ -131,7 +131,7 @@ systemctl restart zynthian</code></pre>
 <p><strong>What.</strong> Proves the driver bound and the routing is clean. <strong>Why.</strong> No route means step 7 did not take effect; two routes mean a stale one from an earlier session is still alive, and every pad tap will fire twice. <strong>How to confirm.</strong> Exactly <strong>one</strong> <code>ZynMidiRouter:devN_in</code> under the Pads port.</p>
 <pre><code class="language-bash">jack_lsp -c | awk '/\(capture\): Pads MIDI/{f=1;next} /^[^ \t]/{f=0} f{print}'
 # →    ZynMidiRouter:dev2_in            ← exactly one line, and nothing else</code></pre>
-<p><strong>Do not expect a particular slot number.</strong> The helper asks for <code>dev3_in</code>, but once patched Zynthian assigns the slot itself; this rig runs on <code>dev2_in</code>. See <em>Why there is no "Loaded" line</em> below before hunting through the journal.</p>
+<p><strong>Do not expect a particular slot number.</strong> Patched Zynthian assigns the slot itself, and it varies; this rig runs on <code>dev2_in</code>. Nothing else may connect that port — a second connector is what produced a duplicate route here, and two routes make every pad tap fire twice. See <em>Why there is no "Loaded" line</em> below before hunting through the journal.</p>
 <p><strong>Why not <code>grep -A3</code>.</strong> The obvious form of this check, <code>jack_lsp -c | grep -A3 "Pads MIDI"</code>, reports a <em>healthy</em> rig as a broken one. It matches the Pads port twice — once as a port and once as another port's connection — and the three lines it then prints are unrelated ports sitting at the left margin:</p>
 <pre><code class="language-text">a2j:maschine rs [129] (capture): Pads MIDI
    ZynMidiRouter:dev2_in          ← the only real route
