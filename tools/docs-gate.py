@@ -76,6 +76,15 @@ BASELINE = {
     # moves from Features and Playing, which keep their copies until they are
     # cut down last - so the site stays correct at every commit between.
     "modulation.html":             (845,  "2026-08-16"),
+    # Stubs created 2026-08-16 so the sidebar could be written once, with no
+    # broken links. Each baseline is re-set when its tutorial is written.
+    "generating-patterns.html":    (32,   "2026-08-16"),
+    "playing-and-recording.html":  (36,   "2026-08-16"),
+    "sound-and-presets.html":      (30,   "2026-08-16"),
+    "deep-parameters.html":        (30,   "2026-08-16"),
+    "mixing-and-effects.html":     (30,   "2026-08-16"),
+    "the-surface.html":            (33,   "2026-08-16"),
+    "saving.html":                 (30,   "2026-08-16"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
 SKIP_BUDGET = {"index.html"}

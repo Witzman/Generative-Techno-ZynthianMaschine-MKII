@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Requirements — Generative-Techno ZynthianMaschine MKII</title>
+<title>Mixing and effects — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
@@ -33,10 +34,10 @@
 <p id="search-no-results" style="display:none">No results found.</p>
 <ul id="search-results-list"></ul>
 </div>
-<div class="track">
-<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list">
-<li><a href="00-start.html" aria-current="page"><strong>Requirements</strong></a></li>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
 <li><a href="01-fast-installation.html">Fast installation</a></li>
 <li><a href="04-manual-installation.html">Manual installation</a></li>
 </ul></div>
@@ -46,9 +47,9 @@
 <li><a href="05-internals.html">Internals</a></li>
 <li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
 </ul></div>
-<div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list" style="display:none">
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
 <li><a href="02-features.html">Features</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
@@ -56,7 +57,7 @@
 <li><a href="modulation.html">Modulation</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
-<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="mixing-and-effects.html" aria-current="page"><strong>Mixing and effects</strong></a></li>
 <li><a href="the-surface.html">The surface</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
@@ -64,11 +65,10 @@
 </nav>
 <main>
 <article>
-<h1 id="requirements">Requirements</h1>
-<p>What you need before installing. To put it together, go to <a href="01-fast-installation.html">Fast installation</a>.</p>
+<h1 id="mixing-and-effects">Mixing and effects</h1>
+<p>Spread pages, the two inserts on every channel, and the globals.</p>
 <hr>
-<h2 id="what-you-need">What you need</h2>
-<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>Computer</td><td>Raspberry Pi 4 (this is what the rig was built and measured on)</td></tr><tr><td>Surface</td><td>Native Instruments Maschine MK2, over USB</td></tr><tr><td>Audio</td><td><strong>Nothing extra required.</strong> The Pi's own headphone output works, and every figure in this project was measured on it at 48 kHz. An external interface Zynthian supports is optional and will sound better — but it is not what any of this was tested against</td></tr><tr><td>Storage</td><td>SD card, 16 GB or more — the ZynthianOS image is about 7.5 GB compressed</td></tr><tr><td>Display</td><td>Any HDMI monitor or TV for Zynthian's own UI, driven with a USB mouse and keyboard. A touchscreen is what the instrument was built around and is far nicer to play, but it is <strong>not required to install</strong>. You do need a screen eventually: <em>saving</em> snapshots happens there and nowhere else</td></tr><tr><td>Network</td><td>The Pi must reach the internet during installation</td></tr></tbody></table>
+<p><em>This page is being written. In the meantime, <a href="02-features.html">Features</a> and <a href="03-playing.html">Quick start</a> cover the same ground.</em></p>
 </article>
 </main>
 <div id="toc-column"></div>
