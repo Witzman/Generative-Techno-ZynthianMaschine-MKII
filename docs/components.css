@@ -1,0 +1,105 @@
+/* Shared instrument visuals: the MK2's two displays and its pad grid.
+ *
+ * Used by index.html (the hero and the step demo) and by every tutorial page
+ * in the guide. It exists so those visuals live in ONE place: duplicating them
+ * into style.css would leave a block that has to stay in step across files,
+ * which is exactly the failure G2 exists to catch on the sidebar.
+ *
+ * SELF-CONTAINED ON PURPOSE. It declares every variable it uses rather than
+ * depending on the host page, so it renders identically on the landing page's
+ * graphite-and-ivory scheme and inside the guide's own palette. index.html
+ * keeps its own copies of --lcd-* because it uses them outside these
+ * components too (the focus outline, the nav hover); the values are identical
+ * and this file is linked before its inline style, so index wins any tie.
+ *
+ * The markup these expect is what index.html's screen() painter emits:
+ *
+ *   <div class="lcd">
+ *     <div class="tabrow"><span class="tab on">A KICK</span>...</div>
+ *     <div class="cols">
+ *       <div class="col">            (or class="col dead")
+ *         <div class="lab">HITS</div>
+ *         <div class="val">0004</div>
+ *         <div class="meter"><i class="on"></i>...</div>
+ *         <div class="unit"></div>
+ *       </div>
+ *     </div>
+ *   </div>
+ */
+
+:root{
+  --lcd-bg:   #08213f;
+  --lcd-bg-2: #0d3160;
+  --lcd-ink:  #cfeaff;
+  --lcd-dim:  #4f83b0;
+
+  /* Declared here too so this file stands alone. A host that already defines
+   * them (index.html does) wins, because it is linked after this one. --c is
+   * the selected channel's colour, which the pad grid tints itself with. */
+  --mono: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+  --c:    #e03a2f;
+}
+
+.screens{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media (max-width:820px){ .screens{grid-template-columns:1fr} }
+
+.lcd{
+  background:linear-gradient(178deg,var(--lcd-bg-2),var(--lcd-bg) 60%,#061a33);
+  border:2px solid #9a9384;border-radius:4px;
+  padding:.65rem .7rem .8rem;position:relative;overflow:hidden;
+  box-shadow:inset 0 0 34px rgba(80,180,255,.16), 0 0 26px rgba(40,120,200,.22);
+  font-family:var(--mono);
+}
+.lcd::after{
+  content:"";position:absolute;top:0;bottom:0;width:26%;
+  background:linear-gradient(90deg,transparent,rgba(150,215,255,.10),transparent);
+  animation:sweep 6.5s linear infinite;pointer-events:none;
+}
+@keyframes sweep{ from{transform:translateX(-140%)} to{transform:translateX(520%)} }
+
+.tabrow{display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;margin-bottom:.65rem}
+.tab{
+  border:1px solid var(--lcd-dim);color:var(--lcd-ink);
+  font-size:.66rem;letter-spacing:.06em;text-align:center;
+  padding:.1rem 0;border-radius:1px;white-space:nowrap;
+}
+.tab.on{background:var(--lcd-ink);color:var(--lcd-bg);border-color:var(--lcd-ink)}
+
+.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:.55rem}
+@media (max-width:400px){ .cols{grid-template-columns:repeat(2,1fr);row-gap:.9rem} }
+.col .lab{font-size:.64rem;letter-spacing:.09em;color:var(--lcd-dim);white-space:nowrap}
+.col .val{
+  font-size:clamp(1.2rem,3.2vw,1.8rem);line-height:1.05;color:var(--lcd-ink);
+  text-shadow:0 0 12px rgba(140,205,255,.55);white-space:nowrap;
+}
+.col.dead .lab{text-transform:lowercase}
+.col.dead .val{color:var(--lcd-dim);text-shadow:none}
+.col .unit{font-size:.58rem;letter-spacing:.1em;color:var(--lcd-dim);opacity:.8;margin-top:.15rem;min-height:.8em}
+
+.meter{display:flex;gap:2px;margin-top:.35rem;height:7px}
+.meter i{flex:1;background:var(--lcd-dim);opacity:.22;border-radius:1px}
+.meter i.on{opacity:1;background:var(--lcd-ink)}
+
+/* ---------- the pad grid ---------- */
+.padgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem}
+.padgrid button{
+  aspect-ratio:1;border-radius:7px;border:1px solid rgba(255,255,255,.07);
+  background:#101115;padding:0;cursor:default;position:relative;
+  transition:background .12s linear, box-shadow .12s linear, border-color .12s linear;
+}
+.padgrid button::after{
+  content:attr(data-n);
+  position:absolute;left:6px;top:4px;
+  font-family:var(--mono);font-size:.5rem;color:rgba(255,255,255,.22);
+}
+.padgrid button.on{
+  background:color-mix(in srgb,var(--c) 62%,#101115);
+  border-color:color-mix(in srgb,var(--c) 80%,transparent);
+  box-shadow:0 0 18px color-mix(in srgb,var(--c) 45%,transparent),
+             inset 0 0 22px color-mix(in srgb,var(--c) 35%,transparent);
+}
+.padgrid button.head{
+  background:color-mix(in srgb,var(--c) 88%,#fff 18%);
+  box-shadow:0 0 30px color-mix(in srgb,var(--c) 75%,transparent),
+             inset 0 0 0 2px rgba(255,255,255,.85);
+}
