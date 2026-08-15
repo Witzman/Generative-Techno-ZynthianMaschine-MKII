@@ -78,7 +78,7 @@ BASELINE = {
     "modulation.html":             (845,  "2026-08-16"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
-    "generating-patterns.html":    (32,   "2026-08-16"),
+    "generating-patterns.html":    (750,  "2026-08-16"),
     "playing-and-recording.html":  (36,   "2026-08-16"),
     "sound-and-presets.html":      (30,   "2026-08-16"),
     "deep-parameters.html":        (30,   "2026-08-16"),
