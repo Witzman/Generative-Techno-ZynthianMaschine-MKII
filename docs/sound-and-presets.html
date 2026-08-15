@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sound and presets — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="sound-and-presets.html" aria-current="page"><strong>Sound and presets</strong></a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="sound-and-presets">Sound and presets</h1>
+<p>What each channel sounds like, how to change it while the rig plays, and how to make a channel behave as something its engine is not.</p>
+<hr>
+<h2 id="what-it-is">What it is</h2>
+<p><strong>CONTROL is the sound page.</strong> On a drum it is KIT and SAMPLE; on a voice it is PRESET, CUTOFF, RESO, ENV and DECAY. Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel of both kinds — the same three controls in the same place, always.</p>
+<p>Every channel keeps its engine for the life of the snapshot. Nothing is created or destroyed while you play, because building a plugin rebuilds the audio graph and that is a hole in the sound.</p>
+<hr>
+<h2 id="try-it">Try it</h2>
+<ol>
+<li><strong>Select Group A</strong> (KICK) and press <strong>CONTROL</strong>. Encoder 1 is KIT, encoder 2 is SAMPLE.</li>
+<li><strong>Turn SAMPLE.</strong> The kick changes to another sound inside the same kit, immediately.</li>
+<li><strong>Press the button to the right of the big encoder.</strong> Same effect — it steps the selected channel's sound without using an encoder.</li>
+<li><strong>Select Group G</strong> (LEAD) and press <strong>CONTROL</strong>. Now encoder 1 is PRESET and encoders 2&ndash;5 are CUTOFF, RESO, ENV and DECAY.</li>
+<li><strong>Turn CUTOFF.</strong> You are driving the synth that is actually loaded, not a fixed idea of one.</li>
+<li><strong>Now the interesting one.</strong> Select <strong>Group E</strong> (OHAT) and hold <strong>SHIFT</strong> while pressing <strong>GRID</strong>. The channel changes what it behaves as. Do it again to change back.</li>
+</ol>
+<hr>
+<h2 id="the-factory-snapshot">One channel arrives switched</h2>
+<p><strong>E · OHAT ships as a voice.</strong> It keeps its Simmons kit and its sampler, but the Turing register drives it rather than euclid, so it walks between samples instead of laying down a straight hat.</p>
+<p>If your open hat wanders and you did not ask it to, <strong>that is the factory state and not a fault</strong>. Press SHIFT + GRID on E to hear it as an ordinary euclidean hat. It ships that way so the switch is audible the moment you plug in.</p>
+<hr>
+<h2 id="how-it-works">How switching a kind works</h2>
+<p><strong>SHIFT + GRID switches the selected channel between drum and voice behaviour. The engine is never swapped.</strong> A drum kit gets the Turing generator, and a synth gets euclid.</p>
+<p>On a sampler the register walks <strong>the kit's own note list</strong> rather than ROOT and SCALE, because there a note selects a sample and scale-quantising would land most steps on empty keys — silence with nothing to explain it. On a synth, euclid becomes a <strong>root pulse</strong>: ROOT plus that channel's OCTAVE, on every hit.</p>
+<p>Each channel keeps a separate set of parameters per kind, so switching back and forth does not cost you your settings. Pattern length and division deliberately do not move: they are pattern time, not kind, and the groove must not jump under a switch.</p>
+<p><strong>The surface says when a channel is not itself.</strong> The page indicator reads <code>VOX</code> or <code>DRM</code>, and <strong>GRID blinks</strong> for as long as the selected channel is on an overridden kind. Switching back clears the override rather than pinning the channel to a kind it merely happens to have today — so a later snapshot putting a different engine on that chain is not overruled by a stale choice nobody remembers making.</p>
+<hr>
+<h2 id="what-it-refuses">What it refuses, and why</h2>
+<p><strong>A switch rewrites the pattern</strong>, so on a channel you have recorded onto it hands the pattern back to the generator and your take is gone. Hand-edited steps do not survive either, for the same reason turning HITS does not — switching rewrites the line from the generator.</p>
+<p><strong>A voice switched to drum may arrive silent</strong>, because its HITS can read back as 0. The tab draws dashed to say so. That is not a defect: turn HITS up.</p>
+<p><strong>A known defect, stated plainly:</strong> the two buttons beside the big encoder sometimes step a preset once and then stick. Turning the PRESET encoder works reliably. This is being investigated; it is recorded here rather than left for you to discover and mistrust the rest.</p>
+<hr>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="deep-parameters.html">Deep parameter control</a> — reaching everything else a plugin publishes</li>
+<li><a href="generating-patterns.html">Generating patterns</a> — the two generators a channel can run</li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a> — LEVEL, REVERB and DELAY across the row</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

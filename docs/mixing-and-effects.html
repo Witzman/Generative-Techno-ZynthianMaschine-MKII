@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quick start — Generative-Techno ZynthianMaschine MKII</title>
+<title>Mixing and effects — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
@@ -50,13 +51,13 @@
 <button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
 <li><a href="02-features.html">Features</a></li>
-<li><a href="03-playing.html" aria-current="page"><strong>Quick start</strong></a></li>
+<li><a href="03-playing.html">Quick start</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
 <li><a href="modulation.html">Modulation</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
-<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="mixing-and-effects.html" aria-current="page"><strong>Mixing and effects</strong></a></li>
 <li><a href="the-surface.html">The surface</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
@@ -64,22 +65,37 @@
 </nav>
 <main>
 <article>
-<h1 id="quick-start">Quick start</h1>
-<p>Two minutes from a running rig to something worth listening to. Everything here is reversible and nothing needs saving to keep playing.</p>
+<h1 id="mixing-and-effects">Mixing and effects</h1>
+<p>Balancing eight channels from eight knobs, the two effects every channel feeds, and the handful of settings that belong to the machine rather than to a channel.</p>
 <hr>
-<h2 id="your-first-two-minutes">Your first two minutes</h2>
-<p>Press <strong>Play</strong>. All eight channels start together, and the factory snapshot already holds a beat and three voices.</p>
-<p>Press <strong>Group A</strong> to select KICK, then <strong>STEP</strong>. Encoder 1 is HITS: turn it to 4 and you have four-on-the-floor. Encoder 2 is ROTATE — turn it and the same four hits slide around the bar without changing how many there are.</p>
-<p>Press <strong>Group F</strong> for BASS, still in STEP. Encoder 3 is RANDOM. Turn it to roughly 30 and the bassline starts mutating a note at a time. When a phrase goes past that you want, turn RANDOM back to 0: the cell reads <code>LOCK</code> and that line is now frozen, bit for bit, until you move the knob again.</p>
-<p>Press <strong>CONTROL</strong> and the same eight encoders become what the channel <em>sounds</em> like instead of what it plays. That is the whole instrument in miniature — a mode decides what the knobs mean, the channel decides what they act on.</p>
-<p>Nothing you have touched is destructive, and nothing needs saving to keep playing. When you do want to keep it, see <a href="saving.html">Saving a set</a>.</p>
+<h2 id="what-it-is">What it is</h2>
+<p>Every channel carries <strong>its own reverb and delay send</strong> on encoders 7 and 8, feeding two shared effects. Sixteen insert hosts in total — a TAP Stereo Echo and a TAP Reverberator on every one of the eight channels.</p>
+<p>The sends are <strong>post-fader</strong>, so pulling a channel down takes its tail with it rather than leaving a ghost of it hanging in the reverb.</p>
 <hr>
-<h2 id="where-next">Where next</h2>
-<p>Every feature has a page with a walkthrough like the one above — the full list is on <a href="02-features.html">Features</a>. The three worth reading first:</p>
+<h2 id="try-it">Try it</h2>
+<ol>
+<li><strong>Press VOLUME.</strong> That is MIXER mode: one control across all eight channels at once, rather than eight controls on one channel.</li>
+<li><strong>Turn any encoder.</strong> Each one is a channel's LEVEL. This is the page for balancing.</li>
+<li><strong>Press the right arrow beside the display.</strong> The ring steps to REVERB, then DELAY — the same eight channels, a different send.</li>
+<li><strong>Press VOLUME again</strong> to jump back to page 1 rather than paging round.</li>
+<li><strong>Press AUTO.</strong> That is FILTER: CUTOFF and RESO across the row. Notice the five drum columns are drawn dead — see below.</li>
+<li><strong>Press ALL.</strong> Now the eight encoders are the machine's globals: ROOT, SCALE, BPM, MASTER, REVSIZE, REVTYPE, DLYTIME, DLYFBK.</li>
+</ol>
+<hr>
+<h2 id="how-it-works">How it works</h2>
+<p><strong>A spread page is one verb across eight channels.</strong> MIXER and FILTER are both spreads; CONTROL and STEP are the other shape, eight verbs on one channel. That is the whole grammar of the surface, and every page is one or the other.</p>
+<p><strong>ROOT and SCALE wait for the bar</strong>, like everything else that changes what the pattern is. The rest of the globals land instantly.</p>
+<p><strong>Group button brightness tracks each channel's level</strong>, so the row shows the balance without reading anything — and the peak meters on the display run live.</p>
+<hr>
+<h2 id="what-it-refuses">What it refuses, and why</h2>
+<p><strong>FILTER's five drum columns draw dead.</strong> Only the three voices answer it. The drum channels run a sampler, and there is no filter in that chain to reach — so rather than offering a knob that would do nothing, the columns grey out.</p>
+<p><strong>There is no drum filter in this version.</strong> That is worth saying plainly so you do not go hunting for one: filtering drums needs a filter plugin per channel, which costs eight more plugin hosts, and it has not been built.</p>
+<hr>
+<h2 id="see-also">See also</h2>
 <ul>
-<li><a href="generating-patterns.html">Generating patterns</a> — euclid, the Turing register, and what LOCK really means</li>
-<li><a href="modulation.html">Modulation</a> — making any sound parameter move on its own</li>
-<li><a href="the-surface.html">The surface</a> — every button, and what to check when a channel goes quiet</li>
+<li><a href="modulation.html">Modulation</a> — a spread page is the best place to bind eight modulators at once</li>
+<li><a href="sound-and-presets.html">Sound and presets</a> — LEVEL, REVERB and DELAY per channel</li>
+<li><a href="the-surface.html">The surface</a> — modes, pages and how the ring works</li>
 </ul>
 </article>
 </main>

@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quick start — Generative-Techno ZynthianMaschine MKII</title>
+<title>Saving your work — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
@@ -50,7 +51,7 @@
 <button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
 <li><a href="02-features.html">Features</a></li>
-<li><a href="03-playing.html" aria-current="page"><strong>Quick start</strong></a></li>
+<li><a href="03-playing.html">Quick start</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
 <li><a href="modulation.html">Modulation</a></li>
@@ -58,28 +59,39 @@
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
 <li><a href="the-surface.html">The surface</a></li>
-<li><a href="saving.html">Saving your work</a></li>
+<li><a href="saving.html" aria-current="page"><strong>Saving your work</strong></a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="quick-start">Quick start</h1>
-<p>Two minutes from a running rig to something worth listening to. Everything here is reversible and nothing needs saving to keep playing.</p>
+<h1 id="saving">Saving your work</h1>
+<p>A snapshot holds the whole instrument — patterns, sounds, levels, and the driver's own state. Two things it cannot hold, and one trap in the web interface.</p>
 <hr>
-<h2 id="your-first-two-minutes">Your first two minutes</h2>
-<p>Press <strong>Play</strong>. All eight channels start together, and the factory snapshot already holds a beat and three voices.</p>
-<p>Press <strong>Group A</strong> to select KICK, then <strong>STEP</strong>. Encoder 1 is HITS: turn it to 4 and you have four-on-the-floor. Encoder 2 is ROTATE — turn it and the same four hits slide around the bar without changing how many there are.</p>
-<p>Press <strong>Group F</strong> for BASS, still in STEP. Encoder 3 is RANDOM. Turn it to roughly 30 and the bassline starts mutating a note at a time. When a phrase goes past that you want, turn RANDOM back to 0: the cell reads <code>LOCK</code> and that line is now frozen, bit for bit, until you move the knob again.</p>
-<p>Press <strong>CONTROL</strong> and the same eight encoders become what the channel <em>sounds</em> like instead of what it plays. That is the whole instrument in miniature — a mode decides what the knobs mean, the channel decides what they act on.</p>
-<p>Nothing you have touched is destructive, and nothing needs saving to keep playing. When you do want to keep it, see <a href="saving.html">Saving a set</a>.</p>
+<h2 id="try-it">Try it</h2>
+<ol>
+<li><strong>On the touchscreen</strong> (or through VNC in a browser), open the snapshot list and enter a bank.</li>
+<li><strong>The first entry is <em>Save as new snapshot</em>.</strong> That is the one.</li>
+<li>To load, pick any snapshot in the list. Everything comes back — including which channels you had switched, and who owned each pattern.</li>
+</ol>
 <hr>
-<h2 id="where-next">Where next</h2>
-<p>Every feature has a page with a walkthrough like the one above — the full list is on <a href="02-features.html">Features</a>. The three worth reading first:</p>
+<h2 id="the-trap">The trap</h2>
+<p><strong>In webconf's Snapshots page, the Name field and its checkmark RENAME THE SELECTED BANK. They do not save a snapshot.</strong></p>
+<p>It looks exactly like a save box. It is not one. Save from the touchscreen or VNC.</p>
+<hr>
+<h2 id="what-persists">What a snapshot carries</h2>
+<p>The patterns themselves, play chance and swing, mixer levels and mutes, both effect sends per channel, and each channel's kit or preset.</p>
+<p>Plus the driver's own state, which exists nowhere else: every voice's <strong>Turing register</strong> and its four-deep undo ring, the voice parameters, the globals, <strong>which channels you switched kind on</strong>, <strong>who owns each pattern</strong>, your <strong>modulators</strong> — depth, rate, shape, position and base — and the mode and page you were in.</p>
+<p>A set saved mid-sweep comes back at the value you dialled in, not wherever a modulator happened to be when you saved.</p>
+<hr>
+<h2 id="what-it-refuses">What it will not carry, and why</h2>
+<p><strong>A mute set on the sequencer does not persist.</strong> Mute the mixer strip instead — that is in the snapshot, and it shows on the touchscreen mixer too.</p>
+<p><strong>Amber provenance on a drum channel does not survive a reload.</strong> Your take does; the colour does not. A played drum note has the same pitch as a generated one, so once the pattern is read back nothing can tell them apart. The <code>PLAY</code> indicator remains the authority.</p>
+<hr>
+<h2 id="see-also">See also</h2>
 <ul>
-<li><a href="generating-patterns.html">Generating patterns</a> — euclid, the Turing register, and what LOCK really means</li>
-<li><a href="modulation.html">Modulation</a> — making any sound parameter move on its own</li>
-<li><a href="the-surface.html">The surface</a> — every button, and what to check when a channel goes quiet</li>
+<li><a href="playing-and-recording.html">Playing and recording</a> — what ownership means, and why amber matters</li>
+<li><a href="modulation.html">Modulation</a> — modulators are saved running</li>
 </ul>
 </article>
 </main>

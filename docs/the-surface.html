@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The surface — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="the-surface.html" aria-current="page"><strong>The surface</strong></a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="the-surface">The surface</h1>
+<p>What every button does, how to read the two displays, and the list to work down when a channel goes quiet.</p>
+<hr>
+<h2 id="modes-and-pages">Modes and pages</h2>
+<p>Five buttons latch a mode, and exactly one is lit at any time.</p>
+<table><thead><tr><th>Button on the panel</th><th>Mode</th><th>The eight encoders become</th></tr></thead><tbody>
+<tr><td>CONTROL</td><td>CONTROL</td><td>what the selected channel sounds like</td></tr>
+<tr><td>STEP</td><td>STEP</td><td>what the selected channel plays</td></tr>
+<tr><td>ALL</td><td>ALL</td><td>the machine's globals</td></tr>
+<tr><td>VOLUME</td><td>MIXER</td><td>one level across all eight channels</td></tr>
+<tr><td>AUTO</td><td>FILTER</td><td>one filter control across all eight channels</td></tr>
+</tbody></table>
+<p>A mode can carry more than one page. <strong>The arrows beside the display</strong> step through that mode's ring and wrap; the page name sits in the middle of the display. Each mode remembers its own page separately for drum and voice channels, so changing channel does not throw you onto a page you were not on.</p>
+<p><strong>Pressing the mode you are already in returns you to page 1</strong> of that mode. It does not switch you anywhere — every mode button means the same thing twice over: <em>this mode, from the top</em>.</p>
+<p><strong>Group A&ndash;H</strong> selects the channel. Pads, tabs and all eight encoders follow immediately, and the inverted tab on the display — never a Group LED — is the authority on which channel is selected.</p>
+<hr>
+<h2 id="reading-the-displays">Reading the displays</h2>
+<p>Both displays carry a tab row across the top — A&ndash;D on the left, E&ndash;H on the right — with four encoder columns under each.</p>
+<p><strong>The inverted tab is the selected channel. A dashed tab means that channel is not sounding</strong>, whether it is muted at the mixer or silenced by its own generator. It is the one mechanism this instrument has for explaining silence, so read the tab row before assuming a fault.</p>
+<figure class="lcdfig">
+  <div class="lcd">
+    <div class="tabrow">
+      <span class="tab on">A KICK</span><span class="tab">B SNAR</span><span class="tab">C CLAP</span><span class="tab">D CHAT</span>
+    </div>
+    <div class="cols">
+      <div class="col"><div class="lab">KIT</div><div class="val">SP12</div><div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
+      <div class="col"><div class="lab">SAMPLE</div><div class="val">0003</div><div class="meter"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
+      <div class="col dead"><div class="lab">cutoff</div><div class="val">----</div><div class="unit"></div></div>
+      <div class="col dead"><div class="lab">reso</div><div class="val">----</div><div class="unit"></div></div>
+    </div>
+  </div>
+  <figcaption>A drum channel on CONTROL. CUTOFF and RESO draw dead in lower case with <code>----</code>: a sampler has no filter to reach, and the encoder does nothing rather than pretending.</figcaption>
+</figure>
+<hr>
+<h2 id="what-the-lights-mean">What the lights mean</h2>
+<table><thead><tr><th>Surface</th><th>What it says</th></tr></thead><tbody>
+<tr><td>Group A&ndash;H</td><td>hue is the channel, brightness is its level, dark means it is not sounding</td></tr>
+<tr><td>Mode buttons</td><td>exactly one lit, always — it cannot disagree with the display</td></tr>
+<tr><td>F1&ndash;F8</td><td>lit while that channel is muted</td></tr>
+<tr><td>PLAY</td><td>lit while anything is running</td></tr>
+<tr><td>REC</td><td><strong>lit only when a take is actually possible</strong> — dark in STEP mode and while MOD is active</td></tr>
+<tr><td>GRID</td><td>lit always, and <strong>blinking</strong> while the selected channel is on an overridden kind</td></tr>
+<tr><td>NOTE REPEAT</td><td>lit only while the selected channel behaves as a voice</td></tr>
+<tr><td>SWING</td><td>lit while MOD is held or latched</td></tr>
+<tr><td>Arrows, ERASE, SHIFT</td><td>lit whenever the instrument is running — they always do the same thing</td></tr>
+</tbody></table>
+<hr>
+<h2 id="the-buttons">The buttons, one by one</h2>
+<p><strong>NOTE REPEAT — the register undo.</strong> On a voice, it gives back the previous Turing line: it restores the earlier register, forces RANDOM to 0 so the recovered line holds, and rewrites immediately. It walks back up to four registers, which is roughly two wraps of human reaction time — the window in which a mutation steals a phrase before your hand arrives. It does nothing on a euclidean channel, which is why it is unlit there.</p>
+<p><strong>DUPLICATE does nothing.</strong> The register undo used to live here and moved to NOTE REPEAT, beside the big encoder with the other master controls.</p>
+<p><strong>SHIFT + GRID</strong> switches the selected channel's kind — see <a href="sound-and-presets.html">Sound and presets</a>. A bare GRID press does nothing, deliberately.</p>
+<p><strong>MOD + ERASE + ALL</strong> clears every modulator at once, returning each value to the base you set — see <a href="modulation.html">Modulation</a>.</p>
+<p><strong>The two buttons beside the big encoder</strong> step the selected channel's sound: previous or next sample on a drum, previous or next engine preset on a voice.</p>
+<hr>
+<h2 id="mute-solo-erase">Mute, solo and erase</h2>
+<p><strong>F1&ndash;F8 mute channels A&ndash;H</strong>, regardless of which channel is selected — F3 always mutes CLAP. Tap and it latches; hold past a quarter of a second and it is momentary, back on release. Same button, both gestures: momentary is how you play a gesture, latched is how you make a decision.</p>
+<p>The mute is on <strong>the mixer strip rather than the sequencer track</strong>, which is why it survives a snapshot, shows on the touchscreen mixer, and takes the channel's reverb and delay tail with it.</p>
+<p><strong>SOLO</strong> works the same two ways. <strong>ERASE + a Group button</strong> silences that channel — or, on a channel you have recorded onto, hands the pattern back to the generator.</p>
+<hr>
+<h2 id="transport">Transport</h2>
+<p><strong>Play</strong> starts or stops all eight channels together. The decision is taken once and applied to all eight, so they cannot drift into opposite states. <strong>Restart</strong> jumps every playhead to step 0 without stopping — for pulling channels back onto the one after a length change has phased them apart.</p>
+<p>Press Play once after loading a snapshot: loop mode is re-asserted on every transport start, and a fresh load is the one moment it may need it.</p>
+<hr>
+<h2 id="when-it-goes-quiet">When it goes quiet</h2>
+<p>Work down this list before suspecting the rig. Most of it is things you did.</p>
+<table><thead><tr><th>Check</th><th>What it looks like</th></tr></thead><tbody>
+<tr><td>Is the tab dashed?</td><td>the channel is muted, or its generator is silent</td></tr>
+<tr><td>HITS on a drum</td><td>0 hits is a silent channel, not a broken one</td></tr>
+<tr><td>CHANCE on a drum, DENSITY on a voice</td><td>at 0, nothing fires</td></tr>
+<tr><td>Is something soloed?</td><td>every non-soloed Group button goes dark</td></tr>
+<tr><td>MASTER on the ALL page</td><td>the global level, easy to leave down</td></tr>
+<tr><td>GATE at its floor on a voice</td><td>a slow-attack patch never gets far enough to sound</td></tr>
+</tbody></table>
+<p>A voice that is <strong>locked is not silent</strong> — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">Manual installation</a> for the checks that catch a stale MIDI route.</p>
+<hr>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="generating-patterns.html">Generating patterns</a> — what HITS, CHANCE and DENSITY actually do</li>
+<li><a href="playing-and-recording.html">Playing and recording</a> — the pad colours in full</li>
+<li><a href="modulation.html">Modulation</a> — what the <code>~</code> and the dashed bar mean</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

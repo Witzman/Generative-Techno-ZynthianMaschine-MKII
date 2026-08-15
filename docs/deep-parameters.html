@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quick start — Generative-Techno ZynthianMaschine MKII</title>
+<title>Deep parameter control — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
@@ -50,12 +51,12 @@
 <button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
 <li><a href="02-features.html">Features</a></li>
-<li><a href="03-playing.html" aria-current="page"><strong>Quick start</strong></a></li>
+<li><a href="03-playing.html">Quick start</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
 <li><a href="modulation.html">Modulation</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
-<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="deep-parameters.html" aria-current="page"><strong>Deep parameter control</strong></a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
 <li><a href="the-surface.html">The surface</a></li>
 <li><a href="saving.html">Saving your work</a></li>
@@ -64,22 +65,35 @@
 </nav>
 <main>
 <article>
-<h1 id="quick-start">Quick start</h1>
-<p>Two minutes from a running rig to something worth listening to. Everything here is reversible and nothing needs saving to keep playing.</p>
+<h1 id="deep-parameters">Deep parameter control</h1>
+<p>Eight knobs, and a synth with forty parameters. This is how you reach the fortieth without a menu.</p>
 <hr>
-<h2 id="your-first-two-minutes">Your first two minutes</h2>
-<p>Press <strong>Play</strong>. All eight channels start together, and the factory snapshot already holds a beat and three voices.</p>
-<p>Press <strong>Group A</strong> to select KICK, then <strong>STEP</strong>. Encoder 1 is HITS: turn it to 4 and you have four-on-the-floor. Encoder 2 is ROTATE — turn it and the same four hits slide around the bar without changing how many there are.</p>
-<p>Press <strong>Group F</strong> for BASS, still in STEP. Encoder 3 is RANDOM. Turn it to roughly 30 and the bassline starts mutating a note at a time. When a phrase goes past that you want, turn RANDOM back to 0: the cell reads <code>LOCK</code> and that line is now frozen, bit for bit, until you move the knob again.</p>
-<p>Press <strong>CONTROL</strong> and the same eight encoders become what the channel <em>sounds</em> like instead of what it plays. That is the whole instrument in miniature — a mode decides what the knobs mean, the channel decides what they act on.</p>
-<p>Nothing you have touched is destructive, and nothing needs saving to keep playing. When you do want to keep it, see <a href="saving.html">Saving a set</a>.</p>
+<h2 id="what-it-is">What it is</h2>
+<p>Page 1 of CONTROL gives a voice the four controls anyone reaches for first — CUTOFF, RESO, ENV, DECAY. <strong>Everything else the plugin publishes fills further CONTROL pages</strong>, eight ports to a page, in the plugin's own order and under the plugin's own names.</p>
+<p>Nothing in the driver knows what those parameters are. It asks the plugin what it has and builds the pages from the answer, which is why a synth nobody planned for still works.</p>
 <hr>
-<h2 id="where-next">Where next</h2>
-<p>Every feature has a page with a walkthrough like the one above — the full list is on <a href="02-features.html">Features</a>. The three worth reading first:</p>
+<h2 id="try-it">Try it</h2>
+<ol>
+<li><strong>Select Group G</strong> (LEAD) and press <strong>CONTROL</strong>. That is page 1 — PRESET, CUTOFF, RESO, ENV, DECAY, LEVEL, REVERB, DELAY.</li>
+<li><strong>Press the right arrow beside the display.</strong> Page 2. The names change to the plugin's own — abbreviated to fit, in the order the plugin lists them.</li>
+<li><strong>Keep pressing.</strong> Each page is eight more ports. A large synth runs to several pages.</li>
+<li><strong>Turn any of them.</strong> Each port is driven as a percentage of its own range, so a knob behaves the same whether the port runs 0&ndash;1 or 0&ndash;20000.</li>
+<li><strong>Press CONTROL again</strong> to jump straight back to page 1 rather than paging around.</li>
+</ol>
+<hr>
+<h2 id="how-it-works">How it works</h2>
+<p><strong>The four synth knobs follow the plugin that is loaded</strong>, not the one the snapshot shipped with. Change a chain's engine from the touchscreen and CUTOFF, RESO, ENV and DECAY rebind to the new plugin's own ports.</p>
+<p><strong>Host plumbing is filtered out.</strong> Plugins publish ports no player can use — freewheel flags, latency reports, enable switches that are not really switches. Those are recognised and dropped, so a generated page is eight things you might actually turn.</p>
+<p><strong>Discreteness is respected.</strong> A port with a handful of positions steps in whole units; a continuous one moves by percentage with the remainder carried, so slow turns still move it.</p>
+<hr>
+<h2 id="what-it-refuses">What it refuses, and why</h2>
+<p><strong>A role the plugin has no port for draws dead.</strong> If a loaded synth publishes no resonance, the RESO column greys out and its encoder does nothing at all.</p>
+<p>That is the same law the whole surface follows: <strong>a knob with no source is drawn dead rather than showing a number it cannot move.</strong> A knob that silently does nothing is the worst object on a control surface, because you cannot tell it apart from a broken one.</p>
+<hr>
+<h2 id="see-also">See also</h2>
 <ul>
-<li><a href="generating-patterns.html">Generating patterns</a> — euclid, the Turing register, and what LOCK really means</li>
-<li><a href="modulation.html">Modulation</a> — making any sound parameter move on its own</li>
-<li><a href="the-surface.html">The surface</a> — every button, and what to check when a channel goes quiet</li>
+<li><a href="sound-and-presets.html">Sound and presets</a> — page 1, and changing the engine underneath it</li>
+<li><a href="modulation.html">Modulation</a> — every generated port can carry a modulator</li>
 </ul>
 </article>
 </main>

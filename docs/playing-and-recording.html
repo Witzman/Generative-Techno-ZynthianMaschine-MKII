@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playing and recording — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html" aria-current="page"><strong>Playing and recording</strong></a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="playing-and-recording">Playing and recording</h1>
+<p>The pads are the instrument. Hold REC while you play them and what you played is captured into the same pattern the generator writes — and from that moment the pattern is yours, not the machine's.</p>
+<hr>
+<h2 id="what-it-is">What it is</h2>
+<p>In <strong>CONTROL, ALL, MIXER and FILTER</strong> the sixteen pads play the selected channel. On a voice they are notes. On a drum every pad triggers that channel's own sound, because a drum channel <em>is</em> one sound — hearing CLAP while playing KICK would be the silent-channel confusion in a new costume.</p>
+<p>In <strong>STEP</strong> the pads are the step editor instead. A tap toggles that step, and the velocity of the tap becomes the step's velocity, so accents are played in rather than dialled. Step 0 is the top-left pad; the grid reads left to right, top to bottom.</p>
+<hr>
+<h2 id="try-it">Try it</h2>
+<ol>
+<li><strong>Press Play</strong>, select <strong>Group F</strong> (BASS) and press <strong>CONTROL</strong>. Play the pads — that is the instrument.</li>
+<li><strong>Hold REC</strong> and play a short phrase. Keep holding REC.</li>
+<li><strong>Let go of the last pad while REC is still held</strong>, then release REC. Your phrase is in the pattern.</li>
+<li><strong>Press STEP</strong> and look at the pads. The steps you played light <strong>amber</strong>; the generated notes are still there underneath, dim or bright.</li>
+<li><strong>Look at the page indicator.</strong> It reads <code>PLAY</code> — you own this pattern now, and the generator has stopped rewriting it.</li>
+<li><strong>To give it back:</strong> hold <strong>ERASE</strong> and press <strong>Group F</strong>. Your take is gone and the generator resumes. That is deliberate and it is destructive.</li>
+</ol>
+<hr>
+<h2 id="how-it-works">How it works</h2>
+<p><strong>Capture happens on release, not on press.</strong> A note's length is how long you held the pad, and that is not known until you let go. This has a consequence worth committing to memory: <strong>you must still be holding REC when you release the pad.</strong> Let go of REC first and the note sounds but is never captured. That is the same rule that lets you release REC without cutting off notes still ringing, so it is a trade rather than an oversight.</p>
+<p><strong>Strikes quantise to the nearest step</strong>, wrapping at the end of the bar — nearest rather than next, so a strike landing a hair early is not pushed a step late. A note's length is clamped to what is left of the pattern.</p>
+<p><strong>Recording adds; it does not overwrite.</strong> The generated line freezes where it is and your note goes on top, so a recorded step can hold two notes. An amber pad means your note is there <em>and</em> the generated one still is. A step that sounds but stays dark would be the defect.</p>
+<p><strong>The page indicator reads <code>REC</code> while you are capturing</strong>, and <code>REC-STOP</code> if the transport is stopped — nothing is being captured then, and the surface says so rather than letting you play into nothing.</p>
+<hr>
+<h2 id="who-owns-it">Who owns the pattern</h2>
+<p>The first captured note makes you the owner of that channel's pattern, and the generator stops rewriting it. The indicator reads <code>PLAY</code> for as long as that holds — <strong>including after a snapshot reload</strong>, because ownership is saved.</p>
+<p>Handing the pattern back is deliberate and destructive: your take is gone the moment it happens. There are two routes, and knowing which knobs do it is the difference between keeping a take and losing one.</p>
+<table><thead><tr><th>Route</th><th>On a drum</th><th>On a voice</th></tr></thead><tbody>
+<tr><td>Gesture</td><td colspan="2">ERASE + the channel's Group button</td></tr>
+<tr><td>Knobs that hand back</td><td>HITS, ROTATE, DIVIDE</td><td>LENGTH, DIVIDE, RANDOM</td></tr>
+<tr><td>Knobs that keep the take</td><td>LENGTH, VELO, CHANCE, SWING</td><td>GATE, OCTAVE, RANGE, DENSITY, VELO</td></tr>
+</tbody></table>
+<p>Two details worth carrying: a drum's LENGTH keeps the take, because shortening a pattern preserves the steps that still fit; and RANDOM only hands back when it moves <em>off</em> <code>LOCK</code>, since a locked voice rewrites nothing and could not undo your recording anyway. A knob has to actually move — brushing one does nothing.</p>
+<p><strong>On a drum channel the amber colouring does not survive a snapshot reload, and that is not a lost take.</strong> A played drum note carries the same pitch as a generated one, so once the pattern is read back there is nothing left to tell the two apart. The notes are all there and the channel is still yours: the indicator still reads <code>PLAY</code>, and after a reload that indicator, not the pad colour, is the authority. On a voice the amber survives, because the played pitch is its own.</p>
+<hr>
+<h2 id="what-it-refuses">What it refuses, and why</h2>
+<p><strong>You cannot record in STEP mode</strong> — there the pads belong to the step editor — <strong>and you cannot record while MOD is active</strong>, where they pick a modulator's rate and shape.</p>
+<p>In both cases <strong>the REC button is unlit</strong>. A lit REC would be promising a take it cannot make, so it goes dark rather than letting you play a phrase into nothing and wonder why it vanished.</p>
+<hr>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="generating-patterns.html">Generating patterns</a> — what you are playing over</li>
+<li><a href="modulation.html">Modulation</a> — why nothing MOD does can touch a recorded take</li>
+<li><a href="the-surface.html">The surface</a> — the pad colours in full, and what to check when it goes quiet</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
