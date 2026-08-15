@@ -124,6 +124,7 @@
 <tr><td>Knobs that hand back</td><td>HITS, ROTATE, DIVIDE</td><td>LENGTH, DIVIDE, RANDOM</td></tr>
 <tr><td>Knobs that keep the take</td><td>LENGTH, VELO, CHANCE, SWING</td><td>GATE, OCTAVE, RANGE, DENSITY, VELO</td></tr>
 </tbody></table>
+<p>On a drum channel the amber colouring does not survive a snapshot reload, and that is not a lost take. A played drum note carries the same pitch as a generated one, so once the pattern is read back there is nothing left to tell the two apart. The notes are all still there and the channel is still yours: the page indicator still reads <code>PLAY</code>, and after a reload that indicator, not the pad colour, is the authority. On a voice the amber survives, because the played pitch is its own.</p>
 <p>Two details worth carrying: a drum's LENGTH keeps the take, because shortening a pattern preserves the steps that still fit; and RANDOM only hands back when it moves <em>off</em> <code>LOCK</code>, since a locked voice rewrites nothing and could not undo your recording anyway. A knob has to actually move — brushing one does nothing.</p>
 <hr>
 <h2 id="switching-a-channels-kind">SHIFT + GRID — switching a channel's kind</h2>
@@ -181,6 +182,7 @@
 <tr><td>CHANCE on a drum, DENSITY on a voice</td><td>at 0 nothing fires</td></tr>
 <tr><td>Is something soloed?</td><td>every non-soloed Group button goes dark</td></tr>
 <tr><td>MASTER on the ALL page</td><td>the global level, easy to leave down</td></tr>
+<tr><td>GATE at its floor on a voice</td><td>a slow-attack patch never gets far enough to sound. Not silence — notes too short to hear</td></tr>
 </tbody></table>
 <p>A voice that is <em>locked</em> is not silent — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">5 · Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">4 · Manual installation</a> for the checks that catch a stale MIDI route.</p>
 <hr>

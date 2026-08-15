@@ -44,7 +44,14 @@ BASELINE = {
     "02-features.html":            (821,  "2026-08-14"),
     # Section 3 was written 2026-08-14; this is its first measurement.
     "03-playing.html":             (2547, "2026-08-14"),
-    "04-manual-installation.html": (1856, "2026-08-14"),
+    # +235: step 10's check was rewritten. The published `grep -A3` form
+    # reports a HEALTHY rig as broken - it matches the Pads port twice and
+    # then prints unrelated ports at the left margin, so a reader sees four
+    # devN_in lines where there is one route, and the fix they would reach
+    # for breaks a working rig. Replaced with an awk form scoped to the
+    # port's own connections, plus the real output and why it misleads.
+    # Measured on the Pi 2026-08-15, not derived. 2026-08-15.
+    "04-manual-installation.html": (2091, "2026-08-15"),
     "05-internals.html":           (1011, "2026-08-13"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
