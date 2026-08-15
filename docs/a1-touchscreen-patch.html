@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Appendix · Touchscreen Coordinate Patch — Generative-Techno ZynthianMaschine MKII</title>
+<title>Touchscreen patch — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -36,27 +36,27 @@
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="00-start.html">Start here</a></li>
-<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
-<li><a href="02-features.html">2 · Features</a></li>
-<li><a href="03-playing.html">3 · Playing</a></li>
-</ul></div>
-<div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list" style="display:none">
-<li><a href="04-manual-installation.html">4 · Manual installation</a></li>
-<li><a href="05-internals.html">5 · Internals</a></li>
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
 </ul></div>
 <div class="track">
-<button class="track-header" aria-expanded="true"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
+<li><a href="05-internals.html">Internals</a></li>
 <li><a href="a1-touchscreen-patch.html" aria-current="page"><strong>Touchscreen patch</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Playing</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="appendix--touchscreen-coordinate-patch">Appendix · Touchscreen Coordinate Patch</h1>
+<h1 id="appendix--touchscreen-coordinate-patch">Touchscreen patch</h1>
 <p><strong>Optional.</strong> Not part of the instrument. Apply it only if you have the symptom below.</p>
 <hr>
 <h2 id="who-needs-this">Who needs this</h2>
@@ -106,7 +106,7 @@ systemctl restart zynthian</code></pre>
 <p><strong>A Zynthian update overwrites it.</strong> <code>multitouch.py</code> is tracked in the <code>zynthian-ui</code> checkout, so any update replaces your edit. Keep the <code>.bak</code>, and expect to re-apply after upgrading.</p>
 <p><strong>Do not run <code>git checkout</code> or <code>git reset</code> in <code>/zynthian/zynthian-ui</code> to undo this.</strong> That directory also holds this project's three driver files as <em>untracked</em> drop-ins; a hard reset removes the instrument along with the patch. Restore from the <code>.bak</code> copy instead.</p>
 <hr>
-<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="04-manual-installation.html">4 · Manual installation</a></p>
+<p><strong>Back to:</strong> <a href="00-start.html">Requirements</a> · <a href="04-manual-installation.html">Manual installation</a></p>
 </article>
 </main>
 <div id="toc-column"></div>

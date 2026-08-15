@@ -37,7 +37,10 @@ INTERNAL = ["/home/witzman", "guide-src", "zynth-docs", "zynth-repos",
 
 # name: (baseline prose words, date measured). Prose excludes code and tables.
 BASELINE = {
-    "00-start.html":               (93,   "2026-08-13"),
+    # Restructured 2026-08-15: the page became Requirements and keeps only
+    # "What you need". The "Where to go" nav summary went with the sidebar
+    # rework that replaced it, and the project description moved out.
+    "00-start.html":               (18,   "2026-08-15"),
     "01-fast-installation.html":   (505,  "2026-08-14"),
     # +145: the drum-filter claim was wrong (there is no drum filter) and the
     # controls-follow-the-plugin behaviour was undocumented. 2026-08-14.

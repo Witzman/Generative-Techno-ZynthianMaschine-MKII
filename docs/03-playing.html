@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3 · Playing — Generative-Techno ZynthianMaschine MKII</title>
+<title>Playing — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -33,31 +33,31 @@
 <p id="search-no-results" style="display:none">No results found.</p>
 <ul id="search-results-list"></ul>
 </div>
-<div class="track">
-<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list">
-<li><a href="00-start.html">Start here</a></li>
-<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
-<li><a href="02-features.html">2 · Features</a></li>
-<li><a href="03-playing.html" aria-current="page"><strong>3 · Playing</strong></a></li>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="04-manual-installation.html">4 · Manual installation</a></li>
-<li><a href="05-internals.html">5 · Internals</a></li>
-</ul></div>
-<div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list" style="display:none">
+<li><a href="05-internals.html">Internals</a></li>
 <li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html" aria-current="page"><strong>Playing</strong></a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="3--playing">3 · Playing</h1>
-<p>What the surface does under your hands. This assumes the rig is installed and the factory snapshot is loaded — if it is not, start at <a href="01-fast-installation.html">1 · Fast installation</a>. What the instrument <em>is</em> rather than how it is played is <a href="02-features.html">2 · Features</a>.</p>
+<h1 id="3--playing">Playing</h1>
+<p>What the surface does under your hands. This assumes the rig is installed and the factory snapshot is loaded — if it is not, start at <a href="01-fast-installation.html">Fast installation</a>. What the instrument <em>is</em> rather than how it is played is <a href="02-features.html">Features</a>.</p>
 <hr>
 <h2 id="your-first-two-minutes">Your first two minutes</h2>
 <p>Press <strong>Play</strong>. All eight channels start together, and the factory snapshot already holds a beat and three voices.</p>
@@ -184,9 +184,9 @@
 <tr><td>MASTER on the ALL page</td><td>the global level, easy to leave down</td></tr>
 <tr><td>GATE at its floor on a voice</td><td>a slow-attack patch never gets far enough to sound. Not silence — notes too short to hear</td></tr>
 </tbody></table>
-<p>A voice that is <em>locked</em> is not silent — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">5 · Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">4 · Manual installation</a> for the checks that catch a stale MIDI route.</p>
+<p>A voice that is <em>locked</em> is not silent — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">Manual installation</a> for the checks that catch a stale MIDI route.</p>
 <hr>
-<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="02-features.html">2 · Features</a> · <strong>Next:</strong> <a href="04-manual-installation.html">4 · Manual installation</a></p>
+<p><strong>Back to:</strong> <a href="00-start.html">Requirements</a> · <a href="02-features.html">Features</a> · <strong>Next:</strong> <a href="04-manual-installation.html">Manual installation</a></p>
 </article>
 </main>
 <div id="toc-column"></div>

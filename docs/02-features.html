@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>2 · Features — Generative-Techno ZynthianMaschine MKII</title>
+<title>Features — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -33,31 +33,31 @@
 <p id="search-no-results" style="display:none">No results found.</p>
 <ul id="search-results-list"></ul>
 </div>
-<div class="track">
-<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list">
-<li><a href="00-start.html">Start here</a></li>
-<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
-<li><a href="02-features.html" aria-current="page"><strong>2 · Features</strong></a></li>
-<li><a href="03-playing.html">3 · Playing</a></li>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="04-manual-installation.html">4 · Manual installation</a></li>
-<li><a href="05-internals.html">5 · Internals</a></li>
-</ul></div>
-<div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list" style="display:none">
+<li><a href="05-internals.html">Internals</a></li>
 <li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html" aria-current="page"><strong>Features</strong></a></li>
+<li><a href="03-playing.html">Playing</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="2--features">2 · Features</h1>
-<p>What the instrument does. How you operate it is <a href="03-playing.html">3 · Playing</a>; how it is built is <a href="05-internals.html">5 · Internals</a>.</p>
+<h1 id="2--features">Features</h1>
+<p>What the instrument does. How you operate it is <a href="03-playing.html">Playing</a>; how it is built is <a href="05-internals.html">Internals</a>.</p>
 <hr>
 <h2 id="the-eight-channels">The eight channels</h2>
 <table><thead><tr><th>Group</th><th>Name</th><th>Kind</th><th>Engine</th><th>MIDI ch</th><th>Colour</th></tr></thead><tbody><tr><td>A</td><td>KICK</td><td>drum</td><td>LinuxSampler, an SFZ drum machine</td><td>1</td><td>red</td></tr><tr><td>B</td><td>SNAR</td><td>drum</td><td>LinuxSampler</td><td>2</td><td>orange</td></tr><tr><td>C</td><td>CLAP</td><td>drum</td><td>LinuxSampler</td><td>3</td><td>amber</td></tr><tr><td>D</td><td>CHAT</td><td>drum</td><td>LinuxSampler</td><td>4</td><td>yellow-green</td></tr><tr><td>E</td><td>OHAT</td><td>drum</td><td>LinuxSampler</td><td>5</td><td>green</td></tr><tr><td>F</td><td>BASS</td><td>voice</td><td>JC303</td><td>6</td><td>blue</td></tr><tr><td>G</td><td>LEAD</td><td>voice</td><td>Obxd</td><td>7</td><td>violet</td></tr><tr><td>H</td><td>PADS</td><td>voice</td><td>padthv1</td><td>8</td><td>cyan</td></tr></tbody></table>
