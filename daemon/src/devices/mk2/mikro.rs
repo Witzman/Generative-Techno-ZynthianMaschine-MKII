@@ -813,21 +813,50 @@ impl Maschine for Mikro {
             // two buttons share a byte. Correct them the same way if any of
             // them ever needs to light: send one index at a time and read
             // back which button lights.
-            MaschineButton::Noterepeat => idx = 17,
-            MaschineButton::Enter => idx = 18,
-            MaschineButton::Navright => idx = 19,
-            MaschineButton::Navleft => idx = 20,
-            MaschineButton::Tempo => idx = 21,
-            MaschineButton::Swing => idx = 22,
-            MaschineButton::Volume => idx = 23,
+            // MEASURED ON THE HARDWARE 2026-08-15, replacing guesses. Same
+            // method as indices 1-16: light one byte of light_buf2 at a time
+            // with every other index in 17-31 forced to 0, and read back the
+            // physical button that lights.
+            //
+            // Five of the six previous names in this range were wrong, and two
+            // of them were live bugs in the shipped instrument: solo mode lit
+            // VOLUME, and MIXER mode lit SOLO. Nothing caught it because no
+            // code lit this block until a modifier needed an indicator.
+            //
+            // The layout is the right-hand column first, top to bottom, and
+            // then the master section:
+            //
+            //   17 SCENE      25 VOLUME     (measured)
+            //   18 PATTERN    26 SWING      (measured)
+            //   19 PAD MODE   27 TEMPO      (inferred)
+            //   20 NAVIGATE   28-31 unknown
+            //   21 DUPLICATE  (measured)
+            //   22 SELECT     (measured)
+            //   23 SOLO       (measured)
+            //   24 MUTE       (measured)
+            //
+            // 21-26 are measured. 17-20 continue the same column upward and
+            // 27 continues the master section, so they are inferred with high
+            // confidence but NOT verified - light them and read them back
+            // before trusting them. Inferring is exactly what produced the
+            // wrong table this replaces.
+            MaschineButton::Scene => idx = 17,
+            MaschineButton::Pattern => idx = 18,
+            MaschineButton::Padmode => idx = 19,
+            MaschineButton::Navigate => idx = 20,
+            MaschineButton::Duplicate => idx = 21,
+            MaschineButton::Select => idx = 22,
+            MaschineButton::Solo => idx = 23,
             MaschineButton::Mute => idx = 24,
-            MaschineButton::Solo => idx = 25,
-            MaschineButton::Select => idx = 26,
-            MaschineButton::Duplicate => idx = 27,
-            MaschineButton::Navigate => idx = 28,
-            MaschineButton::Padmode => idx = 29,
-            MaschineButton::Pattern => idx = 30,
-            MaschineButton::Scene => idx = 31,
+            MaschineButton::Volume => idx = 25,
+            MaschineButton::Swing => idx = 26,
+            MaschineButton::Tempo => idx = 27,
+
+            // Noterepeat, Enter, Navright and Navleft previously held 17-20,
+            // which the measurement shows belong to the Scene/Pattern/Pad
+            // Mode/Navigate column. Their real indices are unknown, so they
+            // fall through to the catch-all below and light nothing. That is
+            // deliberate: no LED is better than another button's LED.
 
             // Group A-H are handled above as RGB triplets, not here.
             MaschineButton::Shift => idx2 = 55,
