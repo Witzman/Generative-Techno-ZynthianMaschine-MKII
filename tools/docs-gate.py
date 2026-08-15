@@ -83,7 +83,7 @@ BASELINE = {
     "sound-and-presets.html":      (699,  "2026-08-16"),
     "deep-parameters.html":        (426,  "2026-08-16"),
     "mixing-and-effects.html":     (434,  "2026-08-16"),
-    "the-surface.html":            (33,   "2026-08-16"),
+    "the-surface.html":            (775,  "2026-08-16"),
     "saving.html":                 (327,  "2026-08-16"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
