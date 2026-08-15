@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>5 · Internals — Generative-Techno ZynthianMaschine MKII</title>
+<title>Internals — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -36,28 +36,28 @@
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="00-start.html">Start here</a></li>
-<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
-<li><a href="02-features.html">2 · Features</a></li>
-<li><a href="03-playing.html">3 · Playing</a></li>
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
 </ul></div>
 <div class="track">
 <button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
-<li><a href="04-manual-installation.html">4 · Manual installation</a></li>
-<li><a href="05-internals.html" aria-current="page"><strong>5 · Internals</strong></a></li>
+<li><a href="05-internals.html" aria-current="page"><strong>Internals</strong></a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Playing</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="5--internals">5 · Internals</h1>
-<p>How the instrument is built. What it does is <a href="02-features.html">2 · Features</a>; how to install it is <a href="04-manual-installation.html">4 · Manual installation</a>.</p>
+<h1 id="5--internals">Internals</h1>
+<p>How the instrument is built. What it does is <a href="02-features.html">Features</a>; how to install it is <a href="04-manual-installation.html">Manual installation</a>.</p>
 <hr>
 <h2 id="the-control-path">The control path</h2>
 <p>A pad press reaches the sequencer through five hops, and every one of them has broken at least once:</p>
@@ -103,7 +103,7 @@ flowchart LR
 <p>Build one channel by hand on the touchscreen — add TAP Stereo Echo, then TAP Reverberator, set the four values, save — and let <code>tools/build-techno-snapshot.py</code> replicate it. The cloner finds the chain carrying both inserts, appends the same two to every other chain that has a MIDI channel, gives each a fresh processor id, copies the template's fader position, and backs the file up first. Then load and save once more from the touchscreen, so what is on disk is Zynthian's own output rather than the script's.</p>
 <p>It deliberately does not build the whole snapshot. Nothing outside the UI process can reach Zynthian's live state manager, and hand-maintaining fader positions in JSON is exactly the kind of guess this project avoids.</p>
 <hr>
-<p><strong>Back to:</strong> <a href="00-start.html">Start here</a> · <a href="02-features.html">2 · Features</a></p>
+<p><strong>Back to:</strong> <a href="00-start.html">Requirements</a> · <a href="02-features.html">Features</a></p>
 </article>
 </main>
 <div id="toc-column"></div>

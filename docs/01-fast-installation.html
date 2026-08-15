@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>1 · Fast installation — Generative-Techno ZynthianMaschine MKII</title>
+<title>Fast installation — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -36,30 +36,31 @@
 <div class="track">
 <button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
-<li><a href="00-start.html">Start here</a></li>
-<li><a href="01-fast-installation.html" aria-current="page"><strong>1 · Fast installation</strong></a></li>
-<li><a href="02-features.html">2 · Features</a></li>
-<li><a href="03-playing.html">3 · Playing</a></li>
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html" aria-current="page"><strong>Fast installation</strong></a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
 <button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="04-manual-installation.html">4 · Manual installation</a></li>
-<li><a href="05-internals.html">5 · Internals</a></li>
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
-<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Playing</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="1--fast-installation">1 · Fast installation</h1>
+<h1 id="1--fast-installation">Fast installation</h1>
+<p><strong>Check the <a href="00-start.html">system requirements</a> first</strong> — the hardware and the SD card matter, and nothing below works without them.</p>
 <p><strong>Recommended.</strong> Six actions. About forty minutes, most of it unattended.</p>
 <p>At the end the instrument is running the factory snapshot: eight channels alive, the Maschine's pads lit in channel colours, both displays showing their tab rows, and a pattern playing the moment you press Play.</p>
-<p>Every step here is done by hand and explained in <a href="04-manual-installation.html">4 · Manual installation</a>. Come back to that page if something goes wrong, or if you would rather not run a script you have not read.</p>
+<p>Every step here is done by hand and explained in <a href="04-manual-installation.html">Manual installation</a>. Come back to that page if something goes wrong, or if you would rather not run a script you have not read.</p>
 <hr>
 <h2 id="1--flash-zynthianos">1 — Flash ZynthianOS</h2>
 <p>Download the image and its checksum, verify it, then write it to the card with Raspberry Pi Imager. A truncated download produces a Pi that boots most of the way and then behaves inexplicably.</p>
@@ -98,7 +99,7 @@ md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
 <hr>
 <h2 id="nothing-happened">Nothing happened?</h2>
 <table><thead><tr><th>What you see</th><th>What it means</th><th>What to do</th></tr></thead><tbody><tr><td>Pads dark, displays blank</td><td>The daemon is not running</td><td><code>systemctl status maschine-mk2</code>, then restart <strong>the daemon first and the UI second</strong> — the order matters</td></tr><tr><td>Pads lit, but nothing responds</td><td>The driver never bound to the daemon's port</td><td>Re-run the installer; it re-applies the <code>zynautoconnect</code> patch</td></tr><tr><td>A tab is <strong>dashed</strong></td><td>That channel is silent on purpose — muted, or its generator is set to never fire</td><td>Not a fault. The dashed tab is the instrument's way of explaining silence</td></tr><tr><td>Zynthian came up empty, no mixer strips</td><td>This Pi had a previous session. Zynthian restores its last state before falling back to the factory default</td><td>Load it by hand: <strong>Snapshots</strong> → into bank <code>000</code> → <code>017-generative-techno</code>. From the screen, or from webconf's Snapshots page</td></tr></tbody></table>
-<p>Anything else: work through <a href="04-manual-installation.html">4 · Manual installation</a>, which gives each step's own check.</p>
+<p>Anything else: work through <a href="04-manual-installation.html">Manual installation</a>, which gives each step's own check.</p>
 </article>
 </main>
 <div id="toc-column"></div>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>4 · Manual installation — Generative-Techno ZynthianMaschine MKII</title>
+<title>Manual installation — Generative-Techno ZynthianMaschine MKII</title>
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
@@ -33,30 +33,30 @@
 <p id="search-no-results" style="display:none">No results found.</p>
 <ul id="search-results-list"></ul>
 </div>
-<div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
-<ul class="track-list" style="display:none">
-<li><a href="00-start.html">Start here</a></li>
-<li><a href="01-fast-installation.html">1 · Fast installation</a></li>
-<li><a href="02-features.html">2 · Features</a></li>
-<li><a href="03-playing.html">3 · Playing</a></li>
-</ul></div>
 <div class="track">
-<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list">
-<li><a href="04-manual-installation.html" aria-current="page"><strong>4 · Manual installation</strong></a></li>
-<li><a href="05-internals.html">5 · Internals</a></li>
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html" aria-current="page"><strong>Manual installation</strong></a></li>
 </ul></div>
 <div class="track" data-collapsed="true">
-<button class="track-header" aria-expanded="false"><span class="track-label">Appendix</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
 <ul class="track-list" style="display:none">
+<li><a href="05-internals.html">Internals</a></li>
 <li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Playing</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
 <main>
 <article>
-<h1 id="4--manual-installation">4 · Manual installation</h1>
+<h1 id="4--manual-installation">Manual installation</h1>
 <p>This is what <a href="01-fast-installation.html"><code>bootstrap.sh</code></a> does, step by step, for readers installing by hand or debugging an install that went wrong. Every step states what it does, why it is needed, and how to confirm it worked.</p>
 <p>Run everything on the Pi, as <code>root</code>, from the repository root. ZynthianOS is administered as root, and root SSH login is enabled out of the box. There is also a <code>zynthian</code> user in the <code>sudo</code> group, but nothing here uses it — <code>bootstrap.sh</code> refuses to run below uid 0, and the steps below assume root:</p>
 <pre><code class="language-bash">ssh root@zynthian.local     # or the IP; password: opensynth, older images raspberry
