@@ -94,7 +94,13 @@ BASELINE = {
     # broken links. Each baseline is re-set when its tutorial is written.
     "generating-patterns.html":    (750,  "2026-08-16"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
-    "sound-and-presets.html":      (699,  "2026-08-16"),
+    # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
+    # behaviour, SHIFT + the big encoder's buttons steps the kit, and the
+    # "known defect" published here was withdrawn - the buttons always
+    # stepped, the four-character font could not show it. Root-caused at the
+    # rig, and a withdrawal has to explain itself or the next reader trusts
+    # the retraction no more than the claim.
+    "sound-and-presets.html":      (841,  "2026-08-16"),
     "deep-parameters.html":        (426,  "2026-08-16"),
     "mixing-and-effects.html":     (434,  "2026-08-16"),
     "the-surface.html":            (775,  "2026-08-16"),

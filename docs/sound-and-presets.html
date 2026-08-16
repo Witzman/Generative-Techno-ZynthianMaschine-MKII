@@ -69,7 +69,8 @@
 <p>What each channel sounds like, how to change it while the rig plays, and how to make a channel behave as something its engine is not.</p>
 <hr>
 <h2 id="what-it-is">What it is</h2>
-<p><strong>CONTROL is the sound page.</strong> On a drum it is KIT and SAMPLE; on a voice it is PRESET, CUTOFF, RESO, ENV and DECAY. Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel of both kinds — the same three controls in the same place, always.</p>
+<p><strong>CONTROL is the sound page, and it follows the engine.</strong> A drum engine gives you KIT and SAMPLE; a synth engine gives you PRESET, CUTOFF, RESO, ENV and DECAY. Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel — the same three controls in the same place, always.</p>
+<p><strong>The engine decides, not the behaviour.</strong> A sampler played by the Turing register still has a kit and a sample, so it still shows them. Switching a channel's kind changes how it is played, never what it is.</p>
 <p>Every channel keeps its engine for the life of the snapshot. Nothing is created or destroyed while you play, because building a plugin rebuilds the audio graph and that is a hole in the sound.</p>
 <hr>
 <h2 id="try-it">Try it</h2>
@@ -77,6 +78,7 @@
 <li><strong>Select Group A</strong> (KICK) and press <strong>CONTROL</strong>. Encoder 1 is KIT, encoder 2 is SAMPLE.</li>
 <li><strong>Turn SAMPLE.</strong> The kick changes to another sound inside the same kit, immediately.</li>
 <li><strong>Press the button to the right of the big encoder.</strong> Same effect — it steps the selected channel's sound without using an encoder.</li>
+<li><strong>Hold SHIFT and press it again.</strong> Now it steps the <strong>kit</strong> rather than the sample. Only a drum engine has kits, so on a synth channel this does nothing.</li>
 <li><strong>Select Group G</strong> (LEAD) and press <strong>CONTROL</strong>. Now encoder 1 is PRESET and encoders 2&ndash;5 are CUTOFF, RESO, ENV and DECAY.</li>
 <li><strong>Turn CUTOFF.</strong> You are driving the synth that is actually loaded, not a fixed idea of one.</li>
 <li><strong>Now the interesting one.</strong> Select <strong>Group E</strong> (OHAT) and hold <strong>SHIFT</strong> while pressing <strong>GRID</strong>. The channel changes what it behaves as. Do it again to change back.</li>
@@ -95,7 +97,7 @@
 <h2 id="what-it-refuses">What it refuses, and why</h2>
 <p><strong>A switch rewrites the pattern</strong>, so on a channel you have recorded onto it hands the pattern back to the generator and your take is gone. Hand-edited steps do not survive either, for the same reason turning HITS does not — switching rewrites the line from the generator.</p>
 <p><strong>A voice switched to drum may arrive silent</strong>, because its HITS can read back as 0. The tab draws dashed to say so. That is not a defect: turn HITS up.</p>
-<p><strong>A known defect, stated plainly:</strong> the two buttons beside the big encoder sometimes step a preset once and then stick. Turning the PRESET encoder works reliably. This is being investigated; it is recorded here rather than left for you to discover and mistrust the rest.</p>
+<p><strong>A defect that was published here has been withdrawn.</strong> The buttons beside the big encoder were reported to step a preset once and then stick. They never did: they step every press. What stuck was the <em>name</em>. The value was drawn in a font that fits four characters, and preset banks are full of neighbours that agree on their first four — a padthv1 bank of 67 patches has six called <code>Dusk</code>, <code>Dusk2</code> … <code>Dusk6</code>, and stepping walks a bank alphabetically. Six presses, one word on the screen, six variants of one pad. <strong>Names now draw in the small font at nine characters and keep their trailing digits</strong>, so every press shows its move.</p>
 <hr>
 <h2 id="see-also">See also</h2>
 <ul>

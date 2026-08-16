@@ -709,16 +709,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if chan is not None:
             view["level"] = int(round(self.state_manager.zynmixer.get_level(chan) * 100))
 
-        if self.channel_kind(channel) == "drum":
+        # The ENGINE decides, not the behaviour: a sampler played by the
+        # Turing register still has a kit and a sample, and the CONTROL page
+        # it is given now shows both. Matches _page_kind().
+        if self._is_sampler(channel):
             kits = self._kit_list()
             pending = self.kit_pending
             shown = pending[1] if pending and pending[0] == channel \
                 else self._current_kit_index(channel, kits)
             name = kits[shown][0] if 0 <= shown < len(kits) else ""
-            view["kit"] = lib.kit_short_name(name) or "----"
-            view["sample"] = (self._sample_name(channel) or "----")[:4]
+            # Full names from here down: columns() shortens them with
+            # short_label(), which keeps the trailing digits that tell two
+            # neighbours apart. Truncating here as well would throw those
+            # away before the rule that protects them ever runs.
+            view["kit"] = name or "----"
+            view["sample"] = self._sample_name(channel) or "----"
         else:
-            view["preset"] = (self._preset_name(channel) or "----")[:4]
+            view["preset"] = self._preset_name(channel) or "----"
         # Per column, because the four page-1 symbols come from the plugin that
         # is actually loaded: a sampler behaving as a voice (SP4) publishes
         # none of them, and a synth swapped in from the touchscreen may publish
@@ -1098,6 +1105,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return tlib.resolve_kind(self.kind_override[channel],
                                  self._chain_kind(channel))
 
+    def _page_kind(self, channel, mode=None):
+        """The kind that decides which PAGE RING a mode shows.
+
+        CONTROL follows the ENGINE, every other mode follows the BEHAVIOUR.
+        They are different questions and conflating them put four dead knobs
+        on the screen: SP4 lets a sampler be played by the Turing register,
+        and a sampler behaving as a voice was handed the voice CONTROL page -
+        a PRESET column plus cutoff, reso, env and decay, none of which
+        LinuxSampler publishes. A sampler always has kits and samples however
+        it is being played, and that is what CONTROL should show.
+
+        Same principle as 3685f1d, one level up: that made page 1's four synth
+        columns resolve from the loaded processor's eng_code rather than the
+        CHANNELS table, because the table records what the snapshot loaded.
+        This decides WHICH PAGE the same way.
+
+        STEP keeps the behaviour kind - a kit walked by the register wants the
+        voice step parameters, which is the whole point of the override."""
+
+        mode = self.mode if mode is None else mode
+        if mode == "CONTROL":
+            return self._chain_kind(channel)
+        return self.channel_kind(channel)
+
     def _is_sampler(self, channel):
         """Does this channel's CHAIN run a sampler, regardless of how the
         channel is behaving? SP4 lets a kit be driven by the Turing register,
@@ -1209,7 +1240,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         mode = self.mode if mode is None else mode
         if kind is None:
-            kind = self.channel_kind(self.group)
+            kind = self._page_kind(self.group, mode)
         key = tlib.ring_key(mode, kind)
         return tlib.PAGE_RINGS[key] + self._gen_pages(mode, kind)
 
@@ -1217,7 +1248,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """The descriptor showing right now."""
 
         ring = self._ring()
-        key = tlib.ring_key(self.mode, self.channel_kind(self.group))
+        key = tlib.ring_key(self.mode, self._page_kind(self.group))
         index = tlib.clamp_index(self.page_idx.get(key, 0), len(ring))
         self.page_idx[key] = index
         return ring[index]
@@ -1228,7 +1259,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         that was under the knob a moment ago."""
 
         ring = self._ring()
-        key = tlib.ring_key(self.mode, self.channel_kind(self.group))
+        key = tlib.ring_key(self.mode, self._page_kind(self.group))
         index = tlib.clamp_index(self.page_idx.get(key, 0), len(ring))
         self.page_idx[key] = tlib.step_index(index, delta, len(ring))
         self._recentre_encoders()
@@ -1254,7 +1285,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Keyed through tlib.ring_key, exactly as _page and _step_page do -
             # a hand-rolled tuple would miss the entry they actually use and
             # this would silently do nothing.
-            key = tlib.ring_key(name, self.channel_kind(self.group))
+            key = tlib.ring_key(name, self._page_kind(self.group, name))
             if self.page_idx.get(key, 0) != 0:
                 self.page_idx[key] = 0
                 self._invalidate_gen_cache()
@@ -1321,7 +1352,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         index = max(0, current + delta)
         if presets:
             index = min(len(presets) - 1, index)
-            self.state[channel]["preset"] = str(presets[index][2])[:4]
+            self.state[channel]["preset"] = str(presets[index][2])
         self.preset_pending = (channel, index, time.monotonic() + PRESET_LOAD_DELAY_S)
         with self.lock:
             self._render_display()
@@ -1373,7 +1404,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         except Exception as e:
             logging.error(f"Maschine: preset load failed on {tlib.CHANNELS[channel][1]}: {e}")
             return
-        self.state[channel]["preset"] = str(presets[index][2])[:4]
+        self.state[channel]["preset"] = str(presets[index][2])
         self._invalidate_gen_cache()
         with self.lock:
             self._render_display()
@@ -2071,14 +2102,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._sound_step(1)
 
     def _sound_step(self, delta):
-        # Previous / next SOUND for the selected channel: a sample within the
-        # kit on a drum, an engine preset on a voice. Unconditionally cycling
-        # the sample resolved a GM percussion fallback on a voice and collapsed
-        # its whole line onto one note.
-        if self.channel_kind(self.group) == "voice":
-            self._nudge_preset(self.group, delta)
-        else:
+        # Previous / next SOUND for the selected channel, and SHIFT makes it
+        # the KIT. Both ask the ENGINE, never the behaviour: a drum engine has
+        # kits and samples whichever way the channel is being played, and a
+        # synth engine has presets. Unconditionally cycling the sample once
+        # resolved a GM percussion fallback on a voice and collapsed its whole
+        # line onto one note.
+        drum_engine = self._is_sampler(self.group)
+        if self.shift_down:
+            # SHIFT + ML/MR walks the kit, and only a drum engine has one. On
+            # a synth engine this does nothing and says nothing - a button
+            # cannot be drawn dead the way a column can.
+            if drum_engine:
+                self._nudge_kit(delta)
+            return
+        if drum_engine:
             self._cycle_sample(delta)
+        else:
+            self._nudge_preset(self.group, delta)
 
     def _select_group(self, group):
         self._release_all()          # the pads are about to mean another sound
@@ -4024,7 +4065,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if shape == tlib.SHAPE_GLOBAL:
             return tlib.columns(desc, None, self.globals_view())
         channel = self.group
-        return tlib.columns(desc, self.channel_kind(channel),
+        return tlib.columns(desc, self._page_kind(channel),
                             self.state_view(channel))
 
     def _column_dead(self, column):
@@ -4100,7 +4141,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 tick = round(float(tlib.quantise_frac(
                     live if live is not None else frac, self.METER_PIXELS)), 3)
             out.append((col["name"], col["value"], bar, round(float(frac), 3),
-                       mod, tick))
+                       mod, tick, bool(col.get("small"))))
         return tuple(out)
 
     def _generated_view(self, desc):
@@ -4174,7 +4215,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         desc = self._page()
         ring = self._ring()
-        key = tlib.ring_key(self.mode, self.channel_kind(self.group))
+        key = tlib.ring_key(self.mode, self._page_kind(self.group))
         label = tlib.page_label(desc["title"], self.page_idx.get(key, 0), len(ring))
         # The page indicator also carries who owns the channel and whether a
         # take is being captured. The tab row is left alone: dashed there means

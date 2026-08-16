@@ -278,6 +278,39 @@ class TestScreenLayout(unittest.TestCase):
         packets = lib.screen_packets(0, self.TABS, self.COLS)
         self.assertEqual(packets[0], lib.display_clear_osc(0))
 
+    def test_a_numeric_value_stays_double_height(self):
+        packets = lib.screen_packets(0, self.TABS, self.COLS)
+        self.assertIn(lib.display_text_osc(0, 3, lib.VALUE_Y, 2, False, "5"),
+                      packets)
+
+    def test_a_name_column_draws_small_and_wide(self):
+        # PRESET, KIT and SAMPLE carry names. Four double-height characters
+        # cannot separate Dusk from Dusk2, so a flagged column drops to the
+        # small font and nine characters.
+        cols = (("PRESET", "GettinRe2", "s", 0.0, None, None, True),
+                ) + self.COLS[1:]
+        packets = lib.screen_packets(0, self.TABS, cols)
+        self.assertIn(
+            lib.display_text_osc(0, 3, lib.VALUE_Y, 1, False, "GettinRe2"),
+            packets)
+
+    def test_a_small_value_is_capped_at_nine_characters(self):
+        cols = (("PRESET", "AbcdefghijKLM", "s", 0.0, None, None, True),
+                ) + self.COLS[1:]
+        packets = lib.screen_packets(0, self.TABS, cols)
+        self.assertIn(
+            lib.display_text_osc(0, 3, lib.VALUE_Y, 1, False, "Abcdefghi"),
+            packets)
+
+    def test_columns_without_the_flag_are_unchanged(self):
+        # The seventh field is optional, exactly as mod and tick are: every
+        # existing caller passes a 4-tuple and must keep working.
+        short = lib.screen_packets(0, self.TABS, self.COLS)
+        explicit = lib.screen_packets(
+            0, self.TABS,
+            tuple(c + (None, None, False) for c in self.COLS))
+        self.assertEqual(short, explicit)
+
     def test_selected_tab_is_inverted_and_muted_tab_is_dashed(self):
         packets = lib.screen_packets(0, self.TABS, self.COLS)
         self.assertIn(lib.display_rect_osc(0, 1, 0, lib.SCREEN_COL - 4,

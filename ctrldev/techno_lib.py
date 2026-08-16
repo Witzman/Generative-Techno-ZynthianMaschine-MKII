@@ -11,6 +11,7 @@
 # ******************************************************************************
 
 import random
+import re
 from collections import deque
 
 
@@ -602,15 +603,55 @@ class techno_lib:
     def _num(v):
         return f"{int(round(v)):04d}"
 
+    # A name-valued column draws in the small font, so it gets nine
+    # characters instead of the four a double-height value fits.
+    SMALL_VALUE_CHARS = 9
+
     @staticmethod
-    def _col(name, value, bar=None, frac=0.0, grey=False, pending=False):
+    def short_label(name, width):
+        """Shorten a name to `width`, keeping the trailing digits.
+
+        Plain truncation throws away the only character that distinguishes
+        neighbours in a preset bank, and stepping walks a bank in alphabetical
+        order, so the collisions are always adjacent. Measured on the rig
+        2026-08-16: of the 67 padthv1 patches on group H, 48 shared a
+        four-character label with a neighbour - Dusk, Dusk2 ... Dusk6 all drew
+        as "Dusk". The player pressed the button six times, saw one word,
+        heard six variants of one pad, and reported the button as broken.
+
+        Nine characters plus this rule gives all 67 a distinct label; nine
+        alone still collides on sixteen of them."""
+
+        text = "" if name is None else str(name)
+        if width <= 0:
+            return ""
+        if len(text) <= width:
+            return text
+        match = re.search(r"\d+$", text)
+        tail = match.group(0) if match else ""
+        # A digit run longer than half the budget IS the name (Randomize01
+        # style is fine; "A123456789012" is not) - keeping it would return
+        # mostly digits and lose what the reader actually recognises.
+        if len(tail) > width // 2:
+            tail = ""
+        return text[:width - len(tail)] + tail
+
+    @staticmethod
+    def _col(name, value, bar=None, frac=0.0, grey=False, pending=False,
+             small=False):
         # No `mod` parameter: the tilde and the span are stamped afterwards by
         # mark_modulated(), which is the one path production uses. A second
         # copy of that logic here was used by nothing but its own tests.
+        if small:
+            # Shorten BEFORE the brackets go on. The other order either
+            # overflows the column or cuts the closing bracket off, and the
+            # bracket is the whole signal that a load is still pending.
+            budget = techno_lib.SMALL_VALUE_CHARS - (2 if pending else 0)
+            value = techno_lib.short_label(value, budget)
         if pending:
             value = f">{value}<"
         return {"name": name, "value": value, "bar": bar, "frac": frac,
-                "grey": grey, "pending": pending, "mod": None}
+                "grey": grey, "pending": pending, "mod": None, "small": small}
 
     @staticmethod
     def _dead(name):
@@ -1018,8 +1059,10 @@ class techno_lib:
             ]
             if kind == "drum":
                 return [
-                    c("KIT", state["kit"], "seg", (0, 1), pending="kit" in p),
-                    c("SAMPLE", state["sample"], "seg", (0, 1), pending="sample" in p),
+                    c("KIT", state["kit"], "seg", (0, 1), pending="kit" in p,
+                      small=True),
+                    c("SAMPLE", state["sample"], "seg", (0, 1),
+                      pending="sample" in p, small=True),
                     dead("tune"), dead("decay"), dead("filtr"),
                 ] + tail
             # A column is live only where the running plugin publishes a
@@ -1029,7 +1072,8 @@ class techno_lib:
             # Law L4 - draw dead, never a number the knob cannot move.
             live = techno_lib.synth_ctrl_flags(state)
             return [
-                c("PRESET", state["preset"], "seg", (0, 1), pending="preset" in p),
+                c("PRESET", state["preset"], "seg", (0, 1),
+                  pending="preset" in p, small=True),
             ] + [
                 c(label, n(state[key]), "uni", state[key] / 127.0)
                 if live[index] else dead(key)

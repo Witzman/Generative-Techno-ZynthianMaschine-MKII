@@ -1571,5 +1571,108 @@ class TestModLabel(unittest.TestCase):
         self.assertEqual(tl.mod_label("CUTOFF 1/2", False), "CUTOFF 1/2")
 
 
+class TestShortLabel(unittest.TestCase):
+    """Truncation that keeps what tells two presets apart.
+
+    Group H's bank is 67 padthv1 patches and 48 of them shared a 4-character
+    label with an alphabetical neighbour - Dusk, Dusk2 ... Dusk6 all drew as
+    "Dusk". Stepping walks the list alphabetically, so the player pressed the
+    button six times, saw one word and heard six variants of one pad, and
+    reported the button as broken. Measured on the rig 2026-08-16."""
+
+    def test_short_names_are_untouched(self):
+        self.assertEqual(tl.short_label("Dusk", 9), "Dusk")
+        self.assertEqual(tl.short_label("Castle", 9), "Castle")
+
+    def test_a_name_exactly_at_the_budget_is_untouched(self):
+        self.assertEqual(tl.short_label("Kawai R50", 9), "Kawai R50")
+
+    def test_trailing_digits_survive_truncation(self):
+        # The whole point: the digit is the only thing that differs.
+        self.assertEqual(tl.short_label("GettinRezd2", 9), "GettinRe2")
+        self.assertEqual(tl.short_label("GettinRezd3", 9), "GettinRe3")
+        self.assertEqual(tl.short_label("OrganSpecial2", 9), "OrganSpe2")
+
+    def test_a_bare_name_still_truncates_plainly(self):
+        self.assertEqual(tl.short_label("GlassyChorused", 9), "GlassyCho")
+
+    def test_the_whole_bank_gets_distinct_labels(self):
+        # The regression this exists to prevent. These are the real names,
+        # read off the rig; every 4-character collision must be gone.
+        names = ["Dusk", "Dusk2", "Dusk3", "Dusk4", "Dusk5", "Dusk6",
+                 "GettinRezd", "GettinRezd2", "GettinRezd3",
+                 "GlassyChorused", "GlassyChorused2",
+                 "OrganSpecial", "OrganSpecial2", "OrganSpecial3",
+                 "PdKey1", "PdKey2", "PdKey3", "PdKey4", "PdKey05",
+                 "Moteef1", "Moteef2", "Moteef3", "Moteef4", "Moteef1Mod"]
+        labels = [tl.short_label(n, 9) for n in names]
+        self.assertEqual(len(set(labels)), len(labels), sorted(labels))
+
+    def test_never_exceeds_the_budget(self):
+        for name in ("x", "SpaceLandings01", "ChristmasCheer", "Randomize02"):
+            self.assertLessEqual(len(tl.short_label(name, 9)), 9, name)
+
+    def test_empty_and_none_are_safe(self):
+        self.assertEqual(tl.short_label("", 9), "")
+        self.assertEqual(tl.short_label(None, 9), "")
+
+    def test_a_digit_run_longer_than_the_budget_cannot_eat_the_name(self):
+        # Degenerate, but it must not return only digits or an empty string.
+        out = tl.short_label("A123456789012", 9)
+        self.assertEqual(len(out), 9)
+        self.assertTrue(out.startswith("A"))
+
+
+class TestNameColumnsDrawSmall(unittest.TestCase):
+    """PRESET, KIT and SAMPLE carry names, not numbers, so they draw in the
+    small font and get the wider budget. Every other column keeps the
+    double-height value that reads at a glance while playing."""
+
+    def _cols(self, kind, state):
+        desc = {"title": "CTRL", "shape": tl.SHAPE_CHANNEL,
+                "verbs": [None] * 8}
+        return tl.columns(desc, kind, state)
+
+    def test_preset_column_is_small_and_shortened(self):
+        state = dict(_voice_state(), preset="GettinRezd2")
+        col = self._cols("voice", state)[0]
+        self.assertEqual(col["name"], "PRESET")
+        self.assertTrue(col["small"])
+        self.assertEqual(col["value"], "GettinRe2")
+
+    def test_kit_and_sample_columns_are_small(self):
+        state = dict(_drum_state(), kit="Roland TR909", sample="ClosedHat2")
+        cols = self._cols("drum", state)
+        self.assertTrue(cols[0]["small"])
+        self.assertTrue(cols[1]["small"])
+
+    def test_numeric_columns_are_not_small(self):
+        state = _voice_state()
+        for col in self._cols("voice", state)[5:]:
+            self.assertFalse(col["small"], col["name"])
+
+    def test_pending_brackets_fit_inside_the_budget(self):
+        # ">value<" costs two characters. Shortening after wrapping would
+        # either overflow the column or cut the closing bracket off.
+        state = dict(_voice_state(), preset="GettinRezd2",
+                     pending={"preset"})
+        col = self._cols("voice", state)[0]
+        self.assertLessEqual(len(col["value"]), 9)
+        self.assertTrue(col["value"].startswith(">"))
+        self.assertTrue(col["value"].endswith("<"))
+        self.assertIn("2", col["value"])
+
+
+def _voice_state():
+    return {"preset": "Init", "cutoff": 64, "reso": 64, "env": 64,
+            "decay": 64, "level": 50, "reverb": 0, "delay": 0,
+            "synth_ctrl": (True, True, True, True), "pending": set()}
+
+
+def _drum_state():
+    return {"kit": "Kit", "sample": "Snare", "level": 50, "reverb": 0,
+            "delay": 0, "pending": set()}
+
+
 if __name__ == "__main__":
     unittest.main()

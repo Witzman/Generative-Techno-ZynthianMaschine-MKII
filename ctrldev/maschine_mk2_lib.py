@@ -267,6 +267,12 @@ class maschine_mk2_lib:
     BAR_H = 10
     TAB_CHARS = 8            # "A KICK " - what fits in a 60 px tab at 6 px
     VALUE_CHARS = 4          # 4 chars of double-height text fit a column
+    # A name-valued column (PRESET, KIT, SAMPLE) draws single height instead,
+    # because four characters cannot tell one preset from the next: 48 of the
+    # 67 patches on group H shared a 4-char label with an alphabetical
+    # neighbour, and stepping walks a bank alphabetically. At 6 px per
+    # character a 64 px column starting at x+3 holds ten; nine keeps a gutter.
+    SMALL_VALUE_CHARS = 9
 
     # rect styles the daemon understands (main.rs display handler)
     RECT_OUTLINE = 0
@@ -453,12 +459,17 @@ class maschine_mk2_lib:
             name, value, kind, frac = col[:4]
             mod = col[4] if len(col) > 4 else None
             tick = col[5] if len(col) > 5 else None
+            small = col[6] if len(col) > 6 else False
             x = i * cls.SCREEN_COL + 3
             if name:
                 out.append(cls.display_text_osc(screen, x, cls.NAME_Y, 1, False, name))
             if value:
+                # A name draws small so more of it fits; a number keeps the
+                # double height that reads at a glance while playing.
+                size = 1 if small else 2
+                budget = cls.SMALL_VALUE_CHARS if small else cls.VALUE_CHARS
                 out.append(cls.display_text_osc(
-                    screen, x, cls.VALUE_Y, 2, False, str(value)[:cls.VALUE_CHARS]))
+                    screen, x, cls.VALUE_Y, size, False, str(value)[:budget]))
             out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod, tick))
         return out
 
