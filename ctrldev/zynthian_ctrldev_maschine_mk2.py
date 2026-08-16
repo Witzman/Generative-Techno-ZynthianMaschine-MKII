@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 # Controller driver for Maschine MK2 via the MaschineMK2_linux daemon.
 #
-# 8 groups x 16 steps euclidean drum sequencer. All sequencing lives in
-# zynseq, so patterns persist in snapshots and the touchscreen pattern
-# editor mirrors them.
+# 8 groups x 16 steps: five euclidean drum channels and three Turing-machine
+# voices, all eight always alive. All sequencing lives in zynseq, so patterns
+# persist in snapshots and the touchscreen pattern editor mirrors them.
 #
 # MIDI in (ch 1, from the daemon):
 #   Pads      NoteOn, note = group note base + pad index. Velocity becomes the
@@ -17,15 +17,23 @@
 #             across all eight channels, or a global
 #   Modes     CONTROL 11, STEP 32, ALL 38, MIXER (VOLUME) 51, FILTER (AUTO) 37 -
 #             latched and mutually exclusive
-#   DL / DR   CC 5/6 - page back / forward within the current mode's ring
+#   DL / DR   CC 47/48 - the arrows beside the display: page back / forward
+#             within the current mode's ring
 #   ML / MR   CC 13/14 - previous / next sound: a sample within the kit on a
 #             drum, an engine preset on a voice
 #   F1-F8     CC 39-46 (mute, or solo while SOLO is held or latched)
+#   SHIFT 49 - MOD 50 (SWING, latches; see the modulation section below)
 #   Solo 31 - Duplicate 29 - Play 1 - Erase 2 (hold only) - Restart 7
 #
-# Reserved and deliberately unused: CC 47/48 (TL/TR - the daemon swallows the
-# transport pair for its own indicators) and CC 49/50 (SHIFT and SWING, which
-# the pass-two daemon patch emits but nothing binds yet).
+# THE CC NUMBERS ABOVE ARE MEASURED, gate G4 2026-08-11 with aseqdump, and the
+# daemon's token names are attached to the OPPOSITE physical buttons from what
+# they suggest. Do not "correct" DL/DR to 5/6 from the token names - that was
+# the wrong belief this header carried until 2026-08-16, while the constants
+# below had been right since G4.
+#
+# Emitted, measured and deliberately unbound: CC 5/6 (TL/TR - the transport
+# STEP pair) and CC 12 (big encoder press) / CC 15 (big encoder turn, 8 units
+# per detent, wraps 120 -> 0). Free surface for the next feature.
 #
 # LED out: OSC to the daemon on 127.0.0.1:42434 (main.rs:609-665)
 #
