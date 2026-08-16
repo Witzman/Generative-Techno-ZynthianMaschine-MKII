@@ -3842,6 +3842,31 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     # --- LEDs ----------------------------------------------------------
 
+    def _step_lit(self, step, gen_note):
+        """Does this step sound - by EITHER route?
+
+        `gen_note` is the pitch the generator put on this step. Asking zynseq
+        for only that pitch is what hid every played-in note on a voice: a
+        voice pad plays a KEYBOARD pitch chosen by which pad was hit
+        (_pad_note -> tlib.pad_note), not the pitch the Turing register wrote
+        there, so the query missed the note, the step read as empty, and
+        _step_state returned dim one line ABOVE the amber test it never
+        reached. The note was in the pattern and sounding the whole time.
+
+        Drums never showed it because a drum channel's played and generated
+        notes are the same pitch - the same identity that costs drums their
+        amber across a reload. One cause, two opposite symptoms.
+
+        The played pitch is read back from zynseq rather than trusted from
+        self.notes, which is a cache: any mirrored state is verified against
+        the pattern, the CHANCE/SWING law. The extra query only happens on a
+        step that actually has a player entry."""
+
+        if self.libseq.getNoteVelocity(step, gen_note):
+            return True
+        entry = self.notes[self.group].get(step)
+        return bool(entry and self.libseq.getNoteVelocity(step, entry[0]))
+
     def _render_pads(self):
         """Full repaint. Also refreshes the two caches the playhead poll
         reads - step_on and cps - so that poll never has to touch the
@@ -3855,7 +3880,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # an empty step: it is unlit rather than dim.
         notes = self._step_notes(self.group, 16)
         self.step_on = [
-            bool(self.libseq.getNoteVelocity(step, notes[step])) if step < steps else None
+            self._step_lit(step, notes[step]) if step < steps else None
             for step in range(16)]
         head = self._playhead()
         self.head_shown = head
