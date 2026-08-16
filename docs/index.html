@@ -451,11 +451,21 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 .modfield svg{display:block;width:100%;height:auto}
 .mw{fill:none;stroke:var(--c);stroke-width:2.2;stroke-linecap:round;opacity:.62;
   mix-blend-mode:screen;transform-box:fill-box;transform-origin:50% 50%;
-  animation-name:mwdrift;animation-iteration-count:infinite;
+  animation-name:mwdrift,mwfade;animation-iteration-count:infinite;
   animation-direction:alternate}
 @keyframes mwdrift{
   from{transform:translateY(-26px) scaleY(.82)}
   to  {transform:translateY( 26px) scaleY(1.18)}
+}
+/* Lines breathe in and out instead of appearing at one opacity while their
+   position moves. Owner, 2026-08-16: the hard edges read as lines popping in
+   and out rather than as modulation. It shares each path's own duration and
+   the alternate direction, so a line is faintest at one end of its travel and
+   brightest at the other - and because every path carries a different
+   duration, no two breathe together. */
+@keyframes mwfade{
+  from{opacity:.20}
+  to  {opacity:.72}
 }
 .modfield .grid{stroke:var(--hairline);stroke-width:1;opacity:.5}
 .modfield figcaption{position:absolute;left:12px;bottom:9px;margin:0;
@@ -662,12 +672,12 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
         <line class="grid" x1="0" y1="130" x2="1200" y2="130"/>
       <path class="mw mw-tri" d="M0,140.6 L12,143.4 L24,146.0 L36,148.3 L48,150.3 L60,152.0 L72,153.5 L84,154.7 L96,155.6 L108,156.3 L120,156.7 L132,156.9 L144,156.9 L156,156.7 L168,156.4 L180,156.0 L192,155.5 L204,155.0 L216,154.4 L228,153.9 L240,153.4 L252,153.0 L264,152.6 L276,152.3 L288,152.2 L300,152.1 L312,152.2 L324,152.3 L336,152.6 L348,153.0 L360,153.4 L372,153.9 L384,154.5 L396,155.0 L408,155.5 L420,156.0 L432,156.4 L444,156.7 L456,156.9 L468,156.9 L480,156.7 L492,156.3 L504,155.6 L516,154.7 L528,153.5 L540,152.0 L552,150.3 L564,148.3 L576,146.0 L588,143.4 L600,140.6 L612,137.6 L624,134.4 L636,131.0 L648,127.5 L660,123.9 L672,120.2 L684,116.6 L696,112.9 L708,109.4 L720,106.0 L732,102.7 L744,99.7 L756,96.8 L768,94.3 L780,92.1 L792,90.1 L804,88.6 L816,87.4 L828,86.5 L840,86.1 L852,86.0 L864,86.2 L876,86.8 L888,87.8 L900,89.0 L912,90.5 L924,92.3 L936,94.3 L948,96.5 L960,98.8 L972,101.2 L984,103.7 L996,106.2 L1008,108.7 L1020,111.2 L1032,113.6 L1044,115.9 L1056,118.0 L1068,120.0 L1080,121.9 L1092,123.6 L1104,125.1 L1116,126.5 L1128,127.6 L1140,128.7 L1152,129.5 L1164,130.3 L1176,130.9 L1188,131.4 L1200,131.9" style="--c:var(--ch-a);animation-duration:13s;animation-delay:-9.8s;animation-timing-function:cubic-bezier(.45,0,.55,1)"/>
       <path class="mw mw-ramp" d="M0,138.7 L12,141.8 L24,144.5 L36,146.8 L48,148.7 L60,150.1 L72,151.1 L84,151.8 L96,152.1 L108,152.1 L120,151.9 L132,151.5 L144,150.9 L156,150.3 L168,149.7 L180,149.2 L192,148.7 L204,148.4 L216,148.2 L228,148.2 L240,148.4 L252,148.7 L264,149.2 L276,149.7 L288,150.3 L300,150.9 L312,151.5 L324,151.9 L336,152.1 L348,152.1 L360,151.8 L372,151.2 L384,150.2 L396,148.7 L408,146.9 L420,144.6 L432,141.9 L444,138.8 L456,135.5 L468,131.8 L480,127.9 L492,123.9 L504,119.8 L516,115.8 L528,111.9 L540,108.2 L552,104.8 L564,101.7 L576,99.1 L588,97.0 L600,95.3 L612,94.3 L624,93.8 L636,93.8 L648,94.4 L660,95.5 L672,97.0 L684,98.9 L696,101.1 L708,103.6 L720,106.3 L732,109.1 L744,111.8 L756,114.6 L768,117.2 L780,119.7 L792,122.0 L804,124.0 L816,125.7 L828,127.2 L840,128.5 L852,129.5 L864,130.3 L876,131.0 L888,131.5 L900,132.0 L912,132.4 L924,132.9 L936,133.5 L948,134.3 L960,135.2 L972,136.4 L984,137.8 L996,139.4 L1008,141.3 L1020,143.4 L1032,145.6 L1044,148.0 L1056,150.5 L1068,153.0 L1080,155.5 L1092,157.8 L1104,159.9 L1116,161.7 L1128,163.2 L1140,164.3 L1152,165.0 L1164,165.1 L1176,164.7 L1188,163.8 L1200,162.3" style="--c:var(--ch-b);animation-duration:17s;animation-delay:-5.1s;animation-timing-function:linear"/>
-      <path class="mw mw-squ" d="M0,142.5 L12,145.0 L24,147.3 L36,149.5 L48,151.5 L60,153.3 L72,154.9 L84,156.4 L96,157.6 L108,158.7 L120,159.6 L132,160.3 L144,160.9 L156,161.3 L168,161.5 L180,161.6 L192,161.6 L204,161.5 L216,161.3 L228,161.0 L240,160.6 L252,160.2 L264,159.7 L276,159.2 L288,158.8 L300,158.3 L312,157.8 L324,157.4 L336,157.0 L348,156.7 L360,156.4 L372,156.2 L384,156.1 L396,156.0 L408,156.0 L420,156.1 L432,156.3 L444,156.5 L456,156.8 L468,157.1 L480,157.5 L492,158.0 L504,158.5 L516,158.9 L528,159.4 L540,159.9 L552,160.3 L564,160.7 L576,161.1 L588,161.4 L600,161.6 L612,161.6 L624,161.6 L636,161.5 L648,161.2 L660,160.7 L672,160.1 L684,159.3 L696,158.4 L708,157.2 L720,155.9 L732,154.4 L744,152.7 L756,150.8 L768,148.8 L780,146.5 L792,144.2 L804,141.6 L816,138.9 L828,136.1 L840,133.2 L852,130.1 L864,127.0 L876,123.9 L888,120.6 L900,117.4 L912,114.2 L924,111.0 L936,107.8 L948,104.7 L960,101.7 L972,98.8 L984,96.1 L996,93.5 L1008,91.0 L1020,88.7 L1032,86.6 L1044,84.8 L1056,83.1 L1068,81.7 L1080,80.5 L1092,79.6 L1104,78.8 L1116,78.4 L1128,78.2 L1140,78.2 L1152,78.5 L1164,79.0 L1176,79.7 L1188,80.6 L1200,81.8" style="--c:var(--ch-c);animation-duration:19s;animation-delay:-14.06s;animation-timing-function:steps(2,jump-none)"/>
-      <path class="mw mw-snh" d="M0,137.5 L12,140.7 L24,143.5 L36,145.7 L48,147.3 L60,148.3 L72,148.9 L84,149.0 L96,148.7 L108,148.3 L120,147.6 L132,147.0 L144,146.4 L156,145.9 L168,145.7 L180,145.6 L192,145.8 L204,146.2 L216,146.7 L228,147.4 L240,148.0 L252,148.6 L264,148.9 L276,149.0 L288,148.6 L300,147.8 L312,146.4 L324,144.5 L336,141.9 L348,138.9 L360,135.3 L372,131.4 L384,127.2 L396,122.8 L408,118.5 L420,114.2 L432,110.3 L444,106.8 L456,103.8 L468,101.5 L480,99.9 L492,99.0 L504,99.0 L516,99.6 L528,100.9 L540,102.7 L552,105.1 L564,107.8 L576,110.7 L588,113.7 L600,116.7 L612,119.5 L624,122.1 L636,124.4 L648,126.4 L660,127.9 L672,129.2 L684,130.1 L696,130.8 L708,131.4 L720,131.9 L732,132.4 L744,133.1 L756,133.9 L768,135.1 L780,136.5 L792,138.3 L804,140.3 L816,142.7 L828,145.2 L840,147.9 L852,150.6 L864,153.2 L876,155.5 L888,157.5 L900,159.0 L912,159.9 L924,160.1 L936,159.6 L948,158.4 L960,156.4 L972,153.8 L984,150.5 L996,146.8 L1008,142.6 L1020,138.2 L1032,133.7 L1044,129.3 L1056,125.0 L1068,121.1 L1080,117.6 L1092,114.7 L1104,112.3 L1116,110.5 L1128,109.4 L1140,108.8 L1152,108.7 L1164,109.0 L1176,109.6 L1188,110.5 L1200,111.5" style="--c:var(--ch-d);animation-duration:23s;animation-delay:-4.85s;animation-timing-function:steps(6,jump-none)"/>
+      <path class="mw mw-squ" d="M0,142.5 L12,145.0 L24,147.3 L36,149.5 L48,151.5 L60,153.3 L72,154.9 L84,156.4 L96,157.6 L108,158.7 L120,159.6 L132,160.3 L144,160.9 L156,161.3 L168,161.5 L180,161.6 L192,161.6 L204,161.5 L216,161.3 L228,161.0 L240,160.6 L252,160.2 L264,159.7 L276,159.2 L288,158.8 L300,158.3 L312,157.8 L324,157.4 L336,157.0 L348,156.7 L360,156.4 L372,156.2 L384,156.1 L396,156.0 L408,156.0 L420,156.1 L432,156.3 L444,156.5 L456,156.8 L468,157.1 L480,157.5 L492,158.0 L504,158.5 L516,158.9 L528,159.4 L540,159.9 L552,160.3 L564,160.7 L576,161.1 L588,161.4 L600,161.6 L612,161.6 L624,161.6 L636,161.5 L648,161.2 L660,160.7 L672,160.1 L684,159.3 L696,158.4 L708,157.2 L720,155.9 L732,154.4 L744,152.7 L756,150.8 L768,148.8 L780,146.5 L792,144.2 L804,141.6 L816,138.9 L828,136.1 L840,133.2 L852,130.1 L864,127.0 L876,123.9 L888,120.6 L900,117.4 L912,114.2 L924,111.0 L936,107.8 L948,104.7 L960,101.7 L972,98.8 L984,96.1 L996,93.5 L1008,91.0 L1020,88.7 L1032,86.6 L1044,84.8 L1056,83.1 L1068,81.7 L1080,80.5 L1092,79.6 L1104,78.8 L1116,78.4 L1128,78.2 L1140,78.2 L1152,78.5 L1164,79.0 L1176,79.7 L1188,80.6 L1200,81.8" style="--c:var(--ch-c);animation-duration:19s;animation-delay:-14.06s;animation-timing-function:cubic-bezier(.85,0,.15,1)"/>
+      <path class="mw mw-snh" d="M0,137.5 L12,140.7 L24,143.5 L36,145.7 L48,147.3 L60,148.3 L72,148.9 L84,149.0 L96,148.7 L108,148.3 L120,147.6 L132,147.0 L144,146.4 L156,145.9 L168,145.7 L180,145.6 L192,145.8 L204,146.2 L216,146.7 L228,147.4 L240,148.0 L252,148.6 L264,148.9 L276,149.0 L288,148.6 L300,147.8 L312,146.4 L324,144.5 L336,141.9 L348,138.9 L360,135.3 L372,131.4 L384,127.2 L396,122.8 L408,118.5 L420,114.2 L432,110.3 L444,106.8 L456,103.8 L468,101.5 L480,99.9 L492,99.0 L504,99.0 L516,99.6 L528,100.9 L540,102.7 L552,105.1 L564,107.8 L576,110.7 L588,113.7 L600,116.7 L612,119.5 L624,122.1 L636,124.4 L648,126.4 L660,127.9 L672,129.2 L684,130.1 L696,130.8 L708,131.4 L720,131.9 L732,132.4 L744,133.1 L756,133.9 L768,135.1 L780,136.5 L792,138.3 L804,140.3 L816,142.7 L828,145.2 L840,147.9 L852,150.6 L864,153.2 L876,155.5 L888,157.5 L900,159.0 L912,159.9 L924,160.1 L936,159.6 L948,158.4 L960,156.4 L972,153.8 L984,150.5 L996,146.8 L1008,142.6 L1020,138.2 L1032,133.7 L1044,129.3 L1056,125.0 L1068,121.1 L1080,117.6 L1092,114.7 L1104,112.3 L1116,110.5 L1128,109.4 L1140,108.8 L1152,108.7 L1164,109.0 L1176,109.6 L1188,110.5 L1200,111.5" style="--c:var(--ch-d);animation-duration:23s;animation-delay:-4.85s;animation-timing-function:cubic-bezier(.7,0,.3,1)"/>
       <path class="mw mw-tri" d="M0,141.2 L12,143.9 L24,146.4 L36,148.6 L48,150.7 L60,152.4 L72,154.0 L84,155.3 L96,156.3 L108,157.2 L120,157.8 L132,158.2 L144,158.4 L156,158.5 L168,158.4 L180,158.1 L192,157.8 L204,157.4 L216,156.9 L228,156.4 L240,155.9 L252,155.4 L264,154.9 L276,154.4 L288,154.1 L300,153.8 L312,153.6 L324,153.4 L336,153.4 L348,153.5 L360,153.6 L372,153.9 L384,154.2 L396,154.6 L408,155.1 L420,155.6 L432,156.1 L444,156.6 L456,157.1 L468,157.6 L480,158.0 L492,158.3 L504,158.4 L516,158.5 L528,158.4 L540,158.1 L552,157.6 L564,156.8 L576,155.9 L588,154.7 L600,153.3 L612,151.7 L624,149.8 L636,147.7 L648,145.3 L660,142.7 L672,140.0 L684,137.0 L696,133.9 L708,130.7 L720,127.3 L732,123.9 L744,120.4 L756,116.9 L768,113.5 L780,110.1 L792,106.7 L804,103.5 L816,100.5 L828,97.6 L840,94.9 L852,92.5 L864,90.3 L876,88.4 L888,86.8 L900,85.4 L912,84.5 L924,83.8 L936,83.4 L948,83.4 L960,83.6 L972,84.2 L984,85.1 L996,86.2 L1008,87.5 L1020,89.1 L1032,90.9 L1044,92.9 L1056,95.0 L1068,97.2 L1080,99.5 L1092,101.9 L1104,104.3 L1116,106.7 L1128,109.0 L1140,111.3 L1152,113.6 L1164,115.7 L1176,117.8 L1188,119.7 L1200,121.4" style="--c:var(--ch-e);animation-duration:29s;animation-delay:-19.08s;animation-timing-function:cubic-bezier(.45,0,.55,1)"/>
       <path class="mw mw-ramp" d="M0,136.2 L12,139.5 L24,142.2 L36,144.0 L48,145.2 L60,145.8 L72,145.8 L84,145.4 L96,144.8 L108,144.1 L120,143.5 L132,143.1 L144,143.0 L156,143.2 L168,143.6 L180,144.2 L192,144.9 L204,145.5 L216,145.8 L228,145.7 L240,145.1 L252,143.7 L264,141.7 L276,139.0 L288,135.5 L300,131.6 L312,127.2 L324,122.7 L336,118.3 L348,114.1 L360,110.5 L372,107.6 L384,105.5 L396,104.3 L408,104.1 L420,104.9 L432,106.4 L444,108.6 L456,111.4 L468,114.4 L480,117.5 L492,120.5 L504,123.2 L516,125.6 L528,127.5 L540,128.9 L552,130.0 L564,130.7 L576,131.3 L588,131.8 L600,132.4 L612,133.3 L624,134.5 L636,136.1 L648,138.1 L660,140.4 L672,143.1 L684,145.8 L696,148.6 L708,151.0 L720,153.1 L732,154.5 L744,155.1 L756,154.8 L768,153.6 L780,151.4 L792,148.4 L804,144.7 L816,140.5 L828,136.0 L840,131.3 L852,126.9 L864,122.8 L876,119.2 L888,116.3 L900,114.2 L912,112.9 L924,112.3 L936,112.3 L948,112.8 L960,113.6 L972,114.6 L984,115.6 L996,116.4 L1008,117.0 L1020,117.4 L1032,117.4 L1044,117.2 L1056,116.8 L1068,116.5 L1080,116.3 L1092,116.4 L1104,117.0 L1116,118.1 L1128,119.9 L1140,122.4 L1152,125.5 L1164,129.2 L1176,133.3 L1188,137.6 L1200,142.0" style="--c:var(--ch-f);animation-duration:31s;animation-delay:-5.89s;animation-timing-function:linear"/>
-      <path class="mw mw-squ" d="M0,139.4 L12,142.2 L24,144.7 L36,146.9 L48,148.9 L60,150.4 L72,151.7 L84,152.6 L96,153.3 L108,153.6 L120,153.7 L132,153.6 L144,153.4 L156,153.0 L168,152.5 L180,151.9 L192,151.4 L204,150.8 L216,150.4 L228,150.0 L240,149.7 L252,149.5 L264,149.5 L276,149.6 L288,149.8 L300,150.2 L312,150.6 L324,151.1 L336,151.7 L348,152.2 L360,152.8 L372,153.2 L384,153.5 L396,153.7 L408,153.7 L420,153.5 L432,153.0 L444,152.2 L456,151.1 L468,149.7 L480,147.9 L492,145.8 L504,143.4 L516,140.7 L528,137.8 L540,134.6 L552,131.2 L564,127.6 L576,123.9 L588,120.2 L600,116.5 L612,112.9 L624,109.4 L636,106.1 L648,103.0 L660,100.2 L672,97.7 L684,95.6 L696,93.8 L708,92.5 L720,91.6 L732,91.2 L744,91.2 L756,91.6 L768,92.4 L780,93.5 L792,95.0 L804,96.8 L816,98.9 L828,101.1 L840,103.5 L852,106.0 L864,108.6 L876,111.1 L888,113.6 L900,116.0 L912,118.3 L924,120.4 L936,122.4 L948,124.1 L960,125.7 L972,127.1 L984,128.2 L996,129.2 L1008,130.0 L1020,130.6 L1032,131.2 L1044,131.7 L1056,132.1 L1068,132.5 L1080,133.0 L1092,133.5 L1104,134.1 L1116,134.8 L1128,135.7 L1140,136.8 L1152,138.0 L1164,139.4 L1176,141.0 L1188,142.8 L1200,144.8" style="--c:var(--ch-g);animation-duration:37s;animation-delay:-31.49s;animation-timing-function:steps(2,jump-none)"/>
-      <path class="mw mw-snh" d="M0,143.7 L12,145.9 L24,148.0 L36,150.0 L48,151.9 L60,153.6 L72,155.2 L84,156.7 L96,158.1 L108,159.3 L120,160.4 L132,161.4 L144,162.2 L156,162.9 L168,163.5 L180,164.0 L192,164.3 L204,164.6 L216,164.7 L228,164.8 L240,164.8 L252,164.7 L264,164.5 L276,164.3 L288,164.0 L300,163.7 L312,163.3 L324,162.9 L336,162.5 L348,162.1 L360,161.6 L372,161.2 L384,160.8 L396,160.4 L408,160.0 L420,159.7 L432,159.4 L444,159.2 L456,158.9 L468,158.8 L480,158.7 L492,158.6 L504,158.6 L516,158.6 L528,158.7 L540,158.9 L552,159.1 L564,159.3 L576,159.6 L588,159.9 L600,160.3 L612,160.7 L624,161.1 L636,161.5 L648,161.9 L660,162.4 L672,162.8 L684,163.2 L696,163.6 L708,163.9 L720,164.2 L732,164.5 L744,164.6 L756,164.8 L768,164.8 L780,164.8 L792,164.7 L804,164.4 L816,164.1 L828,163.7 L840,163.1 L852,162.5 L864,161.7 L876,160.7 L888,159.7 L900,158.5 L912,157.2 L924,155.8 L936,154.2 L948,152.5 L960,150.7 L972,148.7 L984,146.6 L996,144.5 L1008,142.2 L1020,139.8 L1032,137.3 L1044,134.8 L1056,132.2 L1068,129.5 L1080,126.7 L1092,123.9 L1104,121.1 L1116,118.3 L1128,115.4 L1140,112.6 L1152,109.8 L1164,107.0 L1176,104.2 L1188,101.5 L1200,98.9" style="--c:var(--ch-h);animation-duration:41s;animation-delay:-18.29s;animation-timing-function:steps(6,jump-none)"/>
+      <path class="mw mw-squ" d="M0,139.4 L12,142.2 L24,144.7 L36,146.9 L48,148.9 L60,150.4 L72,151.7 L84,152.6 L96,153.3 L108,153.6 L120,153.7 L132,153.6 L144,153.4 L156,153.0 L168,152.5 L180,151.9 L192,151.4 L204,150.8 L216,150.4 L228,150.0 L240,149.7 L252,149.5 L264,149.5 L276,149.6 L288,149.8 L300,150.2 L312,150.6 L324,151.1 L336,151.7 L348,152.2 L360,152.8 L372,153.2 L384,153.5 L396,153.7 L408,153.7 L420,153.5 L432,153.0 L444,152.2 L456,151.1 L468,149.7 L480,147.9 L492,145.8 L504,143.4 L516,140.7 L528,137.8 L540,134.6 L552,131.2 L564,127.6 L576,123.9 L588,120.2 L600,116.5 L612,112.9 L624,109.4 L636,106.1 L648,103.0 L660,100.2 L672,97.7 L684,95.6 L696,93.8 L708,92.5 L720,91.6 L732,91.2 L744,91.2 L756,91.6 L768,92.4 L780,93.5 L792,95.0 L804,96.8 L816,98.9 L828,101.1 L840,103.5 L852,106.0 L864,108.6 L876,111.1 L888,113.6 L900,116.0 L912,118.3 L924,120.4 L936,122.4 L948,124.1 L960,125.7 L972,127.1 L984,128.2 L996,129.2 L1008,130.0 L1020,130.6 L1032,131.2 L1044,131.7 L1056,132.1 L1068,132.5 L1080,133.0 L1092,133.5 L1104,134.1 L1116,134.8 L1128,135.7 L1140,136.8 L1152,138.0 L1164,139.4 L1176,141.0 L1188,142.8 L1200,144.8" style="--c:var(--ch-g);animation-duration:37s;animation-delay:-31.49s;animation-timing-function:cubic-bezier(.85,0,.15,1)"/>
+      <path class="mw mw-snh" d="M0,143.7 L12,145.9 L24,148.0 L36,150.0 L48,151.9 L60,153.6 L72,155.2 L84,156.7 L96,158.1 L108,159.3 L120,160.4 L132,161.4 L144,162.2 L156,162.9 L168,163.5 L180,164.0 L192,164.3 L204,164.6 L216,164.7 L228,164.8 L240,164.8 L252,164.7 L264,164.5 L276,164.3 L288,164.0 L300,163.7 L312,163.3 L324,162.9 L336,162.5 L348,162.1 L360,161.6 L372,161.2 L384,160.8 L396,160.4 L408,160.0 L420,159.7 L432,159.4 L444,159.2 L456,158.9 L468,158.8 L480,158.7 L492,158.6 L504,158.6 L516,158.6 L528,158.7 L540,158.9 L552,159.1 L564,159.3 L576,159.6 L588,159.9 L600,160.3 L612,160.7 L624,161.1 L636,161.5 L648,161.9 L660,162.4 L672,162.8 L684,163.2 L696,163.6 L708,163.9 L720,164.2 L732,164.5 L744,164.6 L756,164.8 L768,164.8 L780,164.8 L792,164.7 L804,164.4 L816,164.1 L828,163.7 L840,163.1 L852,162.5 L864,161.7 L876,160.7 L888,159.7 L900,158.5 L912,157.2 L924,155.8 L936,154.2 L948,152.5 L960,150.7 L972,148.7 L984,146.6 L996,144.5 L1008,142.2 L1020,139.8 L1032,137.3 L1044,134.8 L1056,132.2 L1068,129.5 L1080,126.7 L1092,123.9 L1104,121.1 L1116,118.3 L1128,115.4 L1140,112.6 L1152,109.8 L1164,107.0 L1176,104.2 L1188,101.5 L1200,98.9" style="--c:var(--ch-h);animation-duration:41s;animation-delay:-18.29s;animation-timing-function:cubic-bezier(.7,0,.3,1)"/>
       </svg>
       <figcaption>eight modulators · coprime rates · phase from the moment you bind</figcaption>
     </figure>
@@ -1016,9 +1026,14 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     {hits:2,rot:4},                            /* ....x.......x... */
     {hits:8,rot:0},                            /* x.x.x.x.x.x.x.x. */
     {hits:6,rot:2},                            /* ..x..x.x..x..x.x */
-    {hits:3,rot:0,rand:60,reg:0xB4C7},         /* x....x....x..... , mutating fast */
-    {hits:0,rot:0,rand:35,reg:0x93A5},
-    {hits:0,rot:0,rand:0, reg:0xC61B}
+    /* The three voices carry TWO registers, as the instrument does since
+       2026-08-16: reg is read as pitch, rreg as which steps sound, one bit
+       per step. rand evolves the first, rrand the second, and 0 is LOCK for
+       both. rreg is seeded from what these lanes played euclidean before, so
+       the demo starts on the same pattern it always did. */
+    {hits:3,rot:0,rand:60,rrand:0,reg:0xB4C7,rreg:0x0421},  /* x....x....x..... */
+    {hits:0,rot:0,rand:35,rrand:0,reg:0x93A5,rreg:0x0000},
+    {hits:0,rot:0,rand:0, rrand:0,reg:0xC61B,rreg:0x0000}
   ];
 
   var state={ch:0,step:0,playing:!reduce,all:true};
@@ -1032,7 +1047,21 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   var o1=document.getElementById('o1'), o2=document.getElementById('o2');
 
   function lane(i){ return LANES[i]; }
-  function pattern(i){ return rot(euclid(LANES[i].hits,STEPS), LANES[i].rot); }
+  function pattern(i){
+    var L=LANES[i];
+    /* A voice reads its rhythm register, one bit per step. A drum is
+       euclidean - HITS and ROTATE already place its beat exactly. */
+    if(CH[i].kind==='voice'){
+      var out=[];
+      for(var s=0;s<STEPS;s++) out.push(((L.rreg>>s)&1)===1);
+      return out;
+    }
+    return rot(euclid(L.hits,STEPS), L.rot);
+  }
+  /* "Is this lane sounding at all?" A drum has no hits; a voice has no bits. */
+  function lanePlays(i){
+    return CH[i].kind==='voice' ? LANES[i].rreg!==0 : LANES[i].hits>0;
+  }
 
   /* pitch from a lane's register: a sliding 5-bit window */
   function pitches(i){
@@ -1082,7 +1111,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     var out=[], first=state.all?0:state.ch, last=state.all?7:state.ch;
     for(var c=first;c<=last;c++){
       var L=LANES[c];
-      if(L.hits && pattern(c)[step]) out.push(c);
+      if(lanePlays(c) && pattern(c)[step]) out.push(c);
     }
     return out;
   }
@@ -1202,11 +1231,14 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   /* 128 BPM: a sixteenth is 60/128/4 seconds */
   var stepMs=60000/128/4, PASS=stepMs*STEPS;
 
-  /* every voice's register mutates once per pass, exactly as the driver does it */
+  /* Both of a voice's registers mutate once per pass, exactly as the driver
+     does it - and independently, which is the whole point: a melody can
+     evolve over a rhythm that stays where you put it, or the reverse. */
   function mutate(){
     for(var c=5;c<8;c++){
       var L=LANES[c];
-      if(L.rand>0 && Math.random()*100 < L.rand) L.reg ^= (1 << Math.floor(Math.random()*16));
+      if(L.rand>0  && Math.random()*100 < L.rand)  L.reg  ^= (1 << Math.floor(Math.random()*16));
+      if(L.rrand>0 && Math.random()*100 < L.rrand) L.rreg ^= (1 << Math.floor(Math.random()*16));
     }
   }
 
@@ -1217,7 +1249,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     var first = state.all ? 0 : state.ch, last = state.all ? 7 : state.ch;
     for(var c=first;c<=last;c++){
       var L=LANES[c];
-      if(!L.hits) continue;
+      if(!lanePlays(c)) continue;
       if(!pattern(c)[step]) continue;
       if(CH[c].kind==='drum') DRUM[c](t,CH[c].lvl);
       else voiceHit(t,pitches(c)[step],c,CH[c].lvl);
@@ -1269,8 +1301,9 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       h+='<span>HITS '+pad4(L.hits)+'</span><span>ROTATE '+pad4(L.rot)+'</span>'
        + '<span>DIVIDE 1/16</span><span>LENGTH 0016</span><span class="dead">ratchet ----</span>';
     } else {
-      h+='<span>RHYTHM '+pad4(L.hits)+'</span><span>LENGTH 0016</span>'
-       + '<span>MELODY '+(L.rand===0?'<span class="lock">LOCK</span>':pad4(L.rand))+'</span>'
+      h+='<span>MELODY '+(L.rand===0?'<span class="lock">LOCK</span>':pad4(L.rand))+'</span>'
+       + '<span>RHYTHM '+(L.rrand===0?'<span class="lock">LOCK</span>':pad4(L.rrand))+'</span>'
+       + '<span>LENGTH 0016</span>'
        + '<span>GATE 0040</span>';
     }
     h+='<span>BPM 0128</span>';
@@ -1294,8 +1327,8 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     if(voice){
       l1.textContent='MELODY'; k1.min=0; k1.max=100; k1.step=5; k1.value=L.rand;
       o1.innerHTML = L.rand===0 ? '<span class="lock">LOCK</span>' : pad4(L.rand);
-      l2.textContent='RHYTHM'; k2.min=0; k2.max=16; k2.step=1; k2.value=L.hits;
-      o2.textContent=pad4(L.hits);
+      l2.textContent='RHYTHM'; k2.min=0; k2.max=100; k2.step=5; k2.value=L.rrand;
+      o2.innerHTML = L.rrand===0 ? '<span class="lock">LOCK</span>' : pad4(L.rrand);
     } else {
       l1.textContent='HITS'; k1.min=0; k1.max=16; k1.step=1; k1.value=L.hits;
       o1.textContent=pad4(L.hits);
@@ -1311,7 +1344,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   });
   k2.addEventListener('input',function(){
     var L=LANES[state.ch];
-    if(CH[state.ch].kind==='voice') L.hits=parseInt(k2.value,10);
+    if(CH[state.ch].kind==='voice') L.rrand=parseInt(k2.value,10);
     else L.rot=parseInt(k2.value,10);
     sync(); paintRead(); draw();
   });
