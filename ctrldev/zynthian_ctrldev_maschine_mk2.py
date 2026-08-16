@@ -2256,8 +2256,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """MOD held: the encoder sets modulation DEPTH on this verb, not its
         value. Bipolar, centre is off.
 
-        A refused verb draws dead and does nothing - it never silently sets a
-        depth that will not be honoured."""
+        A refused verb LOSES ITS BAR while MOD is down and does nothing - it
+        never silently sets a depth that will not be honoured. Both halves are
+        real now: this docstring claimed the drawing half for a while when
+        only the doing-nothing half existed, so under MOD the HITS column
+        looked exactly like the LEVEL column and one of them worked. The
+        drawing comes from techno_lib.columns(), through the same `grey` flag
+        _column_dead() reads, so the two cannot drift apart again."""
         if not tlib.mod_allowed(verb):
             return
         if self.erase_down:
@@ -3758,6 +3763,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # everything else here; the LED cache still swallows
                         # every repeat, so a steady GRID costs nothing.
                         self._render_grid()
+                        # SWING blinks while MOD is LATCHED, so it needs the
+                        # same periodic writer GRID does. The LED cache
+                        # swallows every unchanged repeat, so a steady or dark
+                        # SWING still puts nothing on the wire.
+                        self._render_mod()
                         # Volume, pan and the mutes can all move on the
                         # touchscreen with nothing signalling it, so the
                         # screens are polled on the same tick.
@@ -3988,7 +3998,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._send_osc(lib.button_osc("rec", state[0], state[1]))
 
     def _render_mod(self):
-        """SWING lights while MOD is active, held or latched.
+        """SWING lights while MOD is active: STEADY while held, BLINKING while
+        latched.
 
         Same precedent as SOLO above: a latched modifier that is not lit is a
         modifier nobody can find. MOD makes every pad inert and turns all
@@ -3999,7 +4010,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Diffed through self.leds like every other LED write: the device has
         been flooded off the USB bus once."""
 
-        state = (0xFFFFFF, 1.0 if self.mod_down else 0.0)
+        if self.mod_latched:
+            # Blinking = LATCHED, steady = HELD. Held and latched were
+            # indistinguishable before, yet only one of them survives your
+            # finger leaving the button - and a latched MOD leaves most of the
+            # surface without bars for as long as it lasts, so it has to say
+            # so. Same clock-derived phase and the same GRID_BLINK_S as
+            # _render_grid: a second blink rate on one panel would read as a
+            # second meaning.
+            on = int(time.monotonic() / self.GRID_BLINK_S) % 2 == 0
+        else:
+            on = self.mod_held
+        state = (0xFFFFFF, 1.0 if on else 0.0)
         if self.leds.changed("mod", state):
             self._send_osc(lib.button_osc("swing", state[0], state[1]))
 
@@ -4055,18 +4077,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         question - is this column drawn dead? - instead of a second
         approximation of it that would drift from what is on the glass."""
 
+        # MOD strips the bar off every column it would refuse, and the same
+        # flag reaches _column_dead through this one method - so the painter
+        # and the bind's refusal cannot disagree about which columns are live.
+        mod = self.mod_down
         shape = desc["shape"]
         if desc.get("generated"):
-            return tlib.columns(desc, None, self._generated_view(desc))
+            return tlib.columns(desc, None, self._generated_view(desc), mod)
         if shape == tlib.SHAPE_SPREAD:
             views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
                      for i in range(len(tlib.CHANNELS))]
-            return tlib.columns(desc, None, views)
+            return tlib.columns(desc, None, views, mod)
         if shape == tlib.SHAPE_GLOBAL:
-            return tlib.columns(desc, None, self.globals_view())
+            return tlib.columns(desc, None, self.globals_view(), mod)
         channel = self.group
         return tlib.columns(desc, self._page_kind(channel),
-                            self.state_view(channel))
+                            self.state_view(channel), mod)
 
     def _column_dead(self, column):
         """True when this column is drawn dead (law L4): greyed, showing ----,

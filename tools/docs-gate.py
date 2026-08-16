@@ -89,7 +89,11 @@ BASELINE = {
     # New 2026-08-16: the Modulation tutorial, first of eight. Its content
     # moves from Features and Playing, which keep their copies until they are
     # cut down last - so the site stays correct at every commit between.
-    "modulation.html":             (845,  "2026-08-16"),
+    # +89, 2026-08-16: MOD's refusal is now drawn, so the page can describe it
+    # instead of describing an intention - a refused column loses its bar, and
+    # "a bar means you can bind here" is the whole rule. Plus SWING steady
+    # versus blinking, which is what tells held from latched.
+    "modulation.html":             (934,  "2026-08-16"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
     "generating-patterns.html":    (750,  "2026-08-16"),

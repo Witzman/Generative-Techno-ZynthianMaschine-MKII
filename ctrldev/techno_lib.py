@@ -1019,7 +1019,56 @@ class techno_lib:
         return out
 
     @staticmethod
-    def columns(desc, kind, state):
+    def columns(desc, kind, state, mod=False):
+        """The 8 columns for a page, with MOD's refusals drawn.
+
+        `mod` is whether MOD is down. While it is, a column whose verb cannot
+        take a modulator LOSES ITS BAR and keeps everything else, so the rule
+        under MOD reads: a bar means you can bind here.
+
+        This is why binding "sometimes worked and sometimes did not".
+        _mod_encoder's docstring claimed a refused verb draws dead; only the
+        "does nothing" half was ever implemented, so under MOD the HITS column
+        looked exactly like the LEVEL column and one of them worked. The
+        refusal now comes from ONE predicate rather than two lists someone
+        keeps in sync: _column_dead() reads the same `grey` flag this sets,
+        through the same _page_columns(), so the painter and the bind's gate 2
+        agree by construction. Adding an eighth modulatable verb later touches
+        one frozenset."""
+
+        return techno_lib._mod_grey(
+            techno_lib._columns_inner(desc, kind, state), desc, mod)
+
+    @staticmethod
+    def _mod_grey(cols, desc, mod):
+        """Strip the bar off every column MOD would refuse.
+
+        The value stays: it is a live parameter that simply cannot be
+        modulated, and blanking it would put ---- across most of a latched
+        page. An already-dead column is left exactly as it is - MOD must not
+        invent a second look for "no source at all", which is visible with MOD
+        released anyway."""
+
+        if not mod:
+            return cols
+        spread = desc.get("shape") == techno_lib.SHAPE_SPREAD
+        verbs = desc.get("verbs") or ()
+        out = []
+        for index, col in enumerate(cols):
+            verb = desc.get("verb") if spread else (
+                verbs[index] if index < len(verbs) else None)
+            if col.get("grey") or techno_lib.mod_allowed(verb):
+                out.append(col)
+                continue
+            refused = dict(col)
+            refused["bar"] = None
+            refused["frac"] = 0.0
+            refused["grey"] = True
+            out.append(refused)
+        return out
+
+    @staticmethod
+    def _columns_inner(desc, kind, state):
         """The 8 columns for a page. Reads state, never writes it. This is the
         single place where the greyed columns and the pending brackets are
         decided, so both are unit tested rather than eyeballed on hardware.

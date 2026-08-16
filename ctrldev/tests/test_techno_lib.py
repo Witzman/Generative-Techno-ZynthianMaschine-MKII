@@ -1663,6 +1663,87 @@ class TestNameColumnsDrawSmall(unittest.TestCase):
         self.assertIn("2", col["value"])
 
 
+class TestModAwareGreying(unittest.TestCase):
+    """While MOD is down, a column that cannot take a modulator loses its BAR.
+
+    Before this, MOD + encoder on a refused verb did nothing and said nothing:
+    _mod_encoder's docstring claimed a refused verb draws dead, and only the
+    "does nothing" half was implemented. Under MOD the HITS column looked
+    exactly like the LEVEL column and one of them worked, which is why binding
+    "sometimes works and sometimes does not".
+
+    The value stays - it is still a live parameter, it just cannot be
+    modulated - so under MOD the rule is: a bar means you can bind here."""
+
+    CTRL = {"title": "CTRL", "shape": tl.SHAPE_CHANNEL,
+            "verbs": ("preset", "cutoff", "reso", "env", "decay",
+                      "level", "reverb", "delay")}
+    STEP = {"title": "STEP", "shape": tl.SHAPE_CHANNEL,
+            "verbs": ("hits", "rotate", "div", "length", "velo", "chance",
+                      "swing", None)}
+
+    def test_without_mod_nothing_changes(self):
+        state = _voice_state()
+        plain = tl.columns(self.CTRL, "voice", state)
+        again = tl.columns(self.CTRL, "voice", state, mod=False)
+        self.assertEqual(plain, again)
+
+    def test_a_modulatable_verb_keeps_its_bar(self):
+        state = _voice_state()
+        cols = tl.columns(self.CTRL, "voice", state, mod=True)
+        for i, verb in enumerate(self.CTRL["verbs"]):
+            if verb in ("cutoff", "reso", "env", "decay", "level",
+                        "reverb", "delay"):
+                self.assertIsNotNone(cols[i]["bar"], verb)
+                self.assertFalse(cols[i]["grey"], verb)
+
+    def test_a_refused_verb_loses_its_bar_but_keeps_its_value(self):
+        state = _voice_state()
+        plain = tl.columns(self.CTRL, "voice", state)
+        cols = tl.columns(self.CTRL, "voice", state, mod=True)
+        # PRESET is not modulatable - it rewrites what the engine is playing.
+        self.assertIsNone(cols[0]["bar"])
+        self.assertTrue(cols[0]["grey"])
+        self.assertEqual(cols[0]["value"], plain[0]["value"])
+        self.assertEqual(cols[0]["name"], plain[0]["name"])
+
+    def test_the_pattern_verbs_are_refused(self):
+        # HITS, ROTATE, DENSITY and CHANCE rewrite the pattern, and velo/gate
+        # were removed from MOD_TIMBRE after an LFO on VELO destroyed a
+        # recorded take every 200 ms.
+        state = _drum_step_state()
+        cols = tl.columns(self.STEP, "drum", state, mod=True)
+        for i, verb in enumerate(self.STEP["verbs"]):
+            if verb in ("hits", "rotate", "chance", "velo"):
+                self.assertIsNone(cols[i]["bar"], verb)
+                self.assertTrue(cols[i]["grey"], verb)
+
+    def test_an_already_dead_column_is_left_alone(self):
+        # A column with no source at all keeps the ---- vocabulary; MOD must
+        # not invent a second look for it.
+        state = dict(_voice_state(), synth_ctrl=(False, False, False, False))
+        cols = tl.columns(self.CTRL, "voice", state, mod=True)
+        self.assertEqual(cols[1]["value"], "----")
+
+    def test_a_spread_page_uses_its_single_verb(self):
+        desc = {"title": "LEVEL", "shape": tl.SHAPE_SPREAD, "verb": "level"}
+        views = [("A", "KICK", {"level": 50}) for _ in range(8)]
+        cols = tl.columns(desc, None, views, mod=True)
+        self.assertTrue(all(c["bar"] is not None for c in cols))
+
+    def test_a_spread_page_on_a_refused_verb_greys_all_eight(self):
+        desc = {"title": "CHANCE", "shape": tl.SHAPE_SPREAD, "verb": "chance"}
+        views = [("A", "KICK", {"chance": 100}) for _ in range(8)]
+        cols = tl.columns(desc, None, views, mod=True)
+        self.assertTrue(all(c["bar"] is None for c in cols))
+        self.assertTrue(all(c["grey"] for c in cols))
+
+
+def _drum_step_state():
+    return {"hits": 4, "rotate": 0, "div": 2, "length": 16, "velo": 100,
+            "chance": 100, "swing": 50, "pending": set()}
+
+
 def _voice_state():
     return {"preset": "Init", "cutoff": 64, "reso": 64, "env": 64,
             "decay": 64, "level": 50, "reverb": 0, "delay": 0,
