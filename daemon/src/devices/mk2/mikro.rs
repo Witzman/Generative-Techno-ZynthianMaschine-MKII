@@ -826,20 +826,23 @@ impl Maschine for Mikro {
             // The layout is the right-hand column first, top to bottom, and
             // then the master section:
             //
-            //   17 SCENE      25 VOLUME     (measured)
-            //   18 PATTERN    26 SWING      (measured)
-            //   19 PAD MODE   27 TEMPO      (inferred)
-            //   20 NAVIGATE   28-31 unknown
-            //   21 DUPLICATE  (measured)
-            //   22 SELECT     (measured)
-            //   23 SOLO       (measured)
-            //   24 MUTE       (measured)
+            //   17 SCENE      25 VOLUME
+            //   18 PATTERN    26 SWING
+            //   19 PAD MODE   27 TEMPO
+            //   20 NAVIGATE   28 master left
+            //   21 DUPLICATE  29 master right
+            //   22 SELECT     30 ENTER
+            //   23 SOLO       31 NOTE REPEAT
+            //   24 MUTE
             //
-            // 21-26 are measured. 17-20 continue the same column upward and
-            // 27 continues the master section, so they are inferred with high
-            // confidence but NOT verified - light them and read them back
-            // before trusting them. Inferring is exactly what produced the
-            // wrong table this replaces.
+            // EVERY index in 17-31 is now MEASURED. 21-26 and 28-31 on
+            // 2026-08-15; 17-20 and 27 on 2026-08-16, one index at a time,
+            // owner reading the physical button back. Those five had been
+            // carried here as high-confidence inference with a warning not to
+            // trust them, and this time the inference happened to be right -
+            // which is worth nothing as evidence, since nine of the thirteen
+            // indices measured the day before had been wrong. The block is
+            // closed: nothing here is a guess any more.
             MaschineButton::Scene => idx = 17,
             MaschineButton::Pattern => idx = 18,
             MaschineButton::Padmode => idx = 19,
