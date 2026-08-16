@@ -102,14 +102,23 @@ main() {
     echo "== Verify"
     if [ "$DRY" = 1 ]; then
         echo "  [dry-run] bash tools/check-prereqs.sh"
-        echo "  [dry-run] jack_lsp -c | grep -A3 'Pads MIDI'"
+        echo "  [dry-run] jack_lsp -c | awk '/Pads MIDI/...' (route count)"
     else
         ( cd "$REPO_DIR" && bash tools/check-prereqs.sh ) || true
         # Exactly one ZynMidiRouter:devN_in under the Pads port. Do not look for
         # a "Loaded" line: Zynthian logs it at INFO and ZYNTHIAN_LOG_LEVEL
         # defaults to WARNING, so it is never written on a stock rig.
+        #
+        # NOT `grep -A3 "Pads MIDI"`. That form reports a HEALTHY rig as a
+        # broken one: it matches the Pads port twice - once as a port, once as
+        # another port's connection - and then prints unrelated ports that sit
+        # at the left margin, so a working rig shows four devN_in lines under a
+        # header saying "want exactly one". Indentation is the whole
+        # distinction: a route is indented under its port, a port is not.
+        # Measured on the rig 2026-08-15.
         echo "-- Pads MIDI routing (want exactly one devN_in):"
-        jack_lsp -c | grep -A3 "Pads MIDI" || true
+        jack_lsp -c | awk '/\(capture\): Pads MIDI/{f=1;next} /^[^ \t]/{f=0} f{print}' || true
+        echo "   two or more means a stale route - restart the daemon, then the UI"
     fi
 
     cat <<'EOF'

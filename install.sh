@@ -111,9 +111,21 @@ run "systemctl restart zynthian"
 say "Verify (this script does not verify anything itself)"
 cat <<'EOF'
   bash tools/check-prereqs.sh
-  jack_lsp -c | grep -A3 "Pads MIDI"     # exactly one ZynMidiRouter:devN_in
 
-  Do not look for a "Loaded" line in the journal. Zynthian logs it at INFO and
-  ZYNTHIAN_LOG_LEVEL defaults to WARNING, so it is never written on a stock rig
-  whether the driver bound or not. The JACK route above is the real check.
+  # exactly one ZynMidiRouter:devN_in under the Pads port
+  jack_lsp -c | awk '/\(capture\): Pads MIDI/{f=1;next} /^[^ \t]/{f=0} f{print}'
+
+  Two or more means a stale route: restart the daemon, then the UI.
+
+  Do NOT use `grep -A3 "Pads MIDI"`. That form reports a HEALTHY rig as a broken
+  one: it matches the Pads port twice - once as a port, once as another port's
+  connection - and then prints unrelated ports that sit at the left margin, so a
+  working rig shows four devN_in lines under a header saying "want exactly one".
+  Indentation is the whole distinction: a route is indented under its port, a
+  port is not. Measured on the rig 2026-08-15.
+
+  Do not look for a "Loaded" line in the journal either. Zynthian logs it at
+  INFO and ZYNTHIAN_LOG_LEVEL defaults to WARNING, so it is never written on a
+  stock rig whether the driver bound or not. The JACK route above is the real
+  check.
 EOF
