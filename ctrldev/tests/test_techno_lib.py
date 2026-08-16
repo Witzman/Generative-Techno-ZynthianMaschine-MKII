@@ -1223,6 +1223,7 @@ class TestButtonTables(unittest.TestCase):
         self.assertEqual(tl.BUTTONS_STATEFUL[3], "rec")
         self.assertEqual(tl.BUTTONS_STATEFUL[49], "shift")
         self.assertEqual(tl.BUTTONS_STATEFUL[31], "solo")
+        self.assertEqual(tl.BUTTONS_STATEFUL[35], "coarse")
         self.assertEqual(tl.BUTTONS_PRESS[1], "play")
         self.assertEqual(tl.BUTTONS_PRESS[4], "grid")
         self.assertEqual(tl.BUTTONS_PRESS[7], "restart")
@@ -1246,6 +1247,22 @@ class TestButtonTables(unittest.TestCase):
         for cc in (5, 6, 12, 25, 26, 29, 30, 34):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
+
+    def test_coarse_lives_on_tempo_and_carries_both_edges(self):
+        # TEMPO = CC 35, MEASURED 2026-08-16 by aseqdump on the daemon's Pads
+        # port: 127 on press, 0 on release. The daemon's token name said 35
+        # too, but this project has been wrong twice reading a CC off a token
+        # name (DL/DR, and the whole LED index table), so it was captured.
+        # Both edges matter: COARSE is held, so the release IS an event,
+        # which is why it sits in BUTTONS_STATEFUL and not BUTTONS_PRESS.
+        self.assertEqual(tl.BUTTONS_STATEFUL[35], "coarse")
+        self.assertNotIn(35, tl.BUTTONS_PRESS)
+
+    def test_coarse_did_not_land_on_select(self):
+        # SELECT (CC 30) was the design's first home for this and the owner
+        # moved it to TEMPO. SELECT stays free surface.
+        self.assertNotIn(30, tl.BUTTONS_STATEFUL)
+        self.assertNotIn(30, tl.BUTTONS_PRESS)
 
     def test_mod_lives_on_swing_not_auto(self):
         self.assertEqual(tl.BUTTONS_STATEFUL[50], "mod")

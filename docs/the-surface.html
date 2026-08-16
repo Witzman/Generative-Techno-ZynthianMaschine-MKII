@@ -109,12 +109,14 @@
 <tr><td>GRID</td><td>lit always, and <strong>blinking</strong> while the selected channel is on an overridden kind</td></tr>
 <tr><td>NOTE REPEAT</td><td>lit only while the selected channel behaves as a voice</td></tr>
 <tr><td>SWING</td><td>lit while MOD is held or latched</td></tr>
+<tr><td>TEMPO</td><td>lit while it is held, and only then — it does not latch</td></tr>
 <tr><td>Arrows, ERASE, SHIFT</td><td>lit whenever the instrument is running — they always do the same thing</td></tr>
 </tbody></table>
 <hr>
 <h2 id="the-buttons">The buttons, one by one</h2>
 <p><strong>NOTE REPEAT — the register undo.</strong> On a voice, it gives back the previous Turing line: it restores the earlier register, forces RANDOM to 0 so the recovered line holds, and rewrites immediately. It walks back up to four registers, which is roughly two wraps of human reaction time — the window in which a mutation steals a phrase before your hand arrives. It does nothing on a euclidean channel, which is why it is unlit there.</p>
 <p><strong>DUPLICATE does nothing.</strong> The register undo used to live here and moved to NOTE REPEAT, beside the big encoder with the other master controls.</p>
+<p><strong>TEMPO — hold it and every encoder turns twice as fast.</strong> The knobs are deliberately fine, so that a value can be crept up on rather than jumped over. TEMPO is how you cross a range in a hurry: hold it to get near, let go to land. It changes nothing but speed, it does not latch, and it does not set the tempo &mdash; that lives on the touchscreen.</p>
 <p><strong>SHIFT + GRID</strong> switches the selected channel's kind — see <a href="sound-and-presets.html">Sound and presets</a>. A bare GRID press does nothing, deliberately.</p>
 <p><strong>MOD + ERASE + ALL</strong> clears every modulator at once, returning each value to the base you set — see <a href="modulation.html">Modulation</a>.</p>
 <p><strong>The two buttons beside the big encoder</strong> step the selected channel's sound, and which sound depends on the engine: previous or next sample on a drum engine, previous or next preset on a synth engine. <strong>Hold SHIFT and they step the kit instead</strong>, on a drum engine only.</p>

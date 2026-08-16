@@ -327,6 +327,42 @@ class maschine_mk2_lib:
 
         return maschine_mk2_lib.ENC_SWEEP / max(1, values)
 
+    # How much finer an encoder steps by DEFAULT than it used to. Holding
+    # TEMPO (COARSE) divides this back out and gives exactly the old feel.
+    #
+    # It shipped the other way round for an afternoon - a FINE modifier at
+    # x10 over an unchanged default - and the owner played it and asked for
+    # the inversion: the slow feel is the better one to have under the hand
+    # all the time. x10 as the default was rejected in the same sitting on
+    # one number: HITS walks 0-16 in a single encoder sweep under COARSE and
+    # would have taken ten, and moving HITS is the instrument's core live
+    # gesture. x3 was then played and came back "a bit too slow". Two is
+    # where it landed - EVERY ONE of those three numbers was chosen at the
+    # rig, by turning the knob, not by reasoning about it.
+    #
+    # Consequence, accepted knowingly: a plugin float only gets half, where
+    # x10 was what made it comfortable. Surge XT at SP10 step 5 is 777
+    # mostly-float controllers and is the honest re-test of this number.
+    STEP_FACTOR = 2
+
+    @staticmethod
+    def step_units(units, coarse):
+        """Movement worth one step of a parameter.
+
+        `coarse` is TEMPO held. It returns `units` unchanged - the identity,
+        not a float round trip - because the promise is that COARSE gives
+        back precisely the sensitivity that shipped before this existed, so
+        a gesture that took one sweep still takes one.
+
+        COARSE is a ceiling, never an overdrive: nothing on this surface is
+        faster than it was.
+
+        The carry in encoder_steps() is what makes the default work at all:
+        a third of a step per detent would otherwise round to nothing every
+        time and the knob would be dead."""
+
+        return units if coarse else units * maschine_mk2_lib.STEP_FACTOR
+
     @staticmethod
     def display_clear_osc(screen):
         return maschine_mk2_lib.osc_message("/maschine/display/fbclear", [int(screen)])

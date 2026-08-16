@@ -78,6 +78,7 @@
 <li><strong>Press the right arrow beside the display.</strong> Page 2. The names change to the plugin's own — abbreviated to fit, in the order the plugin lists them.</li>
 <li><strong>Keep pressing.</strong> Each page is eight more ports. A large synth runs to several pages.</li>
 <li><strong>Turn any of them.</strong> Each port is driven as a percentage of its own range, so a knob behaves the same whether the port runs 0&ndash;1 or 0&ndash;20000.</li>
+<li><strong>Hold TEMPO and turn the same knob.</strong> Twice as fast. Hold it to get near, let go to land.</li>
 <li><strong>Press CONTROL again</strong> to jump straight back to page 1 rather than paging around.</li>
 </ol>
 <hr>
@@ -85,6 +86,7 @@
 <p><strong>The four synth knobs follow the plugin that is loaded</strong>, not the one the snapshot shipped with. Change a chain's engine from the touchscreen and CUTOFF, RESO, ENV and DECAY rebind to the new plugin's own ports.</p>
 <p><strong>Host plumbing is filtered out.</strong> Plugins publish ports no player can use — freewheel flags, latency reports, enable switches that are not really switches. Those are recognised and dropped, so a generated page is eight things you might actually turn.</p>
 <p><strong>Discreteness is respected.</strong> A port with a handful of positions steps in whole units; a continuous one moves by percentage with the remainder carried, so slow turns still move it.</p>
+<p><strong>TEMPO changes how far a turn goes, never what it sets.</strong> A speed, not a mode: nothing latches, and the same knob reaches the same values either way. It applies to every encoder on the instrument, not only these.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
 <p><strong>A role the plugin has no port for draws dead.</strong> If a loaded synth publishes no resonance, the RESO column greys out and its encoder does nothing at all.</p>

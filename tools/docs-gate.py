@@ -105,9 +105,16 @@ BASELINE = {
     # rig, and a withdrawal has to explain itself or the next reader trusts
     # the retraction no more than the claim.
     "sound-and-presets.html":      (841,  "2026-08-16"),
-    "deep-parameters.html":        (426,  "2026-08-16"),
+    # +58, 2026-08-16: TEMPO. The encoders are now half as sensitive by
+    # default and TEMPO held gives the old speed back, which matters most on
+    # a generated page - a plugin port spreads its whole range across one
+    # knob. Moved deliberately rather than left at 426 with five words of
+    # headroom, which is how a baseline gets nudged to make a run pass.
+    "deep-parameters.html":        (484,  "2026-08-16"),
     "mixing-and-effects.html":     (434,  "2026-08-16"),
-    "the-surface.html":            (775,  "2026-08-16"),
+    # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
+    # the button list. Same reason as above - it was 24 words under.
+    "the-surface.html":            (867,  "2026-08-16"),
     "saving.html":                 (327,  "2026-08-16"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }

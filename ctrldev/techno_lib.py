@@ -510,6 +510,14 @@ class techno_lib:
         49: "shift",
         31: "solo",
         50: "mod",              # SWING. Verified free and unreferenced.
+        # TEMPO. CC 35 MEASURED 2026-08-16 by aseqdump on the daemon's Pads
+        # port - press 127, release 0 - not read off the daemon's token name,
+        # which has been wrong twice (DL/DR, and the LED index table). CC 35
+        # appears nowhere in the G4 capture: TEMPO was simply never pressed
+        # that day, so it was unknown rather than free.
+        # Held, it restores the pre-2026-08-16 encoder feel. Every encoder is
+        # half as sensitive by default now; see lib.STEP_FACTOR.
+        35: "coarse",
     }
 
     # Buttons that act on press only.

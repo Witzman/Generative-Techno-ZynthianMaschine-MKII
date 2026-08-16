@@ -235,6 +235,56 @@ class TestEncoderMovement(unittest.TestCase):
     def test_zero_values_does_not_divide_by_zero(self):
         self.assertEqual(lib.units_per_step(0), 128)
 
+    def test_the_step_factor_is_two(self):
+        # Pinned here and nowhere else. It has moved twice already - x10 as a
+        # FINE modifier, then x3 as the default - each time by playing the
+        # rig, so the tests below derive from the constant and only this one
+        # asserts the number. A change here is a change to the whole feel of
+        # the surface and should be a deliberate line in a diff.
+        self.assertEqual(lib.STEP_FACTOR, 2)
+
+    def test_the_default_steps_finer_by_the_factor(self):
+        self.assertAlmostEqual(lib.step_units(8, False), 8 * lib.STEP_FACTOR)
+        self.assertAlmostEqual(lib.step_units(lib.units_per_step(17), False),
+                               lib.STEP_FACTOR * 128 / 17)
+
+    def test_coarse_is_exactly_the_old_feel(self):
+        # COARSE must return the raw units unchanged - identically, not
+        # "close enough" after a float round trip. The whole promise is that
+        # holding TEMPO gives back the sensitivity that shipped before this,
+        # so a drum gesture that used to take one sweep still takes one.
+        self.assertEqual(lib.step_units(8, True), 8)
+        self.assertEqual(lib.step_units(lib.units_per_step(17), True),
+                         lib.units_per_step(17))
+
+    def test_nothing_is_faster_than_coarse(self):
+        # COARSE is the ceiling, not an overdrive: the default may never
+        # out-run it, or the surface would have got twitchier than it was.
+        for values in (2, 5, 17, 128):
+            units = lib.units_per_step(values)
+            self.assertGreaterEqual(lib.step_units(units, False),
+                                    lib.step_units(units, True))
+
+    def test_the_default_still_reaches_a_step(self):
+        # A fraction of a step per detent is the point; never reaching one at
+        # all would be a dead knob, which is the failure this guards.
+        carry, taken = 0, 0
+        for _ in range(8 * lib.STEP_FACTOR):
+            steps, carry = lib.encoder_steps(carry, 1, lib.step_units(8, False))
+            taken += steps
+        self.assertEqual(taken, 1)
+
+    def test_a_full_sweep_covers_a_fraction_of_the_range(self):
+        # 128 units of travel walks a 17-value parameter end to end under
+        # COARSE (test_a_full_sweep_covers_the_whole_range below); by default
+        # the same travel must move it 17/STEP_FACTOR, truncated.
+        carry, taken = 0, 0
+        units = lib.step_units(lib.units_per_step(17), False)
+        for _ in range(128):
+            steps, carry = lib.encoder_steps(carry, 1, units)
+            taken += steps
+        self.assertEqual(taken, 17 // lib.STEP_FACTOR)
+
     def test_small_movement_takes_no_step(self):
         self.assertEqual(lib.encoder_steps(0, 1, 8)[0], 0)
 

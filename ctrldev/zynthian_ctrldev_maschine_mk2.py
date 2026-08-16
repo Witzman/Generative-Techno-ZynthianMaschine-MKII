@@ -207,6 +207,14 @@ CC_MODE_FILTER = 37      # AUTO
 # does not have to re-run the audit:
 #   GRID 4 · SCENE 25 · PATTERN 26 · PAD MODE 27 · NAVIGATE 34 · MUTE 33
 #   big encoder: turn CC 15 (8 units per detent, wraps 120 -> 0), press CC 12
+# TEMPO is CC 35, measured 2026-08-16 and NOT part of G4 - it was never
+# pressed that day, so it was unknown rather than free. It carries COARSE:
+# every encoder is half as sensitive as it was, and TEMPO held gives the
+# old feel back. See lib.STEP_FACTOR for why two and not ten.
+# The big encoder's CC 15 is emitted from the daemon's "A8" branch
+# (main.rs:911) as a 16-position counter times 8, so it never passes
+# send_encoder_cc and never meets is_encoder_jump. An exact signed delta is
+# ((new - old + 64) % 128) - 64; no threshold is involved. Nothing binds it.
 # There is no VIEW button on the MK2 panel. The daemon defines a "view" token,
 # but the 8-button block is scene, pattern, pad mode, navigate, duplicate,
 # select, solo, mute - confirmed against the hardware by the owner.
@@ -470,6 +478,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.erase_down = False
         self.solo_down = False
         self.solo_mode = False           # latched: the F row means solo
+        # TEMPO held: every encoder returns to the pre-2026-08-16 feel, three
+        # twice the default sensitivity. Hold only, no latch - COARSE + an
+        # encoder is one finger and one hand, so the latch MOD needs (MOD + a
+        # Group button is a two-handed stretch) buys nothing here, and a
+        # latched sensitivity change is a surface that lies about its feel.
+        self.coarse_down = False
         self._down_at = {}
 
     @property
@@ -2048,6 +2062,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _act_shift(self, down):
         self.shift_down = down
 
+    def _act_coarse(self, down):
+        """TEMPO held: every encoder returns to its old, faster feel.
+
+        The carries are dropped on BOTH edges. encoder_steps() bounds a carry
+        by the units-per-step in force when it was written, so a carry banked
+        at the fine default can be twice a coarse step - and the first
+        turn after the press would divide it by the coarse units and take the
+        whole lot at once. Crossing the edge costs a fraction of one step;
+        not crossing it cleanly costs a jump."""
+
+        self.coarse_down = down
+        self.enc_carry.clear()
+        self._render_coarse()
+
     def _act_solo(self, down):
         self._solo_button(down)
 
@@ -2196,7 +2224,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         delta = self._enc_delta(cc_num, cc_val)
         if delta == 0:
             return 0
-        steps, carry = lib.encoder_steps(self.enc_carry.get(cc_num, 0), delta, units)
+        steps, carry = lib.encoder_steps(
+            self.enc_carry.get(cc_num, 0), delta,
+            lib.step_units(units, self.coarse_down))
         self.enc_carry[cc_num] = carry
         return steps
 
@@ -2213,7 +2243,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if delta == 0:
             return 0
         steps, carry = lib.encoder_steps(
-            self.enc_carry.get(cc_num, 0), delta, lib.units_per_step(values))
+            self.enc_carry.get(cc_num, 0), delta,
+            lib.step_units(lib.units_per_step(values), self.coarse_down))
         self.enc_carry[cc_num] = carry
         return steps
 
@@ -4025,6 +4056,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.leds.changed("mod", state):
             self._send_osc(lib.button_osc("swing", state[0], state[1]))
 
+    def _render_coarse(self):
+        """TEMPO lights while COARSE is held.
+
+        Steady only, never blinking: COARSE does not latch, so there is no
+        second state to tell apart. Blinking is the panel's word for LATCHED
+        (GRID on an overridden kind, SWING on a latched MOD) and using it
+        here would invent a meaning that cannot occur.
+
+        LED index 27, measured 2026-08-16 alongside 17-20. Called from both
+        edges of _act_coarse and from nowhere else - there is no periodic
+        writer because there is nothing to animate. Diffed through self.leds
+        like every other LED write."""
+
+        state = (0xFFFFFF, 1.0 if self.coarse_down else 0.0)
+        if self.leds.changed("coarse", state):
+            self._send_osc(lib.button_osc("tempo", state[0], state[1]))
+
     # --- screens -------------------------------------------------------
     #
     # The two screens show what the LEDs cannot: which sample each group
@@ -4273,6 +4321,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_transport()
         self._render_mutes()
         self._render_mod()
+        self._render_coarse()
         self._render_static_leds()
         self._render_pads()
 
