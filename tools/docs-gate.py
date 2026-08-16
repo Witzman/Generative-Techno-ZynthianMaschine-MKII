@@ -41,7 +41,15 @@ BASELINE = {
     # "What you need". The "Where to go" nav summary went with the sidebar
     # rework that replaced it, and the project description moved out.
     "00-start.html":               (18,   "2026-08-15"),
-    "01-fast-installation.html":   (505,  "2026-08-14"),
+    # +156, 2026-08-16: two gaps a real install walks into. Step 1 said to
+    # write the image with Raspberry Pi Imager and stopped - no link, and no
+    # word on the one mistake the reader is set up to make, since we hand them
+    # an .img.xz and Imager wants it still compressed. And step 2 said nothing
+    # about the first boot, which is an initialisation pass minutes long with
+    # an unreliable touchscreen: it reads as a dead Pi, and everything
+    # downstream depends on step 2 succeeding. Owner-raised 2026-08-13, the
+    # oldest open documentation item.
+    "01-fast-installation.html":   (688,  "2026-08-16"),
     # +145: the drum-filter claim was wrong (there is no drum filter) and the
     # controls-follow-the-plugin behaviour was undocumented. 2026-08-14.
     # +78: the project description moved here from the landing page when that
@@ -71,7 +79,12 @@ BASELINE = {
     # for breaks a working rig. Replaced with an awk form scoped to the
     # port's own connections, plus the real output and why it misleads.
     # Measured on the Pi 2026-08-15, not derived. 2026-08-15.
-    "04-manual-installation.html": (2091, "2026-08-15"),
+    # +135, 2026-08-16: the same first-boot warning as section 1, plus a
+    # pointer for flashing. This page opened straight into an ssh command,
+    # so it silently assumed a Pi already running ZynthianOS and never said
+    # where that came from. A pointer, not a copy of section 1's download
+    # block - the image name and its checksum live in one place or they drift.
+    "04-manual-installation.html": (2245, "2026-08-16"),
     "05-internals.html":           (1011, "2026-08-13"),
     # New 2026-08-16: the Modulation tutorial, first of eight. Its content
     # moves from Features and Playing, which keep their copies until they are

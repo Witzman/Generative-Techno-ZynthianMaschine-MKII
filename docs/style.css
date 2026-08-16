@@ -253,6 +253,21 @@ blockquote {
   font-style: italic;
 }
 
+/* --- Warning callout ---
+   Deliberately NOT a blockquote: that rule is muted grey and italic, which
+   reads as an aside. A warning has to read as louder than the body text,
+   not quieter. Amber, upright, its own ground. */
+.warn {
+  border-left: 3px solid #d99a2b;
+  margin: 1.1rem 0;
+  padding: 0.85rem 1.1rem;
+  background: rgba(217,154,43,0.08);
+  border-radius: 2px;
+}
+.warn p { color: #dcd8ce; }
+.warn p:last-child { margin-bottom: 0; }
+.warn strong { color: #f0c274; }
+
 /* --- Lists --- */
 ul, ol { padding-left: 1.5rem; margin: 0.4rem 0 0.9rem; }
 li { margin-bottom: 0.2rem; color: #c2beb4; }

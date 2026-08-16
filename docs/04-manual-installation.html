@@ -66,6 +66,11 @@
 <article>
 <h1 id="4--manual-installation">Manual installation</h1>
 <p>This is what <a href="01-fast-installation.html"><code>bootstrap.sh</code></a> does, step by step, for readers installing by hand or debugging an install that went wrong. Every step states what it does, why it is needed, and how to confirm it worked.</p>
+<p><strong>This page starts from a Pi that already runs ZynthianOS.</strong> Flashing the card is not part of the install — it happens before any of it, and it is the same for both routes: <a href="01-fast-installation.html#1--flash-zynthianos">step 1 of Fast installation</a> has the image, the checksum and how to write it, and Zynthian's own walkthrough is <a href="https://wiki.zynthian.org/index.php/No_Hardware_Build#Get_the_firmware" target="_blank" rel="noopener noreferrer external">Get the firmware</a>.</p>
+<div class="warn">
+<p><strong>The first boot is an initialisation pass, not a normal boot. Give it about half an hour and do not cut the power.</strong></p>
+<p>ZynthianOS resizes its filesystem and configures itself the first time it comes up, and <strong>the touchscreen does not work reliably while that runs</strong> — a blank, frozen or garbled screen here is the install working, not a dead Pi. Nothing below can be reached until it finishes. Upstream describes it as <a href="https://wiki.zynthian.org/index.php/No_Hardware_Build#First_Boot" target="_blank" rel="noopener noreferrer external">First Boot</a>.</p>
+</div>
 <p>Run everything on the Pi, as <code>root</code>, from the repository root. ZynthianOS is administered as root, and root SSH login is enabled out of the box. There is also a <code>zynthian</code> user in the <code>sudo</code> group, but nothing here uses it — <code>bootstrap.sh</code> refuses to run below uid 0, and the steps below assume root:</p>
 <pre><code class="language-bash">ssh root@zynthian.local     # or the IP; password: opensynth, older images raspberry
 git clone https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII

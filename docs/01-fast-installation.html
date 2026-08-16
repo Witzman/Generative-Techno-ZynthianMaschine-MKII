@@ -77,8 +77,14 @@ curl -O https://os.zynthian.org/2026-01-27-zynthianos-oram-2601-stable.img.xz.md
 md5sum -c 2026-01-27-zynthianos-oram-2601-stable.img.xz.md5
 # → 2026-01-27-zynthianos-oram-2601-stable.img.xz: OK</code></pre>
 <p>Use this exact build. Newer <code>vangelis</code> images are a different, still-beta release train and nothing here has been tested on them.</p>
+<p><strong>Give Raspberry Pi Imager the compressed file exactly as it downloaded.</strong> Do not unpack it first — Imager reads <code>.img.xz</code> as it is. In Imager choose <em>Use custom</em>, pick the file, pick the card, write. Zynthian's own walkthrough is <a href="https://wiki.zynthian.org/index.php/No_Hardware_Build#Get_the_firmware" target="_blank" rel="noopener noreferrer external">Get the firmware</a>.</p>
 <hr>
 <h2 id="2--boot-the-pi">2 — Boot the Pi</h2>
+<div class="warn">
+<p><strong>The first boot is an initialisation pass, not a normal boot. Give it about half an hour and do not cut the power.</strong></p>
+<p>ZynthianOS resizes its filesystem and configures itself the first time it comes up, and <strong>the touchscreen does not work reliably while that runs</strong> — a blank, frozen or garbled screen here is the install working, not a dead Pi. Everything below depends on this finishing, so let it finish. Upstream describes it as <a href="https://wiki.zynthian.org/index.php/No_Hardware_Build#First_Boot" target="_blank" rel="noopener noreferrer external">First Boot</a>.</p>
+<p>Budget for the whole job: flashing and first boot about <strong>30 minutes</strong>, the installer in step 5 about <strong>10 minutes</strong>, so <strong>40 minutes</strong> end to end, nearly all of it waiting.</p>
+</div>
 <p>Card in, network cable in, power on. A display is optional — see below. ZynthianOS resizes its filesystem and starts its own UI.</p>
 <hr>
 <h2 id="3--find-it-on-the-network">3 — Find it on the network</h2>
