@@ -96,7 +96,12 @@ BASELINE = {
     "modulation.html":             (934,  "2026-08-16"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
-    "generating-patterns.html":    (750,  "2026-08-16"),
+    # +171, 2026-08-16: a voice now has TWO generators, not one. MELODY and
+    # RHYTHM each get a walkthrough step, and tapping steps in STEP mode
+    # changed meaning on a voice - a tapped rhythm is now the generator's own
+    # state rather than an edit that the next encoder turn wipes. A page that
+    # teaches two machines is longer than one that teaches one.
+    "generating-patterns.html":    (921,  "2026-08-16"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the

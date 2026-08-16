@@ -412,7 +412,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # without re-tagging every field.
         self.GENERATOR_PARAMS = {"hits", "rotate", "div", "length", "chance",
                                  "velo", "swing", "random", "gate", "octave",
-                                 "range", "register", "density"}
+                                 "range", "register", "rhythm", "rhythm_reg"}
         self.MIX_PARAMS = {"level", "reverb", "delay"}
         # Built now, while the Turing mutation is the only writer, so a morph
         # can take it later. Two writers to one pattern is the SIGSEGV by a
@@ -1014,9 +1014,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             notes = self._voice_notes(channel, steps)
             # Which steps sound. A masked step skips addNote entirely, so the
             # write burst - the largest risk in this design - gets smaller at
-            # every density below 100, never larger.
-            mask = tlib.gate_mask(st["register"], st["length"], steps,
-                                  st.get("density", 100) / 100.0)
+            # every step masked off, never larger.
+            # One bit per step from the channel's OWN rhythm register, not a
+            # tap off the pitch register. That separation is the whole point:
+            # the melody can evolve while the steps stay exactly where the
+            # player put them.
+            # .get, not [], deliberately: this runs on the poll thread,
+            # whose handler catches Exception and RETURNS - one KeyError
+            # from a state dict built by an older path would kill the
+            # playhead loop for the rest of the session.
+            mask = tlib.rhythm_mask(st.get("rhythm_reg", 0xFFFF), steps)
             velocity = max(1, min(127, int(st["velo"])))
             played = []
             with self.lock:
@@ -1051,11 +1058,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         rewrites the pattern, so nothing can change it."""
 
         st = self.state[channel]
-        if st["random"] <= 0:
+        melody, rhythm = st["random"], st["rhythm"]
+        if melody <= 0 and rhythm <= 0:
             return
-        tlib.ring_push(st["ring"], st["register"])
-        st["register"] = tlib.mutate(st["register"], st["length"],
-                                     st["random"] / 100.0)
+        steps = lib.step_count(self.div[channel])
+        # Both registers are pushed as a pair, so the undo cannot give back a
+        # melody while keeping a rhythm that moved at the same wrap.
+        tlib.ring_push(st["ring"], (st["register"], st["rhythm_reg"]))
+        if melody > 0:
+            st["register"] = tlib.mutate(st["register"], st["length"],
+                                         melody / 100.0)
+        if rhythm > 0:
+            # Positions survive a full rotation, so this reads as steps
+            # appearing and disappearing - never as the pattern sliding
+            # sideways. Rotating the melody is a separate request and this
+            # must not quietly consume it.
+            st["rhythm_reg"] = tlib.mutate(st["rhythm_reg"], steps,
+                                           rhythm / 100.0)
         self._write_voice_pattern(channel)
 
     def _duplicate(self):
@@ -1071,8 +1090,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         previous = tlib.ring_pop(st["ring"])
         if previous is None:
             return
-        st["register"] = previous
+        # A pair since 2026-08-16, one register per generator. A bare int is a
+        # ring entry from an older snapshot: pitch only, rhythm unchanged.
+        if isinstance(previous, (tuple, list)):
+            st["register"], st["rhythm_reg"] = previous[0], previous[1]
+        else:
+            st["register"] = previous
+        # Both knobs go to LOCK, not just MELODY: undoing while the rhythm is
+        # still evolving would hand back a line whose steps move out from
+        # under it on the next wrap, which is not an undo.
         self.apply(channel, "random", 0)
+        self.apply(channel, "rhythm", 0)
         self._write_voice_pattern(channel)
         with self.lock:
             self._render_display()
@@ -1094,9 +1122,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             with self.lock:
                 self._select_pattern(channel)
                 self.libseq.setSwingAmount((value - 50) / 50.0)
-        elif param == "density" and self.channel_kind(channel) == "voice":
-            # The mask is a function of the register, so nothing about the
-            # register moves here - only which of its steps get written.
+        elif param == "rhythm" and self.channel_kind(channel) == "voice":
+            # Setting the evolve RATE writes nothing new by itself - the
+            # register is untouched - but the pattern is rewritten so a move
+            # off LOCK takes effect on this wrap rather than the next.
             self._write_voice_pattern(channel)
         elif param in ("gate", "octave", "range") and \
                 self.channel_kind(channel) == "voice":
@@ -1759,7 +1788,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "octave": self.state[i]["octave"],
                     "range": self.state[i]["range"],
                     "velo": self._saved_param(i, "velo", self.state[i]["velo"]),
-                    "density": self.state[i]["density"],
+                    "rhythm": self.state[i]["rhythm"],
+                    "rhythm_reg": self.state[i]["rhythm_reg"],
                 }
                 # SP4: keyed on how the channel BEHAVES, not on the table. A
                 # drum chain switched to voice holds register, gate and octave
@@ -1923,9 +1953,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             st = self.state[channel]
             for field in ("register", "length", "random", "gate", "octave",
-                          "range", "velo", "density"):
+                          "range", "velo", "rhythm", "rhythm_reg"):
                 if field in saved:
                     st[field] = saved[field]
+            if "rhythm_reg" not in saved:
+                # A snapshot from before the rhythm generator. Seed its
+                # register from the mask its DENSITY would have produced, so
+                # it sounds IDENTICAL - same function, same inputs, not an
+                # approximation. `rhythm` stays 0: a snapshot made before
+                # rhythm evolution existed was not evolving its rhythm.
+                #
+                # This is the CHANCE/SWING law applied BEFORE it bites. Those
+                # two were defaulted rather than read back, and a channel
+                # saved at chance 0 came back silent while the surface read
+                # 100 - silence with nothing to explain it.
+                st["rhythm_reg"] = tlib.rhythm_seed(
+                    st["register"], st["length"],
+                    lib.step_count(self.div[channel]),
+                    saved.get("density", 100))
             st["ring"] = deque(saved.get("ring", []), maxlen=4)
 
         # Take each voice's division from what the snapshot actually restored,
@@ -2511,7 +2556,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     VERB_RANGES = {
         "velo": (1, 127, None),
         "chance": (0, 100, None),
-        "density": (0, 100, None),
+        "rhythm": (0, 100, None),
         "swing": (50, 75, ENC_UNITS_DISCRETE),
         "level": (0, 100, None),
         "reverb": (0, 100, None),
@@ -3470,15 +3515,47 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_pads()
         self._render_transport()
 
+    def _toggle_rhythm_step(self, step):
+        """A pad tap on a voice: flip that step in the rhythm register.
+
+        The rewrite goes through _write_voice_pattern, which returns early on
+        a player-owned channel - so a REC take is not disturbed by tapping,
+        the same protection both evolve knobs already get.
+
+        The tap is refused past the end of the pattern: a 12-step triplet
+        division must not set bit 13 and have it reappear when the division
+        changes back."""
+
+        channel = self.group
+        st = self.state[channel]
+        steps = lib.step_count(self.div[channel])
+        if not 0 <= step < steps:
+            return
+        st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], step)
+        self._write_voice_pattern(channel)
+        with self.lock:
+            self._render_pads()
+
     def _toggle_step(self, step, velocity=None):
         """A pad tap toggles a step. The tap's own velocity becomes the step's
         velocity, so a hard tap is an accent - free, because the hardware
         already reads it.
 
-        The generator still owns the pattern: the next encoder turn rewrites
-        it and wipes hand-edited steps. That is deliberate - no hidden
-        per-step override state, and no third LED colour to explain."""
+        On a VOICE this flips a bit in the channel's rhythm register and lets
+        the generator rewrite, rather than editing the pattern directly. The
+        steps become the generator's own state, so nothing wipes them and they
+        persist in the snapshot for free - which is what makes "tap steps 1
+        and 9, then evolve only the notes on them" possible at all. Until
+        2026-08-16 this docstring warned that the next encoder turn would wipe
+        a hand edit; on a voice that is no longer true.
 
+        On a DRUM it still edits the pattern. A drum is euclidean, its rhythm
+        is HITS and ROTATE, and the old warning stands there: the generator
+        owns the pattern and the next encoder turn rewrites it."""
+
+        if self.channel_kind(self.group) == "voice":
+            self._toggle_rhythm_step(step)
+            return
         self._select_pattern(self.group)
         steps = self.libseq.getSteps()
         if step >= steps:
@@ -4135,8 +4212,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if self.channel_kind(group) == "voice":
                     # Density 0 writes no notes at all, which is the same
                     # unexplained silence chance 0 produced by another route.
+                    # No bits set in the rhythm register is the new "no
+                    # steps at all" - the same unexplained silence density 0
+                    # produced by another route. A silent channel must say why.
                     silent = (st.get("chance", 100) == 0
-                              or st.get("density", 100) == 0)
+                              or st.get("rhythm_reg", 0xFFFF) == 0)
                 else:
                     silent = self.hits[group] == 0
             out.append((chr(ord("A") + group), tlib.CHANNELS[group][1],

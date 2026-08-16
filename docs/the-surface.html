@@ -114,7 +114,7 @@
 </tbody></table>
 <hr>
 <h2 id="the-buttons">The buttons, one by one</h2>
-<p><strong>NOTE REPEAT — the register undo.</strong> On a voice, it gives back the previous Turing line: it restores the earlier register, forces RANDOM to 0 so the recovered line holds, and rewrites immediately. It walks back up to four registers, which is roughly two wraps of human reaction time — the window in which a mutation steals a phrase before your hand arrives. It does nothing on a euclidean channel, which is why it is unlit there.</p>
+<p><strong>NOTE REPEAT — the register undo.</strong> On a voice, it gives back the previous Turing line: it restores the earlier registers &mdash; both of them, so the rhythm cannot move out from under a line you just recovered &mdash; forces MELODY and RHYTHM to 0 so it holds, and rewrites immediately. It walks back up to four registers, which is roughly two wraps of human reaction time — the window in which a mutation steals a phrase before your hand arrives. It does nothing on a euclidean channel, which is why it is unlit there.</p>
 <p><strong>DUPLICATE does nothing.</strong> The register undo used to live here and moved to NOTE REPEAT, beside the big encoder with the other master controls.</p>
 <p><strong>TEMPO — hold it and every encoder turns twice as fast.</strong> The knobs are deliberately fine, so that a value can be crept up on rather than jumped over. TEMPO is how you cross a range in a hurry: hold it to get near, let go to land. It changes nothing but speed, it does not latch, and it does not set the tempo &mdash; that lives on the touchscreen.</p>
 <p><strong>SHIFT + GRID</strong> switches the selected channel's kind — see <a href="sound-and-presets.html">Sound and presets</a>. A bare GRID press does nothing, deliberately.</p>
@@ -135,7 +135,7 @@
 <table><thead><tr><th>Check</th><th>What it looks like</th></tr></thead><tbody>
 <tr><td>Is the tab dashed?</td><td>the channel is muted, or its generator is silent</td></tr>
 <tr><td>HITS on a drum</td><td>0 hits is a silent channel, not a broken one</td></tr>
-<tr><td>CHANCE on a drum, DENSITY on a voice</td><td>at 0, nothing fires</td></tr>
+<tr><td>CHANCE at 0 on a drum, no steps left on a voice</td><td>nothing fires</td></tr>
 <tr><td>Is something soloed?</td><td>every non-soloed Group button goes dark</td></tr>
 <tr><td>MASTER on the ALL page</td><td>the global level, easy to leave down</td></tr>
 <tr><td>GATE at its floor on a voice</td><td>a slow-attack patch never gets far enough to sound</td></tr>
@@ -144,7 +144,7 @@
 <hr>
 <h2 id="see-also">See also</h2>
 <ul>
-<li><a href="generating-patterns.html">Generating patterns</a> — what HITS, CHANCE and DENSITY actually do</li>
+<li><a href="generating-patterns.html">Generating patterns</a> — what HITS, CHANCE, MELODY and RHYTHM actually do</li>
 <li><a href="playing-and-recording.html">Playing and recording</a> — the pad colours in full</li>
 <li><a href="modulation.html">Modulation</a> — what the <code>~</code> and the dashed bar mean</li>
 </ul>

@@ -718,7 +718,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
           <tr><td>CONTROL · drum</td><td>KIT, SAMPLE, then LEVEL, REVERB, DELAY</td></tr>
           <tr><td>CONTROL · voice</td><td>PRESET, CUTOFF, RESO, ENV, DECAY, LEVEL, REVERB, DELAY</td></tr>
           <tr><td>STEP · drum</td><td>HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, SWING</td></tr>
-          <tr><td>STEP · voice</td><td>LENGTH, DIVIDE, RANDOM, GATE, OCTAVE, RANGE, DENSITY, VELO</td></tr>
+          <tr><td>STEP · voice</td><td>DIVIDE, GATE, MELODY, RHYTHM, LENGTH, OCTAVE, RANGE, VELO</td></tr>
           <tr><td>ALL</td><td>ROOT, SCALE, BPM, MASTER, REVSIZE, REVTYPE, DLYTIME, DLYFBK</td></tr>
           <tr><td>MIXER · FILTER</td><td>one control across all eight channels at once</td></tr>
         </tbody>
@@ -858,7 +858,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       title:'STEP on a voice,<br><em>RANDOM at zero.</em>', tabs:[-1,2],
       cap:'The readout says LOCK rather than a number, because a number could be a coincidence. The shift register is frozen and the line repeats bit for bit.',
       L:[['LENGTH','0016','',8],['DIVIDE','1/8','',5],['RANDOM','LOCK','',0],['GATE','0040','',3]],
-      R:[['OCTAVE','+00','',4],['RANGE','0002','',2],['DENSITY','0075','',6],['VELO','0110','',7]]
+      R:[['OCTAVE','+00','',4],['RANGE','0002','',2],['LENGTH','0008','',6],['VELO','0110','',7]]
     },
     {
       title:'CONTROL<br><em>on a drum channel.</em>', tabs:[0,-1],
@@ -1009,7 +1009,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   /* The factory pattern, at 128 BPM: four-on-the-floor under a backbeat
      snare and clap, eighth-note closed hats, an off-beat open hat that
      never lands on the kick, and a syncopated bass. Lead and pads start
-     at density zero - they are alive and silent, waiting to be turned up. */
+     with no steps left - they are alive and silent, waiting to be turned up. */
   var LANES=[
     {hits:4,rot:0},                            /* x...x...x...x... */
     {hits:2,rot:4},                            /* ....x.......x... */
@@ -1269,8 +1269,8 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       h+='<span>HITS '+pad4(L.hits)+'</span><span>ROTATE '+pad4(L.rot)+'</span>'
        + '<span>DIVIDE 1/16</span><span>LENGTH 0016</span><span class="dead">ratchet ----</span>';
     } else {
-      h+='<span>DENSITY '+pad4(L.hits)+'</span><span>LENGTH 0016</span>'
-       + '<span>RANDOM '+(L.rand===0?'<span class="lock">LOCK</span>':pad4(L.rand))+'</span>'
+      h+='<span>RHYTHM '+pad4(L.hits)+'</span><span>LENGTH 0016</span>'
+       + '<span>MELODY '+(L.rand===0?'<span class="lock">LOCK</span>':pad4(L.rand))+'</span>'
        + '<span>GATE 0040</span>';
     }
     h+='<span>BPM 0128</span>';
@@ -1292,9 +1292,9 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   function sync(){
     var L=LANES[state.ch], voice = CH[state.ch].kind==='voice';
     if(voice){
-      l1.textContent='RANDOM'; k1.min=0; k1.max=100; k1.step=5; k1.value=L.rand;
+      l1.textContent='MELODY'; k1.min=0; k1.max=100; k1.step=5; k1.value=L.rand;
       o1.innerHTML = L.rand===0 ? '<span class="lock">LOCK</span>' : pad4(L.rand);
-      l2.textContent='DENSITY'; k2.min=0; k2.max=16; k2.step=1; k2.value=L.hits;
+      l2.textContent='RHYTHM'; k2.min=0; k2.max=16; k2.step=1; k2.value=L.hits;
       o2.textContent=pad4(L.hits);
     } else {
       l1.textContent='HITS'; k1.min=0; k1.max=16; k1.step=1; k1.value=L.hits;

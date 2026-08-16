@@ -177,7 +177,7 @@ class TestColumnModel(unittest.TestCase):
     def voice_state(self, **over):
         s = dict(preset="SUBB", cutoff=44, reso=71, env=96, decay=30, level=90,
                  reverb=12, delay=64, length=8, div=1, random=35, gate=40,
-                 octave=-1, range=2, swing=58, velo=100, density=100,
+                 octave=-1, range=2, swing=58, velo=100, rhythm=0, rhythm_reg=0xFFFF,
                  pending=set())
         s.update(over)
         return s
@@ -205,12 +205,14 @@ class TestColumnModel(unittest.TestCase):
         self.assertEqual(tl.columns(_desc("STEP", "drum"), "drum", st)[6]["name"],
                          "SWING")
 
-    def test_density_is_column_seven_on_the_voice_step_page(self):
+    def test_rhythm_is_column_four_on_the_voice_step_page(self):
         # The voice traded its SWING column for DENSITY. Swing did not go
         # away: it is the STEP ring's spread page, all eight channels at once.
         st = self.voice_state()
-        self.assertEqual(tl.columns(_desc("STEP", "voice"), "voice", st)[6]["name"],
-                         "DENSITY")
+        # Encoder 4, beside MELODY on 3: the owner put the two generators
+        # side by side at the rig, because they are one idea.
+        self.assertEqual(tl.columns(_desc("STEP", "voice"), "voice", st)[3]["name"],
+                         "RHYTHM")
 
     def test_drum_control_has_three_greyed_columns(self):
         cols = tl.columns(_desc("CONTROL", "drum"), "drum", self.drum_state())
@@ -260,7 +262,8 @@ class TestColumnModel(unittest.TestCase):
                                      f"{page}/{kind}/{c['name']}={c['value']}")
 
     def test_octave_draws_a_bipolar_bar(self):
-        col = tl.columns(_desc("STEP", "voice"), "voice", self.voice_state())[4]
+        # Encoder 6 since the 2026-08-16 reorder, was 5.
+        col = tl.columns(_desc("STEP", "voice"), "voice", self.voice_state())[5]
         self.assertEqual(col["name"], "OCTAVE")
         self.assertEqual(col["bar"], "bi")
 
@@ -322,12 +325,16 @@ class TestPageRings(unittest.TestCase):
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "drum")][0]["verbs"],
             ("hits", "rotate", "div", "length", "velo", "chance", "swing", None))
-        # The voice page is the shipped layout with encoder 7 traded from
-        # swing to density - see the SP1 density addendum.
+        # Reordered by the owner at the rig, 2026-08-16: pattern time first,
+        # then the two generators SIDE BY SIDE, then pitch, then velocity.
+        # Encoder 3 is MELODY on the panel but keeps the key `random`.
+        # THIS ORDER MUST MATCH _columns_inner's list position for position -
+        # verbs decide what an encoder writes, that list what it draws, and
+        # nothing checks they agree at runtime.
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"],
-            ("length", "div", "random", "gate", "octave", "range",
-             "density", "velo"))
+            ("div", "gate", "random", "rhythm", "length", "octave",
+             "range", "velo"))
 
     def test_control_channel_page_verbs_match_the_shipped_layout(self):
         self.assertEqual(
@@ -378,7 +385,7 @@ def _drum_view(**over):
 def _voice_view(**over):
     view = dict(length=8, div=1, random=0, gate=40, octave=0, range=2,
                 swing=50, velo=110, level=19, reverb=0, delay=0, chance=100,
-                density=100, preset="SAW", cutoff=64, reso=32, env=64, decay=40,
+                rhythm=0, rhythm_reg=0xFFFF, preset="SAW", cutoff=64, reso=32, env=64, decay=40,
                 pending=set())
     view.update(over)
     return view
@@ -658,30 +665,33 @@ class TestGateMask(unittest.TestCase):
         self.assertEqual(tl.gate_mask(0b10, 2, 1, 0.0), (False,))
 
 
-class TestDensityPage(unittest.TestCase):
+class TestRhythmPage(unittest.TestCase):
+    """Was TestDensityPage. DENSITY became RHYTHM on 2026-08-16 - same
+    encoder, same spread page, a generator instead of a count."""
 
-    def test_the_voice_step_ring_gains_a_density_page(self):
+    def test_the_voice_step_ring_gains_a_rhythm_page(self):
         ring = tl.PAGE_RINGS[("STEP", "voice")]
         self.assertEqual([d["verb"] for d in ring[1:]],
-                         ["swing", "chance", "density"])
+                         ["swing", "chance", "rhythm"])
 
     def test_the_drum_step_ring_is_unchanged(self):
-        # A drum's density is HITS, on its own page, in its own units.
+        # A drum's rhythm is HITS and ROTATE, already exact. Euclidean
+        # channels get no second generator.
         ring = tl.PAGE_RINGS[("STEP", "drum")]
         self.assertEqual([d["verb"] for d in ring[1:]], ["swing", "chance"])
 
-    def test_density_replaces_swing_on_the_voice_channel_page(self):
+    def test_rhythm_sits_beside_melody_on_the_voice_channel_page(self):
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"],
-            ("length", "div", "random", "gate", "octave", "range",
-             "density", "velo"))
+            ("div", "gate", "random", "rhythm", "length", "octave",
+             "range", "velo"))
 
     def test_the_spread_spec_maps_the_full_range(self):
-        _, to_frac = tl.SPREAD_SPECS["density"]
+        _, to_frac = tl.SPREAD_SPECS["rhythm"]
         self.assertEqual(to_frac(0), 0.0)
         self.assertEqual(to_frac(100), 1.0)
 
-    def test_the_density_spread_page_greys_a_drum(self):
+    def test_the_rhythm_spread_page_greys_a_drum(self):
         desc = tl.PAGE_RINGS[("STEP", "voice")][3]
         views = [("A", "KICK", _drum_view()), ("F", "BASS", _voice_view())]
         views += [("X", "----", _drum_view())] * 6
@@ -689,7 +699,11 @@ class TestDensityPage(unittest.TestCase):
         self.assertTrue(cols[0]["grey"])
         self.assertEqual(cols[0]["value"], "----")
         self.assertFalse(cols[1]["grey"])
-        self.assertEqual(cols[1]["value"], "0100")
+        # 0 is LOCK: a voice starts with its rhythm frozen, where DENSITY
+        # started at 100. The steps it sounds come from the register, which
+        # starts with every bit set - so the SOUND is unchanged, only the
+        # number on this page moves.
+        self.assertEqual(cols[1]["value"], "0000")
 
 
 class TestQuarterDivisionLabel(unittest.TestCase):
@@ -1065,7 +1079,7 @@ class TestDefaultChannelState(unittest.TestCase):
         # the render path - the crash R2 exists to prevent.
         st = tl.default_channel_state("voice")
         for key in ("preset", "cutoff", "reso", "env", "decay", "random",
-                    "gate", "octave", "range", "density", "length",
+                    "gate", "octave", "range", "rhythm", "rhythm_reg", "length",
                     "register", "ring"):
             self.assertIn(key, st, f"voice is missing {key}")
 
@@ -1082,10 +1096,13 @@ class TestDefaultChannelState(unittest.TestCase):
         self.assertEqual(len(b["ring"]), 0)
         self.assertEqual(a["ring"].maxlen, 4)
 
-    def test_a_voice_starts_locked_and_at_full_density(self):
+    def test_a_voice_starts_locked_with_every_step_sounding(self):
         st = tl.default_channel_state("voice")
         self.assertEqual(st["random"], 0)
-        self.assertEqual(st["density"], 100)
+        # Both generators start at LOCK, and the rhythm register starts
+        # with every bit set - the same sound density=100 gave.
+        self.assertEqual(st["rhythm"], 0)
+        self.assertEqual(tl.rhythm_mask(st["rhythm_reg"], 16), tuple([True] * 16))
 
     def test_the_voice_register_keeps_the_shipped_seed(self):
         # The driver seeded this inline before SP4 moved the builder here.
@@ -1293,7 +1310,7 @@ class TestModulatorMaths(unittest.TestCase):
         # The set's whole contract in one assertion: everything in MOD_TIMBRE
         # lands on a mixer strip or a plugin port. If a verb is added here it
         # must be checked against _apply_generator/_write_pattern first.
-        rewrites = {"hits", "rotate", "div", "length", "density", "chance",
+        rewrites = {"hits", "rotate", "div", "length", "rhythm", "chance",
                     "gate", "velo", "octave", "range", "random", "root",
                     "scale", "kit", "preset", "sample"}
         self.assertEqual(tl.MOD_TIMBRE & rewrites, frozenset())
@@ -1311,7 +1328,7 @@ class TestModulatorMaths(unittest.TestCase):
     def test_generation_verbs_are_refused_in_v1(self):
         # HITS/ROTATE/DENSITY/CHANCE are the DRIFT targets. Drift is deferred
         # and blocked on the SP2-ownership rule, so MOD refuses them for now.
-        for verb in ("hits", "rotate", "density", "chance"):
+        for verb in ("hits", "rotate", "rhythm", "chance"):
             self.assertFalse(tl.mod_allowed(verb), verb)
 
     def test_none_is_refused(self):
@@ -1774,3 +1791,151 @@ def _drum_state():
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTwoGenerators(unittest.TestCase):
+    """MELODY and RHYTHM: one Turing register per voice for pitch, one for
+    which steps sound. Replaces DENSITY, which set how many steps sounded but
+    never which - the owner's actual need was to tap steps 1 and 9 and evolve
+    only the notes on them."""
+
+    def test_the_rhythm_register_is_one_bit_per_step(self):
+        # Bit N set means step N sounds. 16 bits covers every division:
+        # step_count() is 16 straight, 12 triplet, and never more.
+        self.assertEqual(tl.rhythm_mask(0b0000001000000010, 16),
+                         tuple(i in (1, 9) for i in range(16)))
+
+    def test_a_shorter_pattern_reads_only_its_own_bits(self):
+        # A triplet division has 12 steps; bits 12-15 must not leak in.
+        self.assertEqual(len(tl.rhythm_mask(0xFFFF, 12)), 12)
+        self.assertTrue(all(tl.rhythm_mask(0xFFFF, 12)))
+
+    def test_no_bits_set_is_a_silent_channel(self):
+        self.assertEqual(tl.rhythm_mask(0, 16), tuple([False] * 16))
+
+    def test_locking_rhythm_freezes_the_steps_exactly(self):
+        # mutate() at chance 0 is the identity over a full rotation. That is
+        # what makes LOCK exact rather than approximate, and it has to hold for
+        # the rhythm register the same way it holds for the pitch one.
+        reg = 0b0000001000000010
+        self.assertEqual(tl.mutate(reg, 16, 0.0), reg)
+
+    def test_evolving_rhythm_keeps_step_positions_and_flips_bits(self):
+        # The knob must read as "steps appear and disappear", NOT as a
+        # rotation - rotating the melody is a separate request and this must
+        # not quietly consume it. A full rotation returns to the same
+        # positions, so any difference is a flipped bit, never a shift.
+        reg = 0b0000001000000010
+        flipped = tl.mutate(reg, 16, 1.0, rng=lambda: 0.0)   # flip every time
+        self.assertNotEqual(flipped, reg)
+        rotations = {tl.rotate(reg, 16, n) for n in range(16)}
+        self.assertNotIn(flipped, rotations - {reg})
+
+    def test_toggling_a_step_flips_exactly_one_bit(self):
+        self.assertEqual(tl.rhythm_toggle(0, 3), 0b1000)
+        self.assertEqual(tl.rhythm_toggle(0b1000, 3), 0)
+
+    def test_toggling_leaves_every_other_step_alone(self):
+        reg = 0b0000001000000010
+        for step in range(16):
+            out = tl.rhythm_toggle(reg, step)
+            self.assertEqual(out ^ reg, 1 << step, f"step {step}")
+
+
+class TestDensityMigration(unittest.TestCase):
+    """A snapshot saved before this change has `density` and no rhythm
+    register. It must sound IDENTICAL after the change - the CHANCE/SWING law
+    applied before it bites, not after."""
+
+    def test_seeding_reproduces_the_old_mask_exactly(self):
+        for density in (0, 25, 50, 75, 100):
+            for reg in (0b10110011, 0b11111111, 0b00000001):
+                old = tl.gate_mask(reg, 8, 16, density / 100.0)
+                seeded = tl.rhythm_seed(reg, 8, 16, density)
+                self.assertEqual(tl.rhythm_mask(seeded, 16), old,
+                                 f"register {reg:08b} density {density}")
+
+    def test_full_density_seeds_every_step(self):
+        self.assertEqual(tl.rhythm_mask(tl.rhythm_seed(0b10110011, 8, 16, 100), 16),
+                         tuple([True] * 16))
+
+    def test_zero_density_seeds_silence(self):
+        self.assertEqual(tl.rhythm_seed(0b10110011, 8, 16, 0), 0)
+
+    def test_a_new_voice_starts_with_every_step_sounding_and_locked(self):
+        # Exactly what density=100 and random=0 gave before.
+        st = tl.default_channel_state("voice")
+        self.assertEqual(tl.rhythm_mask(st["rhythm_reg"], 16), tuple([True] * 16))
+        self.assertEqual(st["rhythm"], 0)
+        self.assertEqual(st["random"], 0)
+
+    def test_density_is_gone_from_a_fresh_voice(self):
+        self.assertNotIn("density", tl.default_channel_state("voice"))
+
+
+class TestGeneratorSurface(unittest.TestCase):
+    """The two generators must read as one idea on the panel: MELODY on
+    encoder 3, RHYTHM on encoder 7, each with LOCK at zero."""
+
+    def test_the_voice_step_page_names_both_generators(self):
+        verbs = tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"]
+        self.assertEqual(verbs[2], "random")     # MELODY keeps its state key
+        self.assertEqual(verbs[3], "rhythm")     # right beside it
+        self.assertNotIn("density", verbs)
+
+    def test_the_columns_are_labelled_melody_and_rhythm(self):
+        desc = tl.PAGE_RINGS[("STEP", "voice")][0]
+        cols = tl.columns(desc, "voice", _voice_view())
+        self.assertEqual(cols[2]["name"], "MELODY")
+        self.assertEqual(cols[3]["name"], "RHYTHM")
+
+    def test_the_density_spread_page_became_a_rhythm_page(self):
+        verbs = [d.get("verb") for d in tl.PAGE_RINGS[("STEP", "voice")][1:]]
+        self.assertEqual(verbs, ["swing", "chance", "rhythm"])
+        self.assertIn("rhythm", tl.SPREAD_SPECS)
+        self.assertNotIn("density", tl.SPREAD_SPECS)
+
+    def test_rhythm_hands_the_pattern_back_only_when_moved_off_lock(self):
+        # Same rule RANDOM already has: turning it DOWN to LOCK must not be
+        # destructive, or the one gesture that says "stop changing my pattern"
+        # would destroy it.
+        self.assertTrue(tl.hands_back("voice", "rhythm", 40))
+        self.assertFalse(tl.hands_back("voice", "rhythm", 0))
+
+    def test_rhythm_is_not_modulatable(self):
+        # It rewrites the whole pattern through _apply_generator, which is
+        # EXACTLY the velo defect that destroyed a recorded take every 200ms
+        # unattended. MOD_TIMBRE is an allow-list so this is refused by
+        # default - asserted anyway, because that defect reached the hardware
+        # gate through a wrong deny list.
+        self.assertFalse(tl.mod_allowed("rhythm"))
+        self.assertFalse(tl.mod_allowed("random"))
+
+
+class TestVerbColumnAlignment(unittest.TestCase):
+    """The verbs tuple decides which encoder WRITES what; _columns_inner's
+    list decides what each encoder DRAWS. Nothing checks at runtime that they
+    agree, so a reorder of one without the other would silently point a knob
+    at a parameter its own label denies. This is that check."""
+
+    # verb -> the name its column must draw. Deliberately explicit: `random`
+    # draws MELODY and `div` draws DIVIDE, so a mechanical comparison would
+    # not catch a swap.
+    VOICE_STEP = (
+        ("div", "DIVIDE"), ("gate", "GATE"), ("random", "MELODY"),
+        ("rhythm", "RHYTHM"), ("length", "LENGTH"), ("octave", "OCTAVE"),
+        ("range", "RANGE"), ("velo", "VELO"),
+    )
+
+    def test_every_voice_step_column_draws_its_own_verb(self):
+        desc = tl.PAGE_RINGS[("STEP", "voice")][0]
+        cols = tl.columns(desc, "voice", _voice_view())
+        for index, (verb, name) in enumerate(self.VOICE_STEP):
+            self.assertEqual(desc["verbs"][index], verb, f"verb at {index}")
+            self.assertEqual(cols[index]["name"], name, f"name at {index}")
+
+    def test_the_two_generators_are_adjacent(self):
+        # The owner's reason for the layout: they are one idea, so the hand
+        # finds them together. A reorder that separates them is a regression.
+        verbs = tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"]
+        self.assertEqual(abs(verbs.index("random") - verbs.index("rhythm")), 1)

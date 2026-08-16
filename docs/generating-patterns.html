@@ -73,7 +73,7 @@
 <p>There are two generators, and every channel runs one of them:</p>
 <ul>
 <li><strong>Euclidean</strong>, on the five drum channels. Given a step count and a hit count, hits spread as evenly as the grid allows, then rotate.</li>
-<li><strong>A Turing machine</strong>, on the three voices. Each owns a shift register, clocked once per pass and mutated with probability RANDOM; the register's value is read as pitch.</li>
+<li><strong>Two Turing machines</strong>, on each of the three voices. One shift register is read as pitch, the other as which steps sound. Each is clocked once per pass and mutated by its own knob &mdash; MELODY and RHYTHM &mdash; so a melody can evolve over a rhythm that stays exactly where you put it.</li>
 </ul>
 <p>Which generator a channel runs is not fixed to its engine — see <a href="sound-and-presets.html">Sound and presets</a>.</p>
 <hr>
@@ -88,9 +88,11 @@
 <p><strong>The voices.</strong></p>
 <ol start="5">
 <li><strong>Press Group F</strong> for BASS, still in STEP.</li>
-<li><strong>Turn encoder 3 (RANDOM) to about 30.</strong> The bassline starts fishing: every pass mutates one bit, so the line keeps turning into a neighbouring line.</li>
-<li><strong>When a phrase goes past that you want, snap RANDOM back to 0.</strong> The cell reads <code>LOCK</code> and that line is frozen, bit for bit, until you move the knob again.</li>
-<li><strong>Missed it?</strong> Press <strong>NOTE REPEAT</strong>. It gives the previous line back and sets RANDOM to 0 so it holds.</li>
+<li><strong>Turn encoder 3 (MELODY) to about 30.</strong> The bassline starts fishing: every pass mutates one bit, so the line keeps turning into a neighbouring line.</li>
+<li><strong>When a phrase goes past that you want, snap MELODY back to 0.</strong> The cell reads <code>LOCK</code> and that line is frozen, bit for bit, until you move the knob again.</li>
+<li><strong>Missed it?</strong> Press <strong>NOTE REPEAT</strong>. It gives the previous line back and sets both knobs to 0 so it holds.</li>
+<li><strong>Now put MELODY at LOCK and turn encoder 4 (RHYTHM) to about 30.</strong> The opposite: the notes hold still while steps appear and disappear underneath them.</li>
+<li><strong>Both at LOCK, then tap pads in STEP mode.</strong> Each tap turns a step on or off, and it stays &mdash; tap step 1 and step 9, then turn MELODY up, and you have two notes evolving on the beat you chose.</li>
 </ol>
 <figure class="lcdfig">
   <div class="lcd">
@@ -109,8 +111,9 @@
 <hr>
 <h2 id="how-it-works">How it works</h2>
 <p><strong>The drum STEP page</strong> is HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, SWING. HITS and ROTATE are the two you play with; the rest set the frame. CHANCE is how often a hit actually fires — drop it and the pattern starts breathing rather than repeating.</p>
-<p><strong>The voice STEP page</strong> is LENGTH, DIVIDE, RANDOM, GATE, OCTAVE, RANGE, DENSITY, VELO. LENGTH here is the register's length in bits, not a bar count. GATE is how long each note holds — up to eight steps, so a pad can be a drone. DENSITY is how many steps sound at all: drop it and the line thins without changing its notes. The register's value is quantised to ROOT and SCALE from the ALL page, then placed by OCTAVE and RANGE.</p>
-<p><strong>RANDOM is the instrument's main gesture.</strong> Set it to 20&ndash;40 and the voice fishes. Snap it to 0 the moment you hear something worth keeping. The cell reads <code>LOCK</code> rather than a number, deliberately: a number could be a coincidence, while <code>LOCK</code> means nothing will rewrite that pattern at all.</p>
+<p><strong>The voice STEP page</strong> is DIVIDE, GATE, MELODY, RHYTHM, LENGTH, OCTAVE, RANGE, VELO. The two generators sit side by side because they are one idea. LENGTH here is the pitch register&rsquo;s length in bits, not a bar count. GATE is how long each note holds &mdash; up to eight steps, so a pad can be a drone. The pitch value is quantised to ROOT and SCALE from the ALL page, then placed by OCTAVE and RANGE.</p>
+<p><strong>MELODY is the instrument&rsquo;s main gesture.</strong> Set it to 20&ndash;40 and the voice fishes. Snap it to 0 the moment you hear something worth keeping. The cell reads <code>LOCK</code> rather than a number, deliberately: a number could be a coincidence, while <code>LOCK</code> means nothing will rewrite that pattern at all.</p>
+<p><strong>RHYTHM is the same gesture applied to the beat.</strong> Same range, same <code>LOCK</code> at zero, same freeze. Which steps sound is its own register, one bit per step, so it is independent of the notes: either can run while the other holds. A pad tap in STEP mode flips one of those bits, which is why a rhythm you tap in by hand survives everything &mdash; it is not an edit sitting on top of the generator, it <em>is</em> the generator.</p>
 <p><strong>Structure lands on the bar; timbre lands instantly.</strong> A change to what the pattern <em>is</em> waits for the channel's own next wrap, so the groove never jumps under your hand. DIVIDE and LENGTH show in angle brackets — <code>&gt;1/8&lt;</code> — while a change is waiting to take.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>

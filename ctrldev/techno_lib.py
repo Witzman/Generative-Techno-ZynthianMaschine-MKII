@@ -88,12 +88,72 @@ class techno_lib:
         The N lowest gate values sound, N = round(density * steps), ties broken
         by step index. Rank rather than threshold because the requirement is a
         count: density 1.0 is every step and 0.0 is none, exactly, and lowering
-        density can only remove a step - never move one."""
+        density can only remove a step - never move one.
+
+        RETAINED FOR MIGRATION ONLY since 2026-08-16. DENSITY is gone from the
+        surface and the writer now reads a rhythm register, but rhythm_seed()
+        calls this to reproduce a pre-change snapshot's mask exactly. Deleting
+        it would silently change how every old snapshot sounds."""
         count = int(round(max(0.0, min(1.0, density)) * steps))
         values = techno_lib.gate_values(register, length, steps)
         order = sorted(range(steps), key=lambda i: (values[i], i))
         chosen = set(order[:count])
         return tuple(i in chosen for i in range(steps))
+
+    # ------------------------------------------------------- rhythm generator
+    #
+    # A voice has TWO Turing registers: `register` drives pitch, `rhythm_reg`
+    # drives which steps sound. One bit per step, and 16 bits covers every
+    # division because step_count() is 16 straight, 12 triplet, and never more.
+    #
+    # This replaces DENSITY, which set how many steps sounded but never WHICH.
+    # The need it could not meet: tap steps 1 and 9, then evolve only the notes
+    # on them. Rhythm and pitch used to be one register read at two points
+    # (gate_values), so mutating for a new melody moved the rhythm with it.
+    #
+    # gate_values' docstring defended that coupling: "they cannot be [
+    # independent], or the mask would stop being a function of the register and
+    # LOCK would no longer freeze the rests". THAT DEFENCE SURVIVES. With two
+    # registers the mask is still a function of a register - just not the same
+    # one. Being register-derived was the requirement; sharing one was not.
+
+    @staticmethod
+    def rhythm_mask(rhythm_reg, steps):
+        """Which steps sound: bit N of the rhythm register is step N.
+
+        Only the pattern's own bits are read, so a 12-step triplet division
+        cannot pick up bits 12-15 left behind by a 16-step one."""
+
+        return tuple(bool(rhythm_reg >> i & 1) for i in range(steps))
+
+    @staticmethod
+    def rhythm_toggle(rhythm_reg, step):
+        """Flip one step on or off, leaving every other step alone.
+
+        A pad tap in STEP mode lands here instead of writing a note into the
+        pattern. That is what makes a hand-chosen rhythm survive: the steps
+        become the generator's own state rather than an edit sitting on top of
+        it, so nothing wipes them and they persist in the snapshot for free.
+        Before this, _toggle_step's own docstring warned that the next encoder
+        turn would wipe them."""
+
+        return rhythm_reg ^ (1 << step)
+
+    @staticmethod
+    def rhythm_seed(register, length, steps, density):
+        """The rhythm register a pre-2026-08-16 snapshot should load with.
+
+        Exact, not approximate: it runs the same gate_mask() on the same
+        inputs the old writer used, so a snapshot saved before the rhythm
+        generator existed sounds IDENTICAL after it. This is the CHANCE/SWING
+        law applied before it bites rather than after - a mirrored value that
+        reads back absent is silence, or motion, with nothing explaining it.
+
+        gate_mask() is kept alive for exactly this reason and must not be
+        deleted with DENSITY."""
+
+        mask = techno_lib.gate_mask(register, length, steps, density / 100.0)
+        return sum(1 << i for i, on in enumerate(mask) if on)
 
     @staticmethod
     def note_duration(gate, step, steps):
@@ -240,7 +300,10 @@ class techno_lib:
     # register and it regenerates the whole line.
     HANDBACK_VERBS = {
         "drum": frozenset(("hits", "rotate", "div")),
-        "voice": frozenset(("length", "div", "random")),
+        # `rhythm` joins the voice set: it rewrites the whole pattern, so it
+        # takes it back from a player the same way `random` does - and under
+        # the same exception, moving DOWN to LOCK is not destructive.
+        "voice": frozenset(("length", "div", "random", "rhythm")),
     }
 
     @staticmethod
@@ -253,7 +316,7 @@ class techno_lib:
         recording."""
         if verb not in techno_lib.HANDBACK_VERBS.get(kind, frozenset()):
             return False
-        if verb == "random":
+        if verb in ("random", "rhythm"):
             return (value or 0) > 0
         return True
 
@@ -278,10 +341,16 @@ class techno_lib:
             state.update(
                 preset="----", cutoff=64, reso=32, env=64, decay=40,
                 random=0, gate=40, octave=0, range=2,
-                # 100 is every step, which is what the voices did before
-                # density existed - a snapshot without the key restores to it
-                # and sounds unchanged.
-                density=100,
+                # The rhythm generator. `rhythm` is its evolve knob, 0 = LOCK,
+                # exactly like `random` is the melody generator's. `rhythm_reg`
+                # is its register: one bit per step, all 16 set, which is every
+                # step sounding - precisely what density=100 gave before, so a
+                # new voice is unchanged.
+                #
+                # `random` keeps its key although the panel now reads MELODY:
+                # renaming it would move the data in every saved snapshot for a
+                # cosmetic gain.
+                rhythm=0, rhythm_reg=0xFFFF,
                 # LENGTH on a voice is the shift register's length in bits,
                 # not the pattern's length in beats - a different parameter
                 # wearing the same word, so it lives in the dict and never in
@@ -676,7 +745,7 @@ class techno_lib:
         "reverb": ("uni", lambda v: v / 100.0),
         "delay":  ("uni", lambda v: v / 100.0),
         "chance": ("uni", lambda v: v / 100.0),
-        "density": ("uni", lambda v: v / 100.0),
+        "rhythm": ("uni", lambda v: v / 100.0),
         "swing":  ("uni", lambda v: (v - 50) / 25.0),
         "cutoff": ("uni", lambda v: v / 127.0),
         "reso":   ("uni", lambda v: v / 127.0),
@@ -1154,18 +1223,34 @@ class techno_lib:
                 c("SWING", n(state["swing"]), "uni", (state["swing"] - 50) / 25.0),
                 dead("ratchet"),
             ]
+        # THIS LIST'S ORDER MUST MATCH PAGE_RINGS[("STEP", "voice")][0]["verbs"]
+        # position for position - the verbs tuple decides which encoder writes
+        # what, this decides what each encoder DRAWS, and nothing checks that
+        # they agree at runtime. Reorder one and you reorder the other.
+        #
+        # Owner's layout, 2026-08-16, chosen at the rig: pattern time first
+        # (DIVIDE, GATE), then THE TWO GENERATORS SIDE BY SIDE (MELODY,
+        # RHYTHM) because they are one idea and the hand should find them
+        # together, then pitch (LENGTH, OCTAVE, RANGE) and VELO.
         return [
-            c("LENGTH", n(state["length"]), "uni", state["length"] / 16.0,
-              pending="length" in p),
             c("DIVIDE", techno_lib.DIVISION_LABELS[state["div"]], "seg",
               (state["div"], len(techno_lib.DIVISION_LABELS)), pending="div" in p),
-            # LOCK is a word, not a number that could be a coincidence
-            c("RANDOM", "LOCK" if state["random"] <= 0 else n(state["random"]), "uni",
-              state["random"] / 100.0),
             c("GATE", n(state["gate"]), "uni", state["gate"] / techno_lib.GATE_MAX),
+            # LOCK is a word, not a number that could be a coincidence.
+            # MELODY, not RANDOM: there are two generators now and "random"
+            # never said random WHAT. The state key stays `random` - renaming
+            # it would move the data in every saved snapshot for a cosmetic
+            # gain.
+            c("MELODY", "LOCK" if state["random"] <= 0 else n(state["random"]), "uni",
+              state["random"] / 100.0),
+            # The rhythm generator, reading LOCK at zero exactly as MELODY
+            # does - one grammar for both, because they are one idea.
+            c("RHYTHM", "LOCK" if state["rhythm"] <= 0 else n(state["rhythm"]), "uni",
+              state["rhythm"] / 100.0),
+            c("LENGTH", n(state["length"]), "uni", state["length"] / 16.0,
+              pending="length" in p),
             c("OCTAVE", f"{state['octave']:+03d}", "bi", (state["octave"] + 2) / 4.0),
             c("RANGE", str(state["range"]), "seg", (state["range"] - 1, 4)),
-            c("DENSITY", n(state["density"]), "uni", state["density"] / 100.0),
             c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
         ]
 
@@ -1196,11 +1281,11 @@ techno_lib.PAGE_RINGS = {
     # below for every channel at once, which is where it is wanted in a jam.
     ("STEP", "voice"): (
         _d(techno_lib.SHAPE_CHANNEL, "STEP",
-           verbs=("length", "div", "random", "gate", "octave", "range",
-                  "density", "velo")),
+           verbs=("div", "gate", "random", "rhythm", "length", "octave",
+                  "range", "velo")),
         _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
         _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
-        _d(techno_lib.SHAPE_SPREAD, "DENSITY", verb="density"),
+        _d(techno_lib.SHAPE_SPREAD, "RHYTHM", verb="rhythm"),
     ),
     ("ALL", None): (
         _d(techno_lib.SHAPE_GLOBAL, "GLOBAL",
