@@ -445,6 +445,17 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 }
 
 /* --- modulation field ------------------------------------------------ */
+/* ---------- MOD: text + facts left, field right (mirrors .machine) ---------- */
+.modlay{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2rem;
+  align-items:start;margin-top:1.2rem;
+}
+@media (max-width:900px){ .modlay{grid-template-columns:1fr;gap:1.5rem} }
+.modlay > :first-child > p:first-child{margin-top:0}
+/* half-width column shrinks the field to ~110px tall, so the absolutely
+   positioned caption needs its own strip instead of sitting on the waves */
+.modlay .modfield{margin:0;padding-bottom:26px}
+
 .modfield{position:relative;margin:26px 0 6px;border:1px solid var(--hairline);
   border-radius:12px;overflow:hidden;background:
   radial-gradient(120% 140% at 50% 0%,rgba(46,127,232,.10),transparent 62%),#101013}
@@ -471,9 +482,6 @@ footer{border-top:1px solid var(--hairline);background:#101114;padding:2.6rem 0 
 .modfield figcaption{position:absolute;left:12px;bottom:9px;margin:0;
   font:11px/1.4 var(--mono);letter-spacing:.06em;color:var(--ink-2);
   text-transform:uppercase}
-.modnote{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0 0;padding:0;
-  list-style:none;font:12px/1.5 var(--mono);color:var(--ink-2)}
-.modnote li::before{content:"— ";opacity:.6}
 p.more{margin:14px 0 0;font:13px/1.6 var(--mono);letter-spacing:.04em}
 p.more a{color:var(--ch-f);text-decoration:none;border-bottom:1px solid rgba(46,127,232,.4)}
 p.more a:hover{border-bottom-color:var(--ch-f)}
@@ -661,12 +669,29 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       <span class="sec-mark"><span class="v">MOD</span></span>
       <h2>Nothing has to stay still,<br><em>and it is still moving tomorrow</em></h2>
     </div>
-    <p>
-      Hold <strong>MOD</strong> and every encoder stops setting a value and starts setting <em>how that
-      value moves</em>. Not a mode, not a page — the same knobs you already know, given a second
-      dimension where they sit. Cutoff, resonance, level, the sends, and every port a plugin
-      publishes, down to a synth's fortieth parameter.
-    </p>
+    <div class="modlay">
+      <div>
+        <p>
+          Hold <strong>MOD</strong> and every encoder stops setting a value and starts setting <em>how that
+          value moves</em>. Not a mode, not a page — the same knobs you already know, given a second
+          dimension where they sit. Cutoff, resonance, level, the sends, and every port a plugin
+          publishes, down to a synth's fortieth parameter.
+        </p>
+        <p>
+          Each one runs on its own clock, so binding eight across the mixer makes the row breathe
+          rather than pump. They are written into the snapshot with their depth, rate, shape and
+          position — load the set tomorrow and they are still running, from the value you set rather
+          than wherever the sweep happened to stop.
+        </p>
+        <ul class="facts">
+          <li><span class="k">Four shapes</span><span class="v">Triangle, ramp, square and sample-and-hold.</span></li>
+          <li><span class="k">Locked to the bar</span><span class="v">Twelve rates, sixteen bars down to a sixteenth, so nothing drifts out of time with the pattern.</span></li>
+          <li><span class="k">Takes are safe</span><span class="v">It refuses any verb that rewrites the pattern, so a recorded overdub cannot be modulated away.</span></li>
+          <li><span class="k">Costs nothing</span><span class="v">No plugin instances, and nothing is created or torn down while you play.</span></li>
+        </ul>
+        <p class="more"><a href="modulation.html">How it works &rarr;</a> &nbsp;·&nbsp;
+           <a href="modulation.html#try-it">Playing it &rarr;</a></p>
+      </div>
 
     <figure class="modfield">
       <svg viewBox="0 0 1200 260" role="img" aria-label="Eight modulators drifting at different rates and phases">
@@ -682,21 +707,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       </svg>
       <figcaption>eight modulators · coprime rates · phase from the moment you bind</figcaption>
     </figure>
-
-    <p>
-      Each one runs on its own clock, so binding eight across the mixer makes the row breathe
-      rather than pump. They are written into the snapshot with their depth, rate, shape and
-      position — load the set tomorrow and they are still running, from the value you set rather
-      than wherever the sweep happened to stop.
-    </p>
-    <ul class="modnote">
-      <li>four shapes: triangle, ramp, square, sample-and-hold</li>
-      <li>rates locked to the bar, sixteen bars down to a sixteenth</li>
-      <li>it refuses anything that rewrites the pattern, so a recorded take is safe</li>
-      <li>costs no plugin instances and nothing is created while you play</li>
-    </ul>
-    <p class="more"><a href="modulation.html">How it works &rarr;</a> &nbsp;·&nbsp;
-       <a href="modulation.html#try-it">Playing it &rarr;</a></p>
+    </div>
   </div>
 </section>
 
