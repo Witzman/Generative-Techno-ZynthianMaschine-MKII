@@ -105,7 +105,14 @@ main() {
             echo "  [dry-run] install -m 0644 $PACK_DIR/*.zss $SNAP_DIR/"
         else
             install -m 0644 "$PACK_DIR"/*.zss "$SNAP_DIR/"
-            echo "  placed $(find "$SNAP_DIR" -name '0[3-8][0-9]-*.zss' | wc -l) of $PACK_N"
+            # Counted by name against the pack itself, not by a 03x-08x glob:
+            # the reader may have their own snapshots in that number range and
+            # a count that includes them reports a success that did not happen.
+            PLACED=0
+            for f in "$PACK_DIR"/*.zss; do
+                [ -f "$SNAP_DIR/$(basename "$f")" ] && PLACED=$((PLACED + 1))
+            done
+            echo "  placed $PLACED of $PACK_N"
         fi
     else
         echo "== No genre pack in this checkout - skipping (the instrument is complete without it)"
