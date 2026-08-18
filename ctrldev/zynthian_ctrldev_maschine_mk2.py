@@ -304,6 +304,7 @@ PLAYHEAD_POLL_S = 0.033        # ~30 Hz, 4x oversampled at 120 BPM
 # volume moved on the touchscreen is invisible until something asks. Only the
 # led_cache diff reaches the wire, so a quiet poll costs nothing.
 VOLUME_POLL_TICKS = 6          # every ~200ms
+POLL_ERROR_TICKS = 900         # ~30s between repeats of one poll error
 
 # Set by the daemon's alias helper: uid "virtual:maschine.rs/Maschine MK2 Pads",
 # and Zynthian's device id is everything after the first '/'.
@@ -361,6 +362,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.enc_carry = {}
         self.osc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.stopping = Event()
+        # Rate limiting for _playhead_loop's error log. The loop no longer
+        # dies on a raised exception, so a persistent fault would otherwise
+        # write 30 journal lines a second.
+        self._poll_error = None
+        self._poll_error_tick = 0
+        self._poll_error_count = 0
         self.playhead_thread = None
         # libzynseq is not thread-safe and this driver touches it from three
         # threads: the MIDI handler, the zynsigman queued signal handler and
@@ -1918,14 +1925,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             restored = {}
             for name, value in sets.items():
-                if isinstance(value, dict):
-                    value = dict(value)
-                    # pending is rebuilt empty rather than restored: it holds
-                    # parameters waiting for the next bar, and a snapshot load
-                    # has no bar to wait for.
-                    value["pending"] = set()
-                    if "ring" in value:
-                        value["ring"] = deque(value["ring"], maxlen=4)
+                if isinstance(value, dict) and name in tlib.KINDS:
+                    # NOT a verbatim copy. A stash written before the rhythm
+                    # generator is short `rhythm` and `rhythm_reg`, and
+                    # _toggle_kind pulls it straight into self.state, where
+                    # columns() indexes both directly. The KeyError lands on
+                    # the playhead poll thread and used to end it - every
+                    # generator stopped for the rest of the session with
+                    # nothing on the surface saying so, measured 2026-08-18.
+                    #
+                    # The `voices` block below has always upgraded its dicts.
+                    # This one restored them as they were saved, so the
+                    # ALTERNATE kind kept whatever key set the snapshot was
+                    # written with until a SHIFT+GRID pulled it into service.
+                    #
+                    # self.div is the outgoing snapshot's division here -
+                    # _derive_params runs further down - which is the same
+                    # approximation the `voices` block makes for the same
+                    # seed. It decides a stashed rhythm register for a kind
+                    # nobody is playing; _toggle_kind rewrites the pattern the
+                    # moment it becomes real.
+                    value = tlib.upgrade_state(
+                        name, value, lib.step_count(self.div[channel]))
                 restored[name] = value
             self.stash[channel] = restored
 
@@ -3881,8 +3902,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # screens are polled on the same tick.
                         self._render_display()
             except Exception as e:
-                logging.error(f"Maschine playhead poll failed: {e}")
-                return
+                # NEVER return. Everything that makes the instrument evolve
+                # lives in this loop - the Turing rewrite at every wrap, the
+                # modulators, the pending structure changes, the kit and
+                # preset commits - so ending it stops the generator dead while
+                # the pads, the encoders and the display all keep working off
+                # the MIDI and zynsigman threads. Nothing on the surface says
+                # the instrument has stopped generating. On 2026-08-18 one
+                # KeyError out of a stale snapshot dict did exactly that, and
+                # it went unexplained for three hours of playing.
+                #
+                # Rate limited because this is a 30 Hz loop: an unguarded
+                # logging.error on a persistent fault writes 30 lines a second
+                # for as long as the fault lasts. The traceback goes out once
+                # per distinct message, the repeat carries the count instead.
+                message = f"{type(e).__name__}: {e}"
+                fresh = message != self._poll_error
+                self._poll_error_count += 1
+                if fresh or tick - self._poll_error_tick >= POLL_ERROR_TICKS:
+                    logging.error("Maschine playhead poll failed, %d since "
+                                  "last report: %s", self._poll_error_count,
+                                  message, exc_info=fresh)
+                    self._poll_error = message
+                    self._poll_error_tick = tick
+                    self._poll_error_count = 0
 
     def _move_playhead(self, head):
         group_color = GROUP_COLORS[self.group]

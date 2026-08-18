@@ -1939,3 +1939,93 @@ class TestVerbColumnAlignment(unittest.TestCase):
         # finds them together. A reorder that separates them is a regression.
         verbs = tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"]
         self.assertEqual(abs(verbs.index("random") - verbs.index("rhythm")), 1)
+
+
+class TestStateUpgrade(unittest.TestCase):
+    """A state dict out of an older snapshot, brought up to the current key
+    set.
+
+    The bug this exists to stop: a voice stash written before the rhythm
+    generator carries DENSITY and no `rhythm`/`rhythm_reg`. It was restored
+    verbatim, so the first SHIFT+GRID pulled it into self.state, columns()
+    indexed state["rhythm"], and the KeyError killed the playhead poll thread
+    - every voice stopped evolving for the rest of the session with nothing on
+    the surface saying so."""
+
+    # Exactly the keys measured in 030-maschine-house.zss, channel 0.
+    PRE_RHYTHM_VOICE = {
+        "chance": 100, "cutoff": 70, "decay": 40, "delay": 0, "density": 60,
+        "env": 64, "gate": 40, "length": 8, "level": 19, "octave": 0,
+        "preset": "Bass", "random": 25, "range": 2, "register": 0b10110011,
+        "reso": 32, "reverb": 0, "ring": [], "swing": 50, "velo": 110,
+    }
+
+    def test_a_pre_rhythm_voice_gains_every_current_key(self):
+        out = tl.upgrade_state("voice", self.PRE_RHYTHM_VOICE, 16)
+        for key in tl.default_channel_state("voice"):
+            self.assertIn(key, out, f"missing {key}")
+
+    def test_it_keeps_what_the_snapshot_said(self):
+        out = tl.upgrade_state("voice", self.PRE_RHYTHM_VOICE, 16)
+        self.assertEqual(out["register"], 0b10110011)
+        self.assertEqual(out["random"], 25)
+        self.assertEqual(out["cutoff"], 70)
+        self.assertEqual(out["preset"], "Bass")
+
+    def test_rhythm_is_seeded_from_density_not_defaulted(self):
+        # 0xFFFF would turn a sparse line into every step sounding. The seed
+        # runs the same gate_mask the old writer did, so it sounds identical.
+        out = tl.upgrade_state("voice", self.PRE_RHYTHM_VOICE, 16)
+        self.assertEqual(out["rhythm_reg"],
+                         tl.rhythm_seed(0b10110011, 8, 16, 60))
+        # A snapshot made before rhythm evolution existed was not evolving.
+        self.assertEqual(out["rhythm"], 0)
+
+    def test_a_current_dict_is_unchanged(self):
+        saved = dict(tl.default_channel_state("voice"))
+        saved["ring"] = []
+        saved.pop("pending")
+        saved["rhythm"] = 40
+        saved["rhythm_reg"] = 0x00FF
+        out = tl.upgrade_state("voice", saved, 16)
+        self.assertEqual(out["rhythm"], 40)
+        self.assertEqual(out["rhythm_reg"], 0x00FF)
+
+    def test_a_drum_dict_survives(self):
+        saved = {"chance": 100, "delay": 0, "kit": "Techno", "level": 19,
+                 "reverb": 0, "sample": "BD", "swing": 50, "velo": 110}
+        out = tl.upgrade_state("drum", saved, 16)
+        self.assertEqual(out["kit"], "Techno")
+        for key in tl.default_channel_state("drum"):
+            self.assertIn(key, out, f"missing {key}")
+
+    def test_retired_keys_are_dropped(self):
+        # DENSITY was retired by the rhythm generator and nothing reads it.
+        out = tl.upgrade_state("voice", self.PRE_RHYTHM_VOICE, 16)
+        self.assertNotIn("density", out)
+
+    def test_ring_comes_back_a_bounded_deque(self):
+        saved = dict(self.PRE_RHYTHM_VOICE, ring=[(1, 2), (3, 4)])
+        out = tl.upgrade_state("voice", saved, 16)
+        self.assertIsInstance(out["ring"], deque)
+        self.assertEqual(out["ring"].maxlen, 4)
+
+    def test_pending_comes_back_empty(self):
+        # It holds parameters waiting for the next bar, and a snapshot load
+        # has no bar to wait for.
+        saved = dict(self.PRE_RHYTHM_VOICE, pending={"div"})
+        out = tl.upgrade_state("voice", saved, 16)
+        self.assertEqual(out["pending"], set())
+
+    def test_the_upgraded_dict_survives_columns(self):
+        # The actual failure: columns() on the restored dict.
+        out = tl.upgrade_state("voice", self.PRE_RHYTHM_VOICE, 16)
+        for mode in ("STEP", "CONTROL", "MIXER"):
+            for desc in tl.PAGE_RINGS.get((mode, "voice"), ()):
+                if desc["shape"] == tl.SHAPE_SPREAD:
+                    # SHAPE_SPREAD reads eight channels, not one - a
+                    # different argument shape, not a different state.
+                    continue
+                # `div` lives in the driver, not the state dict - the view
+                # merges the two, so the test does the same.
+                tl.columns(desc, "voice", dict(out, div=1))

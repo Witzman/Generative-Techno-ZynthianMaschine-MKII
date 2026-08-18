@@ -359,6 +359,46 @@ class techno_lib:
         return state
 
     @staticmethod
+    def upgrade_state(kind, saved, steps):
+        """A state dict out of an older snapshot, brought up to the current
+        key set.
+
+        columns() indexes state["rhythm"] and its neighbours directly, so a
+        dict short one key is a KeyError on the repaint path - and the repaint
+        runs on the playhead poll thread. The snapshot `voices` block has
+        upgraded its dicts since the rhythm generator shipped; the `stash`
+        block restored them verbatim, so a channel's ALTERNATE kind kept its
+        pre-2026-08-16 key set until a SHIFT+GRID pulled it into service. That
+        is not a theoretical window: it took an instrument silent for three
+        hours on 2026-08-18.
+
+        Built from default_channel_state, so a key added tomorrow is covered
+        here the day it exists rather than the day a snapshot proves it is
+        not. Unknown keys are dropped rather than carried - DENSITY was
+        retired by the rhythm generator and nothing reads it any more."""
+
+        state = techno_lib.default_channel_state(kind)
+        for key in state:
+            # pending holds parameters waiting for the next bar, and a
+            # snapshot load has no bar to wait for. It stays the empty set
+            # default_channel_state just built.
+            if key != "pending" and key in saved:
+                state[key] = saved[key]
+        if "ring" in saved:
+            # A deque survives neither JSON nor a verbatim restore.
+            state["ring"] = deque(saved["ring"], maxlen=4)
+        if kind == "voice" and "rhythm_reg" not in saved:
+            # The same seed the `voices` block applies, for the same reason:
+            # the pre-rhythm dict describes its steps with DENSITY, and
+            # reading them back as the 0xFFFF default would turn a sparse
+            # line into every step sounding. `rhythm` stays 0 - a snapshot
+            # made before rhythm evolution existed was not evolving.
+            state["rhythm_reg"] = techno_lib.rhythm_seed(
+                state["register"], state["length"], steps,
+                saved.get("density", 100))
+        return state
+
+    @staticmethod
     def resolve_kind(override, chain_kind):
         """Which kind a channel behaves as.
 
