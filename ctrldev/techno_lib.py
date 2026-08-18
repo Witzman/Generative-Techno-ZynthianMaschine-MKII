@@ -359,6 +359,39 @@ class techno_lib:
         return state
 
     @staticmethod
+    def throttle(seen, key, message, now, seconds):
+        """Should this repeating log line be emitted now?
+
+        Returns `(emit, suppressed, fresh)`. A NEW message is always emitted
+        and marked `fresh`, which is the caller's cue to attach a traceback; a
+        repeat is counted and emitted at most once per `seconds`, carrying the
+        number suppressed since the last report.
+
+        `seen` is the caller's own dict of per-key state and IS mutated - that
+        is the memory the decision needs, and threading it back through every
+        call site would put the same three lines of bookkeeping in each one.
+        `now` is passed in rather than read here so the windows are testable
+        without sleeping.
+
+        This exists because the poll thread runs at 30 Hz. An unguarded
+        logging.error on a persistent fault writes 30 lines a second for as
+        long as the fault lasts, and the fault that motivated all of this was
+        found IN the journal - burying it under its own repeats would have
+        hidden the evidence that explained it."""
+
+        entry = seen.get(key)
+        if entry is None or entry["message"] != message:
+            seen[key] = {"message": message, "at": now, "count": 0}
+            return True, 0, True
+        entry["count"] += 1
+        if now - entry["at"] < seconds:
+            return False, entry["count"], False
+        suppressed = entry["count"]
+        entry["at"] = now
+        entry["count"] = 0
+        return True, suppressed, False
+
+    @staticmethod
     def upgrade_state(kind, saved, steps):
         """A state dict out of an older snapshot, brought up to the current
         key set.

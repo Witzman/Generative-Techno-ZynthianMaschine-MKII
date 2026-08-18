@@ -304,7 +304,7 @@ PLAYHEAD_POLL_S = 0.033        # ~30 Hz, 4x oversampled at 120 BPM
 # volume moved on the touchscreen is invisible until something asks. Only the
 # led_cache diff reaches the wire, so a quiet poll costs nothing.
 VOLUME_POLL_TICKS = 6          # every ~200ms
-POLL_ERROR_TICKS = 900         # ~30s between repeats of one poll error
+POLL_ERROR_S = 30.0            # between repeats of one poll error
 
 # Set by the daemon's alias helper: uid "virtual:maschine.rs/Maschine MK2 Pads",
 # and Zynthian's device id is everything after the first '/'.
@@ -362,12 +362,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.enc_carry = {}
         self.osc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.stopping = Event()
-        # Rate limiting for _playhead_loop's error log. The loop no longer
-        # dies on a raised exception, so a persistent fault would otherwise
-        # write 30 journal lines a second.
-        self._poll_error = None
-        self._poll_error_tick = 0
-        self._poll_error_count = 0
+        self._log_seen = {}
+        # Rate limiting for every error logged on the poll thread. Nothing
+        # there dies on a raised exception any more, so a persistent fault
+        # would otherwise write 30 journal lines a second. Keyed, so one
+        # failing channel cannot silence the report for another.
         self.playhead_thread = None
         # libzynseq is not thread-safe and this driver touches it from three
         # threads: the MIDI handler, the zynsigman queued signal handler and
@@ -3798,30 +3797,58 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         position only ever runs forward until it wraps. Reads only, and the
         rewrite it triggers takes the lock itself."""
 
-        for channel, ch in enumerate(tlib.CHANNELS):
-            voice = self.channel_kind(channel) == "voice"
-            with self.lock:
-                if self._play_state(channel) == zynseq_lib.SEQ_STOPPED:
-                    self._voice_pos[channel] = None
-                    # Stopped: a pending structure change has no bar to wait
-                    # for, so take it now rather than leaving it in brackets.
-                    if self.state[channel]["pending"]:
-                        pending = set(self.state[channel]["pending"])
-                        self.state[channel]["pending"].clear()
+        for channel in range(len(tlib.CHANNELS)):
+            try:
+                self._wrap_channel(channel)
+            except Exception as e:
+                # PER CHANNEL, deliberately. A single raise used to abort the
+                # whole sweep, so every channel after the bad one missed its
+                # wrap - and since the channels are walked in a fixed order,
+                # the same ones lost it every time. The bad channel is the
+                # one that stops evolving; the others must not pay for it.
+                self._log_poll_error(f"voice wrap on channel {channel}", e)
+
+    def _wrap_channel(self, channel):
+        """One channel's share of _voice_wraps.
+
+        Split out so the caller can catch per channel. Everything that can
+        raise in here is that channel's own: its state dict, its pattern, its
+        registers."""
+
+        voice = self.channel_kind(channel) == "voice"
+        with self.lock:
+            if self._play_state(channel) == zynseq_lib.SEQ_STOPPED:
+                self._voice_pos[channel] = None
+                # Stopped: a pending structure change has no bar to wait
+                # for, so take it now rather than leaving it in brackets.
+                if self.state[channel]["pending"]:
+                    pending = set(self.state[channel]["pending"])
+                    self.state[channel]["pending"].clear()
+                    try:
                         if not voice:
                             if "div" in pending:
                                 self._write_pattern(channel)
                             else:
                                 self._set_length(channel, self.beats[channel])
-                    continue
-                position = self.libseq.getPlayPosition(self.zynseq.bank, channel)
-            previous = self._voice_pos.get(channel)
-            self._voice_pos[channel] = position
-            wrapped = previous is not None and position < previous
+                    except Exception:
+                        # The write did not land, so the change is still
+                        # pending. Putting it back keeps the brackets on the
+                        # surface, which is the truth, and the next wrap
+                        # tries again. Clearing it and failing would drop a
+                        # structure change silently - the exact shape of
+                        # fault this whole round exists to stop.
+                        self.state[channel]["pending"] |= pending
+                        raise
+                return
+            position = self.libseq.getPlayPosition(self.zynseq.bank, channel)
+        previous = self._voice_pos.get(channel)
+        self._voice_pos[channel] = position
+        wrapped = previous is not None and position < previous
 
-            if wrapped and self.state[channel]["pending"]:
-                pending = set(self.state[channel]["pending"])
-                self.state[channel]["pending"].clear()
+        if wrapped and self.state[channel]["pending"]:
+            pending = set(self.state[channel]["pending"])
+            self.state[channel]["pending"].clear()
+            try:
                 with self.lock:
                     if voice:
                         self._write_voice_pattern(channel)
@@ -3834,19 +3861,41 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # pattern to hear a polyrhythm must not throw away the
                         # beat that is playing.
                         self._set_length(channel, self.beats[channel])
+            except Exception:
+                self.state[channel]["pending"] |= pending
+                raise
 
-            if not voice:
-                continue
-            if wrapped:
-                if channel in self._key_dirty:
-                    # A key change lands on the bar, and it must be heard even
-                    # on a voice that is locked - the line keeps its shape and
-                    # changes key, which is the point of a global root.
-                    self._key_dirty.discard(channel)
-                    self._write_voice_pattern(channel)
-                    if not self._key_dirty:
-                        self.globals["pending"].clear()
-                self._rewrite_voice(channel)
+        if not voice:
+            return
+        if wrapped:
+            if channel in self._key_dirty:
+                # A key change lands on the bar, and it must be heard even
+                # on a voice that is locked - the line keeps its shape and
+                # changes key, which is the point of a global root.
+                self._key_dirty.discard(channel)
+                self._write_voice_pattern(channel)
+                if not self._key_dirty:
+                    self.globals["pending"].clear()
+            self._rewrite_voice(channel)
+
+    def _log_poll_error(self, key, exc):
+        """Report an exception raised on the poll thread, rate limited.
+
+        Two callers now - the loop itself and each channel of _voice_wraps -
+        which is what earns the helper: the throttle's bookkeeping is easy to
+        get subtly different in two places, and a limiter that is wrong in one
+        of them either floods the journal or hides the fault."""
+
+        message = f"{type(exc).__name__}: {exc}"
+        emit, suppressed, fresh = tlib.throttle(
+            self._log_seen, key, message, time.monotonic(), POLL_ERROR_S)
+        if not emit:
+            return
+        # The traceback goes out once per distinct message. A repeat carries
+        # the count instead - the stack is identical and printing it again
+        # buries everything else in the journal.
+        logging.error("Maschine %s failed, %d since last report: %s",
+                      key, suppressed, message, exc_info=fresh)
 
     def _playhead_loop(self):
         """Repaint just the two pads the playhead moves between. A full
@@ -3916,16 +3965,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # logging.error on a persistent fault writes 30 lines a second
                 # for as long as the fault lasts. The traceback goes out once
                 # per distinct message, the repeat carries the count instead.
-                message = f"{type(e).__name__}: {e}"
-                fresh = message != self._poll_error
-                self._poll_error_count += 1
-                if fresh or tick - self._poll_error_tick >= POLL_ERROR_TICKS:
-                    logging.error("Maschine playhead poll failed, %d since "
-                                  "last report: %s", self._poll_error_count,
-                                  message, exc_info=fresh)
-                    self._poll_error = message
-                    self._poll_error_tick = tick
-                    self._poll_error_count = 0
+                self._log_poll_error("playhead poll", e)
 
     def _move_playhead(self, head):
         group_color = GROUP_COLORS[self.group]

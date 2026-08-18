@@ -2029,3 +2029,56 @@ class TestStateUpgrade(unittest.TestCase):
                 # `div` lives in the driver, not the state dict - the view
                 # merges the two, so the test does the same.
                 tl.columns(desc, "voice", dict(out, div=1))
+
+
+class TestThrottle(unittest.TestCase):
+    """The rate limiter behind every error log on the 30 Hz poll thread.
+
+    Without it, one persistent fault writes 30 journal lines a second for as
+    long as it lasts. With it, a NEW message is always reported - with its
+    traceback - and a repeat is counted and reported at most once per window."""
+
+    def setUp(self):
+        self.seen = {}
+
+    def test_a_new_message_is_always_emitted_and_marked_fresh(self):
+        emit, suppressed, fresh = tl.throttle(self.seen, "poll", "boom", 0.0, 30.0)
+        self.assertTrue(emit)
+        self.assertTrue(fresh)
+        self.assertEqual(suppressed, 0)
+
+    def test_an_immediate_repeat_is_suppressed(self):
+        tl.throttle(self.seen, "poll", "boom", 0.0, 30.0)
+        emit, _, fresh = tl.throttle(self.seen, "poll", "boom", 0.1, 30.0)
+        self.assertFalse(emit)
+        self.assertFalse(fresh)
+
+    def test_a_repeat_after_the_window_reports_the_count(self):
+        tl.throttle(self.seen, "poll", "boom", 0.0, 30.0)
+        for i in range(1, 5):
+            tl.throttle(self.seen, "poll", "boom", i * 0.1, 30.0)
+        emit, suppressed, fresh = tl.throttle(self.seen, "poll", "boom", 31.0, 30.0)
+        self.assertTrue(emit)
+        self.assertFalse(fresh)          # no second traceback for the same fault
+        self.assertEqual(suppressed, 5)  # the four above plus this one
+
+    def test_the_count_resets_after_a_report(self):
+        tl.throttle(self.seen, "poll", "boom", 0.0, 30.0)
+        tl.throttle(self.seen, "poll", "boom", 0.1, 30.0)
+        tl.throttle(self.seen, "poll", "boom", 31.0, 30.0)
+        emit, suppressed, _ = tl.throttle(self.seen, "poll", "boom", 62.0, 30.0)
+        self.assertTrue(emit)
+        self.assertEqual(suppressed, 1)
+
+    def test_a_different_message_is_fresh_again(self):
+        tl.throttle(self.seen, "poll", "boom", 0.0, 30.0)
+        emit, _, fresh = tl.throttle(self.seen, "poll", "bang", 0.1, 30.0)
+        self.assertTrue(emit)
+        self.assertTrue(fresh)
+
+    def test_keys_do_not_shadow_each_other(self):
+        # One failing channel must not silence the report for another.
+        tl.throttle(self.seen, "wrap 5", "boom", 0.0, 30.0)
+        emit, _, fresh = tl.throttle(self.seen, "wrap 6", "boom", 0.1, 30.0)
+        self.assertTrue(emit)
+        self.assertTrue(fresh)
