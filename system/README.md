@@ -13,6 +13,17 @@ Deployed configuration, taken off a working rig and verified by checksum.
 | `maschine-clock-connect.sh` | `/usr/local/bin/` | Wires the bridge's ports. |
 | `maschine.json` | the daemon's working directory | Pad note offsets and encoder CC numbers, and **`"external_pad_leds": true`** — without it the daemon repaints pads on press and release in its own colour, and the first touch destroys the per-channel picture. |
 
+**`maschine.json` here is the TEMPLATE, and the live copy is deliberately
+untracked.** `config.rs` reads `maschine.json` relative to its working
+directory, and `maschine-mk2.service` sets that to `daemon/`, so the file the
+daemon actually reads is `daemon/maschine.json`. `install.sh` copies this
+template there **only if it is absent** — a rig whose config has been edited by
+hand must survive a reinstall — and `deploy-to-pi.sh` never sends it at all.
+The live copy is in `.gitignore`. **Do not track it.** Committing it publishes
+one machine's settings, and tracking the path would make a pull on any rig fail
+on the untracked file sitting there; the obvious unblock is deleting it, which
+silently drops `external_pad_leds`.
+
 Restart order is always **daemon first, UI second**. Restarting the daemon alone
 makes `a2j` re-register its port on a new zmip slot while the ctrldev driver
 stays bound to the dead one: the rig goes silent with no error in any log.

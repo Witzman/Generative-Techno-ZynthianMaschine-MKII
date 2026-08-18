@@ -2,5 +2,15 @@ target/
 __pycache__/
 *.pyc
 *.zss.bak
+
+# The daemon's LIVE config, not the template. config.rs reads "maschine.json"
+# relative to its working directory, which the systemd unit points at daemon/,
+# so install.sh copies system/maschine.json there ONCE and never again - a
+# hand-edited live config has to survive a reinstall. Committing this copy
+# would publish one machine's settings; worse, if main ever tracked the path a
+# pull on the Pi would fail on the untracked file, and the obvious unblock is
+# deleting it - which drops "external_pad_leds" and lets the first pad touch
+# destroy the per-group colours.
+daemon/maschine.json
 notes/
 .superpowers/
