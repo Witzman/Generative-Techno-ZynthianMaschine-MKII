@@ -13,6 +13,7 @@ REPO_DIR=/root/Generative-Techno-ZynthianMaschine-MKII
 SNAP_ROOT=/zynthian/zynthian-my-data/snapshots
 SNAP_DIR="$SNAP_ROOT/000"
 SNAP=017-generative-techno.zss
+PACK_DIR="$REPO_DIR/snapshot/genre-pack"   # the fifty genre snapshots, 031-080
 
 main() {
     DRY=0
@@ -86,6 +87,28 @@ main() {
         mkdir -p "$SNAP_DIR"
         install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_DIR/"
         install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_ROOT/default.zss"
+    fi
+
+    # --- 3b. the genre pack ---------------------------------------------------
+    # Fifty fixed arrangements, 031-080, beside the factory snapshot in bank
+    # 000. NOT copied over default.zss: the factory snapshot is what a fresh
+    # Pi should boot into, and these are places to go from there.
+    #
+    # Copied rather than installed one by one so the count is visible in the
+    # output - fifty silent successes look identical to fifty silent failures.
+    # A pack that is absent from the checkout is not an error: an older clone
+    # predates it, and the instrument is complete without it.
+    if [ -d "$PACK_DIR" ]; then
+        PACK_N=$(find "$PACK_DIR" -name '*.zss' | wc -l)
+        echo "== Place the genre pack ($PACK_N snapshots, bank 000)"
+        if [ "$DRY" = 1 ]; then
+            echo "  [dry-run] install -m 0644 $PACK_DIR/*.zss $SNAP_DIR/"
+        else
+            install -m 0644 "$PACK_DIR"/*.zss "$SNAP_DIR/"
+            echo "  placed $(find "$SNAP_DIR" -name '0[3-8][0-9]-*.zss' | wc -l) of $PACK_N"
+        fi
+    else
+        echo "== No genre pack in this checkout - skipping (the instrument is complete without it)"
     fi
 
     # --- 4. restart the UI so it picks the snapshot up ------------------------

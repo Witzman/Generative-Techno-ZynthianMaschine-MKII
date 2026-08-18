@@ -1,0 +1,1443 @@
+{
+  "schema_version": 3,
+  "last_snapshot_fpath": "/zynthian/zynthian-my-data/snapshots/000/017-generative-techno.zss",
+  "midi_profile_state": {
+    "MASTER_BANK_CHANGE_UP": "",
+    "SYS_ENABLED": "1",
+    "MASTER_PROGRAM_CHANGE_DOWN": "",
+    "SINGLE_ACTIVE_CHANNEL": "0",
+    "RTPMIDI_ENABLED": "0",
+    "TOUCHOSC_ENABLED": "0",
+    "PORTS": "DISABLED_IN=\\nENABLED_OUT=ttymidi:MIDI_out,QmidiNet:in_1\\nENABLED_FB=",
+    "MASTER_NOTE_CUIA": "",
+    "MASTER_CHANNEL": "0",
+    "USB_BY_PORT": "1",
+    "NETWORK_ENABLED": "0",
+    "FILTER_RULES": "",
+    "PROG_CHANGE_ZS3": "1",
+    "BLE_ENABLED": "1",
+    "MASTER_PROGRAM_CHANGE_UP": "",
+    "BANK_CHANGE": "0",
+    "CC_AUTOMODE": "0",
+    "MASTER_BANK_CHANGE_CCNUM": "0",
+    "MASTER_BANK_CHANGE_DOWN": "",
+    "AUBIONOTES_ENABLED": "0",
+    "FINE_TUNING": "440",
+    "MASTER_PROGRAM_CHANGE_TYPE": "Custom",
+    "PLAY_LOOP": "1",
+    "FILTER_OUTPUT": "0",
+    "PRESET_PRELOAD_NOTEON": "1",
+    "ACTIVE_CHANNEL": "0",
+    "TRANSPORT_CLOCK_SOURCE": "1",
+    "CLOCK_ENABLED": "0",
+    "port_names": {}
+  },
+  "chains": {
+    "1": {
+      "title": "Kick",
+      "midi_chan": 0,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 0,
+      "zmop_index": 0,
+      "cc_route": [],
+      "slots": [
+        {
+          "2": "LS"
+        },
+        {
+          "10": "JV/TAP Stereo Echo"
+        },
+        {
+          "11": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "2": {
+      "title": "Snare",
+      "midi_chan": 1,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 1,
+      "zmop_index": 1,
+      "cc_route": [],
+      "slots": [
+        {
+          "3": "LS"
+        },
+        {
+          "12": "JV/TAP Stereo Echo"
+        },
+        {
+          "13": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "3": {
+      "title": "Clap",
+      "midi_chan": 2,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 2,
+      "zmop_index": 2,
+      "cc_route": [],
+      "slots": [
+        {
+          "4": "LS"
+        },
+        {
+          "14": "JV/TAP Stereo Echo"
+        },
+        {
+          "15": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "4": {
+      "title": "Closed Hat",
+      "midi_chan": 3,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 3,
+      "zmop_index": 3,
+      "cc_route": [],
+      "slots": [
+        {
+          "5": "LS"
+        },
+        {
+          "16": "JV/TAP Stereo Echo"
+        },
+        {
+          "17": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "5": {
+      "title": "Open Hat",
+      "midi_chan": 4,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 4,
+      "zmop_index": 4,
+      "cc_route": [],
+      "slots": [
+        {
+          "6": "LS"
+        },
+        {
+          "18": "JV/TAP Stereo Echo"
+        },
+        {
+          "19": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "6": {
+      "title": "BASS",
+      "midi_chan": 5,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 5,
+      "zmop_index": 5,
+      "cc_route": [],
+      "slots": [
+        {
+          "26": "JV/Calf Monosynth"
+        },
+        {
+          "20": "JV/TAP Stereo Echo"
+        },
+        {
+          "21": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "7": {
+      "title": "LEAD",
+      "midi_chan": 6,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 6,
+      "zmop_index": 6,
+      "cc_route": [],
+      "slots": [
+        {
+          "7": "JV/Helm"
+        },
+        {
+          "22": "JV/TAP Stereo Echo"
+        },
+        {
+          "23": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "8": {
+      "title": "PADS",
+      "midi_chan": 7,
+      "midi_thru": false,
+      "audio_thru": false,
+      "mixer_chan": 7,
+      "zmop_index": 7,
+      "cc_route": [],
+      "slots": [
+        {
+          "8": "JV/String machine"
+        },
+        {
+          "24": "JV/TAP Stereo Echo"
+        },
+        {
+          "25": "JV/TAP Reverberator"
+        }
+      ],
+      "fader_pos": 0,
+      "zctrls": []
+    },
+    "0": {
+      "title": "Main",
+      "midi_chan": null,
+      "midi_thru": false,
+      "audio_thru": true,
+      "mixer_chan": 16,
+      "zmop_index": null,
+      "cc_route": [],
+      "slots": [],
+      "fader_pos": 0,
+      "zctrls": []
+    }
+  },
+  "zs3": {
+    "zs3-0": {
+      "title": "Deep Shuffle",
+      "active_chain": 0,
+      "global": {
+        "midi_transpose": 0
+      },
+      "chains": {
+        "0": {
+          "midi_chan": null,
+          "midi_learn": {},
+          "audio_in": [],
+          "audio_out": [
+            "^system:playback_1$|^system:playback_2$"
+          ],
+          "audio_thru": true
+        },
+        "1": {
+          "midi_chan": 0,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch0_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "2": {
+          "midi_chan": 1,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch1_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "3": {
+          "midi_chan": 2,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch2_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "4": {
+          "midi_chan": 3,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch3_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "5": {
+          "midi_chan": 4,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch4_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "6": {
+          "midi_chan": 5,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch5_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "7": {
+          "midi_chan": 6,
+          "midi_learn": {
+            "65281": [
+              [
+                7,
+                "modulation wheel"
+              ]
+            ]
+          },
+          "midi_in": [
+            "ZynMidiRouter:ch6_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        },
+        "8": {
+          "midi_chan": 7,
+          "midi_learn": {},
+          "midi_in": [
+            "ZynMidiRouter:ch7_out"
+          ],
+          "audio_in": [
+            1,
+            2
+          ],
+          "audio_out": [
+            0
+          ]
+        }
+      },
+      "processors": {
+        "2": {
+          "bank_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines",
+            null,
+            "Drum Machines",
+            null,
+            "Drum Machines"
+          ],
+          "bank_subdir_info": null,
+          "preset_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/SP1200 1.sfz",
+            0,
+            "SP1200 1",
+            "sfz",
+            "SP1200 1.sfz"
+          ],
+          "preset_subdir_info": null,
+          "controllers": {
+            "volume": {
+              "value": 96
+            },
+            "pan": {
+              "value": 64
+            },
+            "expression": {
+              "value": 127
+            }
+          }
+        },
+        "10": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "11": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "3": {
+          "bank_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines",
+            null,
+            "Drum Machines",
+            null,
+            "Drum Machines"
+          ],
+          "bank_subdir_info": null,
+          "preset_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/SP1200 1.sfz",
+            0,
+            "SP1200 1",
+            "sfz",
+            "SP1200 1.sfz"
+          ],
+          "preset_subdir_info": null,
+          "controllers": {
+            "volume": {
+              "value": 96
+            },
+            "pan": {
+              "value": 64
+            },
+            "expression": {
+              "value": 127
+            }
+          }
+        },
+        "12": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "13": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "4": {
+          "bank_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines",
+            null,
+            "Drum Machines",
+            null,
+            "Drum Machines"
+          ],
+          "bank_subdir_info": null,
+          "preset_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/SP1200 2.sfz",
+            0,
+            "SP1200 2",
+            "sfz",
+            "SP1200 2.sfz"
+          ],
+          "preset_subdir_info": null,
+          "controllers": {
+            "volume": {
+              "value": 96
+            },
+            "pan": {
+              "value": 64
+            },
+            "expression": {
+              "value": 127
+            }
+          }
+        },
+        "14": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "15": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "5": {
+          "bank_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines",
+            null,
+            "Drum Machines",
+            null,
+            "Drum Machines"
+          ],
+          "bank_subdir_info": null,
+          "preset_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Kawai R50.sfz",
+            0,
+            "Kawai R50",
+            "sfz",
+            "Kawai R50.sfz"
+          ],
+          "preset_subdir_info": null,
+          "controllers": {
+            "volume": {
+              "value": 96
+            },
+            "pan": {
+              "value": 64
+            },
+            "expression": {
+              "value": 127
+            }
+          }
+        },
+        "16": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "17": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "6": {
+          "bank_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines",
+            null,
+            "Drum Machines",
+            null,
+            "Drum Machines"
+          ],
+          "bank_subdir_info": null,
+          "preset_info": [
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/SP1200 1.sfz",
+            0,
+            "SP1200 1",
+            "sfz",
+            "SP1200 1.sfz"
+          ],
+          "preset_subdir_info": null,
+          "controllers": {
+            "volume": {
+              "value": 96
+            },
+            "pan": {
+              "value": 64
+            },
+            "expression": {
+              "value": 127
+            }
+          }
+        },
+        "18": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "19": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "26": {
+          "bank_info": null,
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {}
+        },
+        "20": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "21": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "7": {
+          "bank_info": null,
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {}
+        },
+        "22": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "23": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        },
+        "8": {
+          "bank_info": null,
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {}
+        },
+        "24": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "ldelay": {
+              "value": 241.93548387096774
+            },
+            "lfeedback": {
+              "value": 73.0
+            },
+            "rhaasdelay": {
+              "value": 241.93548387096774
+            },
+            "rhaasfeedback": {
+              "value": 35.0
+            },
+            "lecholevel": {
+              "value": -70.0
+            },
+            "recholevel": {
+              "value": -70.0
+            },
+            "dryLevel": {
+              "value": 0.0
+            },
+            "crossmode": {
+              "value": 1
+            },
+            "haaseffect": {
+              "value": 0
+            },
+            "swapoutputs": {
+              "value": 0
+            }
+          }
+        },
+        "25": {
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
+          "bank_subdir_info": null,
+          "preset_info": null,
+          "preset_subdir_info": null,
+          "controllers": {
+            "decay": {
+              "value": 6700.0
+            },
+            "drylevel": {
+              "value": 0.0
+            },
+            "wetlevel": {
+              "value": -70.0
+            },
+            "combs_en": {
+              "value": 1
+            },
+            "allps_en": {
+              "value": 1
+            },
+            "bandpass_en": {
+              "value": 1
+            },
+            "stereo_enh": {
+              "value": 1
+            },
+            "mode": {
+              "value": 8
+            }
+          }
+        }
+      },
+      "mixer": {
+        "chan_00": {
+          "level": 0.19
+        },
+        "midi_learn": {},
+        "chan_01": {
+          "level": 0.19
+        },
+        "chan_02": {
+          "level": 0.19
+        },
+        "chan_03": {
+          "level": 0.19
+        },
+        "chan_04": {
+          "level": 0.19
+        },
+        "chan_05": {
+          "level": 0.19
+        },
+        "chan_06": {
+          "level": 0.19
+        },
+        "chan_07": {
+          "level": 0.19
+        },
+        "chan_16": {
+          "level": 0.774264705882353
+        }
+      },
+      "midi_capture": {
+        "USB:1.1.3/Maschine Controller MK2 IN 1": {
+          "zmip_input_mode": true,
+          "zmip_system": true,
+          "zmip_system_rt": true,
+          "disable_ctrldev": false,
+          "ctrldev_driver": "",
+          "routed_chains": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "midi_learn": {}
+        },
+        "ttymidi:MIDI_in": {
+          "zmip_input_mode": true,
+          "zmip_system": true,
+          "zmip_system_rt": true,
+          "disable_ctrldev": false,
+          "ctrldev_driver": "",
+          "routed_chains": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "midi_learn": {}
+        },
+        "virtual:maschine.rs/Maschine MK2 Pads": {
+          "zmip_input_mode": true,
+          "zmip_system": true,
+          "zmip_system_rt": true,
+          "disable_ctrldev": false,
+          "ctrldev_driver": "zynthian_ctrldev_maschine_mk2",
+          "routed_chains": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "midi_learn": {},
+          "ctrldev_state": {
+            "globals": {
+              "root": 9,
+              "scale": 2,
+              "bpm": 122,
+              "master": 80,
+              "revsize": 25,
+              "revtype": 3,
+              "dlytime": 1,
+              "dlyfbk": 35
+            },
+            "mode": "CONTROL",
+            "pages": {
+              "CONTROL|drum": 0,
+              "STEP|drum": 0,
+              "STEP|voice": 0,
+              "CONTROL|voice": 0,
+              "MIXER|": 0,
+              "ALL|": 0
+            },
+            "selected": 0,
+            "kinds": {},
+            "stash": {},
+            "owners": {
+              "0": "gen",
+              "1": "gen",
+              "2": "gen",
+              "3": "gen",
+              "4": "gen",
+              "5": "gen",
+              "6": "gen",
+              "7": "gen"
+            },
+            "voices": {
+              "5": {
+                "register": 4384,
+                "length": 16,
+                "rhythm_reg": 43690,
+                "random": 0,
+                "rhythm": 0,
+                "gate": 40,
+                "octave": -1,
+                "range": 1,
+                "velo": 104,
+                "ring": []
+              },
+              "6": {
+                "register": 9974,
+                "length": 16,
+                "rhythm_reg": 17476,
+                "random": 0,
+                "rhythm": 0,
+                "gate": 50,
+                "octave": 0,
+                "range": 2,
+                "velo": 88,
+                "ring": []
+              },
+              "7": {
+                "register": 39893,
+                "length": 16,
+                "rhythm_reg": 257,
+                "random": 0,
+                "rhythm": 0,
+                "gate": 900,
+                "octave": 1,
+                "range": 1,
+                "velo": 74,
+                "ring": []
+              }
+            },
+            "mods": {},
+            "mod_seed": 0
+          }
+        },
+        "zynsmf:midi_out": {
+          "zmip_input_mode": false,
+          "zmip_system": false,
+          "zmip_system_rt": false,
+          "disable_ctrldev": false,
+          "ctrldev_driver": "",
+          "routed_chains": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "midi_learn": {}
+        },
+        "zynseq:output": {
+          "zmip_input_mode": false,
+          "zmip_system": false,
+          "zmip_system_rt": false,
+          "disable_ctrldev": false,
+          "ctrldev_driver": "",
+          "routed_chains": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "midi_learn": {
+            "1537": [
+              [
+                7,
+                "modulation wheel"
+              ]
+            ]
+          }
+        },
+        "CV/Gate": {
+          "zmip_input_mode": false,
+          "zmip_system": false,
+          "zmip_system_rt": false,
+          "disable_ctrldev": false,
+          "ctrldev_driver": "",
+          "routed_chains": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "midi_learn": {}
+        }
+      }
+    }
+  },
+  "last_zs3_id": null,
+  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHoABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkaCQAAAFkAAAAAAQAAAAAAAAAAZAkaCQAAAFkAAAAAAgAAAAAAAAAAZAkaCQAAAFkAAAAAAwAAAAAAAAAAZAkaCQAAAFkAHBhdG4AAAAgAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBwYXRuAAAASgAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAABAAAAAAAAAABkCdgJwAAAWQAAAAADAAAAAAAAAABkCdgJwAAAWQAcGF0bgAAAJ4AAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAqSioAAAFkAAAAAAMAAAAAAAAAAZAqSioAAAFkAAAAAAYAAAAAAAAAAZAqSioAAAFkAAAAAAgAAAAAAAAAAZAqSioAAAFkAAAAAAsAAAAAAAAAAZAqSioAAAFkAAAAAA4AAAAAAAAAAZAqSioAAAFkAHBhdG4AAABKAAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAGAAAAAAAAAAGQKlAqAAABZAAAAAAOAAAAAAAAAAGQKlAqAAABZABwYXRuAAAAyAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAQAAAAAAAAABkDxoPAAAAWQAAAAAAwAAAAAAAAABkDxoPAAAAWQAAAAABQAAAAAAAAABkDxoPAAAAWQAAAAABwAAAAAAAAABkDxoPAAAAWQAAAAACQAAAAAAAAABkDxoPAAAAWQAAAAACwAAAAAAAAABkDxoPAAAAWQAAAAADQAAAAAAAAABkDxoPAAAAWQAAAAADwAAAAAAAAABkDxoPAAAAWQAcGF0bgAAAHQAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZA8WDwAAAFkAAAAAAYAAAAAAAAAAZA8WDwAAAFkAAAAAAoAAAAAAAAAAZA8WDwAAAFkAAAAAA4AAAAAAAAAAZA8WDwAAAFkAHBhdG4AAABKAAAAEQAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAGQPEo8AAABZAAAAAAIAAAAAAAAAAGQPEo8AAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
+}

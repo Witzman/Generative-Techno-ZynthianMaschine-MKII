@@ -109,7 +109,14 @@ BASELINE = {
     # stepped, the four-character font could not show it. Root-caused at the
     # rig, and a withdrawal has to explain itself or the next reader trusts
     # the retraction no more than the claim.
-    "sound-and-presets.html":      (841,  "2026-08-16"),
+    # +269, 2026-08-18: the genre pack. Fifty snapshots ship with the rig now,
+    # and this is the page a reader is on when they wonder what to load. The
+    # section has to say the one thing that is NOT obvious from playing them -
+    # every voice arrives at LOCK with no modulation, so a preset repeats
+    # until you turn something. Without that sentence the pack reads as an
+    # instrument that stopped generating, which is exactly the fault this
+    # project spent 2026-08-18 chasing.
+    "sound-and-presets.html":      (1110, "2026-08-18"),
     # +58, 2026-08-16: TEMPO. The encoders are now half as sensitive by
     # default and TEMPO held gives the old speed back, which matters most on
     # a generated page - a plugin port spreads its whole range across one
