@@ -185,6 +185,14 @@ BASELINE = {
     "the-surface.html":            (1030, "2026-08-19"),
     "saving.html":                 (327,  "2026-08-16"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
+    # New 2026-08-20, owner-requested: the ranked idea list. 677 words MEASURED
+    # at creation, not estimated. The page is deliberately mostly TABLE - the
+    # fifty-four ideas are name, description, cost and rank in three tables,
+    # which the budget does not count - so the prose is only the four framing
+    # sections. If the prose grows without the tables growing, something has
+    # started explaining instead of listing, and that is what this number is
+    # here to catch.
+    "whats-next.html":             (677,  "2026-08-20"),
 }
 SKIP_BUDGET = {"index.html"}
 

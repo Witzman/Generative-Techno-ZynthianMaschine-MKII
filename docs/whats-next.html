@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What could come next — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="whats-next.html" aria-current="page"><strong>What could come next</strong></a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="02-features.html">Features</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="whats-next">What could come next</h1>
+<p>Fifty-four ideas for this instrument, ranked. <strong>None of them is built, and none of them is promised.</strong></p>
+<hr>
+
+<h2 id="what-this-is">What this page is</h2>
+<p>Everything else in this guide describes an instrument you can play today. This page is the opposite: it is the idea list, kept in the open so that anyone forking the project can see what has been considered and how expensive it looked.</p>
+<p>The list was assembled by reading the code rather than by wishing &mdash; every entry has a known mechanism behind it, and several were rejected as impossible before they reached this page. What survives is ordered by <strong>impact divided by cost</strong>.</p>
+<p><strong>Cost</strong> is S, M or L. S means a day or less and nothing new underneath. M means new state or a new part of the surface, still inside the shape the instrument already has. L means a new mechanism, a new page of the surface, or a question that cannot be answered without measuring the hardware first.</p>
+<p><strong>Impact</strong> is 1 to 5, and it means musical consequence &mdash; how much the thing you hear changes &mdash; not how clever the idea is.</p>
+<p>A ratio is where an argument starts, not where it ends. It knows nothing about what depends on what: the countdown ruler sits at rank 22 and nine of the entries above it cannot exist without it.</p>
+
+<h2 id="the-theme">The theme: things that land on the beat</h2>
+<p>Most of this round answers one request &mdash; buildups and drops that are <em>fired</em> by a gesture and then <em>resolve</em> somewhere musical, four or eight or sixteen bars later, instead of happening the instant your finger moves.</p>
+<p>That turned out to rest on something the instrument does not have: it does not know what bar it is on. Its sense of time is a free-running clock scaled by tempo, which is accurate enough for a sweep and not accurate enough to land a drop. A bar count taken from the sequencer itself is the first entry on the list and the hinge for fifteen others.</p>
+
+<h2 id="nearly-free">Nearly free &mdash; ranks 1 to 21</h2>
+<p>Small work, and in several cases the machinery is already running and has simply never been asked for this.</p>
+<table>
+<tr><th>#</th><th>Idea</th><th>What it does</th><th>Cost</th><th>Impact</th></tr>
+<tr><td>1</td><td><strong>RISE</strong></td><td>A single sweep instead of a repeating one: a filter opens over eight bars, arrives exactly on the downbeat, and stays there.</td><td>S</td><td>5</td></tr>
+<tr><td>2</td><td><strong>CHANCE ramp</strong></td><td>The breakdown that thins instead of muting &mdash; every channel's odds walk down over N bars and back up into the drop, so the kit dissolves and re-forms.</td><td>S</td><td>5</td></tr>
+<tr><td>3</td><td><strong>DROP</strong></td><td>Tap the two or three channels that should survive; on the landing bar everything else falls silent for a set number of bars and returns by itself.</td><td>S</td><td>5</td></tr>
+<tr><td>4</td><td><strong>Polymeter</strong></td><td>Kick on four beats, hat on three, percussion on five. Lengths that do not agree, phasing against each other for sixty bars.</td><td>S</td><td>5</td></tr>
+<tr><td>5</td><td>PHRASE clock</td><td>One bar count the whole instrument agrees on, readable on the pads and the screens. Nothing sounds different; you always know where you are.</td><td>S</td><td>4</td></tr>
+<tr><td>6</td><td>FREEZE</td><td>One tap and everything generative holds still, so you can set up a transition without the machine changing it under you. Tap again to resume.</td><td>S</td><td>4</td></tr>
+<tr><td>7</td><td>Half-time and double-time</td><td>Armed, and it puts itself back N bars later.</td><td>S</td><td>4</td></tr>
+<tr><td>8</td><td>BREAK</td><td>The inverse of the drop: channels fall out now and return on the landing bar, counted for you.</td><td>S</td><td>4</td></tr>
+<tr><td>9</td><td>One knob for how much everything moves</td><td>The big encoder scales the depth of every live modulator at once, from still to churning.</td><td>S</td><td>4</td></tr>
+<tr><td>10</td><td>Tempo ramp</td><td>Six BPM over eight bars into the drop, then hold or snap back.</td><td>S</td><td>4</td></tr>
+<tr><td>11</td><td>Ratchet ramp</td><td>Over the last bar of a build every note subdivides: one, two, three, four. The roll.</td><td>S</td><td>4</td></tr>
+<tr><td>12</td><td>Auto-pilot</td><td>Arm a build and drop to repeat on a sixteen or thirty-two bar cycle, and the instrument plays its own arrangement while you work on a sound.</td><td>S</td><td>4</td></tr>
+<tr><td>13</td><td>Phrase-locked modulation</td><td>Every LFO starts its cycle on the phrase rather than on power-up, so an eight-bar sweep is <em>the</em> eight bars.</td><td>S</td><td>4</td></tr>
+<tr><td>14</td><td>Audio capture from the panel</td><td>Long-press REC and the jam is recorded to the Pi. A generative instrument you cannot capture loses every good bar.</td><td>S</td><td>4</td></tr>
+<tr><td>15</td><td>One-shot fills</td><td>A second pattern per channel, fired by a pad, played once, returning to the loop by itself.</td><td>S</td><td>4</td></tr>
+<tr><td>16</td><td>Sound changes land on the bar</td><td>A kit or preset change waits for the downbeat instead of arriving mid-beat, so sweeping through sounds stops leaving a seam.</td><td>S</td><td>3</td></tr>
+<tr><td>17</td><td>The pending page</td><td>Everything armed, with the bars remaining, and a way to cancel any one of them. What makes the rest safe to use on stage.</td><td>S</td><td>3</td></tr>
+<tr><td>18</td><td>Gate collapse</td><td>Every note shortens across the last two bars &mdash; tighter and drier without touching a filter &mdash; then returns.</td><td>S</td><td>3</td></tr>
+<tr><td>19</td><td>Velocity swell</td><td>The pattern leans harder across a build and settles after the drop.</td><td>S</td><td>3</td></tr>
+<tr><td>20</td><td>The DIN MIDI sockets</td><td>The Maschine has five-pin MIDI in and out on the back. They work, and this instrument has never used them. Not a build &mdash; a switch nobody flipped.</td><td>S</td><td>3</td></tr>
+<tr><td>21</td><td>Rotate a melody</td><td>Drums can be spun around the bar; voices cannot. This gives them the same gesture.</td><td>S</td><td>3</td></tr>
+</table>
+
+<h2 id="worth-the-work">Worth the work &mdash; ranks 22 to 38</h2>
+<p>Real work, and the payoff is proportional. Rank 22 is the countdown ruler that most of the top twenty fire into, which is why its own ratio understates it so badly.</p>
+<table>
+<tr><th>#</th><th>Idea</th><th>What it does</th><th>Cost</th><th>Impact</th></tr>
+<tr><td>22</td><td><strong>ARM</strong></td><td>One gesture for &ldquo;do this, not now, but N bars from here, on the downbeat&rdquo;. The pads become a countdown ruler that extinguishes bar by bar, and a tap cancels it.</td><td>M</td><td>5</td></tr>
+<tr><td>23</td><td>Mute grid</td><td>Sixteen pads, eight channels, twice over: the top rows mute now, the bottom rows queue the same change to the next bar.</td><td>M</td><td>5</td></tr>
+<tr><td>24</td><td>A master-bus insert</td><td>One filter across the whole mix, swept for a drop. The mix chain is already there and already empty, so it costs one effect rather than eight.</td><td>M</td><td>5</td></tr>
+<tr><td>25</td><td>Beat-repeat</td><td>Every channel collapses to its first beat and restores on the boundary.</td><td>M</td><td>5</td></tr>
+<tr><td>26</td><td>The build ladder</td><td>One number from 0 to 100 that moves hits, density, odds, ratchet and cutoff together. Turn it by hand, or arm it and let it climb over sixteen bars.</td><td>M</td><td>5</td></tr>
+<tr><td>27</td><td>Count-in</td><td>Once a drop is armed, the last bar clicks, so you can play into it instead of counting.</td><td>S</td><td>2</td></tr>
+<tr><td>28</td><td>TURN</td><td>The bar before any landing becomes a fill, and the original pattern comes straight back. Every build ends on a turnaround.</td><td>M</td><td>4</td></tr>
+<tr><td>29</td><td>BRAKE</td><td>Hold a button and the tempo bends down; release and it returns at the next bar. A tape-stop that resolves.</td><td>M</td><td>4</td></tr>
+<tr><td>30</td><td>Punch-in</td><td>A take that starts on the next bar and stops itself after N bars, so both hands stay on the pads.</td><td>M</td><td>4</td></tr>
+<tr><td>31</td><td>Timed transpose</td><td>Up a fifth for eight bars, and back, with the return already paid for.</td><td>M</td><td>4</td></tr>
+<tr><td>32</td><td>Risers and impacts</td><td>A sample scheduled backwards from the boundary so its tail lands on the drop. The player for it is already running and idle.</td><td>M</td><td>4</td></tr>
+<tr><td>33</td><td>Mixer scenes</td><td>A whole mixer picture &mdash; levels, pans, mutes &mdash; recalled at the next bar. Two or three make verse, chorus and drop.</td><td>M</td><td>4</td></tr>
+<tr><td>34</td><td>Banks as scenes</td><td>The sequencer has sixty-four banks and the instrument uses one. Each is a complete eight-channel pattern set, and they are all already in the snapshot.</td><td>M</td><td>4</td></tr>
+<tr><td>35</td><td>An undo ring</td><td>Reroll, randomise and length each destroy a bar with no way back. This keeps the last few and lets you step back through them.</td><td>M</td><td>4</td></tr>
+<tr><td>36</td><td>Note repeat</td><td>Hold a pad and it retriggers at a chosen rate. The Maschine gesture this instrument does not have.</td><td>M</td><td>4</td></tr>
+<tr><td>37</td><td>A chord walker</td><td>The three voices share a root and a scale, and a slow walker moves the root every few bars, so three unrelated lines become a progression.</td><td>M</td><td>4</td></tr>
+<tr><td>38</td><td>A drum rhythm register</td><td>The soft randomiser: drums get the same evolving generator the voices already have.</td><td>M</td><td>4</td></tr>
+</table>
+
+<h2 id="the-big-ones">The big ones &mdash; ranks 39 to 54</h2>
+<p>Each of these needs something the instrument does not have yet: a new page of the surface, a new sense of time, or a measurement before it can even be costed honestly. Two of them may turn out to be impossible on this hardware, and that is stated rather than discovered later.</p>
+<table>
+<tr><th>#</th><th>Idea</th><th>What it does</th><th>Cost</th><th>Impact</th></tr>
+<tr><td>39</td><td>Lock snapshots and morph</td><td>Store the whole state of the instrument to a pad; recall it instantly, or morph into it over sixteen bars with every continuous value gliding.</td><td>L</td><td>5</td></tr>
+<tr><td>40</td><td>Loop roll</td><td>Hold a button and the channel loops the last eight, four, two or one steps around the playhead, then rejoins. Needs a timing answer this instrument does not have yet.</td><td>L</td><td>5</td></tr>
+<tr><td>41</td><td>A phrase, not a bar</td><td>A channel plays four bars where the fourth differs &mdash; a real fill in the timeline rather than a swap.</td><td>L</td><td>5</td></tr>
+<tr><td>42</td><td>An automation lane</td><td>Per-step automation stored inside the pattern itself: saved with the snapshot, played by the audio engine, immune to any stutter in the driver.</td><td>L</td><td>5</td></tr>
+<tr><td>43</td><td>Retrograde</td><td>The bar plays backwards for N bars and then unmirrors.</td><td>M</td><td>3</td></tr>
+<tr><td>44</td><td>Choke groups</td><td>Closed hat kills open hat. <em>May be impossible on the drum sampler</em>, whose one-shots play to the end regardless &mdash; that has to be measured before it is designed.</td><td>M</td><td>3</td></tr>
+<tr><td>45</td><td>Duplicate a channel</td><td>Copy a channel onto another group, pattern and settings and modulation, then let it diverge.</td><td>M</td><td>3</td></tr>
+<tr><td>46</td><td>Accent and micro-timing</td><td>A velocity accent mask and a small timing nudge per channel: the weight that swing alone does not give.</td><td>M</td><td>3</td></tr>
+<tr><td>47</td><td>Sidechain pump</td><td>The bar-synced gain movement that glues a techno mix. The cheap version is a pump; a true per-kick duck is a different and more expensive feature.</td><td>M</td><td>3</td></tr>
+<tr><td>48</td><td>A different lead synth</td><td>Surge XT in place of the current lead engine, with its own parameter tables.</td><td>M</td><td>3</td></tr>
+<tr><td>49</td><td>The screens draw the curve</td><td>The pads say how fast a modulator moves; the screens should say what shape it is.</td><td>M</td><td>3</td></tr>
+<tr><td>50</td><td>A character insert</td><td>A second effect slot per channel, for drive and colour rather than space.</td><td>M</td><td>3</td></tr>
+<tr><td>51</td><td>Spare chains</td><td>A channel becomes a real synth rather than borrowing one, with somewhere to put it.</td><td>L</td><td>4</td></tr>
+<tr><td>52</td><td>A different drum engine</td><td>Replacing the sampler with one that has a filter per drum &mdash; the only route to per-channel drum timbre that measurement has left open.</td><td>L</td><td>4</td></tr>
+<tr><td>53</td><td>Layout presets</td><td>Rearranging which knob sits where, saved per player.</td><td>M</td><td>2</td></tr>
+<tr><td>54</td><td>Three focuses collapsed into one</td><td>A simplification of how the instrument decides what a knob is pointed at. The only entry on the list that would cost relearning.</td><td>M</td><td>2</td></tr>
+</table>
+
+<h2 id="what-the-list-says">What the list says</h2>
+<p>Four of the top five cost a day or less. The most valuable single idea on the page &mdash; a sweep that runs once and lands on the downbeat &mdash; is a flag in a data structure that has been shipping since August 2026, because the modulation engine was built to repeat and was never asked to stop.</p>
+<p>The cheapest genuinely new <em>sound</em> is the odds ramp, because per-step probability is read live while the pattern plays and costs nothing to change. A whole breakdown is one existing control, called once a bar.</p>
+<p>The four expensive ones are expensive for the same reason, and it is not the code: each needs a new page of the surface or a new answer about timing. On an instrument with sixteen pads and two small screens, where to put a thing is usually harder than how to build it.</p>
+<p>And two entries are honest unknowns. Whether a sampled drum can be cut off at all, and whether the driver's heartbeat is fast enough to roll a single step, are both questions for the hardware. This project has learned twice that a feature written from the code rather than from the rig is a feature that gets published wrong.</p>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
