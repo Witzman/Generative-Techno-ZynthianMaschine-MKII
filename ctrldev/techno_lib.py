@@ -1096,17 +1096,48 @@ class techno_lib:
     # so a centred base at full depth reaches both end stops and no further.
     MOD_DEPTH_MAX = 100
 
+    # DRIFT: the pattern verbs a modulator may drive, applied at the WRAP.
+    #
+    # The 2026-08-14 spec named HITS / ROTATE / DENSITY / CHANCE. DENSITY no
+    # longer exists - the rhythm generator replaced it on 2026-08-16 - so it is
+    # dropped rather than resurrected. LENGTH and DIV stay out of v1: they are
+    # handback verbs too, but they change the pattern's STRUCTURE, land on the
+    # bar through `pending` and rescale note positions, so drifting them means a
+    # bar whose length changes under the player. Different feature.
+    DRIFT_VERBS = frozenset({"hits", "rotate", "chance"})
+
     @staticmethod
-    def mod_allowed(verb):
-        """True when MOD may bind a modulator to this verb.
+    def is_drift(verb):
+        """True when this verb rewrites the PATTERN and so must be applied at
+        the wrap rather than on the 200 ms modulator tick.
+
+        Writing one every 200 ms means clear() plus an addNote loop under the
+        lock, five times a second, forever - which IS the `velo` defect that
+        destroyed a recorded take unattended in v1."""
+        return verb in techno_lib.DRIFT_VERBS
+
+    @staticmethod
+    def mod_allowed(verb, owned=False):
+        """True when MOD may bind a modulator to this verb on this channel.
 
         A refused verb is drawn dead (law L4) rather than silently ignoring
         the gesture - a knob that does nothing without saying so is the one
-        thing this surface must never do."""
+        thing this surface must never do.
+
+        `owned` is whether the PLAYER owns this channel's pattern. It matters
+        only for drift: those verbs rewrite the pattern, and rewriting it with
+        no hands on the panel is exactly how a recorded take gets erased. Drift
+        refuses there and is drawn dead - owner's confirmed rule, 2026-08-19,
+        the simplest one that cannot destroy a take. Timbre verbs do not
+        rewrite anything, so ownership is irrelevant to them.
+
+        Defaults to unowned so every existing caller keeps its meaning."""
         if not verb:
             return False
         if verb.startswith(techno_lib.VERB_LV2) or verb.startswith(techno_lib.VERB_FX):
             return True
+        if verb in techno_lib.DRIFT_VERBS:
+            return not owned
         return verb in techno_lib.MOD_TIMBRE
 
     @staticmethod
@@ -1383,7 +1414,7 @@ class techno_lib:
         return out
 
     @staticmethod
-    def columns(desc, kind, state, mod=False):
+    def columns(desc, kind, state, mod=False, owned=False):
         """The 8 columns for a page, with MOD's refusals drawn.
 
         `mod` is whether MOD is down. While it is, a column whose verb cannot
@@ -1401,10 +1432,10 @@ class techno_lib:
         one frozenset."""
 
         return techno_lib._mod_grey(
-            techno_lib._columns_inner(desc, kind, state), desc, mod)
+            techno_lib._columns_inner(desc, kind, state), desc, mod, owned)
 
     @staticmethod
-    def _mod_grey(cols, desc, mod):
+    def _mod_grey(cols, desc, mod, owned=False):
         """Strip the bar off every column MOD would refuse.
 
         The value stays: it is a live parameter that simply cannot be
@@ -1421,7 +1452,7 @@ class techno_lib:
         for index, col in enumerate(cols):
             verb = desc.get("verb") if spread else (
                 verbs[index] if index < len(verbs) else None)
-            if col.get("grey") or techno_lib.mod_allowed(verb):
+            if col.get("grey") or techno_lib.mod_allowed(verb, owned):
                 out.append(col)
                 continue
             refused = dict(col)

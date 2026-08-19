@@ -594,6 +594,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         drives them as a percentage scaled onto the port's own range, and a
         modulator must speak the same units as the knob beside it or the two
         would disagree about what depth 50 means."""
+        if verb in ("hits", "rotate") and channel is not None:
+            # Not in VERB_RANGES because their range is the PATTERN's, not a
+            # constant: how many steps this channel has right now.
+            steps = lib.step_count(self.div[channel])
+            return (0, steps) if verb == "hits" else (0, max(0, steps - 1))
         span = self.VERB_RANGES.get(verb)
         if span is not None:
             return (span[0], span[1])
@@ -1065,6 +1070,73 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                           f"register {st['register']:0{st['length']}b}, range {note_range}")
         finally:
             self.writer_token[channel] = None
+
+    def _drift_channel(self, channel):
+        """Apply this channel's drift modulators. Called ONCE PER WRAP.
+
+        Drift is the half of MOD that rewrites the PATTERN - hits gained and
+        lost, the bar rotating under itself, a channel thinning out and coming
+        back. It runs here and never in _mod_write(): a pattern verb written on
+        the 200 ms tick is clear() plus an addNote loop under the lock five
+        times a second, which is precisely the velo defect that destroyed a
+        recorded take unattended.
+
+        OWNERSHIP IS RE-CHECKED EVERY WRAP, not only at bind time. A player can
+        record onto a channel that is already drifting, and the bind-time gate
+        cannot see the future; re-checking here means the take is safe the
+        moment it exists. The entry is deliberately NOT deleted, so handing the
+        channel back with ERASE + Group restores the drift the player set up.
+
+        Writes through apply(), the single write path, so drift is not a second
+        writer with rules of its own - which the SP10 design rejected by name."""
+
+        if self.owner.get(channel) == "player":
+            return
+        beats = self._elapsed_beats()
+        moved = False
+        rewrite = False
+        for (chan, verb), entry in list(self.mod.items()):
+            if chan != channel or not tlib.is_drift(verb):
+                continue
+            span = self._mod_range(channel, verb)
+            if span is None:
+                continue
+            pos = tlib.mod_pos(entry["phase0"], beats, tlib.MOD_RATES[entry["rate"]])
+            wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
+            value = tlib.mod_value(entry["base"], wave, entry["depth"],
+                                   span[0], span[1])
+            # Integer verbs: a pattern cannot have 3.4 hits.
+            before = self.param_get(channel, verb)
+            self.apply(channel, verb, int(round(value)))
+            if self.param_get(channel, verb) == before:
+                continue
+            moved = True
+            if verb in ("hits", "rotate"):
+                # AND REWRITE, or nothing is heard. apply() stores the number
+                # and routes to _apply_generator, which has branches for
+                # chance, swing and the voice verbs but NONE for hits or
+                # rotate - the euclid encoder path sets self.hits/self.rot and
+                # then calls _write_pattern() itself, so apply() was never the
+                # write path for these two. Drift is the first caller that
+                # moves them without going through _act_euclid.
+                #
+                # CHANCE deliberately does not land here: setPlayChance is a
+                # native per-pattern property and costs zero pattern writes,
+                # which is exactly why it is the cheap drift target.
+                rewrite = True
+        if rewrite:
+            with self.lock:
+                self._write_pattern(channel)
+        if moved and channel == self.group:
+            # REPAINT, or the pads lie. apply() rewrites the pattern but the
+            # 30 Hz poll only moves the two playhead pads - a full repaint
+            # otherwise waits for a user event, so the steps on the panel would
+            # show a pattern that is no longer playing. Only when something
+            # actually moved, and only for the channel being looked at: an
+            # unconditional repaint here would be sixteen getNoteVelocity calls
+            # per wrap per channel for nothing.
+            with self.lock:
+                self._render_pads()
 
     def _rewrite_voice(self, channel):
         """Called at a playhead wrap.
@@ -2531,7 +2603,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         looked exactly like the LEVEL column and one of them worked. The
         drawing comes from techno_lib.columns(), through the same `grey` flag
         _column_dead() reads, so the two cannot drift apart again."""
-        if not tlib.mod_allowed(verb):
+        if not tlib.mod_allowed(verb, self.owner.get(channel) == "player"):
+            # Drift refuses on a player-owned channel and is drawn dead there -
+            # owner's confirmed rule, 2026-08-19. Rewriting a pattern with no
+            # hands on the panel is exactly how the velo defect erased a take.
             return
         if self.erase_down:
             # MOD + ERASE + encoder clears. Destructive, so it is two-key and
@@ -2720,6 +2795,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             channel, verb = key
             span = self._mod_range(channel, verb)
             if span is None:
+                continue
+            if tlib.is_drift(verb):
+                # Applied at the WRAP by _wrap_channel, never here. A pattern
+                # verb written every 200 ms is clear() plus an addNote loop
+                # under the lock, five times a second, forever - the velo
+                # defect exactly.
                 continue
             pos = tlib.mod_pos(entry["phase0"], beats,
                                tlib.MOD_RATES[entry["rate"]])
@@ -4037,6 +4118,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self.state[channel]["pending"] |= pending
                 raise
 
+        if wrapped:
+            # Drift, for drums and voices alike - it is the pattern that drifts,
+            # not the line. Outside the lock, like _rewrite_voice below: apply()
+            # reaches _write_pattern, which takes the lock itself.
+            self._drift_channel(channel)
+
         if not voice:
             return
         if wrapped:
@@ -4522,8 +4609,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if shape == tlib.SHAPE_GLOBAL:
             return tlib.columns(desc, None, self.globals_view(), mod)
         channel = self.group
+        owned = self.owner.get(channel) == "player"
         return tlib.columns(desc, self._page_kind(channel),
-                            self.state_view(channel), mod)
+                            self.state_view(channel), mod, owned)
 
     def _column_dead(self, column):
         """True when this column is drawn dead (law L4): greyed, showing ----,

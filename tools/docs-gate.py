@@ -102,7 +102,14 @@ BASELINE = {
     # and that the fade speeds are a READABLE range and not the real rates -
     # which is a claim about honesty, and the one a later reader would
     # otherwise take for a measurement.
-    "modulation.html":             (1279, "2026-08-19"),
+    # +261, 2026-08-19 (second move that day): DRIFT. The page grew twice in
+    # one session because the whole second half of MOD shipped in it - the
+    # timbre LFO had been the only half since 2026-08-15. Five paragraphs, and
+    # two of them exist for safety rather than description: that drift refuses
+    # on a channel you have recorded, and that recording onto a drifting
+    # channel STOPS it rather than losing your take. A reader who does not know
+    # those two will either think it is broken or lose a take finding out.
+    "modulation.html":             (1540, "2026-08-19"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
     # +171, 2026-08-16: a voice now has TWO generators, not one. MELODY and

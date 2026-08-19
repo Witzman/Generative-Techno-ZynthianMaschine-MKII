@@ -1325,11 +1325,17 @@ class TestModulatorMaths(unittest.TestCase):
                      "root", "scale", "octave", "range"):
             self.assertFalse(tl.mod_allowed(verb), verb)
 
-    def test_generation_verbs_are_refused_in_v1(self):
-        # HITS/ROTATE/DENSITY/CHANCE are the DRIFT targets. Drift is deferred
-        # and blocked on the SP2-ownership rule, so MOD refuses them for now.
-        for verb in ("hits", "rotate", "rhythm", "chance"):
-            self.assertFalse(tl.mod_allowed(verb), verb)
+    def test_generation_verbs_now_depend_on_OWNERSHIP(self):
+        # CHANGED 2026-08-19: drift shipped. These used to be refused
+        # unconditionally because drift was deferred and blocked on the
+        # SP2-ownership rule; the owner confirmed that rule, so they are
+        # bindable on an UNOWNED channel and refused on an owned one.
+        for verb in ("hits", "rotate", "chance"):
+            self.assertTrue(tl.mod_allowed(verb, owned=False), verb)
+            self.assertFalse(tl.mod_allowed(verb, owned=True), verb)
+        # RHYTHM is still refused outright: it is a voice's evolve knob, not a
+        # pattern verb drift targets, and it is not in DRIFT_VERBS.
+        self.assertFalse(tl.mod_allowed("rhythm"))
 
     def test_none_is_refused(self):
         self.assertFalse(tl.mod_allowed(None))
@@ -1741,15 +1747,27 @@ class TestModAwareGreying(unittest.TestCase):
         self.assertEqual(cols[0]["value"], plain[0]["value"])
         self.assertEqual(cols[0]["name"], plain[0]["name"])
 
-    def test_the_pattern_verbs_are_refused(self):
-        # HITS, ROTATE, DENSITY and CHANCE rewrite the pattern, and velo/gate
-        # were removed from MOD_TIMBRE after an LFO on VELO destroyed a
-        # recorded take every 200 ms.
+    def test_the_pattern_verbs_are_refused_ON_AN_OWNED_CHANNEL(self):
+        # CHANGED 2026-08-19: drift shipped, so HITS/ROTATE/CHANCE are bindable
+        # on an unowned channel. They stay refused on an owned one, which is
+        # the whole rule - rewriting a pattern with no hands on the panel is
+        # how a recorded take gets erased, exactly as the velo defect did.
         state = _drum_step_state()
-        cols = tl.columns(self.STEP, "drum", state, mod=True)
+        cols = tl.columns(self.STEP, "drum", state, mod=True, owned=True)
         for i, verb in enumerate(self.STEP["verbs"]):
             if verb in ("hits", "rotate", "chance", "velo"):
                 self.assertIsNone(cols[i]["bar"], verb)
+                self.assertTrue(cols[i]["grey"], verb)
+
+    def test_the_pattern_verbs_are_offered_on_an_unowned_channel(self):
+        state = _drum_step_state()
+        cols = tl.columns(self.STEP, "drum", state, mod=True, owned=False)
+        for i, verb in enumerate(self.STEP["verbs"]):
+            if verb in ("hits", "rotate", "chance"):
+                self.assertFalse(cols[i]["grey"], verb)
+            if verb == "velo":
+                # VELO stays refused whatever the ownership: it is written by
+                # regenerating the whole pattern and is not a drift target.
                 self.assertTrue(cols[i]["grey"], verb)
 
     def test_an_already_dead_column_is_left_alone(self):
@@ -1768,7 +1786,8 @@ class TestModAwareGreying(unittest.TestCase):
     def test_a_spread_page_on_a_refused_verb_greys_all_eight(self):
         desc = {"title": "CHANCE", "shape": tl.SHAPE_SPREAD, "verb": "chance"}
         views = [("A", "KICK", {"chance": 100}) for _ in range(8)]
-        cols = tl.columns(desc, None, views, mod=True)
+        # owned=True: CHANCE is a drift verb now, so it is refused only there.
+        cols = tl.columns(desc, None, views, mod=True, owned=True)
         self.assertTrue(all(c["bar"] is None for c in cols))
         self.assertTrue(all(c["grey"] for c in cols))
 
@@ -2365,3 +2384,69 @@ class TestBigEncoderDetents(unittest.TestCase):
     def test_a_fast_spin_gives_every_page_it_passed(self):
         # Three detents in one report must not collapse into one page.
         self.assertEqual(tl.big_detents(24), (3, 0))
+
+
+class TestDriftAllowed(unittest.TestCase):
+    """Drift refuses to bind on a player-owned channel — owner confirmed
+    2026-08-19, settling the question that blocked drift since 2026-08-14.
+
+    ONE PREDICATE, NOT TWO LISTS. columns() greys whatever fails this, and
+    _column_dead() reads that same flag, so the painter and the refusal agree by
+    construction. The `velo` defect reached the surface through a deny list that
+    disagreed with the code."""
+
+    def test_timbre_verbs_are_unaffected_by_ownership(self):
+        # They do not rewrite the pattern, so a take is never at risk.
+        for verb in ("level", "reverb", "delay", "cutoff"):
+            self.assertTrue(tl.mod_allowed(verb, owned=False))
+            self.assertTrue(tl.mod_allowed(verb, owned=True))
+
+    def test_drift_verbs_bind_on_an_unowned_channel(self):
+        for verb in ("hits", "rotate", "chance"):
+            self.assertTrue(tl.mod_allowed(verb, owned=False))
+
+    def test_drift_verbs_refuse_on_an_owned_channel(self):
+        for verb in ("hits", "rotate", "chance"):
+            self.assertFalse(tl.mod_allowed(verb, owned=True))
+
+    def test_density_is_not_resurrected(self):
+        # The 2026-08-14 spec named it; the rhythm generator replaced it on
+        # 2026-08-16, so it is dropped rather than brought back.
+        self.assertFalse(tl.mod_allowed("density", owned=False))
+
+    def test_structure_verbs_stay_out_of_v1(self):
+        # LENGTH and DIV are handback verbs too, but they change the pattern's
+        # SHAPE and land through `pending`. A bar whose length changes under
+        # the player is a different feature.
+        for verb in ("length", "div"):
+            self.assertFalse(tl.mod_allowed(verb, owned=False))
+
+    def test_the_default_is_unowned_so_old_callers_are_unchanged(self):
+        self.assertTrue(tl.mod_allowed("cutoff"))
+        self.assertTrue(tl.mod_allowed("hits"))
+
+    def test_lv2_and_fx_verbs_still_pass(self):
+        self.assertTrue(tl.mod_allowed("lv2:cutoff", owned=True))
+        self.assertTrue(tl.mod_allowed("fx:0:wet", owned=True))
+
+
+class TestDriftIsWrapRate(unittest.TestCase):
+    """Drift is applied at the pattern wrap, never on the 200 ms tick.
+
+    A pattern verb written every 200 ms means clear() plus an addNote loop under
+    the lock, five times a second, forever. That IS the velo defect."""
+
+    def test_drift_verbs_are_named(self):
+        self.assertEqual(tl.DRIFT_VERBS, frozenset({"hits", "rotate", "chance"}))
+
+    def test_a_drift_verb_is_wrap_rate(self):
+        for verb in tl.DRIFT_VERBS:
+            self.assertTrue(tl.is_drift(verb))
+
+    def test_a_timbre_verb_is_not(self):
+        for verb in ("level", "reverb", "delay", "cutoff", "reso", "env", "decay"):
+            self.assertFalse(tl.is_drift(verb))
+
+    def test_plugin_verbs_are_not(self):
+        self.assertFalse(tl.is_drift("lv2:cutoff"))
+        self.assertFalse(tl.is_drift("fx:0:wet"))
