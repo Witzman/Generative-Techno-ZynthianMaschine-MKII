@@ -2696,3 +2696,251 @@ class TestRerollScope(unittest.TestCase):
     def test_an_all_synth_rig_gives_PATTERN_nothing(self):
         rig = {i: False for i in range(8)}
         self.assertEqual(tl.reroll_scope("pattern", rig, self.ALL_GEN, 0, True), ())
+
+
+class TestSwitchSpec(unittest.TestCase):
+    """An enumerated or toggled port is a SWITCH. What counts as one is
+    decided here rather than in the driver, which cannot be imported on WSL."""
+
+    def test_a_toggle_is_a_switch(self):
+        self.assertEqual(tl.switch_spec(["off", "on"], [0, 1]),
+                         (("off", "on"), (0, 1)))
+
+    def test_an_enum_is_a_switch(self):
+        spec = tl.switch_spec(["LP24", "LP12", "BP", "HP"], [0, 1, 2, 3])
+        self.assertEqual(len(spec[0]), 4)
+
+    def test_a_trigger_is_not_a_switch(self):
+        # One label is a one-shot. Firing it off a mute button is a different
+        # feature and is refused rather than half-supported.
+        self.assertIsNone(tl.switch_spec(["trig"], [0]))
+
+    def test_a_plain_numeric_port_is_not_a_switch(self):
+        self.assertIsNone(tl.switch_spec(None, None))
+        self.assertIsNone(tl.switch_spec([], []))
+
+    def test_labels_without_ticks_are_not_a_switch(self):
+        self.assertIsNone(tl.switch_spec(["a", "b"], None))
+
+    def test_mismatched_lengths_truncate_rather_than_raise(self):
+        # A column that indexed past the end of one of them would take the
+        # whole render down, and the render runs on the poll thread.
+        labels, ticks = tl.switch_spec(["a", "b", "c"], [0, 1])
+        self.assertEqual((labels, ticks), (("a", "b"), (0, 1)))
+
+
+class TestSwitchIndex(unittest.TestCase):
+
+    def test_an_exact_tick_is_its_own_index(self):
+        self.assertEqual(tl.switch_index(2, (0, 1, 2, 3)), 2)
+
+    def test_a_value_between_ticks_takes_the_nearest(self):
+        self.assertEqual(tl.switch_index(30, (0, 32, 64)), 1)
+
+    def test_sparse_ticks_are_not_assumed_evenly_spaced(self):
+        self.assertEqual(tl.switch_index(0.9, (0.0, 0.25, 1.0)), 2)
+
+    def test_descending_ticks_work(self):
+        # zynthian_controller sets range_reversed for a descending scale, so
+        # the order cannot be assumed.
+        self.assertEqual(tl.switch_index(10, (100, 50, 10, 0)), 2)
+
+    def test_a_label_string_resolves_through_the_labels(self):
+        # jalv seeds a toggle with 'off' / 'on', so the first read of a port
+        # can be a word rather than a number.
+        self.assertEqual(tl.switch_index("on", (0, 1), ("off", "on")), 1)
+
+    def test_an_unknown_label_falls_back_to_the_first_position(self):
+        self.assertEqual(tl.switch_index("weird", (0, 1), ("off", "on")), 0)
+
+
+class TestSwitchMovement(unittest.TestCase):
+    """The button wraps and the knob clamps, deliberately: one button has to
+    reach every position, and no knob on this surface jumps from the last
+    position to the first on one detent."""
+
+    def test_the_button_advances(self):
+        self.assertEqual(tl.switch_next(0, 4), 1)
+
+    def test_the_button_wraps(self):
+        self.assertEqual(tl.switch_next(3, 4), 0)
+
+    def test_a_two_state_button_is_a_toggle(self):
+        self.assertEqual(tl.switch_next(1, 2), 0)
+
+    def test_the_knob_clamps_at_both_ends(self):
+        self.assertEqual(tl.switch_step(3, 4, 1), 3)
+        self.assertEqual(tl.switch_step(0, 4, -1), 0)
+
+    def test_the_knob_takes_a_multi_step_delta(self):
+        self.assertEqual(tl.switch_step(0, 6, 3), 3)
+
+    def test_an_empty_switch_cannot_move(self):
+        self.assertEqual(tl.switch_next(0, 0), 0)
+        self.assertEqual(tl.switch_step(0, 0, 1), 0)
+
+
+class TestSwitchColumns(unittest.TestCase):
+    """A switch column draws the plugin's own WORD over a segmented bar - the
+    vocabulary the surface already has - instead of a number over a fill."""
+
+    def _page(self, count=2):
+        ports = [(f"p{i}", 0.0, 1.0) for i in range(count)]
+        return tl.generated_pages(ports, (), tl.SHAPE_CHANNEL,
+                                  tl.VERB_LV2, "EXTRA")[0]
+
+    def test_a_switch_column_shows_the_label(self):
+        page = self._page()
+        cols = tl.columns(page, "voice", {
+            "lv2:p0": 100, "pending": set(),
+            "switch": {"lv2:p0": (1, 2, "on")}})
+        self.assertEqual(cols[0]["value"], "on")
+        self.assertEqual(cols[0]["bar"], "seg")
+        self.assertEqual(cols[0]["frac"], (1, 2))
+        # A word needs the small font, exactly as a preset name does.
+        self.assertTrue(cols[0]["small"])
+
+    def test_the_name_is_still_the_port(self):
+        page = self._page()
+        cols = tl.columns(page, "voice", {
+            "lv2:p0": 0, "pending": set(),
+            "switch": {"lv2:p0": (0, 4, "LP24")}})
+        self.assertEqual(cols[0]["name"], "P0")
+        self.assertEqual(cols[0]["value"], "LP24")
+
+    def test_a_port_that_is_not_a_switch_is_untouched(self):
+        page = self._page()
+        cols = tl.columns(page, "voice", {
+            "lv2:p0": 50, "lv2:p1": 50, "pending": set(),
+            "switch": {"lv2:p0": (0, 2, "off")}})
+        self.assertEqual(cols[1]["value"], "0050")
+        self.assertEqual(cols[1]["bar"], "uni")
+
+    def test_a_view_with_no_switches_at_all_still_renders(self):
+        # Every caller that predates switches omits the key.
+        page = self._page()
+        cols = tl.columns(page, "voice", {"lv2:p0": 50, "pending": set()})
+        self.assertEqual(cols[0]["value"], "0050")
+
+    def test_a_dead_port_outranks_a_stale_switch_entry(self):
+        # Law L4: no value in the view means the port is gone, and a switch
+        # entry left over from the previous plugin must not draw over it.
+        page = self._page()
+        cols = tl.columns(page, "voice", {
+            "pending": set(), "switch": {"lv2:p0": (1, 2, "on")}})
+        self.assertTrue(cols[0]["grey"])
+        self.assertEqual(cols[0]["value"], "----")
+
+    def test_a_long_label_is_shortened_to_the_small_font_budget(self):
+        page = self._page()
+        cols = tl.columns(page, "voice", {
+            "lv2:p0": 0, "pending": set(),
+            "switch": {"lv2:p0": (0, 3, "Ladder 24dB LP")}})
+        self.assertLessEqual(len(cols[0]["value"]), tl.SWITCH_LABEL_CHARS)
+
+
+class TestFRowKind(unittest.TestCase):
+    """Taking the F row is the only part of switch exposure that is not
+    additive, so what the row means is a table, tested."""
+
+    def test_control_unmodified_is_switches(self):
+        self.assertEqual(tl.f_row_kind("CONTROL", False, False, False),
+                         tl.F_ROW_SWITCH)
+
+    def test_every_other_mode_keeps_mute(self):
+        for mode in ("STEP", "ALL", "MIXER", "FILTER"):
+            self.assertEqual(tl.f_row_kind(mode, False, False, False),
+                             tl.F_ROW_MUTE)
+
+    def test_shift_hands_mute_back_inside_control(self):
+        self.assertEqual(tl.f_row_kind("CONTROL", True, False, False),
+                         tl.F_ROW_MUTE)
+
+    def test_solo_still_solos_inside_control(self):
+        self.assertEqual(tl.f_row_kind("CONTROL", False, True, False),
+                         tl.F_ROW_MUTE)
+
+    def test_mod_makes_the_row_inert_rather_than_switching(self):
+        self.assertEqual(tl.f_row_kind("CONTROL", False, False, True),
+                         tl.F_ROW_INERT)
+
+    def test_mod_outside_control_is_still_mute(self):
+        # MOD only takes a row that switch exposure had taken in the first
+        # place; outside CONTROL nothing about the row changed.
+        self.assertEqual(tl.f_row_kind("STEP", False, False, True),
+                         tl.F_ROW_MUTE)
+
+    def test_shift_outranks_mod(self):
+        self.assertEqual(tl.f_row_kind("CONTROL", True, False, True),
+                         tl.F_ROW_MUTE)
+
+
+class TestWrapLabel(unittest.TestCase):
+    """A port name does not fit one row. The tab box above the column carries
+    the first line and the name row the second, so a column has sixteen
+    characters instead of eight - owner, 2026-08-19, at the rig, where
+    PITCH_BEND_RANGE and PITCH_BEND_STEP both drew as "PITCH_BE"."""
+
+    def test_a_short_name_uses_one_line(self):
+        self.assertEqual(tl.wrap_label("Gain"), ("Gain", ""))
+
+    def test_it_breaks_on_a_space(self):
+        self.assertEqual(tl.wrap_label("Master Tune"), ("Master", "Tune"))
+
+    def test_neighbours_stop_colliding(self):
+        # The pair that motivated it: same first eight characters, different
+        # second line.
+        self.assertEqual(tl.wrap_label("ModWheel Range")[1], "Range")
+        self.assertEqual(tl.wrap_label("ModWheel Assign")[1], "Assign")
+
+    def test_an_underscore_is_a_break_and_survives(self):
+        self.assertEqual(tl.wrap_label("MOD_WHEEL_ASSIGN"), ("MOD_", "WHEEL_"))
+
+    def test_one_long_word_is_hard_split(self):
+        self.assertEqual(tl.wrap_label("OSCILLATORSYNC"), ("OSCILLAT", "ORSYNC"))
+
+    def test_a_third_line_is_dropped_rather_than_drawn_nowhere(self):
+        first, second = tl.wrap_label("One Two Three Four Five")
+        self.assertLessEqual(len(first), tl.TAB_LABEL_CHARS)
+        self.assertLessEqual(len(second), tl.TAB_LABEL_CHARS)
+
+    def test_nothing_wraps_to_nothing(self):
+        self.assertEqual(tl.wrap_label(""), ("", ""))
+        self.assertEqual(tl.wrap_label(None), ("", ""))
+
+
+class TestGeneratedTabs(unittest.TestCase):
+
+    def test_a_tab_carries_the_label_and_no_channel_styling(self):
+        tabs = tl.generated_tabs(("Cutoff", "Engine", "", "Poly/Mon"))
+        self.assertEqual(len(tabs), 4)
+        letter, name, selected, muted, armed = tabs[0]
+        # No letter: a parameter is not a channel, so none of the channel
+        # styles - selected, dashed, dotted - apply to it.
+        self.assertEqual((letter, name), ("", "Cutoff"))
+        self.assertFalse(selected or muted or armed)
+
+
+class TestGeneratedColumnNames(unittest.TestCase):
+
+    def _page(self):
+        return tl.generated_pages([("mod_wheel_assign", 0.0, 1.0)], (),
+                                  tl.SHAPE_CHANNEL, tl.VERB_LV2, "EXTRA")[0]
+
+    def test_the_name_row_is_the_second_line_of_the_name(self):
+        cols = tl.columns(self._page(), "voice", {
+            "lv2:mod_wheel_assign": 50, "pending": set(),
+            "names": {"lv2:mod_wheel_assign": "ModWheel Assign"}})
+        self.assertEqual(cols[0]["name"], "Assign")
+
+    def test_without_a_name_it_falls_back_to_the_symbol(self):
+        cols = tl.columns(self._page(), "voice",
+                          {"lv2:mod_wheel_assign": 50, "pending": set()})
+        self.assertEqual(cols[0]["name"], "MOD_WHEE")
+
+    def test_a_dead_column_still_names_itself(self):
+        cols = tl.columns(self._page(), "voice", {
+            "pending": set(), "names": {"lv2:mod_wheel_assign": "ModWheel Assign"}})
+        self.assertTrue(cols[0]["grey"])
+        self.assertEqual(cols[0]["value"], "----")
+        self.assertEqual(cols[0]["name"], "assign")

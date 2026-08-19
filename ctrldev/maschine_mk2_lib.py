@@ -489,7 +489,10 @@ class maschine_mk2_lib:
             style = (cls.RECT_DOTTED if armed
                      else cls.RECT_DASHED if muted else cls.RECT_OUTLINE)
             out.append(cls.display_rect_osc(screen, x, 0, w, cls.TAB_H, style))
-            tab_label = f"{letter} {name}"[:cls.TAB_CHARS]
+            # No letter means this tab is not a channel: a generated page
+            # puts the parameter's own name here, and the leading space a
+            # blank letter would leave costs one of eight characters.
+            tab_label = (f"{letter} {name}" if letter else str(name))[:cls.TAB_CHARS]
             out.append(cls.display_text_osc(screen, x + 3, 2, 1, False, tab_label))
             if selected:
                 # One inversion over the finished tab. Filling the box and

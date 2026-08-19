@@ -930,11 +930,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         span = zctrl.value_max - zctrl.value_min
         if span <= 0:
             return
-        if tlib.port_is_discrete(zctrl.value_min, zctrl.value_max,
-                              getattr(zctrl, "is_integer", True)):
-            # A toggle or a handful of positions: one percent of it rounds to
-            # nothing and _set_value() truncates integer controls, so drive it
-            # in whole units instead. Measured dead on TAP Reverberator.
+        # An enumerated or toggled port moves between its OWN ticks, which
+        # are not necessarily one unit apart: stepping in whole units lands
+        # between two scale points on any plugin whose values are sparse, and
+        # the port then reads as a number nobody named. Clamped, not wrapped -
+        # F1-F8 wrap, a knob does not.
+        spec = tlib.switch_spec(getattr(zctrl, "labels", None),
+                                getattr(zctrl, "ticks", None))
+        if spec is not None:
+            labels, ticks = spec
+            delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
+            if delta == 0:
+                return
+            index = tlib.switch_index(zctrl.value, ticks, labels)
+            target = ticks[tlib.switch_step(index, len(ticks), delta)]
+        elif tlib.port_is_discrete(zctrl.value_min, zctrl.value_max,
+                                 getattr(zctrl, "is_integer", True)):
+            # A handful of positions with no labels on them: one percent of it
+            # rounds to nothing and _set_value() truncates integer controls,
+            # so drive it in whole units instead. Measured dead on TAP
+            # Reverberator.
             delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
             if delta == 0:
                 return
@@ -966,8 +981,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         span = zctrl.value_max - zctrl.value_min
         if span <= 0:
             return
-        if tlib.port_is_discrete(zctrl.value_min, zctrl.value_max,
-                              getattr(zctrl, "is_integer", True)):
+        # An enumerated or toggled port moves between its OWN ticks, which
+        # are not necessarily one unit apart: stepping in whole units lands
+        # between two scale points on any plugin whose values are sparse, and
+        # the port then reads as a number nobody named. Clamped, not wrapped -
+        # F1-F8 wrap, a knob does not.
+        spec = tlib.switch_spec(getattr(zctrl, "labels", None),
+                                getattr(zctrl, "ticks", None))
+        if spec is not None:
+            labels, ticks = spec
+            delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
+            if delta == 0:
+                return
+            index = tlib.switch_index(zctrl.value, ticks, labels)
+            target = ticks[tlib.switch_step(index, len(ticks), delta)]
+        elif tlib.port_is_discrete(zctrl.value_min, zctrl.value_max,
+                                 getattr(zctrl, "is_integer", True)):
             # The whole REV page is toggles - combs_en, allps_en, bandpass,
             # stereo_E - and every one of them was dead until this branch.
             delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
@@ -2408,6 +2437,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.shift_down = down
         with self.lock:
             self._render_pads()
+            # SHIFT is also what hands the F row back to mute inside CONTROL,
+            # so the row's lights have to follow both edges of it.
+            self._render_mutes()
 
     def _mod_legend_state(self):
         """(bound, rate index, shape) for the legend.
@@ -3369,6 +3401,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         key = ("f", index)
         soloing = self.solo_down or self.solo_mode
+        if self._switch_row() is not None:
+            # CONTROL, unmodified: the row is the page's switches. Asked
+            # through the same predicate the LED is painted from, so the
+            # button and its light cannot disagree about what the row means.
+            #
+            # The pop is unconditional: a press that landed as a mute, with
+            # SHIFT released before the button, would otherwise leave a
+            # _down_at entry behind for a later hold to measure its time from.
+            self._down_at.pop(key, None)
+            if down:
+                self._switch_press(index)
+            return
         if down:
             self._down_at[key] = (time.monotonic(), soloing)
             self._toggle_solo(index) if soloing else self._toggle_mute(index)
@@ -4461,6 +4505,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # swallows every unchanged repeat, so a steady or dark
                         # SWING still puts nothing on the wire.
                         self._render_mod()
+                        # The F row follows the page in CONTROL, and a switch
+                        # can also move from the touchscreen - so it needs a
+                        # periodic writer for the same reason GRID does. Eight
+                        # dict lookups against the LED cache when nothing has
+                        # changed.
+                        self._render_mutes()
                         # Volume, pan and the mutes can all move on the
                         # touchscreen with nothing signalling it, so the
                         # screens are polled on the same tick.
@@ -4647,13 +4697,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _render_mutes(self):
         """F1-F8 light what they did: lit = muted, or lit = soloed while the
         F row means solo. SOLO itself is lit only while its mode is latched,
-        so the row's meaning is always readable from the panel."""
+        so the row's meaning is always readable from the panel.
+
+        In CONTROL the row is the page's SWITCHES instead, and then lit means
+        the switch is off its first position - dark on a column that carries
+        no switch, which is a button honestly saying it does nothing. Both
+        readings come from _switch_row(), the same call _f_button() asks."""
 
         mixer = self.state_manager.zynmixer
         soloing = self.solo_down or self.solo_mode
+        switches = self._switch_row()
         for group in range(8):
             chan = self._mixer_chan(group)
-            if chan is None:
+            if switches is not None:
+                on = bool(switches[group])
+            elif chan is None:
                 on = False
             elif soloing:
                 on = bool(mixer.get_solo(chan))
@@ -4841,6 +4899,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         surface said why. Silence with no explanation is the one thing this
         instrument must never do."""
 
+        # A GENERATED page is the exception, owner 2026-08-19 at the rig: it
+        # is one channel's own plugin, the parameter names do not fit one row
+        # (PITCH_BEND_RANGE and PITCH_BEND_STEP both truncate to "PITCH_BE"),
+        # and the channel names are not what a player is reading there. So the
+        # tab row carries the FIRST line of each column's name and the name
+        # row carries the second. The channel tabs are still on every other
+        # page, which is where the silence signal is read.
+        desc = self._page()
+        if desc.get("generated"):
+            labels = []
+            for verb in desc["verbs"][screen * 4:screen * 4 + 4]:
+                labels.append(tlib.wrap_label(self._port_name(verb))[0])
+            return tlib.generated_tabs(labels)
+
         out = []
         for group in range(screen * 4, screen * 4 + 4):
             chan = self._mixer_chan(group)
@@ -4990,7 +5062,163 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Same substitution as state_view(): a modulated port shows its
             # base, not the live value _mod_write() just swept it to.
             view[verb] = self._mod_override(self.group, verb, percent)
+            # An enumerated or toggled port draws the plugin's own word over a
+            # segmented bar instead of a number over a fill. The percent above
+            # is still set: the modulator speaks in percent and mark_modulated
+            # stamps the same column.
+            switch = self._switch_view(verb)
+            if switch is not None:
+                view.setdefault("switch", {})[verb] = switch
+            # The plugin's own name, wrapped across the tab row and the name
+            # row by generated_columns and _tabs between them.
+            name = getattr(zctrl, "name", None)
+            if name:
+                view.setdefault("names", {})[verb] = str(name)
         return view
+
+    # --- switches -------------------------------------------------------
+    #
+    # An enumerated or toggled plugin port is a SWITCH: it has labels and
+    # ticks, and turning a knob between two of them was the surface flattening
+    # a distinction the engine had already made. The F row carries them in
+    # CONTROL mode, one button directly above the encoder that owns the same
+    # column.
+    #
+    # Everything decidable without a live controller is in techno_lib, where
+    # it is unit tested - this half exists only because a zynthian_controller
+    # cannot be imported off the Pi.
+
+    def _port_name(self, verb):
+        """The plugin's own name for a generated verb's port - "Pitch Bend
+        Range", not the LV2 symbol - or the symbol abbreviation when the
+        chain answers nothing.
+
+        A name is what the tab row and the name row spell out between them.
+        The symbol is the fallback rather than the source: symbols are written
+        for a host, and two of them sharing their first eight characters is
+        exactly the collision this fixes."""
+
+        if verb is None:
+            return ""
+        zctrl = self._mod_zctrl(self.group, verb)
+        name = getattr(zctrl, "name", None) if zctrl is not None else None
+        if name:
+            return str(name)
+        return tlib.port_label(verb.split(":")[-1])
+
+    def _switch_spec(self, verb):
+        """(labels, ticks) for a generated verb whose port is a switch, else
+        None. Resolved through _mod_zctrl, so it reaches the port exactly the
+        way _verb_lv2 and the modulator do - never through
+        zynthian_lv2.get_plugin_ports(), which is keyed by port INDEX."""
+
+        if verb is None or not (verb.startswith(tlib.VERB_LV2)
+                                or verb.startswith(tlib.VERB_FX)):
+            return None
+        zctrl = self._mod_zctrl(self.group, verb)
+        if zctrl is None:
+            return None
+        return tlib.switch_spec(getattr(zctrl, "labels", None),
+                                getattr(zctrl, "ticks", None))
+
+    def _switch_view(self, verb):
+        """(index, count, label) for a switch port, or None when this verb is
+        not one.
+
+        A MODULATED switch reads its BASE, not the sweep - the same
+        substitution _generated_view() applies to every other generated
+        column. Showing the LFO's current position here would put the word and
+        the bar somewhere the button did not leave them."""
+
+        spec = self._switch_spec(verb)
+        if spec is None:
+            return None
+        labels, ticks = spec
+        zctrl = self._mod_zctrl(self.group, verb)
+        value = zctrl.value
+        entry = self.mod.get(self._mod_key(self.group, verb))
+        if entry is not None:
+            span = zctrl.value_max - zctrl.value_min
+            if span > 0:
+                value = zctrl.value_min + span * (float(entry["base"]) / 100.0)
+        index = tlib.switch_index(value, ticks, labels)
+        return (index, len(ticks), labels[index])
+
+    def _switch_row(self):
+        """What the F row means right now: a tuple of eight entries when it is
+        the page's switches, None when it is still mute and solo.
+
+        THE SINGLE PREDICATE for both the painter (_render_mutes) and the
+        action (_f_button), for the reason _column_dead exists: a second
+        approximation of "what does this button do" drifts from the first, and
+        an F LED that disagrees with what the button does is the worst object
+        this surface can produce.
+
+        An entry is True when the switch is off its first position, False when
+        it is on it, and None when that column carries no switch at all - a
+        dark button that does nothing, which is law L4 on a button.
+
+        Mute and solo are one modifier away inside CONTROL: SHIFT + Fn mutes,
+        SOLO + Fn solos exactly as it does everywhere else. Every other mode
+        is untouched."""
+
+        kind = tlib.f_row_kind(self.mode, self.shift_down,
+                               self.solo_down or self.solo_mode, self.mod_down)
+        if kind == tlib.F_ROW_MUTE:
+            return None
+        if kind == tlib.F_ROW_INERT:
+            # MOD: dark and doing nothing. The rule itself is in
+            # techno_lib.f_row_kind, where it is unit tested.
+            return (None,) * 8
+        verbs = self._page().get("verbs") or ()
+        out = []
+        for column in range(8):
+            verb = verbs[column] if column < len(verbs) else None
+            view = self._switch_view(verb)
+            out.append(None if view is None else view[0] > 0)
+        return tuple(out)
+
+    def _switch_press(self, column):
+        """F1-F8 in CONTROL: advance the switch above the button, wrapping.
+
+        Press only. The tap/hold law is about mute and solo - a momentary
+        parameter switch would be a different feature, and a held one would
+        fight the display.
+
+        A modulated port has its modulator's BASE moved instead of being
+        written, the same contract mod_steer() gives the encoders: writing the
+        engine here would be overwritten by the next modulator tick inside
+        200 ms and the button would read as broken."""
+
+        verbs = self._page().get("verbs") or ()
+        verb = verbs[column] if column < len(verbs) else None
+        if verb is None or not verb.startswith(tlib.VERB_LV2):
+            # Only the channel's own synth. An `fx:` verb is ganged across all
+            # eight inserts and lives on the ALL pages, which this row never
+            # reaches - writing one from here would move insert 0 alone.
+            return
+        view = self._switch_view(verb)
+        if view is None:
+            return
+        spec = self._switch_spec(verb)
+        if spec is None:
+            return
+        _, ticks = spec
+        target = ticks[tlib.switch_next(view[0], len(ticks))]
+        zctrl = self._mod_zctrl(self.group, verb)
+        key = self._mod_key(self.group, verb)
+        entry = self.mod.get(key)
+        if entry is not None:
+            span = zctrl.value_max - zctrl.value_min
+            if span <= 0:
+                return
+            entry["base"] = min(100.0, max(
+                0.0, (float(target) - zctrl.value_min) / span * 100.0))
+        else:
+            zctrl.set_value(target, True)
+        with self.lock:
+            self._render_display()
+            self._render_mutes()
 
     # Peak metering. Two mixer APIs exist and the Pi runs the older one -
     # measured 2026-08-11, G4 step 4:

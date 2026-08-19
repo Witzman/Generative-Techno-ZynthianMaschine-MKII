@@ -1533,6 +1533,200 @@ class techno_lib:
         """Move a discrete port by whole units, clamped to its own range."""
         return max(lo, min(hi, value + delta))
 
+    # --- generated page labels -------------------------------------------
+    #
+    # A plugin port's name does not fit one row. PITCH_BEND_RANGE and
+    # PITCH_BEND_STEP both truncate to "PITCH_BE", and MOD_WHEEL_RANGE and
+    # MOD_WHEEL_ASSIGN both to "MOD_WHEE" - two adjacent columns drawing the
+    # same word, which is no name at all. Owner, 2026-08-19, at the rig.
+    #
+    # The tab row above the columns carries the channel names, and on a
+    # GENERATED page nobody needs them there: the page is one channel's own
+    # plugin, the selected channel is on the group buttons, and the pages that
+    # explain silence are the ones this is not. So the tab row and the name
+    # row are used as ONE field two lines deep, and the name is wrapped over
+    # both - sixteen characters instead of eight.
+
+    TAB_LABEL_CHARS = 8      # matches maschine_mk2_lib.TAB_CHARS
+
+    @staticmethod
+    def wrap_label(text, width=None):
+        """(line 1, line 2) for a parameter name spread over the tab row and
+        the name row.
+
+        Breaks on spaces and underscores first, because "MOD_WHEEL / ASSIGN"
+        reads and "MOD_WHEE / L_ASSIGN" does not. A single word longer than
+        the row is hard-split - there is nothing better to do with
+        OSCILLATORSYNC, and half a word is still more than none.
+
+        Anything past two rows is dropped: the third line has nowhere to go."""
+        width = techno_lib.TAB_LABEL_CHARS if width is None else width
+        text = "" if text is None else str(text).strip()
+        if not text or width <= 0:
+            return ("", "")
+        if len(text) <= width:
+            return (text, "")
+        # Underscores are word breaks that also take up a character; spaces
+        # are word breaks that do not survive the wrap.
+        words, current = [], ""
+        for ch in text:
+            current += ch
+            if ch in " _":
+                words.append(current)
+                current = ""
+        if current:
+            words.append(current)
+        lines, line = [], ""
+        for word in words:
+            candidate = line + word
+            if len(candidate.rstrip()) <= width:
+                line = candidate
+                continue
+            if line:
+                lines.append(line.rstrip())
+                line = ""
+            while len(word.rstrip()) > width:
+                lines.append(word[:width])
+                word = word[width:]
+            line = word
+        if line:
+            lines.append(line.rstrip())
+        lines = [text[:width], text[width:width * 2]] if not lines else lines
+        return (lines[0][:width], (lines[1][:width] if len(lines) > 1 else ""))
+
+    @staticmethod
+    def generated_tabs(labels):
+        """Four tab tuples for one screen of a generated page.
+
+        Same shape screen_packets already takes - (letter, name, selected,
+        muted, armed) - with no letter and every flag off: a parameter name is
+        not a channel, so none of the channel styles apply to it. Plain
+        outlined boxes with a word in them."""
+        out = []
+        for label in labels:
+            out.append(("", label, False, False, False))
+        return tuple(out)
+
+    # --- switches -------------------------------------------------------
+    #
+    # A plugin publishes three kinds of control and Zynthian has parsed all
+    # three before the driver sees them: continuous, ENUMERATED (scale_points
+    # become labels + ticks) and TOGGLE (is_toggled becomes labels
+    # ['off','on']). This driver read none of it until 2026-08-19, so a filter
+    # type drew as 0040 where the plugin had the word LP24, and a two-state
+    # port was a knob you turned between two values.
+    #
+    # A switch is drawn with the vocabulary the surface already has: the word
+    # in the small font, and a "seg" bar at (index, count) - two positions
+    # fill it empty or full, more positions fill it left to right.
+
+    SWITCH_LABEL_CHARS = SMALL_VALUE_CHARS      # a switch value is a word
+
+    # What the F row means, as a table rather than as a condition spread
+    # through the driver. Three answers, and the driver's _switch_row() is the
+    # only caller - so the LED painter and the button handler ask one question
+    # once.
+    F_ROW_MUTE = "mute"        # mute, or solo while SOLO is held or latched
+    F_ROW_SWITCH = "switch"    # the CONTROL page's switches, one per column
+    F_ROW_INERT = "inert"      # dark and doing nothing
+
+    @staticmethod
+    def f_row_kind(mode, shift, soloing, mod):
+        """Whether F1-F8 are mutes, switches, or nothing at all.
+
+        Only CONTROL gives the row away, and only unmodified: SHIFT + Fn hands
+        mute back inside CONTROL, and SOLO + Fn is solo there exactly as it is
+        in every other mode. Mute is a control a player reaches for without
+        looking, so it stays one modifier away rather than being unreachable.
+
+        MOD makes the row INERT rather than leaving it as switches: MOD makes
+        the pads inert and repurposes every encoder, and a parameter switch
+        firing inside a bind gesture would be a surprise from a gesture that
+        is supposed to change nothing."""
+        if mode != "CONTROL" or shift or soloing:
+            return techno_lib.F_ROW_MUTE
+        if mod:
+            return techno_lib.F_ROW_INERT
+        return techno_lib.F_ROW_SWITCH
+
+    @staticmethod
+    def switch_spec(labels, ticks):
+        """(labels, ticks) as parallel tuples when a port is a SWITCH, else None.
+
+        A switch is a port carrying at least two labels with a tick each -
+        exactly what zynthian_controller._configure() builds for an enumerated
+        or toggled port. One label is a TRIGGER, not a switch: firing a
+        one-shot off a mute button is a different feature and is refused here
+        rather than half-supported.
+
+        Truncates to the shorter of the two rather than trusting them to be
+        parallel. Upstream always builds them together, but a column that
+        indexes past the end of one of them would take the whole render down,
+        and the render runs on the poll thread."""
+        if not labels or not ticks:
+            return None
+        count = min(len(labels), len(ticks))
+        if count < 2:
+            return None
+        return (tuple(labels[:count]), tuple(ticks[:count]))
+
+    @staticmethod
+    def switch_index(value, ticks, labels=()):
+        """Which position `value` is at: the NEAREST tick.
+
+        Ticks are not necessarily evenly spaced and not necessarily ascending
+        (zynthian_controller sets range_reversed for a descending scale), so
+        this scans all of them instead of assuming an order. A tie goes to the
+        lower index.
+
+        `value` may be a LABEL: zynthian_controller accepts a string and
+        converts it, and jalv seeds a toggle with 'off' / 'on', so the very
+        first read of a port can be a word."""
+        if isinstance(value, str):
+            for index, label in enumerate(labels):
+                if str(label) == value:
+                    return index
+            return 0
+        best, best_dist = 0, None
+        for index, tick in enumerate(ticks):
+            try:
+                dist = abs(float(tick) - float(value))
+            except (TypeError, ValueError):
+                continue
+            if best_dist is None or dist < best_dist:
+                best, best_dist = index, dist
+        return best
+
+    @staticmethod
+    def switch_next(index, count, delta=1):
+        """Where a BUTTON press lands: wrapping. One button has to reach every
+        position, and a switch that stops at the end is a button that does
+        nothing on its last press."""
+        if count <= 0:
+            return 0
+        return (index + delta) % count
+
+    @staticmethod
+    def switch_step(index, count, delta):
+        """Where an ENCODER turn lands: clamped. The knob and the button
+        deliberately differ - a knob that wrapped would jump from the last
+        position to the first on a single detent, which no hardware knob on
+        this surface does."""
+        if count <= 0:
+            return 0
+        return max(0, min(count - 1, index + delta))
+
+    @staticmethod
+    def switch_label(label):
+        """The plugin's own word, in the budget the small font gives.
+
+        Case is left as the plugin wrote it: 'LP24' and 'saw' are how the
+        reader will see them in every other editor, and upper-casing them
+        loses a distinction some plugins make."""
+        return techno_lib.short_label(
+            "" if label is None else str(label),
+            techno_lib.SWITCH_LABEL_CHARS)
+
     @staticmethod
     def usable_ports(ports, exclude=()):
         """Numeric ports with a real range, minus the ones that already have a
@@ -1580,19 +1774,41 @@ class techno_lib:
     def generated_columns(desc, state):
         """Columns for a generated page. The surface value is 0-100; the driver
         scales it onto each port's own range, as _set_ganged() already does for
-        the hand-written FX roles."""
+        the hand-written FX roles.
+
+        A port that is a SWITCH is the exception: state["switch"] carries
+        (index, count, label) for it, and the column draws the plugin's own
+        word over a "seg" bar instead of a number over a fill. The driver
+        builds that entry because only it can see a live zynthian_controller;
+        which columns it changes is decided here, where it is tested."""
+        switches = state.get("switch") or {}
+        names = state.get("names") or {}
         out = []
         for verb in desc["verbs"]:
             if verb is None:
                 out.append(techno_lib._col("", "", None, 0.0))
                 continue
             symbol = verb.split(":")[-1]
+            # The name row is the SECOND line of the wrapped parameter name;
+            # the first line is in the tab box above it. With no name to wrap
+            # - a chain that answered nothing - it falls back to the symbol
+            # abbreviation this page drew before names existed.
+            label = techno_lib.port_label(symbol)
+            if verb in names:
+                label = techno_lib.wrap_label(names[verb])[1]
             value = state.get(verb)
             if value is None:
-                out.append(techno_lib._dead(techno_lib.port_label(symbol).lower()))
+                out.append(techno_lib._dead(
+                    (label or techno_lib.port_label(symbol)).lower()))
                 continue
-            out.append(techno_lib._col(techno_lib.port_label(symbol),
-                                       techno_lib._num(value), "uni",
+            switch = switches.get(verb)
+            if switch is not None:
+                index, count, word = switch
+                out.append(techno_lib._col(
+                    label, techno_lib.switch_label(word), "seg",
+                    (index, count), small=True))
+                continue
+            out.append(techno_lib._col(label, techno_lib._num(value), "uni",
                                        value / 100.0))
         return out
 
