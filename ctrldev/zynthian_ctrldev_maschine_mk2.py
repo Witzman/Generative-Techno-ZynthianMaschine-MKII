@@ -1094,7 +1094,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         beats = self._elapsed_beats()
         moved = False
-        rewrite = False
         for (chan, verb), entry in list(self.mod.items()):
             if chan != channel or not tlib.is_drift(verb):
                 continue
@@ -1111,22 +1110,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if self.param_get(channel, verb) == before:
                 continue
             moved = True
-            if verb in ("hits", "rotate"):
-                # AND REWRITE, or nothing is heard. apply() stores the number
-                # and routes to _apply_generator, which has branches for
-                # chance, swing and the voice verbs but NONE for hits or
-                # rotate - the euclid encoder path sets self.hits/self.rot and
-                # then calls _write_pattern() itself, so apply() was never the
-                # write path for these two. Drift is the first caller that
-                # moves them without going through _act_euclid.
-                #
-                # CHANCE deliberately does not land here: setPlayChance is a
-                # native per-pattern property and costs zero pattern writes,
-                # which is exactly why it is the cheap drift target.
-                rewrite = True
-        if rewrite:
-            with self.lock:
-                self._write_pattern(channel)
         if moved and channel == self.group:
             # REPAINT, or the pads lie. apply() rewrites the pattern but the
             # 30 Hz poll only moves the two playhead pads - a full repaint
@@ -1227,6 +1210,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         elif param == "velo" and self.channel_kind(channel) == "drum":
             # Velocity is written into the notes, so it only becomes audible
             # once the pattern is rewritten.
+            with self.lock:
+                self._write_pattern(channel)
+        elif param in ("hits", "rotate"):
+            # THE HOLE THIS FILLED, 2026-08-19. There was no branch here for
+            # these two, because the euclid ENCODER path sets self.hits/self.rot
+            # directly and calls _write_pattern() itself - so apply() was never
+            # the write path for them and nobody noticed, since nothing else
+            # moved them. Then drift did, and so did clearing a drift
+            # (_mod_clear -> _mod_base_set -> apply), and both showed the value
+            # changing on the display while the pattern kept playing the old
+            # one. Fixed here rather than at each caller: one place, and the
+            # next non-encoder caller inherits it.
+            #
+            # No double write: _act_euclid does NOT go through apply().
             with self.lock:
                 self._write_pattern(channel)
 
