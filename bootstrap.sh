@@ -14,6 +14,7 @@ SNAP_ROOT=/zynthian/zynthian-my-data/snapshots
 SNAP_DIR="$SNAP_ROOT/000"
 SNAP=017-generative-techno.zss
 PACK_DIR="$REPO_DIR/snapshot/genre-pack"   # the fifty genre snapshots, 031-080
+DRONE_DIR="$REPO_DIR/snapshot/drone-ambient"   # the twenty drone/ambient ones, 081-100
 
 main() {
     DRY=0
@@ -116,6 +117,26 @@ main() {
         fi
     else
         echo "== No genre pack in this checkout - skipping (the instrument is complete without it)"
+    fi
+
+    # --- 3c. the drone and ambient pack ---------------------------------------
+    # Same rules as the genre pack: bank 000 only, never default.zss, absent is
+    # not an error.
+    if [ -d "$DRONE_DIR" ]; then
+        DRONE_N=$(find "$DRONE_DIR" -name '*.zss' | wc -l)
+        echo "== Place the drone and ambient pack ($DRONE_N snapshots, bank 000)"
+        if [ "$DRY" = 1 ]; then
+            echo "  [dry-run] install -m 0644 $DRONE_DIR/*.zss $SNAP_DIR/"
+        else
+            install -m 0644 "$DRONE_DIR"/*.zss "$SNAP_DIR/"
+            PLACED=0
+            for f in "$DRONE_DIR"/*.zss; do
+                [ -f "$SNAP_DIR/$(basename "$f")" ] && PLACED=$((PLACED + 1))
+            done
+            echo "  placed $PLACED of $DRONE_N"
+        fi
+    else
+        echo "== No drone/ambient pack in this checkout - skipping"
     fi
 
     # --- 4. restart the UI so it picks the snapshot up ------------------------

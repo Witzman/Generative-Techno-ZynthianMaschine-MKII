@@ -49,7 +49,7 @@
           "10": "JV/GxEcho-Stereo"
         },
         {
-          "11": "JV/Shiroverb"
+          "11": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -71,7 +71,7 @@
           "12": "JV/GxEcho-Stereo"
         },
         {
-          "13": "JV/Shiroverb"
+          "13": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -93,7 +93,7 @@
           "14": "JV/GxEcho-Stereo"
         },
         {
-          "15": "JV/Shiroverb"
+          "15": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -115,7 +115,7 @@
           "16": "JV/GxEcho-Stereo"
         },
         {
-          "17": "JV/Shiroverb"
+          "17": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -137,7 +137,7 @@
           "18": "JV/GxEcho-Stereo"
         },
         {
-          "19": "JV/Shiroverb"
+          "19": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -159,7 +159,7 @@
           "20": "JV/GxEcho-Stereo"
         },
         {
-          "21": "JV/Shiroverb"
+          "21": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -181,7 +181,7 @@
           "22": "JV/GxEcho-Stereo"
         },
         {
-          "23": "JV/Shiroverb"
+          "23": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -203,7 +203,7 @@
           "24": "JV/GxEcho-Stereo"
         },
         {
-          "25": "JV/Shiroverb"
+          "25": "JV/Roomy"
         }
       ],
       "fader_pos": 0,
@@ -224,7 +224,7 @@
   },
   "zs3": {
     "zs3-0": {
-      "title": "FX Echo Shiro",
+      "title": "Echo Room",
       "active_chain": 0,
       "global": {
         "midi_transpose": 0

@@ -40,7 +40,22 @@ WHY EACH PART IS THE WAY IT IS - these were measured, not assumed:
   the index is written as 0 rather than faked.
 
 * Evolution is forced OFF everywhere: `random` and `rhythm` are 0 on every
-  voice and `mods` is empty. These snapshots are fixed arrangements.
+  voice and `mods` is empty - UNLESS the entry carries a `mods` list, which the
+  drone and ambient packs do. Those are the opposite instrument: barely any
+  pattern, everything moving.
+
+* A channel plays as a voice only when `kinds` says so. _chain_kind() returns
+  "drum" for channels 0-4 from the CHANNELS table and never looks at the loaded
+  engine, so putting a synth on chain 1 does NOT make channel A a voice - the
+  override is what does, and it is what SHIFT + GRID sets on the panel. An
+  override with no matching voice parameters would come up on defaults, so
+  `overrides` carries both.
+
+* A modulator whose port does not exist is INERT, not an error: _mod_write()
+  takes `span is None` as "skip". So binding cutoff on a synth that publishes no
+  cutoff costs nothing - but it also does nothing, which is why level, reverb
+  and delay carry the weight here. Those three always resolve: level is the
+  mixer strip, reverb and delay are the two insert wets every chain has.
 """
 
 import argparse
@@ -144,13 +159,28 @@ def build_one(base, entry, kit_notes):
 
     zs3["title"] = entry["title"]
 
+    # `overrides` turns a drum channel into a voice - the SHIFT + GRID gesture,
+    # persisted. An entry may give that channel its own synth engine, or leave
+    # it on LinuxSampler to be a sampler walked by a Turing register, which is
+    # what the factory snapshot does with channel E.
+    overrides = {int(k): v for k, v in (entry.get("overrides") or {}).items()}
+
     # --- drums: keep LS, switch the kit, take the notes from the scan --------
     drum_notes = []
     for i, cid in enumerate(DRUM_CHAINS):
+        pid = proc_of(chains[cid])
+        over = overrides.get(i)
+        if over and over.get("engine"):
+            # This chain stops being a sampler, so it has no kit and no kit
+            # note - its pattern comes from the register instead.
+            if chains[cid]["slots"][0][pid] != over["engine"]:
+                chains[cid]["slots"][0] = {pid: over["engine"]}
+                clear_processor(procs[pid])
+            drum_notes.append(None)
+            continue
         kit = entry["drums"]["kits"][i]
         if kit not in kit_notes:
             raise ValueError(f"{entry['file']}: kit {kit!r} is not usable")
-        pid = proc_of(chains[cid])
         set_kit(procs[pid], kit)
         drum_notes.append(kit_notes[kit][i])
 
@@ -194,10 +224,34 @@ def build_one(base, entry, kit_notes):
         }
         for i in range(3)
     }
+    # A channel the entry overrides needs its voice parameters too, or it comes
+    # up as a voice running whatever default_channel_state built.
+    for channel, over in overrides.items():
+        state["voices"][str(channel)] = {
+            "register": over["register"],
+            "length": over["length"],
+            "rhythm_reg": over["rhythm_reg"],
+            "random": 0,
+            "rhythm": 0,
+            "gate": over["gate"],
+            "octave": over["octave"],
+            "range": over["range"],
+            "velo": over["velo"],
+            "ring": [],
+        }
     state["owners"] = {str(i): "gen" for i in range(8)}
-    state["mods"] = {}          # no automated modulation, by the owner's brief
-    state["mod_seed"] = 0
-    state["kinds"] = {}         # no kind overrides: drums stay drums, voices voices
+    # Keyed "<channel>|<verb>", which is what set_state partitions back apart.
+    # Absent means no modulation at all, which is the genre pack's brief.
+    state["mods"] = {
+        f"{m['channel']}|{m['verb']}": {
+            "depth": m["depth"], "rate": m["rate"], "shape": m["shape"],
+            "phase0": float(m.get("phase0", 0.0)), "base": m["base"],
+            "seed": int(m.get("seed", 0)),
+        }
+        for m in (entry.get("mods") or [])
+    }
+    state["mod_seed"] = len(state["mods"])
+    state["kinds"] = {str(k): "voice" for k in overrides}
     state["stash"] = {}         # nothing sleeping, so nothing stale to upgrade
     state["selected"] = 0
 
@@ -210,6 +264,13 @@ def build_one(base, entry, kit_notes):
     template = bytes(patns[0][1][PATN_HEADER:PATN_HEADER + PATN_EVENT])
 
     for i in range(5):                                   # drum channels A-E
+        over = overrides.get(i)
+        if over:
+            # Behaving as a voice: the steps come from its register, and
+            # _write_voice_pattern rewrites the notes on load anyway.
+            steps = [s for s in range(STEPS) if over["rhythm_reg"] >> s & 1]
+            patns[i][1] = set_pattern(patns[i][1], steps, 60, over["velo"], template)
+            continue
         patns[i][1] = set_pattern(patns[i][1], entry["drums"]["steps"][i],
                                   drum_notes[i], entry["drums"]["velo"][i], template)
     for i in range(3):                                   # voice channels F-H

@@ -116,7 +116,14 @@ BASELINE = {
     # until you turn something. Without that sentence the pack reads as an
     # instrument that stopped generating, which is exactly the fault this
     # project spent 2026-08-18 chasing.
-    "sound-and-presets.html":      (1110, "2026-08-18"),
+    # +261 again, 2026-08-18: the drone and ambient pack. Its own section
+    # rather than a line in the genre one, because it is the opposite
+    # instrument - twelve slow modulators and almost no pattern - and because
+    # it is the only shipped state where SHIFT + GRID arrives already applied.
+    # A reader meeting a blinking GRID and a VOX indicator on a drum channel
+    # needs to be told that is the preset and not a fault, on the page they
+    # are already on.
+    "sound-and-presets.html":      (1371, "2026-08-18"),
     # +58, 2026-08-16: TEMPO. The encoders are now half as sensitive by
     # default and TEMPO held gives the old speed back, which matters most on
     # a generated page - a plugin port spreads its whole range across one

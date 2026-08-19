@@ -1,7 +1,9 @@
 # Snapshots
 
-Two things live here: the **factory snapshot**, which is the instrument's own
-configuration, and the **genre pack**, fifty fixed arrangements built from it.
+Three things live here: the **factory snapshot**, which is the instrument's own
+configuration; the **genre pack**, fifty fixed arrangements built from it; and
+the **drone and ambient pack**, twenty slow pieces that are the opposite
+instrument — almost no pattern, and everything moving.
 
 ---
 
@@ -188,3 +190,83 @@ these three initially "passed" that way and proved nothing.
 **What that does not prove:** that all fifty sound good. Structure is verified,
 taste is not. The same caveat as the factory snapshot applies, for the same
 reason — loading without error is not playing the right notes.
+
+
+---
+
+# The drone and ambient pack
+
+**Twenty snapshots**, `081`–`100`, in [`drone-ambient/`](drone-ambient/), built
+by the same tool from [`drone-ambient-manifest.json`](drone-ambient-manifest.json).
+
+Where the genre pack is fixed arrangements with no modulation, this pack is the
+inverse: **barely any rhythm, and twelve modulators per preset.** 240 in total.
+
+| Files | Layout | Channels |
+|---|---|---|
+| `081`–`090` | **drone** | all eight play as voices, each on its own synth engine |
+| `091`–`100` | **ambient** | A–D stay drums, E–H are voices |
+
+Tempos 52–90. Every voice is `gate 800` — an eight-step note — with a
+`rhythm_reg` of one or two bits, so a drone voice sounds once or twice a bar and
+holds.
+
+## SHIFT + GRID is what makes them work
+
+A channel plays as a voice **only** because the snapshot carries a kind
+override, which is exactly what SHIFT + GRID sets on the panel. This is not
+cosmetic: `_chain_kind()` returns `drum` for channels A–E straight off the
+channel table and **never looks at the loaded engine**, so putting a synth on
+chain 1 does not make channel A a voice. The override does.
+
+So a drone snapshot carries `kinds` for channels 0–4, and the ambient ones carry
+it for channel 4 alone. On the panel, GRID blinks on those channels and the page
+indicator reads `VOX` — the instrument telling you the channel is not itself.
+
+Four ambient presets leave channel E on **LinuxSampler with no synth**, so the
+Turing register walks the kit's own samples rather than a scale. That is the
+factory snapshot's trick, and it is a genuinely different colour from a synth
+pad: `092`, `094`, `097`, `099`.
+
+## The modulators
+
+Twelve per preset, bound to `level`, `reverb`, `delay`, `cutoff` and `reso`.
+Rates are **bar-synced and slow** — indices 0–5 only, which is 16 bars down to
+2 bars per cycle. At 60 BPM, index 0 is a 64-second sweep.
+
+`level`, `reverb` and `delay` carry 180 of the 240 because **they always
+resolve**: level is the mixer strip, reverb and delay are the two insert wets
+every chain has. `cutoff` and `reso` are placed only on channels running JC303,
+Obxd or padthv1, whose ports this project has actually measured. That matters
+because a modulator on a port the loaded synth does not publish is **inert, not
+an error** — `_mod_write()` treats a missing span as "skip" — so it would be
+silent weight in the file rather than a fault you could hear and fix.
+
+## What the cost measurement changed
+
+**Three effect plugins had to be removed from the design after measuring**, and
+one of them was already shipped in the genre pack. The instrument puts the same
+insert pair on **all eight chains**, so an effect's cost is multiplied by eight,
+and a drone is 24 plugin hosts.
+
+| Removed | Measured | Replaced with |
+|---|---|---|
+| `Aether` | 61.6% DSP, 5 xruns | `Dragonfly Hall Reverb` |
+| `CHOWTapeModel` | 82.4% DSP, 62 xruns | `Calf Vinyl` |
+| `ChowPhaserStereo` | 91.6% DSP, **11 of 24 hosts never started** | `YK Chorus` |
+| `Roboverb` | 93.8% DSP, **406 xruns** | `Tal-Reverb-III` |
+| `SO-kl5 Piano Synthesizer` | the one engine, not an effect — 57.6%, 11 xruns | `RipplerX` |
+| two Dragonfly reverbs together | 52.7% DSP, 2 xruns | one of them |
+
+Each was proven by elimination — its partner measured clean in another pair, or
+in the engine's case, every other synth in that preset appears in a preset that
+passed.
+
+**The synths are not the cost.** One probe carrying all six otherwise-unproven
+engines at once measured **16.4%**, barely above the floor. Every problem found
+was an insert plugin multiplied by eight. After the replacements, the whole pack
+runs **18.9% to 38.6% with zero xruns**.
+
+**Load-testing is not cost-testing.** All four affected genre-pack presets had
+already been loaded successfully on the rig, and one of them was glitching at
+43.4% with 8 xruns. Loading without error is not running without glitching.

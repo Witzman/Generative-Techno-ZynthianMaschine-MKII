@@ -3225,7 +3225,7 @@
    ]
   },
   "fx": [
-   "JV/CHOWTapeModel",
+   "JV/Calf Vinyl",
    "JV/YK Chorus"
   ],
   "notes": "Tape saturation into chorus - no reverb at all, width comes from the modulation."
@@ -3541,7 +3541,7 @@
   },
   "fx": [
    "JV/ZamEQ2",
-   "JV/Aether"
+   "JV/Dragonfly Hall Reverb"
   ],
   "notes": "Shaped with EQ before a large algorithmic reverb - the cleanest of the effect set."
  },
@@ -3741,14 +3741,14 @@
    ]
   },
   "fx": [
-   "JV/ChowPhaserStereo",
+   "JV/YK Chorus",
    "JV/Roomy"
   ],
   "notes": "Slow stereo phasing into a small room - motion without any delay."
  },
  {
   "file": "067-fx-echo-shiro",
-  "title": "FX Echo Shiro",
+  "title": "Echo Room",
   "genre": "deep-house",
   "tempo": 121,
   "root": 0,
@@ -3843,9 +3843,9 @@
   },
   "fx": [
    "JV/GxEcho-Stereo",
-   "JV/Shiroverb"
+   "JV/Roomy"
   ],
-  "notes": "Stereo tape echo into a shimmering plate - the Rhodes preset given depth."
+  "notes": "GxEcho-Stereo into Roomy - a tighter room than the plate it started as; the pair it had was already taken by 075."
  },
  {
   "file": "068-fx-eq-talreverb",
@@ -4428,7 +4428,7 @@
   },
   "fx": [
    "JV/Tal-Dub-3",
-   "JV/Aether"
+   "JV/Tal-Reverb-II"
   ],
   "notes": "The dub delay proper into a huge reverb - the deepest tail in the set."
  },
@@ -4831,7 +4831,7 @@
    ]
   },
   "fx": [
-   "JV/ChowPhaserStereo",
+   "JV/YK Chorus",
    "JV/Dragonfly Hall Reverb"
   ],
   "notes": "Phaser sweep into a hall - classic trance width without a delay."
@@ -4950,7 +4950,7 @@
   },
   "fx": [
    "JV/Multivoice Chorus",
-   "JV/Aether"
+   "JV/Dragonfly Hall Reverb"
   ],
   "notes": "Multivoice chorus into the largest reverb available - maximum lift."
  },

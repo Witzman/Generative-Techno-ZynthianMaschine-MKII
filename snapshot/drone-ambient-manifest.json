@@ -1,0 +1,4852 @@
+[
+ {
+  "file": "081-drone-glacier",
+  "title": "Glacier",
+  "genre": "drone",
+  "tempo": 64,
+  "root": 7,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/Obxd",
+    "JV/amsynth"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/synthv1",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/padthv1",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/String machine",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/Kars",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/MDA DX10",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 1,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Dragonfly Hall Reverb",
+   "JV/Tal-Reverb-II"
+  ],
+  "notes": "Eight slow layers in G minor, nothing articulated, everything drifting."
+ },
+ {
+  "file": "082-drone-tectonic",
+  "title": "Tectonic",
+  "genre": "drone",
+  "tempo": 56,
+  "root": 2,
+  "scale": 3,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/Obxd",
+    "JV/padthv1"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/Calf Wavetable",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/MiMi-d",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/synthv1",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/Triceratops",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/MDA JX10",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 7,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Shiroverb",
+   "JV/Tal-Reverb-III"
+  ],
+  "notes": "Phrygian and very low; the filters open over sixteen bars."
+ },
+ {
+  "file": "083-drone-aurora",
+  "title": "Aurora",
+  "genre": "drone",
+  "tempo": 72,
+  "root": 9,
+  "scale": 1,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/amsynth"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/Surge XT",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/synthv1",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/String machine",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/MDA ePiano",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/Kars",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Shiroverb",
+   "JV/Tal-Reverb-III"
+  ],
+  "notes": "The one bright major drone, Surge carrying the top."
+ },
+ {
+  "file": "084-drone-mariana",
+  "title": "Mariana",
+  "genre": "drone",
+  "tempo": 52,
+  "root": 0,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/Obxd",
+    "JV/Triceratops"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/MiMi-d",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/Calf Monosynth",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/synthv1",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/padthv1",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/Noize Mak3r",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 3,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Roomy",
+   "JV/Tal-Reverb-II"
+  ],
+  "notes": "Slowest of the set; a single note per bar per voice."
+ },
+ {
+  "file": "085-drone-solarwind",
+  "title": "Solar Wind",
+  "genre": "drone",
+  "tempo": 68,
+  "root": 5,
+  "scale": 2,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/MDA JX10"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/Calf Wavetable",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/Mutated Instruments",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/MDA DX10",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/synthv1",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/Kars",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Modulay",
+   "JV/Dragonfly Hall Reverb"
+  ],
+  "notes": "Dorian, with the delay wet drifting on its own clock."
+ },
+ {
+  "file": "086-drone-basalt",
+  "title": "Basalt",
+  "genre": "drone",
+  "tempo": 58,
+  "root": 7,
+  "scale": 3,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/padthv1",
+    "JV/amsynth"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/Odin2",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/synthv1",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/MiMi-d",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/String machine",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/Calf Monosynth",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Calf Vinyl",
+   "JV/Shiroverb"
+  ],
+  "notes": "Tape and stone; the only heavy engine is Odin2 on channel A."
+ },
+ {
+  "file": "087-drone-cathedral",
+  "title": "Cathedral",
+  "genre": "drone",
+  "tempo": 60,
+  "root": 2,
+  "scale": 4,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/MDA ePiano",
+    "JV/Triceratops"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/RipplerX",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/String machine",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/padthv1",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/Kars",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/synthv1",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 2,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 2,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Dragonfly Hall Reverb",
+   "JV/Tal-Reverb-III"
+  ],
+  "notes": "Harmonic minor, long reverb, the sustained-string end of the set."
+ },
+ {
+  "file": "088-drone-palesun",
+  "title": "Pale Sun",
+  "genre": "drone",
+  "tempo": 76,
+  "root": 9,
+  "scale": 5,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/padthv1",
+    "JV/Obxd",
+    "JV/Kars"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/Vex",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/synthv1",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/MDA DX10",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/Mutated Instruments",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/Calf Wavetable",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/YK Chorus",
+   "JV/Dragonfly Room Reverb"
+  ],
+  "notes": "Pentatonic and airy; chorus keeps it from sitting still."
+ },
+ {
+  "file": "089-drone-ferrite",
+  "title": "Ferrite",
+  "genre": "drone",
+  "tempo": 54,
+  "root": 3,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/Obxd",
+    "JV/padthv1"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/Noize Mak3r",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/MiniOPL3",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/synthv1",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/Calf Monosynth",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/MDA JX10",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 7,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Calf Vinyl",
+   "JV/Tal-Reverb-III"
+  ],
+  "notes": "Grittier drone; vinyl noise under eight slow voices."
+ },
+ {
+  "file": "090-drone-halcyon",
+  "title": "Halcyon",
+  "genre": "drone",
+  "tempo": 80,
+  "root": 10,
+  "scale": 2,
+  "drums": {
+   "kits": [
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909",
+    "Roland TR909"
+   ],
+   "steps": [
+    [],
+    [],
+    [],
+    [],
+    []
+   ],
+   "velo": [
+    70,
+    68,
+    72,
+    66,
+    70
+   ],
+   "gate": [
+    800,
+    800,
+    800,
+    800,
+    800
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/amsynth"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "0": {
+    "engine": "JV/RipplerX",
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -2,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   },
+   "1": {
+    "engine": "JV/String machine",
+    "register": 204,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": -1,
+    "range": 1,
+    "velo": 68,
+    "gate": 800
+   },
+   "2": {
+    "engine": "JV/synthv1",
+    "register": 153,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": -1,
+    "range": 1,
+    "velo": 72,
+    "gate": 800
+   },
+   "3": {
+    "engine": "JV/MDA ePiano",
+    "register": 227,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 800
+   },
+   "4": {
+    "engine": "JV/Triceratops",
+    "register": 170,
+    "length": 8,
+    "rhythm_reg": 1,
+    "octave": 0,
+    "range": 1,
+    "velo": 70,
+    "gate": 800
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/YK Chorus",
+   "JV/Dragonfly Hall Reverb"
+  ],
+  "notes": "Fastest drone at 80, phaser wide, still one note per bar."
+ },
+ {
+  "file": "091-ambient-driftwood",
+  "title": "Driftwood",
+  "genre": "ambient",
+  "tempo": 72,
+  "root": 7,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Roland CR78",
+    "Roland CR78",
+    "Roland CR78",
+    "Roland CR78",
+    "Roland CR78"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [],
+    [
+     8
+    ],
+    [
+     4,
+     12
+    ],
+    []
+   ],
+   "velo": [
+    70,
+    60,
+    58,
+    52,
+    60
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/Obxd",
+    "JV/String machine"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600,
+    "engine": "JV/padthv1"
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 4,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Modulay",
+   "JV/Dragonfly Room Reverb"
+  ],
+  "notes": "CR78 brushes under four drifting voices."
+ },
+ {
+  "file": "092-ambient-snowfield",
+  "title": "Snowfield",
+  "genre": "ambient",
+  "tempo": 68,
+  "root": 2,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Korg DDM110",
+    "Korg DDM110",
+    "Korg DDM110",
+    "Korg DDM110",
+    "Korg DDM110"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [],
+    [],
+    [
+     2,
+     10
+    ],
+    []
+   ],
+   "velo": [
+    66,
+    58,
+    55,
+    50,
+    58
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/synthv1",
+    "JV/Obxd",
+    "JV/padthv1"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 7,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 6,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Shiroverb",
+   "JV/Tal-Reverb-III"
+  ],
+  "notes": "Channel E stays a sampler played by the register, walking the DDM110."
+ },
+ {
+  "file": "093-ambient-tidal",
+  "title": "Tidal",
+  "genre": "ambient",
+  "tempo": 76,
+  "root": 5,
+  "scale": 2,
+  "drums": {
+   "kits": [
+    "SP 12",
+    "SP 12",
+    "SP 12",
+    "SP 12",
+    "SP 12"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [
+     8
+    ],
+    [],
+    [
+     0,
+     6,
+     12
+    ],
+    []
+   ],
+   "velo": [
+    72,
+    60,
+    56,
+    54,
+    60
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/amsynth"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600,
+    "engine": "JV/String machine"
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Modulay",
+   "JV/Dragonfly Hall Reverb"
+  ],
+  "notes": "SP-12 grit, dorian, the delay breathing across four bars."
+ },
+ {
+  "file": "094-ambient-moss",
+  "title": "Moss",
+  "genre": "ambient",
+  "tempo": 64,
+  "root": 0,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Fricke MSB512",
+    "Fricke MSB512",
+    "Fricke MSB512",
+    "Fricke MSB512",
+    "Fricke MSB512"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [],
+    [
+     10
+    ],
+    [],
+    []
+   ],
+   "velo": [
+    64,
+    56,
+    54,
+    50,
+    56
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/padthv1",
+    "JV/Kars"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Roomy",
+   "JV/Tal-Reverb-II"
+  ],
+  "notes": "Almost no percussion; channel E is the MSB512 walked slowly."
+ },
+ {
+  "file": "095-ambient-lantern",
+  "title": "Lantern",
+  "genre": "ambient",
+  "tempo": 84,
+  "root": 9,
+  "scale": 1,
+  "drums": {
+   "kits": [
+    "Boss DR220",
+    "Boss DR220",
+    "Boss DR220",
+    "Boss DR220",
+    "Boss DR220"
+   ],
+   "steps": [
+    [
+     0,
+     10
+    ],
+    [],
+    [
+     4,
+     12
+    ],
+    [
+     2,
+     6,
+     10,
+     14
+    ],
+    []
+   ],
+   "velo": [
+    74,
+    60,
+    58,
+    52,
+    60
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/String machine"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600,
+    "engine": "JV/MDA ePiano"
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/YK Chorus",
+   "JV/Dragonfly Early Reflections"
+  ],
+  "notes": "The brightest ambient one; major, with a real hat pattern."
+ },
+ {
+  "file": "096-ambient-rainshadow",
+  "title": "Rainshadow",
+  "genre": "ambient",
+  "tempo": 70,
+  "root": 5,
+  "scale": 3,
+  "drums": {
+   "kits": [
+    "Kawai R50",
+    "Kawai R50",
+    "Kawai R50",
+    "Kawai R50",
+    "Kawai R50"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [],
+    [
+     6
+    ],
+    [
+     3,
+     11
+    ],
+    []
+   ],
+   "velo": [
+    68,
+    58,
+    55,
+    50,
+    58
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/Obxd",
+    "JV/padthv1"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600,
+    "engine": "JV/Calf Wavetable"
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 7,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Regrader",
+   "JV/Shiroverb"
+  ],
+  "notes": "Phrygian, sparse, the reverb wet swinging widest of the pack."
+ },
+ {
+  "file": "097-ambient-slowtide",
+  "title": "Slow Tide",
+  "genre": "ambient",
+  "tempo": 66,
+  "root": 7,
+  "scale": 2,
+  "drums": {
+   "kits": [
+    "Yamaha RX11",
+    "Yamaha RX11",
+    "Yamaha RX11",
+    "Yamaha RX11",
+    "Yamaha RX11"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [
+     8
+    ],
+    [],
+    [
+     4,
+     12
+    ],
+    []
+   ],
+   "velo": [
+    70,
+    58,
+    56,
+    52,
+    58
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/synthv1",
+    "JV/Obxd",
+    "JV/padthv1"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 7,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 6,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Tal-Dub-3",
+   "JV/Dragonfly Hall Reverb"
+  ],
+  "notes": "Dub-adjacent ambient; channel E is the RX11 as a voice."
+ },
+ {
+  "file": "098-ambient-ember",
+  "title": "Ember",
+  "genre": "ambient",
+  "tempo": 88,
+  "root": 3,
+  "scale": 0,
+  "drums": {
+   "kits": [
+    "Roland TR808",
+    "Roland TR808",
+    "Roland TR808",
+    "Roland TR808",
+    "Roland TR808"
+   ],
+   "steps": [
+    [
+     0,
+     11
+    ],
+    [],
+    [
+     4,
+     12
+    ],
+    [
+     2,
+     6,
+     10,
+     14
+    ],
+    []
+   ],
+   "velo": [
+    72,
+    58,
+    60,
+    52,
+    58
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/JC303",
+    "JV/padthv1",
+    "JV/amsynth"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600,
+    "engine": "JV/Obxd"
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 4,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": -70,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 78,
+    "phase0": 0.86,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Calf Vinyl",
+   "JV/Dragonfly Room Reverb"
+  ],
+  "notes": "808 at a walking pace, warmest of the ambient ten."
+ },
+ {
+  "file": "099-ambient-quietrooms",
+  "title": "Quiet Rooms",
+  "genre": "ambient",
+  "tempo": 62,
+  "root": 2,
+  "scale": 4,
+  "drums": {
+   "kits": [
+    "LINN9000 2",
+    "LINN9000 2",
+    "LINN9000 2",
+    "LINN9000 2",
+    "LINN9000 2"
+   ],
+   "steps": [
+    [
+     0
+    ],
+    [],
+    [],
+    [
+     8
+    ],
+    []
+   ],
+   "velo": [
+    62,
+    54,
+    52,
+    50,
+    54
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/RipplerX"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 1,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 3,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 2,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 4,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Roomy",
+   "JV/Tal-Reverb-II"
+  ],
+  "notes": "Harmonic minor and very quiet; two drum hits in the whole bar."
+ },
+ {
+  "file": "100-ambient-longdusk",
+  "title": "Long Dusk",
+  "genre": "ambient",
+  "tempo": 90,
+  "root": 10,
+  "scale": 5,
+  "drums": {
+   "kits": [
+    "SP1200 1",
+    "SP1200 1",
+    "SP1200 1",
+    "SP1200 1",
+    "SP1200 1"
+   ],
+   "steps": [
+    [
+     0,
+     10
+    ],
+    [
+     8
+    ],
+    [],
+    [
+     0,
+     4,
+     8,
+     12
+    ],
+    []
+   ],
+   "velo": [
+    74,
+    60,
+    56,
+    54,
+    60
+   ],
+   "gate": [
+    40,
+    40,
+    40,
+    30,
+    60
+   ]
+  },
+  "voices": {
+   "engines": [
+    "JV/Obxd",
+    "JV/padthv1",
+    "JV/String machine"
+   ],
+   "rhythm_reg": [
+    4097,
+    1,
+    17
+   ],
+   "register": [
+    219,
+    147,
+    201
+   ],
+   "length": [
+    8,
+    8,
+    8
+   ],
+   "octave": [
+    -1,
+    0,
+    1
+   ],
+   "range": [
+    1,
+    1,
+    2
+   ],
+   "velo": [
+    78,
+    72,
+    68
+   ],
+   "gate": [
+    800,
+    700,
+    800
+   ]
+  },
+  "overrides": {
+   "4": {
+    "register": 179,
+    "length": 8,
+    "rhythm_reg": 257,
+    "octave": 0,
+    "range": 1,
+    "velo": 66,
+    "gate": 600,
+    "engine": "JV/Triceratops"
+   }
+  },
+  "mods": [
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 55,
+    "rate": 0,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.0,
+    "seed": 1
+   },
+   {
+    "channel": 2,
+    "verb": "level",
+    "depth": -45,
+    "rate": 2,
+    "shape": "tri",
+    "base": 26,
+    "phase0": 0.27,
+    "seed": 2
+   },
+   {
+    "channel": 5,
+    "verb": "level",
+    "depth": 60,
+    "rate": 1,
+    "shape": "s&h",
+    "base": 32,
+    "phase0": 0.55,
+    "seed": 3
+   },
+   {
+    "channel": 7,
+    "verb": "level",
+    "depth": -50,
+    "rate": 3,
+    "shape": "tri",
+    "base": 24,
+    "phase0": 0.81,
+    "seed": 4
+   },
+   {
+    "channel": 1,
+    "verb": "reverb",
+    "depth": 70,
+    "rate": 0,
+    "shape": "tri",
+    "base": 45,
+    "phase0": 0.13,
+    "seed": 5
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 65,
+    "rate": 3,
+    "shape": "s&h",
+    "base": 38,
+    "phase0": 0.62,
+    "seed": 6
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": -60,
+    "rate": 5,
+    "shape": "tri",
+    "base": 52,
+    "phase0": 0.9,
+    "seed": 7
+   },
+   {
+    "channel": 3,
+    "verb": "delay",
+    "depth": 60,
+    "rate": 4,
+    "shape": "tri",
+    "base": 30,
+    "phase0": 0.41,
+    "seed": 8
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 50,
+    "rate": 2,
+    "shape": "ramp",
+    "base": 22,
+    "phase0": 0.7,
+    "seed": 9
+   },
+   {
+    "channel": 5,
+    "verb": "cutoff",
+    "depth": 75,
+    "rate": 1,
+    "shape": "tri",
+    "base": 70,
+    "phase0": 0.2,
+    "seed": 10
+   },
+   {
+    "channel": 6,
+    "verb": "cutoff",
+    "depth": 65,
+    "rate": 4,
+    "shape": "tri",
+    "base": 62,
+    "phase0": 0.48,
+    "seed": 11
+   },
+   {
+    "channel": 5,
+    "verb": "reso",
+    "depth": 45,
+    "rate": 5,
+    "shape": "s&h",
+    "base": 40,
+    "phase0": 0.33,
+    "seed": 12
+   }
+  ],
+  "fx": [
+   "JV/Calf Vinyl",
+   "JV/Dragonfly Hall Reverb"
+  ],
+  "notes": "Pentatonic, lo-fi, the closing preset of the whole pack."
+ }
+]
