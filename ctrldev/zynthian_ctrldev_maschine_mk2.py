@@ -564,6 +564,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def param_get(self, channel, param):
         """Read a parameter wherever it actually lives."""
 
+        if param == "range" and self._is_sampler(channel):
+            # SP8's alias applies to READS as well as writes. It did not at
+            # first, and the symptom was precise: the encoder read `range` (a
+            # voice's octave spread, 2) and wrote `kit_range`, so every turn
+            # started from 2 again and only ever produced 1 or 3. An alias
+            # that covers one direction is a value that disagrees with itself.
+            return self.state[channel].get("kit_range", 4)
+
         attr = self._legacy_attr(channel, param)
         if attr is not None:
             value = getattr(self, attr)[channel]
@@ -1409,10 +1417,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.page_idx[key] = index
         return ring[index]
 
-    def _act_reroll_drums(self, down):
+    def _act_reroll_scene(self, down):
         self._act_reroll("scene", down)
 
-    def _act_reroll_voices(self, down):
+    def _act_reroll_pattern(self, down):
         self._act_reroll("pattern", down)
 
     def _act_reroll(self, which, down):
@@ -1429,13 +1437,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         key = "reroll_" + which
         if down:
-            if self.shift_down:
+            if self.erase_down:
+                # UNDO moved here from SHIFT, 2026-08-19: SHIFT now means "every
+                # channel of this engine type". ERASE is already this
+                # instrument's take-it-back modifier - ERASE + Group hands a
+                # pattern back, MOD + ERASE clears a modulator - so undo on
+                # ERASE + button is the grammar the player already knows.
                 self._reroll_undo_apply(which)
                 return
-            if self._reroll_pending & set(tlib.reroll_channels(which)):
+            if self._reroll_pending:
                 # The cancel window. Without it a player who presses again
-                # thinking it missed would arm a second one instead.
-                self._reroll_pending -= set(tlib.reroll_channels(which))
+                # thinking it missed would arm a second one instead. It cancels
+                # everything pending rather than this button's share: the
+                # scopes overlap now, and a half-cancelled reroll would be
+                # harder to reason about than none.
+                self._reroll_pending.clear()
                 with self.lock:
                     self._render_all()
                 return
@@ -1447,7 +1463,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         if (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
             return                       # let go early: nothing happens
-        targets = tlib.reroll_targets(which, self.owner)
+        samplers = {ch: self._is_sampler(ch) for ch in range(8)}
+        targets = tlib.reroll_scope(which, samplers, self.owner,
+                                    self.group, self.shift_down)
         if not targets:
             # Everything this button owns is player-owned. Say nothing rather
             # than arm an empty gesture; the tabs already show why.
@@ -1459,7 +1477,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _reroll_undo_apply(self, which):
         """Put back what the last reroll on these channels overwrote."""
         restored = False
-        for channel in tlib.reroll_channels(which):
+        for channel in list(self._reroll_undo):
             saved = self._reroll_undo.pop(channel, None)
             if saved is None:
                 continue
@@ -3633,6 +3651,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         LinuxSampler over a socket and can block - but every zynseq read and
         write around it must. Hence the three phases."""
 
+        # SP8's remembered kit centre names a note in the kit being REPLACED.
+        # Carrying it across would centre the walk on whatever happens to sit
+        # at that number in the new kit - or on nothing at all.
+        self.state[group].pop("kit_centre", None)
         kits = self._kit_list()
         if not kits:
             return
@@ -3900,6 +3922,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._handback(channel)
 
         # Stash the set we are leaving, restore or build the one we arrive at.
+        # The remembered kit centre belongs to the kind being left.
+        self.state[channel].pop("kit_centre", None)
         self.stash[channel][old] = self.state[channel]
         self.stash[channel][old + ":hits"] = self.hits[channel]
         self.stash[channel][old + ":rot"] = self.rot[channel]
@@ -4042,6 +4066,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.libseq.updateSequenceInfo()
             self._render_pads()
 
+    def _kit_centre(self, channel):
+        """The note SP8's kit window centres on: the drum this channel plays.
+
+        REMEMBERED, NEVER REDISCOVERED, and that is the whole point.
+        _group_note() reads the note back out of the PATTERN, so using it as
+        the centre made a feedback loop: the walk wrote a higher note, home was
+        rediscovered there, the next walk centred on that, and the channel
+        marched up the kit until it was in keys with nothing mapped. Measured
+        on the rig 2026-08-19 - group A had drifted from note 36 to 64 and gone
+        silent, which reads as a dead channel rather than a wandering one.
+
+        Captured once, on the first walk, and cleared whenever the kit or the
+        kind changes - the two events after which the old centre means nothing.
+        """
+
+        st = self.state[channel]
+        centre = st.get("kit_centre")
+        if centre is None:
+            centre = self._group_note(channel)
+            st["kit_centre"] = centre
+        return centre
+
     def _voice_notes(self, channel, steps):
         """The notes a voice-behaving channel's line uses.
 
@@ -4071,8 +4117,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Same column, different value, chosen by the ENGINE: the pattern
             # CONTROL already follows.
             notes = tlib.kit_line(st["register"], st["length"], steps, kit,
-                                  kit_range=st.get("kit_range", 4),
-                                  centre=self._group_note(channel))
+                                  kit_range=st.get("kit_range", 1),
+                                  centre=self._kit_centre(channel))
             # An unreadable or empty kit degrades to the channel's own drum,
             # never to silence.
             return notes or [self._group_note(channel)] * steps
@@ -4255,6 +4301,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._log_poll_error(f"voice wrap on channel {channel}", e)
 
     def _wrap_channel(self, channel):
+
         """One channel's share of _voice_wraps.
 
         Split out so the caller can catch per channel. Everything that can
@@ -4407,6 +4454,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # everything else here; the LED cache still swallows
                         # every repeat, so a steady GRID costs nothing.
                         self._render_grid()
+                        # SCENE / PATTERN follow the selected channel's kind.
+                        self._render_reroll()
                         # SWING blinks while MOD is LATCHED, so it needs the
                         # same periodic writer GRID does. The LED cache
                         # swallows every unchanged repeat, so a steady or dark
@@ -4553,6 +4602,31 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.leds.changed("play", state):
             self._send_osc(lib.button_osc("play", state[0], state[1]))
         self._render_modes()
+
+    def _render_reroll(self):
+        """SCENE and PATTERN light when the SELECTED group is theirs to reroll.
+
+        Owner, 2026-08-19. The two buttons act on different halves of the
+        instrument, and nothing on the panel said which half you were in - so
+        the answer was "hold one and watch the tabs", which is a disclosure
+        that arrives after the gesture rather than before it.
+
+        Driven from the render tick like every other LED here, never at the
+        point of a press, so the light and the behaviour cannot disagree. The
+        LED cache swallows every unchanged repeat, so a steady button costs
+        nothing on the wire.
+
+        The button LED NAMES go to the daemon, which owns the measured index
+        table - SCENE is index 17 and PATTERN 18, both measured 2026-08-15
+        after nine of thirteen guessed indices turned out wrong."""
+
+        # ENGINE, not kind - the same rule the reroll itself follows. A drum
+        # sampler in Turing mode is still a sampler, so PATTERN stays lit on it.
+        sampler = self._is_sampler(self.group)
+        for led, lit in (("pattern", sampler), ("scene", not sampler)):
+            state = (COLOR_PAGE, BRIGHT_PAGE_ON if lit else BRIGHT_PAGE_OFF)
+            if self.leds.changed(f"reroll_{led}", state):
+                self._send_osc(lib.button_osc(led, state[0], state[1]))
 
     def _render_modes(self):
         """Exactly one mode LED lit, always. Derived from self.mode on the

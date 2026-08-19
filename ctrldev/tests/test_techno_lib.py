@@ -1277,8 +1277,8 @@ class TestButtonTables(unittest.TestCase):
 
     def test_the_reroll_buttons_are_bound_and_stateful(self):
         # Stateful, not press-only: hold-to-fire needs the release.
-        self.assertEqual(tl.BUTTONS_STATEFUL[25], "reroll_drums")
-        self.assertEqual(tl.BUTTONS_STATEFUL[26], "reroll_voices")
+        self.assertEqual(tl.BUTTONS_STATEFUL[25], "reroll_scene")
+        self.assertEqual(tl.BUTTONS_STATEFUL[26], "reroll_pattern")
 
     def test_coarse_lives_on_tempo_and_carries_both_edges(self):
         # TEMPO = CC 35, MEASURED 2026-08-16 by aseqdump on the daemon's Pads
@@ -2549,15 +2549,16 @@ class TestRatchet(unittest.TestCase):
     def test_two_fires_twice_in_the_slot(self):
         count, dur = tl.ratchet_stutter(2, clocks_per_step=24)
         self.assertEqual(count, 2)
-        self.assertEqual(dur, 12)
+        # cps / 2n, not cps / n: a retrigger costs a note-off AND a note-on.
+        self.assertEqual(dur, 6)
 
     def test_three_divides_the_slot_three_ways(self):
         count, dur = tl.ratchet_stutter(3, clocks_per_step=24)
         self.assertEqual(count, 3)
-        self.assertEqual(dur, 8)
+        self.assertEqual(dur, 4)
 
     def test_four_divides_the_slot_four_ways(self):
-        self.assertEqual(tl.ratchet_stutter(4, clocks_per_step=24), (4, 6))
+        self.assertEqual(tl.ratchet_stutter(4, clocks_per_step=24), (4, 3))
 
     def test_the_duration_never_rounds_to_zero(self):
         # A zero-length stutter is a step that makes no sound - silence with
@@ -2590,10 +2591,6 @@ class TestReroll(unittest.TestCase):
     explain, and a reroll that mutes a channel by accident is that failure with
     a new cause."""
 
-    def test_scene_takes_the_drums_and_pattern_the_voices(self):
-        self.assertEqual(tl.reroll_channels("scene"), (0, 1, 2, 3, 4))
-        self.assertEqual(tl.reroll_channels("pattern"), (5, 6, 7))
-
     def test_hits_never_reach_zero(self):
         rng = random.Random(1)
         for _ in range(200):
@@ -2622,11 +2619,15 @@ class TestReroll(unittest.TestCase):
             new = tl.reroll_voice(rng=rng.random)
             self.assertNotEqual(new["rhythm_reg"] & 0xFFFF, 0)
 
-    def test_a_voice_reroll_moves_the_random_value(self):
+    def test_a_voice_reroll_always_LOCKS_melody(self):
+        # REVERSED 2026-08-19 by the owner. This asserted that RANDOM was
+        # rerolled too, straight from the 2026-08-14 spec - but that let a
+        # pattern button switch a held line into an evolving one, which is a
+        # mode change nobody asked for by pressing it. A reroll now hands you a
+        # new line and freezes it.
         rng = random.Random(5)
         vals = {tl.reroll_voice(rng=rng.random)["random"] for _ in range(50)}
-        self.assertGreater(len(vals), 1)
-        self.assertTrue(all(0 <= v <= 100 for v in vals))
+        self.assertEqual(vals, {0})
 
     def test_a_tiny_pattern_still_gets_a_hit(self):
         # step_count is 12 on a triplet division and could be smaller still.
@@ -2636,20 +2637,62 @@ class TestReroll(unittest.TestCase):
             self.assertLessEqual(new["hits"], steps)
 
 
-class TestRerollTargets(unittest.TestCase):
-    """Which channels a reroll actually touches.
+class TestRerollScope(unittest.TestCase):
+    """Owner, 2026-08-19, replacing "the button owns a fixed set of channels".
 
-    It SKIPS channels the player has recorded into. Drums have no undo, so a
-    uniform reroll would be a data-loss button on five of eight channels. The
-    lie would be in the word 'all', not in the behaviour."""
+    A bare press rerolls the ACTIVE group only. SHIFT rerolls every channel of
+    that button's ENGINE type - SCENE the samplers, PATTERN the synths.
 
-    def test_it_skips_owned_channels(self):
-        owners = {0: "gen", 1: "player", 2: "gen", 3: "gen", 4: "player"}
-        self.assertEqual(tl.reroll_targets("scene", owners), (0, 2, 3))
+    ENGINE, not kind, and that is the whole point: a drum sampler running in
+    Turing mode is still a SAMPLER, so it answers to SCENE. Asking for a global
+    synth sequence change must not hand you a new drum pattern as well."""
 
-    def test_it_can_come_up_empty(self):
-        owners = {i: "player" for i in range(8)}
-        self.assertEqual(tl.reroll_targets("scene", owners), ())
+    # channel -> is it a sampler engine
+    RIG = {0: True, 1: True, 2: True, 3: True, 4: True,
+           5: False, 6: False, 7: False}
+    ALL_GEN = {i: "gen" for i in range(8)}
 
-    def test_an_unknown_channel_counts_as_generator_owned(self):
-        self.assertEqual(tl.reroll_targets("pattern", {}), (5, 6, 7))
+    def test_a_bare_press_takes_the_active_group_only(self):
+        self.assertEqual(
+            tl.reroll_scope("scene", self.RIG, self.ALL_GEN, selected=2, shift=False),
+            (2,))
+
+    def test_a_bare_press_works_on_a_voice_too(self):
+        self.assertEqual(
+            tl.reroll_scope("pattern", self.RIG, self.ALL_GEN, selected=6, shift=False),
+            (6,))
+
+    def test_the_button_does_not_gate_a_bare_press(self):
+        # Pressing either button acts on what you are looking at. Refusing
+        # because "this is the drum button and you are on a voice" would be a
+        # rule the player has to remember for no benefit.
+        self.assertEqual(
+            tl.reroll_scope("scene", self.RIG, self.ALL_GEN, selected=6, shift=False),
+            (6,))
+
+    def test_shift_PATTERN_takes_every_sampler(self):
+        self.assertEqual(
+            tl.reroll_scope("pattern", self.RIG, self.ALL_GEN, selected=6, shift=True),
+            (0, 1, 2, 3, 4))
+
+    def test_shift_SCENE_takes_every_synth(self):
+        self.assertEqual(
+            tl.reroll_scope("scene", self.RIG, self.ALL_GEN, selected=0, shift=True),
+            (5, 6, 7))
+
+    def test_a_sampler_in_turing_mode_still_answers_to_SCENE(self):
+        # The case that motivated the change. Channel 4 is a drum sampler
+        # switched to voice behaviour; it is still a sampler, so SHIFT+PATTERN
+        # must leave it alone and SHIFT+SCENE must include it.
+        self.assertIn(4, tl.reroll_scope("pattern", self.RIG, self.ALL_GEN, 0, True))
+        self.assertNotIn(4, tl.reroll_scope("scene", self.RIG, self.ALL_GEN, 0, True))
+
+    def test_owned_channels_are_skipped_either_way(self):
+        owners = dict(self.ALL_GEN)
+        owners.update({2: "player", 6: "player"})
+        self.assertEqual(tl.reroll_scope("pattern", self.RIG, owners, 0, True), (0, 1, 3, 4))
+        self.assertEqual(tl.reroll_scope("pattern", self.RIG, owners, 2, False), ())
+
+    def test_an_all_synth_rig_gives_PATTERN_nothing(self):
+        rig = {i: False for i in range(8)}
+        self.assertEqual(tl.reroll_scope("pattern", rig, self.ALL_GEN, 0, True), ())

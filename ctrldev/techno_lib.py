@@ -268,16 +268,31 @@ class techno_lib:
         count = len(kit_notes)
         lo, hi = 0, count - 1
         if kit_range is not None and kit_range < 4:
-            # Width as a fraction of the kit: 1 -> a quarter, 3 -> three
-            # quarters. Never narrower than one note either side of centre, or
-            # a narrowed channel would play one sample forever, which is a
-            # different instrument rather than a narrower one.
-            half = max(1, int(round(count * kit_range / 4.0)) // 2)
+            # WIDTH FIRST, THEN PLACE IT. The first version computed a half-
+            # width around the centre and clamped both ends, which had two
+            # faults the rig showed immediately on an 11-note kit centred on
+            # the kick at index 0: the widths crawled (2, 3, 4 notes for
+            # ranges 1, 2, 3) and then jumped to all 11 at range 4, and
+            # because the kick sits at the EDGE of the list the window was
+            # truncated to half its size - so a narrow setting was narrower
+            # still, and never the width that was asked for.
+            #
+            # Now the width is a clean fraction of the kit and the window is
+            # SLID INWARD when it would overhang, so the full width is always
+            # used. On that kit the progression is 3, 6, 8, 11 rather than
+            # 2, 3, 4, 11.
+            # 1 IS ONE NOTE - the channel plays its own drum and the Turing
+            # register drives only WHICH STEPS SOUND. Owner, 2026-08-19: that
+            # is the default a drum sampler in voice mode should have, because
+            # what it buys is rhythm design, not sample roulette. Widening from
+            # there is the option, not the starting point.
+            width = 1 if kit_range <= 1 else int(round(count * kit_range / 4.0))
+            width = min(max(1, width), count)
             middle = count // 2
             if centre is not None and centre in kit_notes:
                 middle = kit_notes.index(centre)
-            lo = max(0, middle - half)
-            hi = min(count - 1, middle + half)
+            lo = min(max(0, middle - width // 2), count - width)
+            hi = lo + width - 1
         span = hi - lo + 1
         out = []
         for value in techno_lib.rotations(register, length, steps):
@@ -365,7 +380,7 @@ class techno_lib:
             # existed. A voice's RANGE is octave spread and keeps its own
             # default of 2; sharing that number here would have narrowed every
             # existing drum channel to half its kit the day this shipped.
-            state.update(kit="----", sample="----", range=4, kit_range=4,
+            state.update(kit="----", sample="----", range=4, kit_range=1,
                          # 1 = off. A step fires once, as it always has.
                          ratchet=1)
         else:
@@ -390,7 +405,11 @@ class techno_lib:
                 # SP8's kit-walk window. Lives on the voice set too because a
                 # SAMPLER channel switched to voice behaviour is the case it
                 # exists for, and that channel carries a voice state.
-                kit_range=4)
+                #
+                # DEFAULT 1 = ONE NOTE. A drum sampler played by the Turing
+                # register should give rhythm variation on its own drum, not a
+                # walk across the kit - owner, 2026-08-19.
+                kit_range=1)
         return state
 
     # ------------------------------------------------------- pad overlays
@@ -509,7 +528,6 @@ class techno_lib:
     # and a voice's rhythm register never comes back empty. Silence is the
     # failure this instrument is built to explain, and a reroll that mutes a
     # channel by accident is that failure with a new cause.
-    REROLL_GROUPS = {"scene": (0, 1, 2, 3, 4), "pattern": (5, 6, 7)}
     REROLL_CHANCE_FLOOR = 40
 
     @staticmethod
@@ -522,22 +540,35 @@ class techno_lib:
         return f"{label} REROLL>" if pending else label
 
     @staticmethod
-    def reroll_channels(which):
-        """The channels a button owns, before ownership is considered."""
-        return techno_lib.REROLL_GROUPS.get(which, ())
+    def reroll_scope(which, samplers, owners, selected, shift):
+        """The channels a reroll will touch.
 
-    @staticmethod
-    def reroll_targets(which, owners):
-        """The channels a reroll will actually touch.
+        A BARE PRESS takes the ACTIVE group only, whichever button it was -
+        pressing a button acts on what you are looking at, and refusing because
+        "this is the drum button and you are on a voice" would be a rule to
+        remember for no benefit.
 
-        SKIPS anything the player has recorded into. Drums have no undo, so a
-        uniform reroll would be a data-loss button on five of eight channels.
-        A player who wants a recorded channel rerolled hands it back first with
-        ERASE + Group - the existing, deliberate, per-channel destructive
-        route. An unknown channel counts as generator-owned, because that is
-        what an absent entry means everywhere else in this driver."""
-        return tuple(ch for ch in techno_lib.reroll_channels(which)
-                     if owners.get(ch, "gen") != "player")
+        SHIFT takes every channel of that button's ENGINE type: PATTERN the
+        samplers, SCENE the synths. **Engine, not kind** - owner, 2026-08-19.
+        A drum sampler running in Turing mode is still a sampler, so it answers
+        to PATTERN; asking for a global synth sequence change must not hand you
+        a new drum pattern with it. Kind still decides WHAT is rerolled on each
+        channel, because a drum-kind channel has hits and rotation while a
+        voice-kind one has registers - but it no longer decides WHO.
+
+        Owned channels are skipped either way: drums have no undo, so a reroll
+        that included them would be a data-loss button.
+        """
+
+        if shift:
+            # PATTERN is the drum word and SCENE the melodic one - the owner's
+            # reading of the panel, 2026-08-19.
+            want = bool(which == "pattern")
+            channels = tuple(ch for ch in sorted(samplers)
+                             if bool(samplers[ch]) == want)
+        else:
+            channels = (selected,) if selected is not None else ()
+        return tuple(ch for ch in channels if owners.get(ch, "gen") != "player")
 
     @staticmethod
     def reroll_drum(steps, rng=random.random):
@@ -565,7 +596,14 @@ class techno_lib:
         return {
             "chance": techno_lib.REROLL_CHANCE_FLOOR + int(rng() * (span + 1)),
             "rhythm_reg": reg,
-            "random": int(rng() * 101),
+            # MELODY GOES TO LOCK, ALWAYS - owner, 2026-08-19, overriding the
+            # 2026-08-14 spec, which said to reroll "the RANDOM value itself".
+            # Doing that literally meant pressing PATTERN could turn a held
+            # line into an evolving one: a MODE change smuggled into a pattern
+            # gesture. Locking instead hands you a new line and FREEZES it, so
+            # you can hear what you got before deciding to let it move. It is
+            # also what _duplicate already does when it gives a register back.
+            "random": 0,
         }
 
     # ------------------------------------------------------------- RATCHET
@@ -595,7 +633,25 @@ class techno_lib:
         if n <= 1:
             return (0, 0)
         n = min(n, techno_lib.RATCHET_MAX)
-        return (n, max(1, int(clocks_per_step) // n))
+        # THE DURATION IS HALVED AGAIN, and the reason is in the player rather
+        # than in the header. track.cpp schedules stutter events that ALTERNATE
+        # note-off and note-on:
+        #
+        #     command = (nStutterCount % 2 ? NOTE_ON : NOTE_OFF)
+        #     stutter_time = (offset + StutterDur) * ++nStutterCount * spc
+        #     if (stutter_time < noteOffTime && 2 * StutterCount >= nStutterCount)
+        #
+        # So one audible retrigger costs TWO events, and events only fire while
+        # they fall inside the note's own length. With dur = cps / n the events
+        # ran out of room before the second note-on: x2 emitted a note-off and
+        # nothing else, which on a LinuxSampler one-shot is silence - the
+        # sample plays to its end regardless. That is why x2 sounded identical
+        # to OFF while x3 and x4 did something.
+        #
+        # For n audible hits we need 2n-1 events inside the note, so the
+        # spacing is cps / 2n. Derived from the player, after guessing by ear
+        # twice and being wrong both times.
+        return (n, max(1, int(clocks_per_step) // (2 * n)))
 
     # ------------------------------------------------------- the big encoder
     #
@@ -1001,8 +1057,13 @@ class techno_lib:
         # the RELEASE past the threshold does. Hold-to-fire is already this
         # instrument's law, it is self-cancelling - let go early and nothing
         # happens - and the hold buys a disclosure window for free.
-        25: "reroll_drums",
-        26: "reroll_voices",
+        # Named after the PHYSICAL BUTTONS, not after what they reroll. The
+        # mapping was swapped once (owner, 2026-08-19: PATTERN is the better
+        # word for drums, SCENE for melody) and handler names that encode the
+        # meaning would have had to be renamed with it - or, worse, would not
+        # have been, and then lied.
+        25: "reroll_scene",
+        26: "reroll_pattern",
         3: "rec",
         49: "shift",
         31: "solo",
