@@ -464,6 +464,34 @@ class techno_lib:
                    default=min(techno_lib.CHANCE_RUNGS))
         return techno_lib.CHANCE_LOOKS[rung]
 
+    # ------------------------------------------------------- the big encoder
+    #
+    # CC 15 is a 16-position counter TIMES 8, wrapping 120 -> 0. It comes from
+    # the daemon's "A8" branch (main.rs:911) as `status as u8 * 8` and NEVER
+    # passes send_encoder_cc, so is_encoder_jump never sees it. There is no
+    # rejection threshold to fight - a trap note once claimed it "sits exactly
+    # on the rejection threshold", which described a code path CC 15 does not
+    # take. The exact signed delta needs no guard at all.
+    BIG_UNITS_PER_DETENT = 8
+
+    @staticmethod
+    def big_delta(previous, current):
+        """Signed units moved, wrap-safe. 120 -> 0 is one detent forward, not
+        fifteen backwards."""
+        return ((int(current) - int(previous) + 64) % 128) - 64
+
+    @staticmethod
+    def big_detents(units):
+        """(whole detents, remainder to bank).
+
+        A fast spin arrives as several detents in ONE report, and every page it
+        passed must be stepped rather than collapsed into one - the knob is the
+        page ring now, and skipping pages on a quick turn would make it feel
+        like it missed the gesture."""
+        per = techno_lib.BIG_UNITS_PER_DETENT
+        steps = int(units / per) if units >= 0 else -int(-units / per)
+        return (steps, units - steps * per)
+
     # ------------------------------------------------- the MOD pad legend
     #
     # While MOD owns the pads they stop drawing the step picture and become the

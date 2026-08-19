@@ -192,6 +192,8 @@ CC_DL = 47
 CC_DR = 48
 CC_ML = 13
 CC_MR = 14
+CC_BIG_TURN = 15         # big encoder turn: the page ring, owner 2026-08-19
+CC_BIG_PRESS = 12        # measured, deliberately still unbound and free
 CC_TL = 5                # unbound, free
 CC_TR = 6                # unbound, free
 
@@ -457,6 +459,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # None means "ask the chain" - never a stored copy of it.
         self.kind_override = {i: None for i in range(len(tlib.CHANNELS))}
         self.shift_down = False
+        # Big encoder: last CC 15 value, and the sub-detent remainder. It
+        # is a counter, so a delta needs the previous value; None means
+        # 'no reference yet' and the first report only establishes one.
+        self._big_last = None
+        self._big_carry = 0
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -1306,6 +1313,31 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.page_idx[key] = index
         return ring[index]
 
+    def _big_encoder(self, cc_val):
+        """The big encoder steps the page ring of the mode you are in.
+
+        One job, everywhere, no modifier and no press - owner, 2026-08-19,
+        which also withdrew the spread-page additive aggregate that had claimed
+        this knob since 2026-08-14. A knob that does one thing everywhere beats
+        one that does the right thing in two places and needs a rule to explain
+        which.
+
+        _step_page() is already mode-scoped: page_idx is keyed by
+        (mode, kind), so "affects the current mode" is what it already did."""
+
+        if self._big_last is None:
+            # First report only establishes a reference. Acting on it would
+            # step a page from wherever the counter happened to be sitting.
+            self._big_last = cc_val
+            return
+        units = tlib.big_delta(self._big_last, cc_val)
+        self._big_last = cc_val
+        if not units:
+            return
+        steps, self._big_carry = tlib.big_detents(self._big_carry + units)
+        for _ in range(abs(steps)):
+            self._step_page(1 if steps > 0 else -1)
+
     def _step_page(self, delta):
         """DL / DR. Wrapping, and it recentres the encoders for the same reason
         a mode change does: the accumulated fraction belongs to the parameter
@@ -2074,6 +2106,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # Encoders carry a position in cc_val, so they must be handled
                 # before the press-only filter below throws every value away.
                 self._encoder_column(cc_num - ENCODER_CCS[0], cc_num, cc_val)
+                return True
+            if cc_num == CC_BIG_TURN:
+                # Ahead of the press-only filter for the same reason the eight
+                # encoders are: this carries a POSITION, and `down = cc_val ==
+                # 127` would throw every value away. CC 15 could never satisfy
+                # that test anyway - it maxes at 120, which is why the knob has
+                # been inert rather than broken.
+                self._big_encoder(cc_val)
                 return True
             down = cc_val == 127
             # Buttons that carry state across press and release come first:

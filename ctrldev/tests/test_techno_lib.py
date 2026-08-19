@@ -2313,3 +2313,55 @@ class TestOverlayIsStepwise(unittest.TestCase):
     def test_no_overlay_is_stepwise(self):
         # The ordinary step picture is the most stepwise thing there is.
         self.assertTrue(tl.overlay_is_stepwise(None))
+
+
+class TestBigEncoderDelta(unittest.TestCase):
+    """The big encoder's signed delta.
+
+    CC 15 is a 16-position counter times 8, wrapping 120 -> 0. It is emitted
+    from the daemon's "A8" branch as `status * 8` and NEVER passes
+    send_encoder_cc, so it never meets is_encoder_jump - there is no rejection
+    threshold to fight here, which the 2026-08-16 round established after a
+    trap note had claimed the opposite."""
+
+    def test_one_detent_forward(self):
+        self.assertEqual(tl.big_delta(0, 8), 8)
+
+    def test_one_detent_back(self):
+        self.assertEqual(tl.big_delta(8, 0), -8)
+
+    def test_the_wrap_forward_is_one_detent_not_fifteen(self):
+        # 120 -> 0 is the counter wrapping, not a leap backwards.
+        self.assertEqual(tl.big_delta(120, 0), 8)
+
+    def test_the_wrap_back_is_one_detent(self):
+        self.assertEqual(tl.big_delta(0, 120), -8)
+
+    def test_a_fast_spin_still_reads_forward(self):
+        self.assertEqual(tl.big_delta(112, 8), 24)
+
+    def test_no_movement_is_zero(self):
+        self.assertEqual(tl.big_delta(64, 64), 0)
+
+
+class TestBigEncoderDetents(unittest.TestCase):
+    """Turning it must step ONE page per detent, not eight."""
+
+    def test_a_detent_is_one_step(self):
+        self.assertEqual(tl.big_detents(8), (1, 0))
+
+    def test_a_partial_turn_banks_the_remainder(self):
+        steps, carry = tl.big_detents(5)
+        self.assertEqual(steps, 0)
+        self.assertEqual(carry, 5)
+
+    def test_the_remainder_completes_a_detent(self):
+        self.assertEqual(tl.big_detents(5 + 3), (1, 0))
+
+    def test_backwards_works_the_same(self):
+        self.assertEqual(tl.big_detents(-8), (-1, 0))
+        self.assertEqual(tl.big_detents(-5), (0, -5))
+
+    def test_a_fast_spin_gives_every_page_it_passed(self):
+        # Three detents in one report must not collapse into one page.
+        self.assertEqual(tl.big_detents(24), (3, 0))
