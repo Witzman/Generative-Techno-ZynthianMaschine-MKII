@@ -84,6 +84,7 @@
 <hr>
 <h2 id="reading-the-displays">Reading the displays</h2>
 <p>Both displays carry a tab row across the top — A&ndash;D on the left, E&ndash;H on the right — with four encoder columns under each.</p>
+<p><strong>On a generated CONTROL page the tab row carries parameter names instead</strong> — that page is one channel's own plugin, and the names need the room. See <a href="deep-parameters.html">Deep parameter control</a>. Everywhere else the tab row is the channels:</p>
 <p><strong>The inverted tab is the selected channel. A dashed tab means that channel is not sounding</strong>, whether it is muted at the mixer or silenced by its own generator. It is the one mechanism this instrument has for explaining silence, so read the tab row before assuming a fault.</p>
 <figure class="lcdfig">
   <div class="lcd">
@@ -104,7 +105,7 @@
 <table><thead><tr><th>Surface</th><th>What it says</th></tr></thead><tbody>
 <tr><td>Group A&ndash;H</td><td>hue is the channel, brightness is its level, dark means it is not sounding</td></tr>
 <tr><td>Mode buttons</td><td>exactly one lit, always — it cannot disagree with the display</td></tr>
-<tr><td>F1&ndash;F8</td><td>lit while that channel is muted</td></tr>
+<tr><td>F1&ndash;F8</td><td>lit while that channel is muted — <strong>in CONTROL, lit while that column's switch is off its first position</strong>, and dark where there is no switch</td></tr>
 <tr><td>PLAY</td><td>lit while anything is running</td></tr>
 <tr><td>REC</td><td><strong>lit only when a take is actually possible</strong> — dark in STEP mode and while MOD is active</td></tr>
 <tr><td>GRID</td><td>lit always, and <strong>blinking</strong> while the selected channel is on an overridden kind</td></tr>
@@ -125,6 +126,7 @@
 <h2 id="mute-solo-erase">Mute, solo and erase</h2>
 <p><strong>F1&ndash;F8 mute channels A&ndash;H</strong>, regardless of which channel is selected — F3 always mutes CLAP. Tap and it latches; hold past a quarter of a second and it is momentary, back on release. Same button, both gestures: momentary is how you play a gesture, latched is how you make a decision.</p>
 <p>The mute is on <strong>the mixer strip rather than the sequencer track</strong>, which is why it survives a snapshot, shows on the touchscreen mixer, and takes the channel's reverb and delay tail with it.</p>
+<p><strong>CONTROL is the one exception: there the F row carries the page's switches</strong> — a plugin's filter type, waveform or section on/off, one button per column, directly above the knob it belongs to. See <a href="deep-parameters.html">Deep parameter control</a>. <strong>Hold SHIFT and F1&ndash;F8 mute again inside CONTROL</strong>, and SOLO + F still solos there as everywhere else.</p>
 <p><strong>SOLO</strong> works the same two ways. <strong>ERASE + a Group button</strong> silences that channel — or, on a channel you have recorded onto, hands the pattern back to the generator.</p>
 <hr>
 <h2 id="transport">Transport</h2>

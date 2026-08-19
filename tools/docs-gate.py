@@ -159,11 +159,22 @@ BASELINE = {
     # a generated page - a plugin port spreads its whole range across one
     # knob. Moved deliberately rather than left at 426 with five words of
     # headroom, which is how a baseline gets nudged to make a run pass.
-    "deep-parameters.html":        (484,  "2026-08-16"),
+    # +435, 2026-08-19: switch exposure. The page gained the third kind of
+    # control a plugin publishes - enumerated and toggled ports, which the
+    # driver had been drawing as numbers - the F row that now carries them in
+    # CONTROL, where mute went, and the trigger ports deliberately left alone.
+    # Large because the feature is not additive: it takes a button row a
+    # player already uses, and a reader who is not told where mute went finds
+    # out mid-set.
+    "deep-parameters.html":        (919,  "2026-08-19"),
     "mixing-and-effects.html":     (434,  "2026-08-16"),
     # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
     # the button list. Same reason as above - it was 24 words under.
-    "the-surface.html":            (867,  "2026-08-16"),
+    # +163, 2026-08-19: the F row means switches in CONTROL. One row of the
+    # light table and one paragraph in Mute, solo and erase - the page a
+    # player checks when a button does not do what they expect, so the
+    # exception has to be stated where the rule is.
+    "the-surface.html":            (1030, "2026-08-19"),
     "saving.html":                 (327,  "2026-08-16"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
 }
