@@ -126,6 +126,17 @@
 <p><strong>This is the gentlest way to make a bar stop repeating itself.</strong> A hat at three-quarters and a clap at half will not play the same bar twice, but the pattern you wrote is still the pattern &mdash; nothing is being regenerated behind your back.</p>
 <p><strong>It is safe on a take you have recorded.</strong> Setting the odds does not rewrite the pattern: no step is moved, added or removed, so unlike turning HITS or ROTATE it cannot hand your take back to the generator. It costs nothing to try mid-jam, and the odds are saved in the snapshot with everything else.</p>
 <hr>
+<h2 id="ratchet">RATCHET — a step that fires more than once</h2>
+<p><strong>Encoder 8 on a drum's STEP page was empty. It is RATCHET now.</strong> Turn it up and every step of that channel fires two, three or four times inside its own slot &mdash; a roll rather than a hit. It reads <code>OFF</code> at the bottom, because one hit is not a ratchet.</p>
+<p>It applies to the whole channel, not one step, which is what makes it a knob rather than an edit: turn it up for a bar of rolls and back down again without touching the pattern you wrote.</p>
+<hr>
+<h2 id="reroll">Reroll — two buttons that ask for a different bar</h2>
+<p><strong>Hold SCENE to reroll the drums, PATTERN to reroll the voices.</strong> Hold, do not tap &mdash; let go early and nothing happens. The drums get new hit counts and rotations; the voices get a new rhythm, a new play chance and a new MELODY amount.</p>
+<p><strong>It lands on the bar, and the wait is the point.</strong> While it is pending the display reads <code>REROLL&gt;</code> and <strong>the tabs of the channels it will hit are drawn dotted</strong>, so you see what is about to change before it does. Press the same button again before it lands and it is cancelled.</p>
+<p><strong>It never touches a channel you have recorded on.</strong> Those channels are simply left out, and their tabs stay undotted &mdash; the drums have no undo, so a reroll that included them would be a data-loss button. If you want a recorded channel rerolled, hand it back first with ERASE + Group.</p>
+<p><strong>It cannot leave a channel silent.</strong> A drum always keeps at least one hit, a voice always keeps some steps and a play chance above a floor. Silence with nothing to explain it is the one thing this instrument refuses to produce, and a reroll that muted a channel by accident would be exactly that.</p>
+<p><strong>SHIFT and the same button puts it back</strong> &mdash; one deep, for the channels that button just rerolled.</p>
+<hr>
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="modulation.html">Modulation</a> — how to make these values move on their own, and why the generator's own knobs refuse it</li>

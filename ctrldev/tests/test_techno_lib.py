@@ -226,11 +226,14 @@ class TestColumnModel(unittest.TestCase):
         cols = tl.columns(_desc("CONTROL", "voice"), "voice", self.voice_state())
         self.assertEqual([c["name"] for c in cols if c["grey"]], [])
 
-    def test_ratchet_is_drawn_greyed_on_the_drum_step_page(self):
+    def test_ratchet_is_LIVE_on_the_drum_step_page(self):
+        # CHANGED 2026-08-19, SP10 step 3. This column was the page's dead
+        # eighth slot from the prototype onwards, drawn `----` and greyed
+        # because nothing wrote it. RATCHET fills it.
         col = tl.columns(_desc("STEP", "drum"), "drum", self.drum_state())[7]
-        self.assertEqual(col["name"], "ratchet")
-        self.assertTrue(col["grey"])
-        self.assertEqual(col["value"], "----")
+        self.assertEqual(col["name"], "RATCH")
+        self.assertFalse(col["grey"])
+        self.assertEqual(col["value"], "OFF")
 
     def test_random_zero_reads_lock_not_a_number(self):
         col = tl.columns(_desc("STEP", "voice"), "voice", self.voice_state(random=0))[2]
@@ -324,7 +327,8 @@ class TestPageRings(unittest.TestCase):
     def test_step_channel_page_verbs_match_the_shipped_layout(self):
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "drum")][0]["verbs"],
-            ("hits", "rotate", "div", "length", "velo", "chance", "swing", None))
+            ("hits", "rotate", "div", "length", "velo", "chance", "swing",
+             "ratchet"))
         # Reordered by the owner at the rig, 2026-08-16: pattern time first,
         # then the two generators SIDE BY SIDE, then pitch, then velocity.
         # Encoder 3 is MELODY on the panel but keeps the key `random`.
@@ -398,8 +402,9 @@ class TestColumnsByShape(unittest.TestCase):
         cols = tl.columns(desc, "drum", _drum_view())
         self.assertEqual([c["name"] for c in cols],
                          ["HITS", "ROTATE", "DIVIDE", "LENGTH", "VELO",
-                          "CHANCE", "SWING", "ratchet"])
-        self.assertTrue(cols[7]["grey"])
+                          "CHANCE", "SWING", "RATCH"])
+        # No longer greyed: SP10 step 3 gave the slot a verb, 2026-08-19.
+        self.assertFalse(cols[7]["grey"])
 
     def test_global_shape_still_renders_the_shipped_all_page(self):
         desc = tl.PAGE_RINGS[("ALL", None)][0]
@@ -1261,9 +1266,19 @@ class TestButtonTables(unittest.TestCase):
         # by MOD, and NOTE REPEAT 10 by the register undo, so neither is here.
         # DUPLICATE 29 joined the list 2026-08-15 when the register undo moved
         # off it onto NOTE REPEAT.
-        for cc in (5, 6, 12, 25, 26, 29, 30, 34):
+        #
+        # SCENE 25 and PATTERN 26 LEFT this list 2026-08-19: SP10 step 3 gave
+        # them the two reroll buttons. They were free and are now spent, which
+        # is what the list is for - it tracks what is UNCLAIMED, not what is
+        # unclaimable. CC 15 (big encoder turn) left it the same day.
+        for cc in (5, 6, 12, 29, 30, 34):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
+
+    def test_the_reroll_buttons_are_bound_and_stateful(self):
+        # Stateful, not press-only: hold-to-fire needs the release.
+        self.assertEqual(tl.BUTTONS_STATEFUL[25], "reroll_drums")
+        self.assertEqual(tl.BUTTONS_STATEFUL[26], "reroll_voices")
 
     def test_coarse_lives_on_tempo_and_carries_both_edges(self):
         # TEMPO = CC 35, MEASURED 2026-08-16 by aseqdump on the daemon's Pads
@@ -2450,3 +2465,191 @@ class TestDriftIsWrapRate(unittest.TestCase):
     def test_plugin_verbs_are_not(self):
         self.assertFalse(tl.is_drift("lv2:cutoff"))
         self.assertFalse(tl.is_drift("fx:0:wet"))
+
+
+class TestKitWindow(unittest.TestCase):
+    """SP8 — RANGE confines the Turing kit walk to part of the kit.
+
+    kit_line() mapped the register across EVERY note in the kit, so a hats
+    channel switched to Turing wandered onto kicks. RANGE now sets a window
+    width, centred on the channel's own note, so narrowing closes in around the
+    drum the channel already plays."""
+
+    KIT = [36, 38, 39, 42, 44, 46, 49, 51]      # eight notes, kick .. crash
+
+    def test_range_4_is_the_whole_kit_and_is_the_default(self):
+        # THE COMPATIBILITY RULE: drum RANGE starts at maximum, so existing
+        # snapshots sound IDENTICAL the day this ships. SP8 is a pure option.
+        wide = tl.kit_line(0b10110011, 8, 16, self.KIT, kit_range=4, centre=42)
+        old = tl.kit_line(0b10110011, 8, 16, self.KIT)
+        self.assertEqual(wide, old)
+
+    def test_narrowing_shrinks_the_set_of_notes_used(self):
+        wide = set(tl.kit_line(0b10110011, 8, 16, self.KIT, kit_range=4, centre=42))
+        narrow = set(tl.kit_line(0b10110011, 8, 16, self.KIT, kit_range=1, centre=42))
+        self.assertLess(len(narrow), len(wide))
+
+    def test_the_window_is_centred_on_the_channels_own_note(self):
+        # A hats channel narrowed stays on hats rather than sliding to kicks.
+        notes = set(tl.kit_line(0b10110011, 8, 16, self.KIT, kit_range=1, centre=44))
+        self.assertTrue(all(abs(self.KIT.index(n) - self.KIT.index(44)) <= 1 for n in notes),
+                        notes)
+
+    def test_the_narrowest_window_still_makes_a_sound(self):
+        # Never empty: a silent channel must say why, and an empty window would
+        # be silence with nothing to explain it.
+        notes = tl.kit_line(0b10110011, 8, 16, self.KIT, kit_range=1, centre=42)
+        self.assertTrue(notes)
+        self.assertTrue(all(n in self.KIT for n in notes))
+
+    def test_a_centre_outside_the_kit_still_works(self):
+        # The channel's note can be absent from the kit list after a kit swap.
+        notes = tl.kit_line(0b10110011, 8, 16, self.KIT, kit_range=2, centre=99)
+        self.assertTrue(notes)
+
+    def test_an_empty_kit_is_still_empty(self):
+        self.assertEqual(tl.kit_line(0b10110011, 8, 16, [], kit_range=1, centre=42), [])
+
+    def test_old_callers_are_unchanged(self):
+        # Default arguments mean every existing call site keeps its meaning.
+        self.assertEqual(tl.kit_line(179, 8, 16, self.KIT),
+                         tl.kit_line(179, 8, 16, self.KIT, kit_range=4, centre=None))
+
+
+class TestDrumRangeDefault(unittest.TestCase):
+    """RANGE already exists and voices use it as octave spread, defaulting to 2
+    of 4. Reusing that number on drums would make every existing channel walk
+    HALF ITS KIT the moment SP8 lands. Drum RANGE is its own value and starts
+    at maximum."""
+
+    def test_a_voice_keeps_its_octave_spread_default(self):
+        self.assertEqual(tl.default_channel_state("voice")["range"], 2)
+
+    def test_a_drum_starts_at_the_whole_kit(self):
+        self.assertEqual(tl.default_channel_state("drum")["range"], 4)
+
+
+class TestRatchet(unittest.TestCase):
+    """SP10 step 3 — RATCHET fills the drum STEP page's dead eighth column.
+    A step fires 2, 3 or 4 times inside its own slot.
+
+    Implemented as zynseq's NATIVE STUTTER, not as stacked notes: Pattern::
+    addEvent deletes overlapping events with the same note, so three addNote
+    calls on one step leave one note, not three. The event already carries a
+    stutter count and duration, and the .so exports setStutterCount /
+    setStutterDur - a ratchet is what those fields are for."""
+
+    def test_the_drum_step_page_has_a_ratchet_column(self):
+        desc = tl.PAGE_RINGS[("STEP", "drum")][0]
+        self.assertEqual(desc["verbs"][7], "ratchet")
+
+    def test_one_is_off(self):
+        self.assertEqual(tl.ratchet_stutter(1, clocks_per_step=24), (0, 0))
+
+    def test_two_fires_twice_in_the_slot(self):
+        count, dur = tl.ratchet_stutter(2, clocks_per_step=24)
+        self.assertEqual(count, 2)
+        self.assertEqual(dur, 12)
+
+    def test_three_divides_the_slot_three_ways(self):
+        count, dur = tl.ratchet_stutter(3, clocks_per_step=24)
+        self.assertEqual(count, 3)
+        self.assertEqual(dur, 8)
+
+    def test_four_divides_the_slot_four_ways(self):
+        self.assertEqual(tl.ratchet_stutter(4, clocks_per_step=24), (4, 6))
+
+    def test_the_duration_never_rounds_to_zero(self):
+        # A zero-length stutter is a step that makes no sound - silence with
+        # nothing to explain it, which this instrument must never produce.
+        for cps in (1, 2, 3, 5, 7):
+            for n in (2, 3, 4):
+                self.assertGreaterEqual(tl.ratchet_stutter(n, cps)[1], 1)
+
+    def test_a_ratchet_column_reads_off_at_one(self):
+        state = _drum_step_state()
+        state["ratchet"] = 1
+        cols = tl.columns(tl.PAGE_RINGS[("STEP", "drum")][0], "drum", state)
+        self.assertEqual(cols[7]["value"], "OFF")
+
+    def test_a_ratchet_column_shows_its_count(self):
+        state = _drum_step_state()
+        state["ratchet"] = 3
+        cols = tl.columns(tl.PAGE_RINGS[("STEP", "drum")][0], "drum", state)
+        self.assertIn("3", cols[7]["value"])
+
+    def test_a_drum_starts_with_ratchet_off(self):
+        self.assertEqual(tl.default_channel_state("drum")["ratchet"], 1)
+
+
+class TestReroll(unittest.TestCase):
+    """SP10 step 3 — SCENE rerolls the drum channels, PATTERN the voices.
+
+    Two floors are non-negotiable: a reroll may never leave a channel silent
+    with nothing to say why. Silence is the failure this instrument is built to
+    explain, and a reroll that mutes a channel by accident is that failure with
+    a new cause."""
+
+    def test_scene_takes_the_drums_and_pattern_the_voices(self):
+        self.assertEqual(tl.reroll_channels("scene"), (0, 1, 2, 3, 4))
+        self.assertEqual(tl.reroll_channels("pattern"), (5, 6, 7))
+
+    def test_hits_never_reach_zero(self):
+        rng = random.Random(1)
+        for _ in range(200):
+            new = tl.reroll_drum(steps=16, rng=rng.random)
+            self.assertGreaterEqual(new["hits"], 1)
+            self.assertLessEqual(new["hits"], 16)
+
+    def test_rotation_stays_inside_the_pattern(self):
+        rng = random.Random(2)
+        for _ in range(200):
+            new = tl.reroll_drum(steps=16, rng=rng.random)
+            self.assertTrue(0 <= new["rotate"] < 16)
+
+    def test_a_voice_reroll_keeps_chance_above_the_floor(self):
+        rng = random.Random(3)
+        for _ in range(200):
+            new = tl.reroll_voice(rng=rng.random)
+            self.assertGreaterEqual(new["chance"], tl.REROLL_CHANCE_FLOOR)
+            self.assertLessEqual(new["chance"], 100)
+
+    def test_a_voice_reroll_never_empties_the_rhythm_register(self):
+        # No bits set is the "no steps at all" silence the tab row exists to
+        # explain. A reroll must not create it.
+        rng = random.Random(4)
+        for _ in range(200):
+            new = tl.reroll_voice(rng=rng.random)
+            self.assertNotEqual(new["rhythm_reg"] & 0xFFFF, 0)
+
+    def test_a_voice_reroll_moves_the_random_value(self):
+        rng = random.Random(5)
+        vals = {tl.reroll_voice(rng=rng.random)["random"] for _ in range(50)}
+        self.assertGreater(len(vals), 1)
+        self.assertTrue(all(0 <= v <= 100 for v in vals))
+
+    def test_a_tiny_pattern_still_gets_a_hit(self):
+        # step_count is 12 on a triplet division and could be smaller still.
+        for steps in (1, 2, 3, 4):
+            new = tl.reroll_drum(steps=steps, rng=random.Random(6).random)
+            self.assertGreaterEqual(new["hits"], 1)
+            self.assertLessEqual(new["hits"], steps)
+
+
+class TestRerollTargets(unittest.TestCase):
+    """Which channels a reroll actually touches.
+
+    It SKIPS channels the player has recorded into. Drums have no undo, so a
+    uniform reroll would be a data-loss button on five of eight channels. The
+    lie would be in the word 'all', not in the behaviour."""
+
+    def test_it_skips_owned_channels(self):
+        owners = {0: "gen", 1: "player", 2: "gen", 3: "gen", 4: "player"}
+        self.assertEqual(tl.reroll_targets("scene", owners), (0, 2, 3))
+
+    def test_it_can_come_up_empty(self):
+        owners = {i: "player" for i in range(8)}
+        self.assertEqual(tl.reroll_targets("scene", owners), ())
+
+    def test_an_unknown_channel_counts_as_generator_owned(self):
+        self.assertEqual(tl.reroll_targets("pattern", {}), (5, 6, 7))

@@ -421,7 +421,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # without re-tagging every field.
         self.GENERATOR_PARAMS = {"hits", "rotate", "div", "length", "chance",
                                  "velo", "swing", "random", "gate", "octave",
-                                 "range", "register", "rhythm", "rhythm_reg"}
+                                 "range", "kit_range", "register", "rhythm",
+                                 "rhythm_reg", "ratchet"}
         self.MIX_PARAMS = {"level", "reverb", "delay"}
         # Built now, while the Turing mutation is the only writer, so a morph
         # can take it later. Two writers to one pattern is the SIGSEGV by a
@@ -464,9 +465,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # 'no reference yet' and the first report only establishes one.
         self._big_last = None
         self._big_carry = 0
+        # REROLL: channels waiting for their own wrap, and the one-deep undo.
+        # Pending is per CHANNEL rather than per button so a reroll lands on
+        # each channel's OWN bar - the whole point of per-group pattern
+        # lengths is polyrhythm, and a single global bar would fight it.
+        self._reroll_pending = set()
+        self._reroll_undo = {}
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
+        self.has_stutter = False
         # The sleeping state set per channel and kind: channel -> kind -> dict,
         # plus "<kind>:hits" and "<kind>:rot" from the legacy arrays. Pure
         # driver state - nothing in zynseq mirrors it, so there is nothing to
@@ -741,6 +749,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if self._legacy_attr(channel, param) is not None:
                 view[param] = self.param_get(channel, param)
 
+        # SP8: on a SAMPLER the RANGE column is the kit-walk window, not the
+        # voice's octave spread - octave spread means nothing when a note picks
+        # a drum rather than a pitch. Same column, different value, chosen by
+        # the engine. The two are stored separately so an existing snapshot's
+        # `range` cannot silently narrow a kit walk.
+        if self._is_sampler(channel):
+            view["range"] = self.state[channel].get("kit_range", 4)
+
         chan = self._mixer_chan(channel)
         if chan is not None:
             view["level"] = int(round(self.state_manager.zynmixer.get_level(chan) * 100))
@@ -815,6 +831,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         screen model, the LED cache and the engine can never disagree, and so
         that Lock snapshots stay a copy of one dict rather than a scrape of
         four subsystems."""
+
+        if param == "range" and self._is_sampler(channel):
+            # SP8: the RANGE column edits the KIT WINDOW on a sampler. Aliased
+            # here rather than at each call site so the encoder, the snapshot
+            # and any future caller all land on the same value as the view.
+            param = "kit_range"
 
         if self.param_get(channel, param) == value:
             return
@@ -1199,7 +1221,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # register is untouched - but the pattern is rewritten so a move
             # off LOCK takes effect on this wrap rather than the next.
             self._write_voice_pattern(channel)
-        elif param in ("gate", "octave", "range") and \
+        elif param in ("gate", "octave", "range", "kit_range") and \
                 self.channel_kind(channel) == "voice":
             # Timbre-ish, but they only exist in the written notes, so the
             # line has to be rewritten from the unchanged register. Law L2
@@ -1207,6 +1229,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._write_voice_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "voice":
             self._write_voice_pattern(channel)
+        elif param == "ratchet":
+            # The stutter is written into the notes, so it only becomes audible
+            # once the pattern is rewritten - exactly like drum VELO below.
+            with self.lock:
+                self._write_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "drum":
             # Velocity is written into the notes, so it only becomes audible
             # once the pattern is rewritten.
@@ -1381,6 +1408,102 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         index = tlib.clamp_index(self.page_idx.get(key, 0), len(ring))
         self.page_idx[key] = index
         return ring[index]
+
+    def _act_reroll_drums(self, down):
+        self._act_reroll("scene", down)
+
+    def _act_reroll_voices(self, down):
+        self._act_reroll("pattern", down)
+
+    def _act_reroll(self, which, down):
+        """SCENE rerolls the drum channels, PATTERN the voices.
+
+        HOLD to fire, and it lands on the bar. Rejected at design time:
+        SHIFT + button, because SHIFT is already loaded and mis-chording on
+        stage is a real failure mode; and press-to-arm-then-confirm, because it
+        leaves armed state a player can walk away from and trip later.
+
+        SHIFT + the same button is the one-deep UNDO. DUPLICATE's four-deep
+        ring holds registers only, per channel, so it neither undoes a reroll
+        nor is flushed by one."""
+
+        key = "reroll_" + which
+        if down:
+            if self.shift_down:
+                self._reroll_undo_apply(which)
+                return
+            if self._reroll_pending & set(tlib.reroll_channels(which)):
+                # The cancel window. Without it a player who presses again
+                # thinking it missed would arm a second one instead.
+                self._reroll_pending -= set(tlib.reroll_channels(which))
+                with self.lock:
+                    self._render_all()
+                return
+            self._down_at[key] = (time.monotonic(), False)
+            return
+
+        went_down, _ = self._down_at.pop(key, (None, False))
+        if went_down is None:
+            return
+        if (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
+            return                       # let go early: nothing happens
+        targets = tlib.reroll_targets(which, self.owner)
+        if not targets:
+            # Everything this button owns is player-owned. Say nothing rather
+            # than arm an empty gesture; the tabs already show why.
+            return
+        self._reroll_pending |= set(targets)
+        with self.lock:
+            self._render_all()
+
+    def _reroll_undo_apply(self, which):
+        """Put back what the last reroll on these channels overwrote."""
+        restored = False
+        for channel in tlib.reroll_channels(which):
+            saved = self._reroll_undo.pop(channel, None)
+            if saved is None:
+                continue
+            for param, value in saved.items():
+                self.apply(channel, param, value)
+            restored = True
+        if restored:
+            with self.lock:
+                self._render_all()
+
+    def _reroll_channel(self, channel):
+        """Fire the pending reroll for one channel, at its own wrap."""
+
+        if channel not in self._reroll_pending:
+            return
+        self._reroll_pending.discard(channel)
+        if self.owner.get(channel) == "player":
+            # Re-checked at fire time as well as at arm time: the player can
+            # record onto a channel in the bar between the two, and drums have
+            # no undo.
+            return
+        if self.channel_kind(channel) == "voice":
+            new = tlib.reroll_voice()
+            self._reroll_undo[channel] = {
+                "chance": self.param_get(channel, "chance"),
+                "rhythm_reg": self.state[channel].get("rhythm_reg", 0xFFFF),
+                "random": self.param_get(channel, "random"),
+            }
+            self.state[channel]["rhythm_reg"] = new["rhythm_reg"]
+            self.apply(channel, "chance", new["chance"])
+            self.apply(channel, "random", new["random"])
+            self._write_voice_pattern(channel)
+        else:
+            steps = lib.step_count(self.div[channel])
+            new = tlib.reroll_drum(steps)
+            self._reroll_undo[channel] = {
+                "hits": self.param_get(channel, "hits"),
+                "rotate": self.param_get(channel, "rotate"),
+            }
+            self.apply(channel, "hits", new["hits"])
+            self.apply(channel, "rotate", new["rotate"])
+        if channel == self.group:
+            with self.lock:
+                self._render_all()
 
     def _big_encoder(self, cc_val):
         """The big encoder steps the page ring of the mode you are in.
@@ -1696,6 +1819,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Decided once, on the machine that will run the call. Not in __init__:
         # libseq is only reliably usable once the driver is bound.
         self.has_step_chance = self._probe_step_chance()
+        self.has_stutter = self._probe_stutter()
         self.stopping.clear()
         self.playhead_thread = Thread(
             target=self._playhead_loop, name="maschine_mk2_playhead", daemon=True)
@@ -1901,6 +2025,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "gate": self._saved_param(i, "gate", self.state[i]["gate"]),
                     "octave": self.state[i]["octave"],
                     "range": self.state[i]["range"],
+                    # SP8's kit window. .get with a default so a channel whose
+                    # state predates SP8 saves the compatible value rather than
+                    # raising on the save path.
+                    "kit_range": self.state[i].get("kit_range", 4),
                     "velo": self._saved_param(i, "velo", self.state[i]["velo"]),
                     "rhythm": self.state[i]["rhythm"],
                     "rhythm_reg": self.state[i]["rhythm_reg"],
@@ -2081,7 +2209,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             st = self.state[channel]
             for field in ("register", "length", "random", "gate", "octave",
-                          "range", "velo", "rhythm", "rhythm_reg"):
+                          "range", "kit_range", "velo", "rhythm", "rhythm_reg"):
                 if field in saved:
                     st[field] = saved[field]
             if "rhythm_reg" not in saved:
@@ -2323,6 +2451,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return False
         return True
 
+    def _probe_stutter(self):
+        """Register argtypes for the stutter calls, and report usability.
+
+        Same shape as _probe_step_chance, and for the same reason: the symbols
+        are exported by the Pi's .so and `zynseq.py` registers argtypes for
+        NEITHER. These are all uint8 rather than float, so an unregistered call
+        would happen to work today - which is exactly why it is worth pinning
+        now, before someone changes a type upstream and it fails silently."""
+
+        try:
+            self.libseq.setStutterCount.argtypes = [
+                ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint8]
+            self.libseq.setStutterDur.argtypes = [
+                ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint8]
+            self.libseq.getStutterCount.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
+            self.libseq.getStutterCount.restype = ctypes.c_uint8
+        except AttributeError:
+            logging.warning("Maschine: libzynseq has no stutter - RATCHET is "
+                            "unavailable on this build")
+            return False
+        return True
+
     def _step_chance(self, step, note):
         """One step's play chance, 0-100, or None if unreadable.
 
@@ -2493,6 +2643,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 state["swing"] = int(round(self.libseq.getSwingAmount() * 50 + 50))
             except Exception:
                 logging.debug("Maschine: no readable chance/swing on this libzynseq")
+            # RATCHET is stutter, and stutter is SAVED IN THE RIFF - so a
+            # snapshot comes back with the pattern still stuttering. Read it
+            # back rather than defaulting to 1, or the surface would say OFF
+            # over a pattern that is plainly ratcheting: the CHANCE/SWING
+            # defect of 2026-08-11 with a new cause.
+            if self.has_stutter:
+                try:
+                    note = self._group_note(group)
+                    steps = self.libseq.getSteps()
+                    for step in range(steps):
+                        if self.libseq.getNoteVelocity(step, note):
+                            found = int(self.libseq.getStutterCount(step, note))
+                            state["ratchet"] = max(1, found)
+                            break
+                except Exception:
+                    logging.debug("Maschine: no readable stutter on this libzynseq")
         note = self._group_note(group)
         steps = self.libseq.getSteps()
         self.hits[group] = sum(
@@ -2843,6 +3009,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "gate": (5, tlib.GATE_MAX, None),
         "octave": (-2, 2, ENC_UNITS_DISCRETE),
         "range": (1, 4, ENC_UNITS_DISCRETE),
+        # 1 is OFF; 2-4 are the ratchet counts.
+        "ratchet": (1, 4, ENC_UNITS_DISCRETE),
     }
 
     def _mod_steer(self, key, cc_num, cc_val):
@@ -3143,10 +3311,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.libseq.setStepsPerBeat(spb)
         self.libseq.setBeatsInPattern(beats)
         self.libseq.clear()
+        # RATCHET: how many times a step fires inside its own slot, as zynseq's
+        # native stutter. 1 writes nothing at all, so a pattern with the feature
+        # unused is identical to one written before it existed.
+        ratchet = int(self.state[group].get("ratchet", 1))
+        stutter, stut_dur = tlib.ratchet_stutter(
+            ratchet, self.libseq.getClocksPerStep())
         for step, on in enumerate(
                 lib.build_pattern_steps(steps, self.hits[group], self.rot[group])):
             if on:
                 self.libseq.addNote(step, note, velocity, 1.0, 0.0)
+                if stutter and self.has_stutter:
+                    # Written per note rather than pattern-wide: the installed
+                    # API is setStutterCount(step, note, count), and there is a
+                    # changeStutterCountAll() but it is a RELATIVE change, not
+                    # an assignment.
+                    self.libseq.setStutterCount(step, note, stutter)
+                    self.libseq.setStutterDur(step, note, stut_dur)
         self.libseq.updateSequenceInfo()
         logging.debug(f"Maschine group {group}: {label} beats={beats} steps={steps} "
                       f"hits={self.hits[group]} rot={self.rot[group]}")
@@ -3876,7 +4057,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         st = self.state[channel]
         if self._is_sampler(channel):
             kit = [num for num, _ in self._keymap(channel)]
-            notes = tlib.kit_line(st["register"], st["length"], steps, kit)
+            # SP8: RANGE narrows the walk to part of the kit, centred on the
+            # channel's own drum. It reads `kit_range`, NOT `range`, and the
+            # difference is a compatibility rule rather than a style choice:
+            # `range` is the VOICE's octave spread and defaults to 2, so a
+            # sampler channel switched to Turing would have narrowed to half
+            # its kit the day SP8 landed - including channel E of the factory
+            # snapshot, which ships switched. `kit_range` defaults to 4, the
+            # whole kit, so every existing snapshot walks exactly as before.
+            #
+            # The RANGE COLUMN edits this on a sampler channel, because octave
+            # spread means nothing there - the kit walk ignores pitch entirely.
+            # Same column, different value, chosen by the ENGINE: the pattern
+            # CONTROL already follows.
+            notes = tlib.kit_line(st["register"], st["length"], steps, kit,
+                                  kit_range=st.get("kit_range", 4),
+                                  centre=self._group_note(channel))
             # An unreadable or empty kit degrades to the channel's own drum,
             # never to silence.
             return notes or [self._group_note(channel)] * steps
@@ -4114,6 +4310,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             except Exception:
                 self.state[channel]["pending"] |= pending
                 raise
+
+        if wrapped:
+            # A reroll lands on the bar - a phrase-level gesture, so it obeys
+            # the structure rule rather than the timbre rule, even though HITS
+            # and ROTATE land instantly when turned by hand.
+            self._reroll_channel(channel)
 
         if wrapped:
             # Drift, for drums and voices alike - it is the pattern that drifts,
@@ -4582,7 +4784,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 else:
                     silent = self.hits[group] == 0
             out.append((chr(ord("A") + group), tlib.CHANNELS[group][1],
-                        group == self.group, silent))
+                        group == self.group, silent,
+                        group in self._reroll_pending))
         return tuple(out)
 
     def _page_columns(self, desc):
@@ -4770,6 +4973,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # page indicator has to say it is on.
         mod = self.mod_down
         label = tlib.mod_label(label, mod)
+        # A pending reroll says so, and the tabs say which channels.
+        label = tlib.reroll_label(label, bool(self._reroll_pending))
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.
@@ -4778,7 +4983,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # _act_mod() were literal no-ops, because nothing else in the
             # tuple moves when MOD goes down, and a latched MOD made the pads
             # inert and the encoders mean something else with no indication.
-            state = (self._tabs(screen), self._columns(screen), label, mod)
+            state = (self._tabs(screen), self._columns(screen), label, mod,
+                     frozenset(self._reroll_pending))
             if not self.leds.changed(f"disp{screen}", state):
                 continue
             for packet in lib.screen_packets(screen, state[0], state[1], state[2]):

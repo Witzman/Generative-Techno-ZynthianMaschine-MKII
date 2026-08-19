@@ -125,7 +125,13 @@ BASELINE = {
     # picture changes under your hand, which reads as a fault if unexplained),
     # that it does NOT rewrite the pattern and so cannot cost a recorded take,
     # and that it persists in the snapshot.
-    "generating-patterns.html":    (1152, "2026-08-19"),
+    # +334, 2026-08-19 (second move that day): RATCHET and REROLL, SP10 step 3.
+    # Reroll needs four paragraphs and three of them are safety rather than
+    # description - that it lands on the bar and can be cancelled, that it
+    # SKIPS channels you have recorded on, and that it cannot leave a channel
+    # silent. A player who does not know the second one will assume it rerolled
+    # everything and go looking for a take that was never touched.
+    "generating-patterns.html":    (1486, "2026-08-19"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the

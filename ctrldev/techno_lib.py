@@ -240,7 +240,7 @@ class techno_lib:
                 for v in techno_lib.rotations(register, length, steps)]
 
     @staticmethod
-    def kit_line(register, length, steps, kit_notes):
+    def kit_line(register, length, steps, kit_notes, kit_range=4, centre=None):
         """The Turing walk across a drum kit instead of across a scale.
 
         On the shipped SFZ kits a note number selects WHICH SAMPLE sounds -
@@ -251,14 +251,38 @@ class techno_lib:
 
         Same rotations as line(), mapped onto the kit's own notes. Returns []
         for an empty kit; the caller falls back to the channel's own note
-        rather than the library inventing one."""
+        rather than the library inventing one.
+
+        SP8: `kit_range` 1-4 confines the walk to a WINDOW of the kit instead
+        of all of it, centred on `centre` - the channel's own current note - so
+        narrowing closes in around the drum the channel already plays rather
+        than sliding somewhere else. Without it a hats channel switched to
+        Turing wanders onto kicks.
+
+        **4 is the whole kit and it is the drum default**, so existing
+        snapshots sound identical the day this ships and SP8 is a pure option.
+        That is also why the signature defaults this way: every existing call
+        site keeps its meaning untouched."""
         if not kit_notes:
             return []
         count = len(kit_notes)
+        lo, hi = 0, count - 1
+        if kit_range is not None and kit_range < 4:
+            # Width as a fraction of the kit: 1 -> a quarter, 3 -> three
+            # quarters. Never narrower than one note either side of centre, or
+            # a narrowed channel would play one sample forever, which is a
+            # different instrument rather than a narrower one.
+            half = max(1, int(round(count * kit_range / 4.0)) // 2)
+            middle = count // 2
+            if centre is not None and centre in kit_notes:
+                middle = kit_notes.index(centre)
+            lo = max(0, middle - half)
+            hi = min(count - 1, middle + half)
+        span = hi - lo + 1
         out = []
         for value in techno_lib.rotations(register, length, steps):
-            idx = (value * count) >> length
-            out.append(kit_notes[min(count - 1, max(0, idx))])
+            idx = lo + ((value * span) >> length)
+            out.append(kit_notes[min(hi, max(lo, idx))])
         return out
 
     @staticmethod
@@ -336,7 +360,14 @@ class techno_lib:
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
                      chance=100, pending=set())
         if kind == "drum":
-            state.update(kit="----", sample="----")
+            # RANGE on a DRUM is SP8's kit-walk window, and it starts at 4 -
+            # the whole kit - so a channel walks exactly as it did before SP8
+            # existed. A voice's RANGE is octave spread and keeps its own
+            # default of 2; sharing that number here would have narrowed every
+            # existing drum channel to half its kit the day this shipped.
+            state.update(kit="----", sample="----", range=4, kit_range=4,
+                         # 1 = off. A step fires once, as it always has.
+                         ratchet=1)
         else:
             state.update(
                 preset="----", cutoff=64, reso=32, env=64, decay=40,
@@ -355,7 +386,11 @@ class techno_lib:
                 # not the pattern's length in beats - a different parameter
                 # wearing the same word, so it lives in the dict and never in
                 # the legacy beats array.
-                length=8, register=0b10110011, ring=deque(maxlen=4))
+                length=8, register=0b10110011, ring=deque(maxlen=4),
+                # SP8's kit-walk window. Lives on the voice set too because a
+                # SAMPLER channel switched to voice behaviour is the case it
+                # exists for, and that channel carries a voice state.
+                kit_range=4)
         return state
 
     # ------------------------------------------------------- pad overlays
@@ -463,6 +498,104 @@ class techno_lib:
         rung = max((r for r in techno_lib.CHANCE_RUNGS if r <= chance),
                    default=min(techno_lib.CHANCE_RUNGS))
         return techno_lib.CHANCE_LOOKS[rung]
+
+    # -------------------------------------------------------------- REROLL
+    #
+    # SCENE rerolls the drum channels, PATTERN the voices. Both buttons are
+    # measured free and named right on the panel.
+    #
+    # TWO FLOORS, NON-NEGOTIABLE. A reroll may never leave a channel silent
+    # with nothing to say why: hits stay >= 1, play chance stays above a floor,
+    # and a voice's rhythm register never comes back empty. Silence is the
+    # failure this instrument is built to explain, and a reroll that mutes a
+    # channel by accident is that failure with a new cause.
+    REROLL_GROUPS = {"scene": (0, 1, 2, 3, 4), "pattern": (5, 6, 7)}
+    REROLL_CHANCE_FLOOR = 40
+
+    @staticmethod
+    def reroll_label(label, pending):
+        """Mark the strip while a reroll waits for the bar.
+
+        Without a pending marker the player presses again thinking it missed -
+        and the second press is the cancel, so they would silently undo their
+        own gesture."""
+        return f"{label} REROLL>" if pending else label
+
+    @staticmethod
+    def reroll_channels(which):
+        """The channels a button owns, before ownership is considered."""
+        return techno_lib.REROLL_GROUPS.get(which, ())
+
+    @staticmethod
+    def reroll_targets(which, owners):
+        """The channels a reroll will actually touch.
+
+        SKIPS anything the player has recorded into. Drums have no undo, so a
+        uniform reroll would be a data-loss button on five of eight channels.
+        A player who wants a recorded channel rerolled hands it back first with
+        ERASE + Group - the existing, deliberate, per-channel destructive
+        route. An unknown channel counts as generator-owned, because that is
+        what an absent entry means everywhere else in this driver."""
+        return tuple(ch for ch in techno_lib.reroll_channels(which)
+                     if owners.get(ch, "gen") != "player")
+
+    @staticmethod
+    def reroll_drum(steps, rng=random.random):
+        """New hits and rotation for one drum channel.
+
+        Hits are floored at 1 and capped at the pattern's own step count - a
+        triplet division has 12 steps, not 16, and a reroll that wrote 14 would
+        silently do nothing with two of them."""
+        steps = max(1, int(steps))
+        hits = 1 + int(rng() * steps)
+        return {"hits": min(steps, hits), "rotate": int(rng() * steps) % steps}
+
+    @staticmethod
+    def reroll_voice(rng=random.random):
+        """New play chance, rhythm register and RANDOM value for one voice.
+
+        The register is rerolled rather than the notes: a voice's steps ARE its
+        rhythm register, so this is the same gesture the drum reroll makes on
+        hits and rotation. It cannot come back empty - no bits set is the "no
+        steps at all" silence the tab row exists to explain."""
+        reg = int(rng() * 0xFFFF) & 0xFFFF
+        if not reg:
+            reg = 1
+        span = 100 - techno_lib.REROLL_CHANCE_FLOOR
+        return {
+            "chance": techno_lib.REROLL_CHANCE_FLOOR + int(rng() * (span + 1)),
+            "rhythm_reg": reg,
+            "random": int(rng() * 101),
+        }
+
+    # ------------------------------------------------------------- RATCHET
+    #
+    # A step fires 2, 3 or 4 times inside its own slot. Implemented as zynseq's
+    # NATIVE STUTTER rather than as stacked notes, because Pattern::addEvent
+    # DELETES overlapping events carrying the same note - three addNote calls on
+    # one step leave one note, not three. The event already has a stutter count
+    # and a stutter duration, and the installed .so exports setStutterCount and
+    # setStutterDur; a ratchet is exactly what those fields are for.
+    RATCHET_MAX = 4
+
+    @staticmethod
+    def ratchet_stutter(ratchet, clocks_per_step):
+        """(stutter count, stutter duration in clocks) for a ratchet setting.
+
+        1 means OFF and returns (0, 0) - no stutter fields written at all, so a
+        pattern with the feature unused is byte-identical to one written before
+        it existed.
+
+        The duration is FLOORED AT ONE CLOCK. At a fast division a step can be
+        few enough clocks that dividing it four ways rounds to zero, and a
+        zero-length stutter is a step that makes no sound: silence with nothing
+        to explain it, which is the failure this instrument exists to avoid."""
+
+        n = int(ratchet)
+        if n <= 1:
+            return (0, 0)
+        n = min(n, techno_lib.RATCHET_MAX)
+        return (n, max(1, int(clocks_per_step) // n))
 
     # ------------------------------------------------------- the big encoder
     #
@@ -862,6 +995,14 @@ class techno_lib:
     # press and release, so they are dispatched before the press-only filter.
     BUTTONS_STATEFUL = {
         2: "erase",
+        # SCENE and PATTERN, both measured free in the G4 capture and both
+        # named right on the panel for what they do. STATEFUL rather than
+        # press-only because a reroll is hold-to-fire: the press arms nothing,
+        # the RELEASE past the threshold does. Hold-to-fire is already this
+        # instrument's law, it is self-cancelling - let go early and nothing
+        # happens - and the hold buys a disclosure window for free.
+        25: "reroll_drums",
+        26: "reroll_voices",
         3: "rec",
         49: "shift",
         31: "solo",
@@ -1539,7 +1680,12 @@ class techno_lib:
                 c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
                 c("CHANCE", n(state["chance"]), "uni", state["chance"] / 100.0),
                 c("SWING", n(state["swing"]), "uni", (state["swing"] - 50) / 25.0),
-                dead("ratchet"),
+                # SP10 step 3: the page's dead eighth column, filled. OFF at 1
+                # rather than "1", because one hit is not a ratchet and reading
+                # "1" invites turning it down looking for off.
+                c("RATCH", "OFF" if state.get("ratchet", 1) <= 1
+                  else "x%d" % state["ratchet"], "seg",
+                  (max(0, state.get("ratchet", 1) - 1), 4)),
             ]
         # THIS LIST'S ORDER MUST MATCH PAGE_RINGS[("STEP", "voice")][0]["verbs"]
         # position for position - the verbs tuple decides which encoder writes
@@ -1590,7 +1736,7 @@ techno_lib.PAGE_RINGS = {
     ("STEP", "drum"): (
         _d(techno_lib.SHAPE_CHANNEL, "STEP",
            verbs=("hits", "rotate", "div", "length", "velo", "chance",
-                  "swing", None)),
+                  "swing", "ratchet")),
         _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
         _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
     ),

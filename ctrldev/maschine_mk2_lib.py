@@ -464,7 +464,9 @@ class maschine_mk2_lib:
     def screen_packets(screen, tabs, cols, label=""):
         """Every OSC packet for one screen, in draw order.
 
-        tabs: four (letter, name, selected, muted)
+        tabs: four (letter, name, selected, muted), optionally extended with
+              an `armed` flag: (letter, name, selected, muted, armed). Shorter
+              forms still work, so every existing caller and test is untouched.
         cols: four (name, value, bar kind, bar fraction), optionally extended
               with a mod span and a tick: (..., mod span) or
               (..., mod span, tick). Shorter forms still work so every
@@ -474,12 +476,19 @@ class maschine_mk2_lib:
 
         cls = maschine_mk2_lib
         out = [cls.display_clear_osc(screen)]
-        for i, (letter, name, selected, muted) in enumerate(tabs):
+        for i, tab in enumerate(tabs):
+            letter, name, selected, muted = tab[:4]
+            armed = tab[4] if len(tab) > 4 else False
             x = i * cls.SCREEN_COL + 1
             w = cls.SCREEN_COL - 4
-            out.append(cls.display_rect_osc(
-                screen, x, 0, w, cls.TAB_H,
-                cls.RECT_DASHED if muted else cls.RECT_OUTLINE))
+            # DOTTED marks a channel a pending reroll will hit. It is the one
+            # tab style not already spoken for: outline is normal, dashed is
+            # silent, inverted is selected. Armed wins over silent for the bar
+            # it is pending - it is the more urgent thing to know, and it
+            # clears itself.
+            style = (cls.RECT_DOTTED if armed
+                     else cls.RECT_DASHED if muted else cls.RECT_OUTLINE)
+            out.append(cls.display_rect_osc(screen, x, 0, w, cls.TAB_H, style))
             tab_label = f"{letter} {name}"[:cls.TAB_CHARS]
             out.append(cls.display_text_osc(screen, x + 3, 2, 1, False, tab_label))
             if selected:
