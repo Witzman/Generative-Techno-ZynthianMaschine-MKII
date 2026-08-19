@@ -153,7 +153,11 @@ BASELINE = {
     # A reader meeting a blinking GRID and a VOX indicator on a drum channel
     # needs to be told that is the preset and not a fault, on the page they
     # are already on.
-    "sound-and-presets.html":      (1371, "2026-08-18"),
+    # +317, 2026-08-19: the engine list. Twenty-four synths plus the sampler,
+    # each with what kind of synth it is and which pack proves it, and the one
+    # engine that failed at eight instances. Owner-requested; the table itself
+    # is free of the budget, the paragraphs around it are not.
+    "sound-and-presets.html":      (1688, "2026-08-19"),
     # +58, 2026-08-16: TEMPO. The encoders are now half as sensitive by
     # default and TEMPO held gives the old speed back, which matters most on
     # a generated page - a plugin port spreads its whole range across one
@@ -167,7 +171,11 @@ BASELINE = {
     # player already uses, and a reader who is not told where mute went finds
     # out mid-set.
     "deep-parameters.html":        (919,  "2026-08-19"),
-    "mixing-and-effects.html":     (434,  "2026-08-16"),
+    # +197, 2026-08-19: the effects list, the measured cost of an insert pair
+    # at eight instances, and the five plugins that are out with their
+    # numbers. Owner-requested, and the sentence that matters is not in a
+    # table: loading without an error is not running without a glitch.
+    "mixing-and-effects.html":     (631,  "2026-08-19"),
     # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
     # the button list. Same reason as above - it was 24 words under.
     # +163, 2026-08-19: the F row means switches in CONTROL. One row of the

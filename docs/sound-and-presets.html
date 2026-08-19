@@ -113,6 +113,38 @@
 <p>Four of the ambient presets leave <strong>E on its sampler</strong> rather than giving it a synth, so the Turing register walks the kit's own samples. It is the trick the factory snapshot uses on the same channel, and it sounds nothing like a synth pad.</p>
 <p><strong>The modulation is bar-synced and deliberately slow</strong> &mdash; the slowest rate is a full sixteen bars, which at 60&nbsp;BPM is a sweep over a minute long. Nothing here needs your hands to stay interesting. Turn any modulated knob and you steer the <em>centre</em> of its sweep rather than fighting it.</p>
 <hr>
+<h2 id="engines-proven">The synth engines this is proven on</h2>
+<p><strong>Twenty-four LV2 synths, plus the sampler.</strong> Every one below is loaded by a shipped snapshot and has been run on the rig &mdash; eight instances at once in the drone presets, which is the hardest thing this instrument does. Nothing here is a recommendation from a plugin list; it is what has actually played.</p>
+<table><thead><tr><th>Engine</th><th>What kind of synth it is</th><th>Where it plays</th></tr></thead><tbody>
+<tr><td>padthv1</td><td>additive pad synth &mdash; PADsynth, huge slow spectra</td><td>factory, both packs</td></tr>
+<tr><td>Obxd</td><td>virtual analogue poly, Oberheim OB-X voicing</td><td>factory, both packs</td></tr>
+<tr><td>JC303</td><td>TB-303 emulation &mdash; mono acid bass, one filter, accent</td><td>factory, both packs</td></tr>
+<tr><td>synthv1</td><td>four-oscillator subtractive poly</td><td>both packs</td></tr>
+<tr><td>amsynth</td><td>two-oscillator analogue-modelled subtractive</td><td>both packs</td></tr>
+<tr><td>String machine</td><td>divide-down string ensemble &mdash; one sound, done well</td><td>both packs</td></tr>
+<tr><td>Monique</td><td>monophonic virtual analogue, aggressive filters</td><td>genre pack</td></tr>
+<tr><td>MDA JX10</td><td>two-oscillator virtual analogue poly</td><td>both packs</td></tr>
+<tr><td>MDA DX10</td><td>FM poly &mdash; DX-flavoured, four voices of it</td><td>both packs</td></tr>
+<tr><td>MDA ePiano</td><td>modelled electric piano</td><td>both packs</td></tr>
+<tr><td>Calf Monosynth</td><td>subtractive mono, two filters in series or parallel</td><td>both packs</td></tr>
+<tr><td>Calf Wavetable</td><td>wavetable poly</td><td>both packs</td></tr>
+<tr><td>MiMi-d</td><td>virtual analogue poly</td><td>both packs</td></tr>
+<tr><td>Triceratops</td><td>three-oscillator virtual analogue poly with unison</td><td>both packs</td></tr>
+<tr><td>Helm</td><td>subtractive poly built around heavy modulation</td><td>genre pack</td></tr>
+<tr><td>Odin2</td><td>semi-modular hybrid &mdash; analogue, wavetable and FM oscillators</td><td>both packs</td></tr>
+<tr><td>Surge XT</td><td>hybrid poly: wavetable, FM and subtractive in one voice</td><td>both packs</td></tr>
+<tr><td>Noize Mak3r</td><td>virtual analogue poly (TAL NoiseMaker)</td><td>both packs</td></tr>
+<tr><td>Nekobi</td><td>a second 303 &mdash; Nekobee, squarer than JC303</td><td>genre pack</td></tr>
+<tr><td>Mutated Instruments</td><td>macro-oscillator voice: one control picks the synthesis model</td><td>both packs</td></tr>
+<tr><td>Kars</td><td>Karplus&ndash;Strong plucked string</td><td>both packs</td></tr>
+<tr><td>RipplerX</td><td>physically modelled resonators &mdash; strings, membranes, plates</td><td>drone pack</td></tr>
+<tr><td>Vex</td><td>three-oscillator subtractive poly with its own arpeggiator</td><td>drone pack</td></tr>
+<tr><td>MiniOPL3</td><td>OPL3 chip emulation &mdash; two-operator FM, early-90s PC</td><td>drone pack</td></tr>
+<tr><td>LinuxSampler</td><td>the SFZ sampler behind every drum channel and the kit walk</td><td>everywhere</td></tr>
+</tbody></table>
+<p><strong>One synth is out.</strong> <code>SO-kl5 Piano Synthesizer</code> was in a drone preset and cost 57.6&nbsp;% of a core with 11 xruns at eight instances; it was replaced with RipplerX and that preset now runs at 38.6&nbsp;% with none. It is the only engine on this rig that failed &mdash; a probe carrying six otherwise-unproven synths at once measured 16.4&nbsp;%, so <strong>synths are not what runs this Pi out of headroom.</strong> Effects are; see <a href="mixing-and-effects.html">Mixing and effects</a>.</p>
+<p>Any other LV2 synth Zynthian can load will work with the surface &mdash; the four page-1 knobs rebind by name and the generated pages are built from whatever it publishes. Untested means untested, not unsupported.</p>
+<hr>
 <h2 id="kit-window">RANGE narrows the kit walk</h2>
 <p><strong>When a drum channel is played by the Turing register, RANGE decides how much of the kit it may reach.</strong> It arrives at <strong>1, which is one note</strong>: the channel keeps playing its own drum and the register decides only <em>which steps sound</em>. That is the useful thing most of the time &mdash; you get rhythm you could not have programmed, on the drum you chose.</p>
 <p><strong>Turn it up and the walk widens outward from that drum</strong>, taking in its neighbours in the kit, until at 4 it may use the whole thing. That is where a hats channel starts hitting kicks, which is occasionally what you want and usually not.</p>

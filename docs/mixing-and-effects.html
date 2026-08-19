@@ -87,6 +87,53 @@
 <p><strong>ROOT and SCALE wait for the bar</strong>, like everything else that changes what the pattern is. The rest of the globals land instantly.</p>
 <p><strong>Group button brightness tracks each channel's level</strong>, so the row shows the balance without reading anything — and the peak meters on the display run live.</p>
 <hr>
+<h2 id="effects-proven">The effects this is proven on</h2>
+<p><strong>The same insert pair sits on all eight chains, so an effect costs eight times what it looks like.</strong> That is where this Pi runs out of headroom &mdash; not on the synths. Every plugin below is in a shipped snapshot and has been measured running.</p>
+<table><thead><tr><th>Plugin</th><th>What it is</th></tr></thead><tbody>
+<tr><td>TAP Reverberator</td><td>algorithmic reverb, and the factory one &mdash; it has a real wet level, which is rarer than it sounds</td></tr>
+<tr><td>TAP Stereo Echo</td><td>stereo delay, the factory partner, also a true wet send</td></tr>
+<tr><td>Dragonfly Hall Reverb</td><td>large algorithmic hall</td></tr>
+<tr><td>Dragonfly Room Reverb</td><td>small-room algorithmic reverb</td></tr>
+<tr><td>Dragonfly Early Reflections</td><td>reflections only, no tail &mdash; space without wash</td></tr>
+<tr><td>Tal-Reverb-II / Tal-Reverb-III</td><td>plate-flavoured algorithmic reverbs</td></tr>
+<tr><td>Shiroverb</td><td>diffuse ambient reverb</td></tr>
+<tr><td>Roomy</td><td>compact room reverb</td></tr>
+<tr><td>Tal-Dub-3</td><td>dub delay &mdash; filtered repeats that degrade the way tape does</td></tr>
+<tr><td>Regrader</td><td>degrading delay: each repeat loses bits and sample rate</td></tr>
+<tr><td>Modulay</td><td>modulated delay, chorused repeats</td></tr>
+<tr><td>GxEcho-Stereo</td><td>stereo echo</td></tr>
+<tr><td>Gxdigital_delay_st</td><td>clean digital stereo delay</td></tr>
+<tr><td>YK Chorus</td><td>chorus</td></tr>
+<tr><td>Multivoice Chorus</td><td>multi-voice chorus, thicker and slower</td></tr>
+<tr><td>Calf Vinyl</td><td>vinyl noise, crackle and wear</td></tr>
+<tr><td>Calf Tape Simulator</td><td>tape wow, flutter and saturation</td></tr>
+<tr><td>MDA RingMod</td><td>ring modulator</td></tr>
+<tr><td>TAP AutoPanner</td><td>auto-panner</td></tr>
+<tr><td>Ping Pong Pan</td><td>ping-pong panner</td></tr>
+<tr><td>ZamEQ2 · 3 Band EQ</td><td>parametric and three-band EQ</td></tr>
+<tr><td>ZamCompX2</td><td>stereo compressor</td></tr>
+</tbody></table>
+<h3 id="effects-cost">What eight instances actually cost</h3>
+<p>Measured on the rig at 512 frames and 48&nbsp;kHz, with eight synths playing and only the insert pair changed:</p>
+<table><thead><tr><th>Insert pair</th><th>Mean CPU</th><th>Xruns</th></tr></thead><tbody>
+<tr><td>TAP Stereo Echo + TAP Reverberator</td><td>18.5&nbsp;%</td><td>0</td></tr>
+<tr><td>Calf Vinyl + Tal-Reverb-III</td><td>25.4&nbsp;%</td><td>0</td></tr>
+<tr><td>Roomy + Tal-Reverb-II</td><td>25.8&nbsp;%</td><td>0</td></tr>
+<tr><td>Shiroverb + Tal-Reverb-III</td><td>28.1&nbsp;%</td><td>0</td></tr>
+<tr><td>Modulay + Dragonfly Hall Reverb</td><td>29.8&nbsp;%</td><td>0</td></tr>
+<tr><td>YK Chorus + Dragonfly Room Reverb</td><td>36.5&nbsp;%</td><td>0</td></tr>
+</tbody></table>
+<h3 id="effects-out">Five that are out, and why</h3>
+<table><thead><tr><th>Plugin</th><th>Measured at eight instances</th></tr></thead><tbody>
+<tr><td>Aether</td><td>61.6&nbsp;% with real xruns &mdash; still 49&nbsp;% in the lighter three-synth layout</td></tr>
+<tr><td>CHOWTapeModel</td><td>82.4&nbsp;% and 62 xruns</td></tr>
+<tr><td>ChowPhaserStereo</td><td>91.6&nbsp;% &mdash; eleven of twenty-four plugin hosts never start at all</td></tr>
+<tr><td>Roboverb</td><td>93.8&nbsp;% and 406 xruns</td></tr>
+<tr><td>Two Dragonfly reverbs together</td><td>52.7&nbsp;%; either one alone is about 30&nbsp;%</td></tr>
+</tbody></table>
+<p>Each was proven guilty by elimination &mdash; its partner in the pair measured clean elsewhere &mdash; and each was replaced in the presets that carried it. <strong>Loading without an error is not running without a glitch</strong>, which is the whole reason these numbers exist.</p>
+<p><strong>Watch what a plugin calls a wet control.</strong> Several well-known reverbs turn out to crossfade dry against wet rather than offering a send, so turning the mix up takes the dry signal away with it. The factory pair was chosen by measuring that with an impulse, one plugin at a time. If you swap in your own, check it the same way before trusting the REVERB and DELAY encoders.</p>
+<hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
 <p><strong>FILTER's five drum columns draw dead.</strong> Only the three voices answer it. The drum channels run a sampler, and there is no filter in that chain to reach — so rather than offering a knob that would do nothing, the columns grey out.</p>
 <p><strong>There is no drum filter in this version.</strong> That is worth saying plainly so you do not go hunting for one: filtering drums needs a filter plugin per channel, which costs eight more plugin hosts, and it has not been built.</p>
