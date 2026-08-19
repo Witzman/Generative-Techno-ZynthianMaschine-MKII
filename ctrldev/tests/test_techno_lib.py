@@ -2082,3 +2082,107 @@ class TestThrottle(unittest.TestCase):
         emit, _, fresh = tl.throttle(self.seen, "wrap 6", "boom", 0.1, 30.0)
         self.assertTrue(emit)
         self.assertTrue(fresh)
+
+
+class TestPadOverlay(unittest.TestCase):
+    """The pad-overlay policy: who owns the sixteen pads, and what they show.
+
+    Three features want the same takeover — probability on SHIFT, the rate/shape
+    legend on MOD, the ring map on NAVIGATE. Deciding it once here, in the
+    unit-tested half, is the whole point: the driver cannot be imported on WSL,
+    so anything left in the driver is checked by py_compile and the rig only."""
+
+    def test_no_modifier_means_no_overlay(self):
+        self.assertIsNone(tl.overlay_owner(shift=False, mod=False, navigate=False))
+
+    def test_shift_owns_the_pads(self):
+        self.assertEqual(tl.overlay_owner(shift=True, mod=False, navigate=False), "shift")
+
+    def test_shift_beats_a_latched_mod(self):
+        # MOD latches, so MOD-active and SHIFT-held genuinely co-occur. Owner's
+        # rule, 2026-08-19: a momentary gesture takes the pads from a latched
+        # state and gives them back on release.
+        self.assertEqual(tl.overlay_owner(shift=True, mod=True, navigate=False), "shift")
+
+    def test_mod_owns_the_pads_when_shift_is_up(self):
+        self.assertEqual(tl.overlay_owner(shift=False, mod=True, navigate=False), "mod")
+
+    def test_navigate_ranks_below_both(self):
+        self.assertEqual(tl.overlay_owner(shift=False, mod=False, navigate=True), "navigate")
+        self.assertEqual(tl.overlay_owner(shift=True, mod=False, navigate=True), "shift")
+        self.assertEqual(tl.overlay_owner(shift=False, mod=True, navigate=True), "mod")
+
+
+class TestChanceLadder(unittest.TestCase):
+    """SHIFT + pad steps a step's play chance down a short ladder.
+
+    A ladder rather than a hold-and-turn: pads are discrete on this surface and
+    encoders carry magnitudes, and four rungs are four brightness levels, which
+    the pad painter can already show."""
+
+    def test_it_descends(self):
+        self.assertEqual(tl.chance_ladder(100), 75)
+        self.assertEqual(tl.chance_ladder(75), 50)
+        self.assertEqual(tl.chance_ladder(50), 25)
+
+    def test_it_wraps_to_full(self):
+        # Back to 100, never to 0: a step you cannot hear is indistinguishable
+        # from a step that is off, and "a silent channel must say why".
+        self.assertEqual(tl.chance_ladder(25), 100)
+
+    def test_an_unrecognised_value_snaps_to_the_nearest_rung(self):
+        # Chance is also settable from the touchscreen and from older snapshots,
+        # so the ladder must not get stuck on a value it did not produce.
+        self.assertEqual(tl.chance_ladder(90), 75)
+        self.assertEqual(tl.chance_ladder(60), 50)
+        self.assertEqual(tl.chance_ladder(10), 100)
+
+    def test_every_rung_is_reachable_by_pressing(self):
+        seen, v = set(), 100
+        for _ in range(8):
+            seen.add(v)
+            v = tl.chance_ladder(v)
+        self.assertEqual(seen, {100, 75, 50, 25})
+
+
+class TestProbabilityPads(unittest.TestCase):
+    """What the pads draw while SHIFT is held."""
+
+    def test_brightness_tracks_chance(self):
+        full = tl.probability_pad(True, 100)[1]
+        half = tl.probability_pad(True, 50)[1]
+        low = tl.probability_pad(True, 25)[1]
+        self.assertGreater(full, half)
+        self.assertGreater(half, low)
+
+    def test_full_chance_is_full_scale(self):
+        # The daemon halves brightness (set_rgb_light: brightness * 0.5), so
+        # 2.0 is full. Measured in the daemon, not guessed.
+        self.assertAlmostEqual(tl.probability_pad(True, 100)[1], 2.0)
+
+    def test_an_off_step_is_dark_whatever_its_chance(self):
+        # An off step has no note to roll for; drawing it lit would claim a
+        # probability that cannot fire.
+        self.assertEqual(tl.probability_pad(False, 100)[1], 0.0)
+
+    def test_a_low_chance_step_is_still_visibly_lit(self):
+        # The silent-channel law: a step at the bottom rung must not read as
+        # "off". It is dimmer, never dark.
+        self.assertGreater(tl.probability_pad(True, 25)[1], 0.0)
+
+    def test_it_never_paints_white(self):
+        # White belongs to the playhead - owner's standing rule, 2026-08-19.
+        for chance in (100, 75, 50, 25):
+            self.assertNotEqual(tl.probability_pad(True, chance)[0], 0xFFFFFF)
+
+    def test_the_hue_is_constant_across_rungs(self):
+        # Brightness carries the value; the hue must stay recognisable at every
+        # level it is dimmed to, so it must not change with the value.
+        hues = {tl.probability_pad(True, c)[0] for c in (100, 75, 50, 25)}
+        self.assertEqual(len(hues), 1)
+
+    def test_the_hue_is_not_a_group_colour(self):
+        # Group colours are not reserved during an overlay, but reusing one
+        # while the step picture is suppressed still invites misreading.
+        self.assertNotIn(tl.probability_pad(True, 100)[0],
+                         {c for _, _, _, c, _, _ in tl.CHANNELS})

@@ -358,6 +358,80 @@ class techno_lib:
                 length=8, register=0b10110011, ring=deque(maxlen=4))
         return state
 
+    # ------------------------------------------------------- pad overlays
+    #
+    # Three features want the same takeover: hold a modifier and the sixteen
+    # pads stop being the step picture and become something else - probability
+    # on SHIFT, the rate/shape legend on MOD, the ring map on NAVIGATE. The
+    # policy lives here rather than in the driver because the driver cannot be
+    # imported on WSL: anything left there is checked by py_compile and the rig
+    # only, and "which modifier owns the pads" is exactly the kind of rule that
+    # drifts when three features each decide it separately.
+
+    # Highest priority first. MOD LATCHES, so mod-active and shift-held really
+    # do co-occur; the owner's rule (2026-08-19) is that a momentary gesture
+    # takes the pads from a latched state and hands them back on release.
+    OVERLAY_PRIORITY = ("shift", "mod", "navigate")
+
+    @staticmethod
+    def overlay_owner(shift=False, mod=False, navigate=False):
+        """Which modifier owns the pads, or None for the ordinary step picture."""
+        held = {"shift": shift, "mod": mod, "navigate": navigate}
+        for name in techno_lib.OVERLAY_PRIORITY:
+            if held[name]:
+                return name
+        return None
+
+    # The rungs SHIFT + pad walks, in order, wrapping back to the top.
+    #
+    # It stops at 25 and does NOT include 0. A step that never fires is
+    # indistinguishable from a step that is off, and "a silent channel must say
+    # why" is the law that cost this project a jam. Turning a step off is what a
+    # bare tap is for, and that reads differently on the pads.
+    CHANCE_RUNGS = (100, 75, 50, 25)
+
+    @staticmethod
+    def chance_ladder(chance):
+        """The next rung strictly BELOW `chance`, wrapping back to full.
+
+        One rule, no special case. It gives 100 -> 75 -> 50 -> 25 -> 100 for the
+        ladder's own values, and it also lands any OTHER value on a rung in a
+        single press - chance is settable from the touchscreen and arrives out
+        of older snapshots, so a ladder that only moved between its own outputs
+        would stick on 90 or 60 forever."""
+
+        below = [r for r in techno_lib.CHANCE_RUNGS if r < chance]
+        return max(below) if below else max(techno_lib.CHANCE_RUNGS)
+
+    # Not a group colour and not white. White is the playhead
+    # (COLOR_PLAYHEAD) by the owner's standing rule; the group colours are not
+    # actually reserved while the step picture is suppressed, but reusing one
+    # invites misreading a probability as a channel.
+    COLOR_PROBABILITY = 0xFF00C8          # magenta
+    # The daemon halves brightness (set_rgb_light: `brightness * 0.5`), so 2.0
+    # is full scale. Derived from daemon/src/devices/mk2/mikro.rs:529, not from
+    # a note about it.
+    PAD_FULL = 2.0
+    # The bottom rung still has to be visibly lit, or it reads as "off".
+    PAD_FLOOR = 0.5
+
+    @staticmethod
+    def probability_pad(step_on, chance):
+        """(colour, brightness) for one pad while SHIFT is held.
+
+        Brightness carries the value, so the hue is constant across every rung -
+        a colour that changed with the value would be a second encoding of the
+        same thing, and one of them would be misread."""
+
+        if not step_on:
+            # No note to roll for. Drawing it lit would claim a probability that
+            # cannot fire.
+            return (techno_lib.COLOR_PROBABILITY, 0.0)
+        span = techno_lib.PAD_FULL - techno_lib.PAD_FLOOR
+        level = max(0.0, min(100.0, float(chance))) / 100.0
+        return (techno_lib.COLOR_PROBABILITY,
+                techno_lib.PAD_FLOOR + span * level)
+
     @staticmethod
     def throttle(seen, key, message, now, seconds):
         """Should this repeating log line be emitted now?

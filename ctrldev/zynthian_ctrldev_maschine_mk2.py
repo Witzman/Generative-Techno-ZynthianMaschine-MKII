@@ -53,6 +53,7 @@
 # pattern back to step 0 without stopping. A white playhead overlays the
 # selected group's pads while it plays.
 
+import ctypes
 import logging
 import socket
 import time
@@ -456,6 +457,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # None means "ask the chain" - never a stored copy of it.
         self.kind_override = {i: None for i in range(len(tlib.CHANNELS))}
         self.shift_down = False
+        # Whether this libzynseq exposes per-step play chance, decided by
+        # _probe_step_chance() rather than assumed - see its docstring.
+        self.has_step_chance = False
         # The sleeping state set per channel and kind: channel -> kind -> dict,
         # plus "<kind>:hits" and "<kind>:rot" from the legacy arrays. Pure
         # driver state - nothing in zynseq mirrors it, so there is nothing to
@@ -1588,6 +1592,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # hammering libseq at 30 Hz.
             logging.warning("Maschine: playhead thread already running")
             return
+        # Decided once, on the machine that will run the call. Not in __init__:
+        # libseq is only reliably usable once the driver is bound.
+        self.has_step_chance = self._probe_step_chance()
         self.stopping.clear()
         self.playhead_thread = Thread(
             target=self._playhead_loop, name="maschine_mk2_playhead", daemon=True)
@@ -2032,6 +2039,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # inside _pad_up finds nothing and this is a no-op.
                 self._pad_up(step)
                 return True
+            if self.shift_down:
+                # Ahead of MOD and of the STEP branch, in that order, for the
+                # same reason MOD is ahead of STEP: in STEP mode a bare pad hit
+                # toggles the step, so intercepting any lower would let
+                # SHIFT + pad silently edit the pattern instead of setting a
+                # probability. SHIFT outranks MOD because MOD LATCHES - a
+                # momentary gesture takes the pads from a latched state and
+                # hands them back on release (owner, 2026-08-19).
+                self._shift_pad(step)
+                return True
             if self.mod_down:
                 # Ahead of the STEP branch deliberately. In STEP mode a pad
                 # hit goes to _toggle_step, so intercepting further down in
@@ -2125,7 +2142,75 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_display()
 
     def _act_shift(self, down):
+        """SHIFT owns the pads while it is held: they stop showing the step
+        picture and show each step's play chance instead.
+
+        Both edges repaint. Without that the overlay would appear only when
+        something else happened to trigger a render, which is how MOD's two
+        _render_display() calls were literal no-ops before the cache tuple
+        carried `mod`."""
+
         self.shift_down = down
+        with self.lock:
+            self._render_pads()
+
+    def _probe_step_chance(self):
+        """Register argtypes for the per-step chance calls, and report whether
+        they are usable.
+
+        THE SYMBOLS EXIST ON THE PI BUT ZYNSEQ.PY REGISTERS NOTHING FOR THEM -
+        it sets argtypes only for the per-PATTERN pair (`:114-115` there). An
+        unregistered call is silently wrong rather than an error: ctypes passes
+        a Python float as a C double, so `chance` arrives as garbage, and a
+        getter without `restype` is read back as an int. That is the same shape
+        as the two API-drift faults this project already survived, which is why
+        this is a probe and not a hasattr guard - a bare hasattr would degrade
+        silently on the only machine that runs it."""
+
+        try:
+            self.libseq.setNotePlayChance.argtypes = [
+                ctypes.c_uint32, ctypes.c_uint8, ctypes.c_float]
+            self.libseq.getNotePlayChance.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
+            self.libseq.getNotePlayChance.restype = ctypes.c_float
+        except AttributeError:
+            logging.warning("Maschine: libzynseq has no per-step play chance - "
+                            "SHIFT + pad probability is unavailable on this build")
+            return False
+        return True
+
+    def _step_chance(self, step, note):
+        """One step's play chance as the surface's 0-100, or None if unreadable.
+
+        libzynseq speaks 0.0-1.0 here, the same units the per-pattern call takes;
+        the 0-100 is a presentation unit and the conversion lives only here."""
+
+        if not self.has_step_chance or note is None:
+            return None
+        try:
+            return int(round(self.libseq.getNotePlayChance(step, note) * 100))
+        except Exception:
+            return None
+
+    def _shift_pad(self, step):
+        """SHIFT + pad steps that step's play chance down one rung.
+
+        Costs NO pattern rewrite - no clear(), no addNote loop, no write burst
+        under the lock. That is what makes this safe on a player-owned channel:
+        it cannot destroy a take, so it needs none of drift's ownership rules."""
+
+        if not self.has_step_chance:
+            return
+        with self.lock:
+            self._select_pattern(self.group)
+            note = self._step_note(self.group, step)
+            if note is None:
+                return                      # an empty step has nothing to roll for
+            current = self._step_chance(step, note)
+            if current is None:
+                return
+            nxt = tlib.chance_ladder(current)
+            self.libseq.setNotePlayChance(step, note, nxt / 100.0)
+            self._render_pads()
 
     def _act_coarse(self, down):
         """TEMPO held: every encoder returns to its old, faster feel.
@@ -4044,9 +4129,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             for step in range(16)]
         head = self._playhead()
         self.head_shown = head
+        # While a modifier owns the pads they stop being the step picture. The
+        # playhead is still drawn over the top, in white, unchanged - the
+        # overlay does not have to suppress or special-case it, which is the
+        # whole reason white is reserved for it.
+        owner = tlib.overlay_owner(shift=self.shift_down, mod=self.mod_down)
         for step in range(16):
             if step == head:
                 state = (COLOR_PLAYHEAD, BRIGHT_PLAYHEAD)
+            elif owner == "shift":
+                state = tlib.probability_pad(
+                    bool(self.step_on[step]),
+                    self._step_chance(step, notes[step]) or 100)
             else:
                 state = self._step_state(step, color)
             self._paint_pad(step, state)
