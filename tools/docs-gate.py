@@ -93,7 +93,16 @@ BASELINE = {
     # instead of describing an intention - a refused column loses its bar, and
     # "a bar means you can bind here" is the whole rule. Plus SWING steady
     # versus blinking, which is what tells held from latched.
-    "modulation.html":             (934,  "2026-08-16"),
+    # +345, 2026-08-19: the MOD pad legend. The page has to carry it because
+    # the pads CHANGE UNDER THE READER'S HAND the moment they hold MOD, and an
+    # unexplained surface that rearranges itself reads as a fault. Three of the
+    # six paragraphs are load-bearing rather than descriptive: that dim-and-
+    # still means nothing is bound yet (otherwise it reads as broken), that
+    # there is deliberately no playhead (otherwise its absence reads as broken),
+    # and that the fade speeds are a READABLE range and not the real rates -
+    # which is a claim about honesty, and the one a later reader would
+    # otherwise take for a measurement.
+    "modulation.html":             (1279, "2026-08-19"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
     # +171, 2026-08-16: a voice now has TWO generators, not one. MELODY and

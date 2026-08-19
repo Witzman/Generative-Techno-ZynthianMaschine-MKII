@@ -2206,3 +2206,110 @@ class TestProbabilityPads(unittest.TestCase):
         # while the step picture is suppressed still invites misreading.
         self.assertNotIn(tl.probability_pad(True, 100)[0],
                          {c for _, _, _, c, _, _ in tl.CHANNELS})
+
+
+class TestModLegend(unittest.TestCase):
+    """The MOD pad legend: while MOD owns the pads they stop drawing steps and
+    become the modulation menu they already secretly are.
+
+    Today the pads LIE - a pad hit under MOD sets a rate or a shape while the
+    pads still draw the step picture. Gesture and display disagree, which is the
+    one thing this surface is not allowed to do."""
+
+    def test_the_band_is_monotonic_left_to_right(self):
+        # "Further right and further down = faster" must stay true even though
+        # the absolute rate does not.
+        p = tl.MOD_LEGEND_PERIODS
+        self.assertEqual(len(p), len(tl.MOD_RATES))
+        self.assertEqual(list(p), sorted(p, reverse=True))
+
+    def test_the_band_is_legible_at_both_ends(self):
+        # MOD_RATES spans 250:1 - 31 s per cycle down to 0.12 s at 124 BPM.
+        # The slow end is indistinguishable from a static LED; the fast end is
+        # 8.3 Hz against a 30 Hz repaint, which aliases into jitter rather than
+        # reading as speed. The band is a LEGIBILITY MAP, not a measurement.
+        self.assertLessEqual(max(tl.MOD_LEGEND_PERIODS), 3.0)
+        self.assertGreaterEqual(min(tl.MOD_LEGEND_PERIODS), 0.30)
+
+    def test_unbound_means_still_pads(self):
+        # _mod_pad returns immediately when nothing is bound, so the gesture is
+        # inert. Pads dancing while nothing can happen is exactly the sin the
+        # dashed tab row exists to prevent.
+        a = [tl.mod_legend_pad(i, 0.0, 3, "tri", bound=False) for i in range(16)]
+        b = [tl.mod_legend_pad(i, 0.7, 3, "tri", bound=False) for i in range(16)]
+        self.assertEqual(a, b)
+        self.assertEqual(len({x[1] for x in a}), 1)
+
+    def test_bound_rate_pads_move(self):
+        over_time = {tl.mod_legend_pad(0, t / 10.0, 3, "tri", bound=True)[1]
+                     for t in range(20)}
+        self.assertGreater(len(over_time), 1)
+
+    def test_the_selected_rate_is_steady_at_full(self):
+        # Owner, 2026-08-19: the active pad is LIT, not swinging widest. An
+        # amplitude cannot be compared across pads moving at different speeds,
+        # so "widest swing" was a mark you had to work out. Steady and full is
+        # read at a glance, and it is the only still pad on the grid.
+        sel = {tl.mod_legend_pad(5, t / 20.0, 5, "tri", bound=True)[1] for t in range(40)}
+        self.assertEqual(sel, {tl.PAD_FULL})
+
+    def test_the_selected_shape_is_steady_at_full(self):
+        sel = {tl.mod_legend_pad(12, t / 20.0, 5, "tri", bound=True)[1] for t in range(40)}
+        self.assertEqual(sel, {tl.PAD_FULL})
+
+    def test_unselected_pads_still_move(self):
+        other = {tl.mod_legend_pad(6, t / 20.0, 5, "tri", bound=True)[1] for t in range(40)}
+        self.assertGreater(len(other), 1)
+        self.assertLess(max(other), tl.PAD_FULL)
+
+    def test_shape_pads_fade_in_their_own_shape(self):
+        # Teaches the four shapes without a word of text: tri breathes, ramp
+        # saws and snaps, squ hard-blinks, s&h steps randomly.
+        squ = [tl.mod_legend_pad(14, t / 30.0, 5, "squ", bound=True)[1] for t in range(60)]
+        tri = [tl.mod_legend_pad(12, t / 30.0, 5, "squ", bound=True)[1] for t in range(60)]
+        self.assertLessEqual(len(set(squ)), len(set(tri)))
+
+    def test_rate_and_shape_pads_are_different_colours(self):
+        self.assertNotEqual(tl.mod_legend_pad(0, 0.0, 3, "tri", bound=True)[0],
+                            tl.mod_legend_pad(12, 0.0, 3, "tri", bound=True)[0])
+
+    def test_no_pad_is_ever_white(self):
+        # White is the playhead. Standing rule.
+        for i in range(16):
+            for t in range(10):
+                self.assertNotEqual(
+                    tl.mod_legend_pad(i, t / 10.0, 3, "tri", bound=True)[0], 0xFFFFFF)
+
+    def test_brightness_is_quantised(self):
+        # Fading twelve pads at 30 Hz is up to 360 pad messages a second, on a
+        # daemon whose own comment records being flooded off the USB bus once.
+        # Quantising means led_cache.changed() swallows most ticks.
+        seen = {tl.mod_legend_pad(0, t / 200.0, 0, "tri", bound=True)[1]
+                for t in range(400)}
+        self.assertLessEqual(len(seen), 20)
+
+    def test_brightness_never_exceeds_full_scale(self):
+        for i in range(16):
+            for t in range(40):
+                self.assertLessEqual(
+                    tl.mod_legend_pad(i, t / 20.0, 3, "tri", bound=True)[1], tl.PAD_FULL)
+
+
+class TestOverlayIsStepwise(unittest.TestCase):
+    """Does the playhead belong on top of this overlay?
+
+    Only if the pads still MEAN steps. Under SHIFT they do - pad 3 is step 3
+    with a probability - so the white sweep is useful and the framework draws it
+    over the top. Under MOD they do not: pad 3 is a RATE, and a playhead marker
+    on it would point at nothing. The rule is not "always draw the playhead",
+    it is "draw it where the pads are still the pattern"."""
+
+    def test_shift_is_stepwise(self):
+        self.assertTrue(tl.overlay_is_stepwise("shift"))
+
+    def test_mod_is_not_stepwise(self):
+        self.assertFalse(tl.overlay_is_stepwise("mod"))
+
+    def test_no_overlay_is_stepwise(self):
+        # The ordinary step picture is the most stepwise thing there is.
+        self.assertTrue(tl.overlay_is_stepwise(None))

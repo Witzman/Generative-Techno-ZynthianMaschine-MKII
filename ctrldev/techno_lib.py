@@ -373,6 +373,17 @@ class techno_lib:
     # takes the pads from a latched state and hands them back on release.
     OVERLAY_PRIORITY = ("shift", "mod", "navigate")
 
+    # Whether an overlay's pads still MEAN steps. The playhead is drawn over
+    # the top only where they do: under SHIFT pad 3 is step 3 carrying a
+    # probability, so the sweep helps; under MOD pad 3 is a RATE and a playhead
+    # marker on it would point at nothing.
+    OVERLAY_STEPWISE = {"shift": True, "mod": False, "navigate": False}
+
+    @staticmethod
+    def overlay_is_stepwise(owner):
+        """True when the pads under this overlay still stand for steps."""
+        return techno_lib.OVERLAY_STEPWISE.get(owner, True)
+
     @staticmethod
     def overlay_owner(shift=False, mod=False, navigate=False):
         """Which modifier owns the pads, or None for the ordinary step picture."""
@@ -452,6 +463,86 @@ class techno_lib:
         rung = max((r for r in techno_lib.CHANCE_RUNGS if r <= chance),
                    default=min(techno_lib.CHANCE_RUNGS))
         return techno_lib.CHANCE_LOOKS[rung]
+
+    # ------------------------------------------------- the MOD pad legend
+    #
+    # While MOD owns the pads they stop drawing the step picture and become the
+    # modulation menu. Today the pads LIE: a pad hit under MOD sets a rate or a
+    # shape (midi_event, ahead of the STEP branch) while the pads still draw
+    # steps. Gesture and display disagree, which this surface is not allowed to
+    # do.
+    #
+    # THE PERIODS ARE A LEGIBILITY MAP, NOT A MEASUREMENT, and the difference
+    # matters enough to say twice. MOD_RATES spans 250:1 - at 124 BPM one bar is
+    # 1.94 s, so the twelve rates run from 31 s per cycle down to 0.12 s. The
+    # slowest four are indistinguishable from a static LED, and the fastest is
+    # 8.3 Hz against a 30 Hz repaint: 3.6 samples per cycle, which aliases into
+    # jitter rather than reading as speed. So the fades run on a compressed band
+    # instead. "Further right and further down is faster" stays TRUE; the
+    # absolute rate does not. Never quote these as what a modulator does.
+    MOD_LEGEND_PERIODS = (2.00, 1.70, 1.45, 1.25, 1.05, 0.90,
+                          0.78, 0.66, 0.56, 0.48, 0.41, 0.35)
+
+    # One hue for the twelve rate pads, another for the four shape pads. Neither
+    # is white - that is the playhead, drawn over the top.
+    COLOR_MOD_RATE = 0x00D0FF        # cyan
+    COLOR_MOD_SHAPE = 0xC000FF       # violet
+
+    # THE SELECTED PAD IS STEADY AT FULL, and is the only still pad on the grid.
+    # Owner, 2026-08-19, replacing "swings widest": an amplitude cannot be
+    # compared across pads moving at different speeds, so the widest swing was a
+    # mark you had to work out rather than see. The cost is that the selected
+    # rate no longer demonstrates its own speed - which is the one rate you
+    # already know, because you chose it.
+    MOD_LEGEND_BAND = 0.30
+    # Floor, so an unselected pad still reads as lit rather than dead.
+    MOD_LEGEND_FLOOR = 0.35
+    # Nothing bound: _mod_pad returns immediately, so the gesture is inert.
+    # Pads dancing while nothing can happen is the sin the dashed tab row
+    # exists to prevent. Still, dim, and identical.
+    MOD_LEGEND_INERT = 0.25
+    # Quantised so led_cache.changed() swallows most ticks. Fading twelve pads
+    # at 30 Hz is up to 360 pad messages a second, and the daemon has been
+    # "flooded off the USB bus once".
+    MOD_LEGEND_LEVELS = 12
+
+    @staticmethod
+    def mod_legend_pad(index, elapsed, selected_rate, selected_shape, bound=True):
+        """(colour, brightness) for one pad of the MOD legend.
+
+        `index` 0-11 are the rate pads, 12-15 the shapes - the same order
+        _mod_pad already reads them in, and step 0 is the top-left pad, so the
+        twelve rates fill the top three rows and the shapes the bottom one.
+
+        `elapsed` is seconds. The legend is a display of what a rate FEELS like
+        and is deliberately not tempo-locked to the modulator it depicts."""
+
+        rates = len(techno_lib.MOD_LEGEND_PERIODS)
+        is_rate = index < rates
+        colour = techno_lib.COLOR_MOD_RATE if is_rate else techno_lib.COLOR_MOD_SHAPE
+        if not bound:
+            return (colour, techno_lib.MOD_LEGEND_INERT)
+
+        if is_rate:
+            period = techno_lib.MOD_LEGEND_PERIODS[index]
+            shape = "tri"
+            selected = index == selected_rate
+        else:
+            shape = techno_lib.MOD_SHAPES[index - rates]
+            # A fixed, middling period so the four shapes are compared by their
+            # SHAPE and not by their speed.
+            period = 1.20
+            selected = shape == selected_shape
+
+        if selected:
+            # Steady, full, and the only pad on the grid not moving.
+            return (colour, techno_lib.PAD_FULL)
+        wave = techno_lib.mod_wave(shape, (elapsed / period) % 1.0, seed=index)
+        # wave is bipolar; fold to 0..1 so the pad swells rather than inverting.
+        level = techno_lib.MOD_LEGEND_FLOOR + techno_lib.MOD_LEGEND_BAND * (wave + 1.0) / 2.0
+        level = min(level, 1.0) * techno_lib.PAD_FULL
+        step = techno_lib.PAD_FULL / techno_lib.MOD_LEGEND_LEVELS
+        return (colour, round(level / step) * step)
 
     @staticmethod
     def throttle(seen, key, message, now, seconds):

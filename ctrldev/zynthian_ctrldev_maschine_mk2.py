@@ -2154,6 +2154,31 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_pads()
 
+    def _mod_legend_state(self):
+        """(bound, rate index, shape) for the legend.
+
+        `bound` is False when _mod_pad would return without doing anything, so
+        the pads can say so by standing still instead of dancing under an inert
+        gesture."""
+
+        entry = self.mod.get(self.mod_last) if self.mod_last else None
+        if entry is None:
+            return (False, 0, tlib.MOD_SHAPES[0])
+        return (True, entry["rate"], entry["shape"])
+
+    def _paint_mod_legend(self):
+        """The sixteen pads as the modulation menu. Caller holds the lock.
+
+        Driven by wall time, not beats, and deliberately so: this shows what a
+        rate FEELS like on a compressed legibility band, not what the modulator
+        is doing. tlib.MOD_LEGEND_PERIODS carries that caveat at length."""
+
+        bound, rate, shape = self._mod_legend_state()
+        elapsed = time.monotonic()
+        for pad in range(16):
+            self._paint_pad(pad, tlib.mod_legend_pad(pad, elapsed, rate, shape,
+                                                     bound=bound))
+
     def _probe_step_chance(self):
         """Register argtypes for the per-step chance calls, and report whether
         they are usable.
@@ -2251,6 +2276,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._render_mod()
             self._render_rec()
             self._render_display()
+            # The pads become the modulation menu. Painted here as well as on
+            # the poll tick so the takeover is immediate rather than up to
+            # 33 ms late, which is visible on a press.
+            with self.lock:
+                self._render_pads()
             return
         went_down, _ = self._down_at.pop("mod", (None, False))
         self.mod_held = False
@@ -2259,6 +2289,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_mod()
         self._render_rec()
         self._render_display()
+        # Give the step picture back on release. Without this the legend would
+        # stay frozen on the pads until something else happened to repaint
+        # them - the pads would keep lying, in the opposite direction.
+        with self.lock:
+            self._render_pads()
 
     def _act_play(self):
         self._toggle_transport()
@@ -4027,9 +4062,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # for a target that proves it needs more.
                     self._mod_write()
                 with self.lock:
-                    head = self._playhead()
-                    if head != self.head_shown:
-                        self._move_playhead(head)
+                    if tlib.overlay_owner(shift=self.shift_down,
+                                          mod=self.mod_down) == "mod":
+                        # The ONLY animated overlay, and it has to run here at
+                        # 30 Hz rather than on the 200 ms modulator tick: a
+                        # 5 Hz fade looks steppy, not slow. Poll thread only,
+                        # never the MIDI thread.
+                        self._paint_mod_legend()
+                    else:
+                        head = self._playhead()
+                        if head != self.head_shown:
+                            self._move_playhead(head)
                     if tick % VOLUME_POLL_TICKS == 0:
                         self._render_groups()
                         # GRID blinks while the selected channel is on an
@@ -4146,8 +4189,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
         owner = tlib.overlay_owner(shift=self.shift_down, mod=self.mod_down)
+        if owner == "mod":
+            # The pads stop standing for steps entirely, so there is no step
+            # loop and no playhead - see tlib.overlay_is_stepwise().
+            self._paint_mod_legend()
+            return
+        stepwise = tlib.overlay_is_stepwise(owner)
         for step in range(16):
-            if step == head:
+            if step == head and stepwise:
                 state = (COLOR_PLAYHEAD, BRIGHT_PLAYHEAD)
             elif owner == "shift":
                 state = tlib.probability_pad(
