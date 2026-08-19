@@ -2168,10 +2168,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         silently on the only machine that runs it."""
 
         try:
+            # uint8 CHANCE, 0-100 - NOT the float 0.0-1.0 the per-PATTERN
+            # setPlayChance() takes, and NOT what our checkout's header says.
+            # The Pi's own zynseq.h is the authority:
+            #     uint8_t getNotePlayChance(uint32_t step, uint8_t note);
+            #     void setNotePlayChance(uint32_t step, uint8_t note, uint8_t chance);
+            # while the newer checkout declares the third argument as a float.
+            # Registered as float first time round, which made every write pass
+            # garbage and every read return garbage, and BOTH FAILED SILENTLY -
+            # Pattern::setPlayChance simply returns when no event matches, and
+            # the getter reports the "no match" default. The pads drew, nothing
+            # moved, and nothing was logged.
             self.libseq.setNotePlayChance.argtypes = [
-                ctypes.c_uint32, ctypes.c_uint8, ctypes.c_float]
+                ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint8]
             self.libseq.getNotePlayChance.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
-            self.libseq.getNotePlayChance.restype = ctypes.c_float
+            self.libseq.getNotePlayChance.restype = ctypes.c_uint8
         except AttributeError:
             logging.warning("Maschine: libzynseq has no per-step play chance - "
                             "SHIFT + pad probability is unavailable on this build")
@@ -2179,15 +2190,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return True
 
     def _step_chance(self, step, note):
-        """One step's play chance as the surface's 0-100, or None if unreadable.
+        """One step's play chance, 0-100, or None if unreadable.
 
-        libzynseq speaks 0.0-1.0 here, the same units the per-pattern call takes;
-        the 0-100 is a presentation unit and the conversion lives only here."""
+        NO conversion: the per-step call speaks the surface's own 0-100 already.
+        Only the per-PATTERN setPlayChance() takes a 0.0-1.0 float, which is the
+        asymmetry that made this wrong the first time."""
 
         if not self.has_step_chance or note is None:
             return None
         try:
-            return int(round(self.libseq.getNotePlayChance(step, note) * 100))
+            return int(self.libseq.getNotePlayChance(step, note))
         except Exception:
             return None
 
@@ -2209,7 +2221,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if current is None:
                 return
             nxt = tlib.chance_ladder(current)
-            self.libseq.setNotePlayChance(step, note, nxt / 100.0)
+            self.libseq.setNotePlayChance(step, note, nxt)
             self._render_pads()
 
     def _act_coarse(self, down):
