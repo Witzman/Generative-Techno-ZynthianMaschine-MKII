@@ -101,7 +101,15 @@ BASELINE = {
     # changed meaning on a voice - a tapped rhythm is now the generator's own
     # state rather than an edit that the next encoder turn wipes. A page that
     # teaches two machines is longer than one that teaches one.
-    "generating-patterns.html":    (921,  "2026-08-16"),
+    # +231, 2026-08-19: per-step probability on SHIFT + pad. It belongs on this
+    # page rather than a new one because the page already teaches that a pad tap
+    # flips a step - probability is the same gesture with a modifier, and the
+    # reader is already holding the right thought. Four paragraphs because three
+    # of them are load-bearing: what the pads show while SHIFT is held (the
+    # picture changes under your hand, which reads as a fault if unexplained),
+    # that it does NOT rewrite the pattern and so cannot cost a recorded take,
+    # and that it persists in the snapshot.
+    "generating-patterns.html":    (1152, "2026-08-19"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the

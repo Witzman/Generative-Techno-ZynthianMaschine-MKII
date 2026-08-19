@@ -120,6 +120,12 @@
 <p><strong>Pattern length is quantised to whole beats, and always will be.</strong> The sequencer stores a pattern as a number of beats, so the reachable step counts are whole beats times the steps in a beat. <strong>1, 5, 7, 11 and 13 steps cannot be asked for.</strong> Turning LENGTH lands on the nearest count that exists rather than refusing to move — so if the number skips past where you aimed, that is the grid and not a fault.</p>
 <p><strong>A silent channel says so.</strong> HITS at 0 is a silent channel, not a broken one, and CHANCE at 0 emits nothing at all. Both draw the channel's tab dashed — the instrument's one mechanism for explaining silence. Read the tab row before suspecting the rig.</p>
 <hr>
+<h2 id="probability">A step that sounds <em>sometimes</em></h2>
+<p><strong>Hold SHIFT and tap a step to set how often it plays.</strong> Each press steps it down &mdash; always, three times in four, half the time, one time in four &mdash; and the fifth press brings it back to always. A bare tap still turns the step on and off; SHIFT is what changes the odds.</p>
+<p><strong>While SHIFT is held the pads show the odds instead of the pattern.</strong> Each step takes its own colour, brightest magenta for always, then red, then orange, and a cool pale blue for the rarest &mdash; so the one that hardly ever fires is obvious without comparing it to its neighbours. Let go and the step picture comes back. The white playhead keeps sweeping over the top either way.</p>
+<p><strong>This is the gentlest way to make a bar stop repeating itself.</strong> A hat at three-quarters and a clap at half will not play the same bar twice, but the pattern you wrote is still the pattern &mdash; nothing is being regenerated behind your back.</p>
+<p><strong>It is safe on a take you have recorded.</strong> Setting the odds does not rewrite the pattern: no step is moved, added or removed, so unlike turning HITS or ROTATE it cannot hand your take back to the generator. It costs nothing to try mid-jam, and the odds are saved in the snapshot with everything else.</p>
+<hr>
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="modulation.html">Modulation</a> — how to make these values move on their own, and why the generator's own knobs refuse it</li>

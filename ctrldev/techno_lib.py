@@ -403,34 +403,55 @@ class techno_lib:
         below = [r for r in techno_lib.CHANCE_RUNGS if r < chance]
         return max(below) if below else max(techno_lib.CHANCE_RUNGS)
 
-    # Not a group colour and not white. White is the playhead
-    # (COLOR_PLAYHEAD) by the owner's standing rule; the group colours are not
-    # actually reserved while the step picture is suppressed, but reusing one
-    # invites misreading a probability as a channel.
-    COLOR_PROBABILITY = 0xFF00C8          # magenta
     # The daemon halves brightness (set_rgb_light: `brightness * 0.5`), so 2.0
-    # is full scale. Derived from daemon/src/devices/mk2/mikro.rs:529, not from
-    # a note about it.
+    # is full scale. Derived from daemon/src/devices/mk2/mikro.rs:529.
     PAD_FULL = 2.0
-    # The bottom rung still has to be visibly lit, or it reads as "off".
-    PAD_FLOOR = 0.5
+
+    # ONE LOOK PER RUNG: colour AND brightness both carry the value, so either
+    # alone is enough to read it.
+    #
+    # Brightness alone did NOT work, and arithmetic says why rather than taste.
+    # The four rungs gave LED bytes 111 / 159 / 207 / 255 - a 2.29:1 ratio - but
+    # brightness perception follows roughly a cube-root power law, so the EYE
+    # sees about 1.32:1 across the WHOLE scale and some 10% between neighbours.
+    # The owner reported them "nearly indistinguishable", which is exactly what
+    # 10% predicts. Measured 2026-08-19, on the hardware, by the owner's eye.
+    #
+    # Hue does the real work now. The group colours are NOT reserved here,
+    # because the step picture is suppressed while the overlay owns the pads;
+    # the one hard rule is that no rung may be WHITE, which is the playhead
+    # drawn over the top.
+    #
+    # Blinking was considered and rejected: it needs a 30 Hz repaint of up to
+    # sixteen pads on a daemon whose own comment records being "flooded off the
+    # USB bus once"; it is fatiguing to read sixteen of them at a glance; and it
+    # would collide with both the playhead sweep and the MOD legend's fade. This
+    # is static, so led_cache swallows every repeat and it costs nothing.
+    CHANCE_LOOKS = {
+        100: (0xFF00C8, 2.00),   # magenta, full - "always"
+        75:  (0xFF2000, 1.40),   # red
+        50:  (0xFF8000, 0.95),   # orange
+        25:  (0x40C0FF, 0.65),   # pale blue, deliberately the odd one out so
+    }                            # "barely ever" is unmistakable at a glance
 
     @staticmethod
     def probability_pad(step_on, chance):
         """(colour, brightness) for one pad while SHIFT is held.
 
-        Brightness carries the value, so the hue is constant across every rung -
-        a colour that changed with the value would be a second encoding of the
-        same thing, and one of them would be misread."""
+        Redundant coding on purpose - see CHANCE_LOOKS for why brightness alone
+        was not readable."""
 
         if not step_on:
             # No note to roll for. Drawing it lit would claim a probability that
             # cannot fire.
-            return (techno_lib.COLOR_PROBABILITY, 0.0)
-        span = techno_lib.PAD_FULL - techno_lib.PAD_FLOOR
-        level = max(0.0, min(100.0, float(chance))) / 100.0
-        return (techno_lib.COLOR_PROBABILITY,
-                techno_lib.PAD_FLOOR + span * level)
+            return (techno_lib.CHANCE_LOOKS[100][0], 0.0)
+        # Snap to the nearest rung AT OR BELOW, so a value set from the
+        # touchscreen or restored from an older snapshot still shows the look of
+        # the rung the ladder would give it. Never below the bottom rung: a step
+        # that sounds must never read as one that is off.
+        rung = max((r for r in techno_lib.CHANCE_RUNGS if r <= chance),
+                   default=min(techno_lib.CHANCE_RUNGS))
+        return techno_lib.CHANCE_LOOKS[rung]
 
     @staticmethod
     def throttle(seen, key, message, now, seconds):

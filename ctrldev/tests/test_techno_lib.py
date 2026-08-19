@@ -2155,6 +2155,11 @@ class TestProbabilityPads(unittest.TestCase):
         self.assertGreater(full, half)
         self.assertGreater(half, low)
 
+    def test_no_rung_is_white(self):
+        # White is the playhead, drawn over the overlay. Standing rule.
+        for chance in tl.CHANCE_RUNGS:
+            self.assertNotEqual(tl.probability_pad(True, chance)[0], 0xFFFFFF)
+
     def test_full_chance_is_full_scale(self):
         # The daemon halves brightness (set_rgb_light: brightness * 0.5), so
         # 2.0 is full. Measured in the daemon, not guessed.
@@ -2175,11 +2180,26 @@ class TestProbabilityPads(unittest.TestCase):
         for chance in (100, 75, 50, 25):
             self.assertNotEqual(tl.probability_pad(True, chance)[0], 0xFFFFFF)
 
-    def test_the_hue_is_constant_across_rungs(self):
-        # Brightness carries the value; the hue must stay recognisable at every
-        # level it is dimmed to, so it must not change with the value.
-        hues = {tl.probability_pad(True, c)[0] for c in (100, 75, 50, 25)}
-        self.assertEqual(len(hues), 1)
+    def test_every_rung_has_its_own_hue(self):
+        # REVERSED 2026-08-19 by the hardware. This test used to assert ONE hue
+        # across all rungs, on the theory that brightness carried the value and
+        # a moving hue would be a second encoding of the same thing. On the pads
+        # the four brightness levels were "nearly indistinguishable" - LED bytes
+        # 111/159/207/255 look like ~1.32:1 to an eye that perceives brightness
+        # as roughly a cube root. Redundant coding is now deliberate.
+        hues = [tl.probability_pad(True, c)[0] for c in (100, 75, 50, 25)]
+        self.assertEqual(len(set(hues)), 4)
+
+    def test_brightness_still_falls_with_chance(self):
+        # The second code, agreeing with the first. Either alone reads.
+        levels = [tl.probability_pad(True, c)[1] for c in (100, 75, 50, 25)]
+        self.assertEqual(levels, sorted(levels, reverse=True))
+
+    def test_a_value_between_rungs_shows_the_rung_below(self):
+        # Chance is settable from the touchscreen and arrives from old
+        # snapshots; it must still show a look the ladder can produce.
+        self.assertEqual(tl.probability_pad(True, 90), tl.probability_pad(True, 75))
+        self.assertEqual(tl.probability_pad(True, 10), tl.probability_pad(True, 25))
 
     def test_the_hue_is_not_a_group_colour(self):
         # Group colours are not reserved during an overlay, but reusing one
