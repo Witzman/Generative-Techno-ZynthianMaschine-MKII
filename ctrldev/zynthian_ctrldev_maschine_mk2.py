@@ -200,6 +200,24 @@ CC_TR = 6                # unbound, free
 # Mode buttons, all measured at G4 alongside the arrows. Unlike the arrows,
 # every one of these matched what the daemon's source said.
 CC_SOLO = 31             # measured
+
+# REC's LED, one row per state tlib.rec_led_state can return. RED means a file
+# is being written and nothing else on this panel is red for any other reason -
+# the player should never have to work out whether they are recording.
+REC_LED_COLOURS = {
+    "off": 0xFFFFFF,
+    "ready": 0xFFFFFF,
+    "overdub": 0xFFFFFF,
+    "recording": 0xFF2000,
+    "both": 0xFF2000,
+}
+REC_LED_BRIGHT = {
+    "off": 0.0,
+    "ready": 0.35,
+    "overdub": 1.0,
+    "recording": 1.0,
+    "both": 2.0,
+}
 CC_DUPLICATE = 29        # measured
 CC_MODE_CONTROL = 11
 CC_MODE_STEP = 32
@@ -507,6 +525,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Law L1 bookkeeping: when each held button went down, and whether it
         # changed anything, so the release knows what to undo.
         self.erase_down = False
+        # Audio capture to disk. Separate from rec_down, which is overdub.
+        self._recording = False
+        # Set on the MIDI thread, drained on the poll thread: start_recording
+        # spawns jack_capture and can block, and midi_event holds the lock for
+        # the whole event. The same law that keeps a preset load off the MIDI
+        # thread.
+        self._record_due = False
         self.solo_down = False
         self.solo_mode = False           # latched: the F row means solo
         # TEMPO held: every encoder returns to the pre-2026-08-16 feel, three
@@ -2456,10 +2481,60 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _act_erase(self, down):
         self.erase_down = down
 
+    def _toggle_capture(self):
+        """Start or stop the audio recorder. POLL THREAD ONLY.
+
+        Explicit start/stop, NEVER cuia_toggle_audio_record: upstream that
+        branches on `current_screen == 'control' and is_shown_audio_player()`
+        (zynthian_gui.py:1187), and this rig runs headless much of the time,
+        so the toggle's behaviour is not predictable from here. Explicit calls
+        also mean the driver always knows which state it put the recorder in
+        rather than inferring it.
+
+        Reached through state_manager directly rather than through send_cuia,
+        which this driver has never called once - a new thread-safety story to
+        establish for no gain.
+
+        MEASURED 2026-08-20: start_recording() shells out to jack_capture
+        against zynmixer:output_17a/b and touches no screen state, so it works
+        on a headless boot. The probe recorded four seconds and the file was
+        the right size for the elapsed time."""
+
+        recorder = getattr(self.state_manager, "audio_recorder", None)
+        if recorder is None:
+            # Not a crash: an older or stripped state manager simply has no
+            # recorder, and a poll thread that raised here would take the
+            # whole instrument down with it.
+            logging.warning("Maschine: no audio_recorder on the state manager")
+            return
+        try:
+            if self._recording:
+                recorder.stop_recording()
+                self._recording = False
+            else:
+                self._recording = bool(recorder.start_recording())
+        except Exception as e:
+            self._log_poll_error("audio capture", e)
+            return
+        logging.info("Maschine: audio capture %s",
+                     "started" if self._recording else "stopped")
+        with self.lock:
+            self._render_transport()
+
     def _act_rec(self, down):
         # Held, and it overdubs: release ends the take. Held notes are NOT
         # released here - letting go of REC stops capturing, it does not stop
         # the instrument sounding.
+        if down and self.shift_down:
+            # SHIFT + REC is AUDIO CAPTURE, and it cannot collide with overdub
+            # because overdub is bare-REC-HELD. That is also why the feature
+            # entry's "long-press REC" was impossible: a long press IS that
+            # hold.
+            #
+            # Deliberately does not set rec_down, so releasing SHIFT+REC
+            # cannot end an overdub the player never started.
+            self._record_due = True
+            return
         self.rec_down = down
         self._render_display()
 
@@ -4501,6 +4576,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # LinuxSampler over a socket and can block.
                 self._commit_kit()
                 self._commit_preset()
+                if self._record_due:
+                    self._record_due = False
+                    self._toggle_capture()
                 # Drain queued note-map rebuilds here, never on the MIDI
                 # thread: the scan takes the lock for a whole pattern.
                 while self._rebuild_due:
@@ -4859,8 +4937,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         it follows a mode change, and from both edges of _act_mod, so it
         follows MOD being held or latched."""
 
-        lit = self.mode != "STEP" and not self.mod_down
-        state = (0xFFFFFF, self.BRIGHT_STATIC if lit else 0.0)
+        possible = self.mode != "STEP" and not self.mod_down
+        # ONE predicate, every fact. Capture is a second meaning on this LED
+        # and a second writer would fight the first, so there is no second
+        # writer - this is the only place REC's LED is written.
+        meaning = tlib.rec_led_state(possible, self.rec_down, self._recording)
+        state = (REC_LED_COLOURS[meaning], REC_LED_BRIGHT[meaning])
         if self.leds.changed("rec_possible", state):
             self._send_osc(lib.button_osc("rec", state[0], state[1]))
 

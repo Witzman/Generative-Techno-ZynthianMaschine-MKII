@@ -456,6 +456,32 @@ class techno_lib:
     CHANCE_RUNGS = (100, 75, 50, 25)
 
     @staticmethod
+    def rec_led_state(possible, overdub, recording):
+        """What REC's LED means, from ALL THREE facts at once.
+
+        REC's LED already meant "an overdub is possible here" - dark in STEP
+        mode and while MOD owns the pads, because holding REC does nothing
+        there. Audio capture is a SECOND meaning on the same LED, and two
+        writers would fight over it, so there is one predicate taking every
+        fact and no second writer anywhere. That is the same rule that made
+        _switch_row the single predicate for the F row.
+
+        CAPTURE OUTRANKS POSSIBILITY. A capture running while the player is in
+        STEP mode must still light the button: a file quietly filling the disk
+        with nothing on the panel saying so is the unexplained-silence law
+        pointed the other way."""
+
+        if recording and overdub:
+            return "both"
+        if recording:
+            return "recording"
+        if not possible:
+            return "off"
+        if overdub:
+            return "overdub"
+        return "ready"
+
+    @staticmethod
     def chance_ladder(chance):
         """The next rung strictly BELOW `chance`, wrapping back to full.
 

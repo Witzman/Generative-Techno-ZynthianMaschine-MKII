@@ -2974,3 +2974,41 @@ class TestModDepthScale(unittest.TestCase):
 
     def test_a_negative_multiplier_cannot_invert(self):
         self.assertAlmostEqual(tl.mod_depth_scale(50.0, -1.0), 0.0)
+
+
+class TestRecLedState(unittest.TestCase):
+    """REC's LED, from every fact at once. ONE predicate, no second writer."""
+
+    def test_not_possible_is_off(self):
+        # In STEP mode, and while MOD owns the pads, holding REC does nothing
+        # at all - a lit REC would be promising a take it cannot make.
+        self.assertEqual(tl.rec_led_state(False, False, False), "off")
+
+    def test_possible_and_idle_is_ready(self):
+        self.assertEqual(tl.rec_led_state(True, False, False), "ready")
+
+    def test_overdub_armed(self):
+        self.assertEqual(tl.rec_led_state(True, True, False), "overdub")
+
+    def test_recording_to_disk(self):
+        self.assertEqual(tl.rec_led_state(True, False, True), "recording")
+
+    def test_both_at_once_is_its_own_state(self):
+        # If overdub and capture each wrote the LED they would fight and it
+        # would lie about which mode the instrument is in.
+        self.assertEqual(tl.rec_led_state(True, True, True), "both")
+
+    def test_capture_outranks_impossible_overdub(self):
+        # THE CASE THAT MATTERS. Capture is running, but the player has
+        # switched to STEP mode where overdub is not possible. The LED must
+        # still say a recording is in progress - going dark would hide a
+        # running capture, and a file quietly filling the disk with nothing on
+        # the panel saying so is the unexplained-silence law in reverse.
+        self.assertEqual(tl.rec_led_state(False, False, True), "recording")
+
+    def test_every_state_is_distinct(self):
+        seen = {tl.rec_led_state(p, o, r)
+                for p in (False, True)
+                for o in (False, True)
+                for r in (False, True)}
+        self.assertEqual(seen, {"off", "ready", "overdub", "recording", "both"})
