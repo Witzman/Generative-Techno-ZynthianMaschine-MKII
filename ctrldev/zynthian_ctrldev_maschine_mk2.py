@@ -540,6 +540,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # ramp, and for the same reason - one truth about whether a ramp is
         # running rather than three attributes that can disagree.
         self._ratchet_ramp = None
+        self.mute_down = False
+        # Queued mute changes: channel -> the mute state to take at that
+        # channel's next wrap. DELIBERATELY NOT state[ch]["pending"] - that
+        # set holds only "div" and "length", and _wrap_channel treats any
+        # non-"div" member as a length change and calls _set_length(), so a
+        # "mute" member there would rewrite the pattern on every queued mute.
+        self._mute_pending = {}
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -2464,6 +2471,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # hands them back on release (owner, 2026-08-19).
                 self._shift_pad(step)
                 return True
+            if self._pad_owner() == "mute":
+                self._mute_pad(step)
+                return True
             if self._pad_owner() == "arm":
                 # Between SHIFT and MOD, which is OVERLAY_PRIORITY's order and
                 # not a coincidence: SHIFT is the oldest and most-used binding
@@ -2723,6 +2733,78 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for pad in range(16):
             self._paint_pad(pad, tlib.arm_legend_pad(
                 pad, picked=picked, armed_bars=bars, remaining=left))
+
+    def _act_mute(self, down):
+        """MUTE holds the eight-channel mute grid on the pads."""
+
+        self.mute_down = down
+        with self.lock:
+            self._render_pads()
+            self._render_mutes()
+
+    def _is_muted(self, group):
+        """Is this channel silent right now? Read live from zynmixer, which is
+        the only store - the driver caches no mute state anywhere, and a
+        wrapper that did would be a second truth."""
+
+        chan = self._mixer_chan(group)
+        if chan is None:
+            return False
+        return bool(self.state_manager.zynmixer.get_mute(chan))
+
+    def _set_muted(self, group, muted):
+        chan = self._mixer_chan(group)
+        if chan is None:
+            return False
+        self.state_manager.zynmixer.set_mute(chan, bool(muted), update=True)
+        return True
+
+    def _mute_pad(self, step):
+        """A pad while MUTE is held: top half acts now, bottom half queues it.
+
+        A queued change is stored against the channel and taken at that
+        channel's OWN wrap. The phrase bar would land all eight together and
+        is musically the better answer for an arrangement gesture - but this
+        package is deliberately buildable without the clock, and the channel
+        wrap already ships. If the two are ever unified, this is the line that
+        moves.
+
+        Tapping a queued pad twice CANCELS the queue rather than queueing the
+        opposite: the second press of a gesture is its undo everywhere else on
+        this surface."""
+
+        picked = tlib.mute_pad_channel(step, len(tlib.CHANNELS))
+        if picked is None:
+            return
+        group, queued = picked
+        if queued:
+            if group in self._mute_pending:
+                del self._mute_pending[group]
+            else:
+                self._mute_pending[group] = not self._is_muted(group)
+        else:
+            self._set_muted(group, not self._is_muted(group))
+            # An instant press also clears a queued one for that channel. Two
+            # answers pending for one strip is how a mute ends up fighting
+            # itself a bar later.
+            self._mute_pending.pop(group, None)
+        with self.lock:
+            self._render_pads()
+            self._render_mutes()
+            self._render_groups()
+
+    def _paint_mute_grid(self):
+        """The sixteen pads as the eight channels, twice. Caller holds lock."""
+
+        for pad in range(16):
+            picked = tlib.mute_pad_channel(pad, len(tlib.CHANNELS))
+            if picked is None:
+                self._paint_pad(pad, (0x000000, 0.0))
+                continue
+            group, queued = picked
+            self._paint_pad(pad, tlib.mute_pad_state(
+                tlib.CHANNELS[group][3], self._is_muted(group),
+                self._mute_pending.get(group), is_queue_row=queued))
 
     def _act_navigate(self, down):
         """NAVIGATE holds the phrase page on the pads."""
@@ -3366,7 +3448,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """What the pads mean right now. One predicate, every caller."""
         return tlib.pad_owner(shift=self.shift_down, mod=self.mod_down,
                               arm=self.arm_down,
-                              navigate=self.navigate_down)
+                              navigate=self.navigate_down,
+                              mute=self.mute_down)
 
     def _mod_clear(self, key):
         """Drop a modulator and restore its base, so the parameter is left
@@ -5285,6 +5368,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self.state[channel]["pending"] |= pending
                 raise
 
+        if wrapped and channel in self._mute_pending:
+            # A queued mute lands on this channel's own wrap. Popped before it
+            # is applied so a raise cannot leave it queued forever, drawing a
+            # half-lit pad for a change that will never happen.
+            want = self._mute_pending.pop(channel)
+            self._set_muted(channel, want)
+            with self.lock:
+                self._render_mutes()
+                self._render_groups()
+                if self.mute_down:
+                    self._paint_mute_grid()
+
         if wrapped:
             # A reroll lands on the bar - a phrase-level gesture, so it obeys
             # the structure rule rather than the timbre rule, even though HITS
@@ -5509,6 +5604,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
         owner = self._pad_owner()
+        if owner == "mute":
+            self._paint_mute_grid()
+            return
         if owner == "navigate":
             self._paint_phrase_pads()
             return

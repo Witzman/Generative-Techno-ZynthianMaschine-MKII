@@ -1280,6 +1280,10 @@ class TestButtonTables(unittest.TestCase):
         # 20 turned out to have been measured on 2026-08-16 all along - it was
         # carried as "inferred" by a stale summary block, which is the only
         # thing that had blocked it.
+        #
+        # MUTE 33 LEFT it 2026-08-20 for the mute grid - the only feature in
+        # four packages with no blocking measurement at all, since CC 33 and
+        # LED index 24 were both already measured.
         for cc in (5, 6, 12, 29):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
@@ -3806,3 +3810,68 @@ class TestArmMacroTable(unittest.TestCase):
     def test_the_mutepath_pair_is_both_macros_and_both_return_legs(self):
         for name in tl.MUTEPATH_MACROS:
             self.assertIn(name, tl.PENDING_NAMES, name)
+
+
+class TestMuteGrid(unittest.TestCase):
+    """MUTE held: the eight channels twice over, now and queued."""
+
+    def test_the_top_half_is_the_channels_now(self):
+        for pad in range(8):
+            self.assertEqual(tl.mute_pad_channel(pad), (pad, False))
+
+    def test_the_bottom_half_is_the_same_channels_queued(self):
+        # SAME ORDER, so the queued pad sits directly under its own channel.
+        for pad in range(8, 16):
+            self.assertEqual(tl.mute_pad_channel(pad), (pad - 8, True))
+
+    def test_a_pad_outside_the_grid_is_None(self):
+        self.assertIsNone(tl.mute_pad_channel(16))
+        self.assertIsNone(tl.mute_pad_channel(-1))
+
+    def test_an_audible_channel_is_full_and_a_muted_one_is_dark(self):
+        hue = 0xFF0000
+        self.assertEqual(tl.mute_pad_state(hue, False), (hue, tl.PAD_FULL))
+        self.assertEqual(tl.mute_pad_state(hue, True), (hue, tl.PAD_OFF))
+
+    def test_the_hue_is_always_the_channels_own(self):
+        # Hue is identity on this surface and has been since the Group LEDs.
+        for group, spec in enumerate(tl.CHANNELS):
+            colour = spec[3]
+            self.assertEqual(tl.mute_pad_state(colour, False)[0], colour)
+            self.assertEqual(
+                tl.mute_pad_state(colour, False, True, is_queue_row=True)[0],
+                colour)
+
+    def test_a_queue_row_pad_shows_the_CHANGE_not_the_state(self):
+        # Otherwise the bottom half would duplicate the top half and say
+        # nothing the top row does not.
+        hue = 0xFF0000
+        self.assertEqual(
+            tl.mute_pad_state(hue, False, None, is_queue_row=True)[1],
+            tl.PAD_OFF)
+        self.assertEqual(
+            tl.mute_pad_state(hue, True, None, is_queue_row=True)[1],
+            tl.PAD_OFF)
+        self.assertEqual(
+            tl.mute_pad_state(hue, False, True, is_queue_row=True)[1],
+            tl.MUTE_QUEUED)
+        self.assertEqual(
+            tl.mute_pad_state(hue, True, False, is_queue_row=True)[1],
+            tl.MUTE_QUEUED)
+
+    def test_the_three_brightnesses_are_distinct(self):
+        self.assertEqual(len({tl.PAD_FULL, tl.MUTE_QUEUED, tl.PAD_OFF}), 3)
+
+    def test_mute_is_bound_and_not_stepwise(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[33], "mute")
+        self.assertNotIn(33, tl.BUTTONS_PRESS)
+        self.assertFalse(tl.overlay_is_stepwise("mute"))
+
+    def test_mute_sits_below_arm_and_above_mod(self):
+        order = tl.OVERLAY_PRIORITY
+        self.assertLess(order.index("arm"), order.index("mute"))
+        self.assertLess(order.index("mute"), order.index("mod"))
+        self.assertEqual(tl.pad_owner(mute=True, mod=True), "mute")
+        self.assertEqual(tl.pad_owner(mute=True, arm=True), "arm")
+        self.assertEqual(tl.pad_owner(mute=True, shift=True), "shift")
+        self.assertEqual(tl.pad_owner(mute=True), "mute")

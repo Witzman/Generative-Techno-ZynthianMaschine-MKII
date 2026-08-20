@@ -428,15 +428,15 @@ class techno_lib:
     # ARM sits above MOD and below SHIFT. SHIFT is the oldest and most-used
     # binding and must not move; a player holding ARM has committed to
     # scheduling, so it outranks the timbre overlay underneath it.
-    OVERLAY_PRIORITY = ("shift", "arm", "mod", "navigate")
+    OVERLAY_PRIORITY = ("shift", "arm", "mute", "mod", "navigate")
 
     # Whether an overlay's pads still MEAN steps. The playhead is drawn over
     # the top only where they do: under SHIFT pad 3 is step 3 carrying a
     # probability, so the sweep helps; under MOD pad 3 is a RATE and a playhead
     # marker on it would point at nothing. Under ARM a pad is a macro or a bar
     # count, which is the same story again.
-    OVERLAY_STEPWISE = {"shift": True, "arm": False, "mod": False,
-                        "navigate": False}
+    OVERLAY_STEPWISE = {"shift": True, "arm": False, "mute": False,
+                        "mod": False, "navigate": False}
 
     @staticmethod
     def overlay_is_stepwise(owner):
@@ -469,7 +469,8 @@ class techno_lib:
         return (techno_lib.COLOR_PHRASE, techno_lib.PAD_OFF)
 
     @staticmethod
-    def pad_owner(shift=False, mod=False, arm=False, navigate=False):
+    def pad_owner(shift=False, mod=False, arm=False, navigate=False,
+                  mute=False):
         """Which overlay the PADS obey, chord exceptions included.
 
         THE SINGLE PREDICATE for the pad dispatcher, the pad painter and the
@@ -495,18 +496,66 @@ class techno_lib:
         if mod and arm and not shift:
             return "mod"
         return techno_lib.overlay_owner(shift=shift, mod=mod, arm=arm,
-                                        navigate=navigate)
+                                        navigate=navigate, mute=mute)
 
     @staticmethod
-    def overlay_owner(shift=False, mod=False, navigate=False, arm=False):
+    def overlay_owner(shift=False, mod=False, navigate=False, arm=False,
+                      mute=False):
         """Which modifier owns the pads, or None for the ordinary step picture.
 
         `arm` defaults False so every existing caller keeps its meaning."""
-        held = {"shift": shift, "arm": arm, "mod": mod, "navigate": navigate}
+        held = {"shift": shift, "arm": arm, "mute": mute, "mod": mod,
+                "navigate": navigate}
         for name in techno_lib.OVERLAY_PRIORITY:
             if held[name]:
                 return name
         return None
+
+    # MUTE's grid: the eight channels twice over. The top two rows act NOW,
+    # the bottom two queue the same change to the channel's next wrap.
+    MUTE_ROWS_INSTANT = 8
+
+    # Half brightness for a queued change, full for audible, dark for muted.
+    # THREE levels here where the phrase page allows only two, and the reason
+    # is that this grid is read while you are holding it rather than glanced
+    # at: the hand is already on the pads, so the third level has a gesture to
+    # explain it.
+    MUTE_QUEUED = 0.6
+
+    @staticmethod
+    def mute_pad_channel(pad, count=8):
+        """(channel, queued) for a pad of the MUTE grid, or None.
+
+        Pads 0-7 are the channels now; 8-15 are the same channels queued. The
+        two halves are the SAME ORDER, so the queued row sits directly under
+        its own channel and the grid reads as one row of eight with two ways
+        to press it."""
+        pad = int(pad)
+        if not 0 <= pad < 2 * count:
+            return None
+        if pad < techno_lib.MUTE_ROWS_INSTANT:
+            return (pad, False)
+        return (pad - techno_lib.MUTE_ROWS_INSTANT, True)
+
+    @staticmethod
+    def mute_pad_state(colour, muted, queued=None, is_queue_row=False):
+        """(colour, brightness) for one pad of the MUTE grid.
+
+        The GROUP HUE, because the pads are channels here and this instrument
+        has said "hue is identity" since the Group LEDs were written. Only the
+        brightness carries the state.
+
+        `queued` is the pending change for that channel, or None for no
+        change. A queue-row pad shows the CHANGE, not the current state: half
+        bright when something is queued, dark when nothing is. Otherwise the
+        bottom half would duplicate the top half and the row would say nothing
+        the top row does not."""
+
+        if is_queue_row:
+            if queued is None:
+                return (colour, techno_lib.PAD_OFF)
+            return (colour, techno_lib.MUTE_QUEUED)
+        return (colour, techno_lib.PAD_OFF if muted else techno_lib.PAD_FULL)
 
     # The rungs SHIFT + pad walks, in order, wrapping back to the top.
     #
@@ -1352,6 +1401,15 @@ class techno_lib:
         # Held, it restores the pre-2026-08-16 encoder feel. Every encoder is
         # half as sensitive by default now; see lib.STEP_FACTOR.
         35: "coarse",
+        # MUTE. CC 33 MEASURED at G4 (both edges), LED index 24 MEASURED
+        # 2026-08-15 - the ONE index the daemon had guessed right. Both halves
+        # of working rule 7 satisfied, and this is the only feature in four
+        # packages that had no blocking measurement at all.
+        #
+        # Held like SHIFT. A latched mute overlay is state a player can walk
+        # away from, and the pads would stop being the step picture until they
+        # noticed.
+        33: "mute",
         # SELECT. CC 30 MEASURED in notes/findings/2026-08-11-g4-capture.log,
         # LED index 22 MEASURED 2026-08-15 - both halves of working rule 7 are
         # satisfied, and neither was read off the daemon's token name.
