@@ -816,6 +816,28 @@ class techno_lib:
         return f"{label} RPT{int(count)}"
 
     @staticmethod
+    def arm_label(label, arm_down, picked):
+        """Name the macro the player has picked, while ARM is held.
+
+        Added 2026-08-20 after the first play test: the picker brightened the
+        pad it picked and said NOTHING ELSE, so with six macros on the grid a
+        player had no way to know what they were about to arm short of arming
+        it and reading the PENDING page afterwards. A control that will not
+        say what it is about to do is the same fault as one that does nothing
+        and will not admit it.
+
+        Only while ARM is HELD. Once armed, the countdown ruler, the LED and
+        the PENDING page all carry it, and a stale name on the label would
+        outlive the gesture."""
+
+        if not arm_down:
+            return label
+        if picked is None:
+            return f"{label} ARM?"
+        name = techno_lib.PENDING_NAMES.get(picked, str(picked).upper())
+        return f"{label} ARM {name}"
+
+    @staticmethod
     def freeze_label(label, frozen, deep):
         """The page indicator says the machine is being held.
 

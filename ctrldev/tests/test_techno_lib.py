@@ -3947,3 +3947,24 @@ class TestNoteBaseOsc(unittest.TestCase):
         # without a sound or a log.
         bases = [24 + 12 * n for n in range(8)]
         self.assertEqual(bases, [24, 36, 48, 60, 72, 84, 96, 108])
+
+
+class TestArmLabel(unittest.TestCase):
+    """The picker has to say what it is about to arm."""
+
+    def test_nothing_while_arm_is_not_held(self):
+        self.assertEqual(tl.arm_label("CTRL", False, "drop"), "CTRL")
+
+    def test_held_with_nothing_picked_asks(self):
+        self.assertEqual(tl.arm_label("CTRL", True, None), "CTRL ARM?")
+
+    def test_held_names_the_macro(self):
+        self.assertEqual(tl.arm_label("CTRL", True, "drop"), "CTRL ARM DROP")
+        self.assertEqual(tl.arm_label("CTRL", True, "break"), "CTRL ARM BREAK")
+        self.assertEqual(tl.arm_label("CTRL", True, "chance"), "CTRL ARM THIN")
+
+    def test_every_armable_macro_has_a_name_to_show(self):
+        for macro in tl.ARM_MACROS:
+            out = tl.arm_label("X", True, macro)
+            self.assertNotEqual(out, "X ARM?")
+            self.assertTrue(out.startswith("X ARM "))

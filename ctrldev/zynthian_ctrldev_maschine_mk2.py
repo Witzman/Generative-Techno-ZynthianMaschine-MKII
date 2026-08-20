@@ -6466,6 +6466,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         label = tlib.phrase_label(label, self._phrase_bar)
         # And FREEZE says the machine is being held, which is the difference
         # between held and broken.
+        label = tlib.arm_label(label, self.arm_down, self._arm_picked)
         label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
         label = tlib.repeat_label(label, bool(self._repeat_restore),
                                   len(self._repeat_restore))
