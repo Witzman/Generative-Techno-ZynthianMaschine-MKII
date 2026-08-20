@@ -2944,3 +2944,33 @@ class TestGeneratedColumnNames(unittest.TestCase):
         self.assertTrue(cols[0]["grey"])
         self.assertEqual(cols[0]["value"], "----")
         self.assertEqual(cols[0]["name"], "assign")
+
+
+class TestModDepthScale(unittest.TestCase):
+
+    def test_unity_is_the_identity(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 1.0), 50.0)
+
+    def test_it_halves(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 0.5), 25.0)
+
+    def test_it_doubles(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 2.0), 100.0)
+
+    def test_a_NEGATIVE_depth_keeps_its_sign(self):
+        # Depths are signed. Scaling magnitude must not flip a modulator.
+        self.assertAlmostEqual(tl.mod_depth_scale(-50.0, 2.0), -100.0)
+
+    def test_zero_multiplier_parks_it(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 0.0), 0.0)
+
+    def test_a_parked_modulator_COMES_BACK(self):
+        # The whole reason the multiplier is stored separately: if the stored
+        # depth were multiplied in place, 0 x anything = 0 would strand every
+        # modulator at zero with no way back.
+        depth = -37.0
+        self.assertAlmostEqual(tl.mod_depth_scale(depth, 0.0), 0.0)
+        self.assertAlmostEqual(tl.mod_depth_scale(depth, 1.0), -37.0)
+
+    def test_a_negative_multiplier_cannot_invert(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, -1.0), 0.0)

@@ -471,6 +471,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # lengths is polyrhythm, and a single global bar would fight it.
         self._reroll_pending = set()
         self._reroll_undo = {}
+        # Global modulator depth, driven by the big encoder while MOD is
+        # latched. Stored SEPARATELY from every entry's own depth - see
+        # techno_lib.mod_depth_scale for why that is not a style choice:
+        # multiplying the stored depths in place would strand every modulator
+        # at zero the first time this reached 0.
+        self.mod_depth_mult = 1.0
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -639,7 +645,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # (_mod_write) is normalised against the raw lo_hi width, not this
         # narrowed span. If either normalisation changes without the other,
         # the tick will no longer land visually inside this envelope.
-        return tlib.mod_span(entry["base"], entry["depth"], lo_hi[0], lo_hi[1])
+        return tlib.mod_span(entry["base"],
+                             tlib.mod_depth_scale(entry["depth"],
+                                                  self.mod_depth_mult),
+                             lo_hi[0], lo_hi[1])
 
     def _mod_tick_frac(self, channel, verb):
         """Where the modulator's wave currently sits, as a bar fraction, or
@@ -1161,7 +1170,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             pos = tlib.mod_pos(entry["phase0"], beats, tlib.MOD_RATES[entry["rate"]])
             wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
-            value = tlib.mod_value(entry["base"], wave, entry["depth"],
+            value = tlib.mod_value(entry["base"], wave,
+                                   tlib.mod_depth_scale(entry["depth"],
+                                                        self.mod_depth_mult),
                                    span[0], span[1])
             # Integer verbs: a pattern cannot have 3.4 hits.
             before = self.param_get(channel, verb)
@@ -1574,6 +1585,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if not units:
             return
         steps, self._big_carry = tlib.big_detents(self._big_carry + units)
+        if not steps:
+            return
+        if self.mod_down:
+            # WHILE MOD IS LATCHED THE BIG ENCODER IS NOT THE PAGE RING. It
+            # scales every live modulator's depth at once instead. This is an
+            # exception on the most prominent control, so the guide has to
+            # state it plainly - MOD's own label already announces MOD is on,
+            # so the surface is not silent about it.
+            self.mod_depth_mult = max(0.0, min(
+                2.0, self.mod_depth_mult + steps * 0.05))
+            with self.lock:
+                self._render_display()
+            return
         for _ in range(abs(steps)):
             self._step_page(1 if steps > 0 else -1)
 
@@ -2021,6 +2045,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # BASE IS SAVED. It is the driver's own truth: the chain holds
             # wherever the LFO happened to be at save time, which is not the
             # value the player dialled in.
+            # The GLOBAL depth multiplier, saved beside the modulators it
+            # scales rather than inside them - the stored depths stay the
+            # player's own numbers, so a snapshot saved at multiplier 0 still
+            # carries every depth it had.
+            "mod_depth_mult": self.mod_depth_mult,
             "mods": {
                 f"{'' if ch is None else ch}|{verb}": {
                     "depth": e["depth"], "rate": e["rate"],
@@ -2131,6 +2160,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # after this load would write a stale base over a value the snapshot
         # just restored.
         self._mod_restore_due = []
+        # Read with a DEFAULT rather than through an upgrade path: a snapshot
+        # written before this key existed simply restores at 1.0, which is the
+        # unity multiplier and exactly what those snapshots meant. Validated
+        # rather than trusted, for the reason CHANCE and SWING were - a
+        # hand-edited value must not reach the poll thread unchecked.
+        mult = state.get("mod_depth_mult", 1.0)
+        self.mod_depth_mult = (float(mult) if isinstance(mult, (int, float))
+                               and 0.0 <= mult <= 2.0 else 1.0)
+
         for key, entry in (state.get("mods") or {}).items():
             chan_s, _, verb = str(key).partition("|")
             if not verb or not tlib.mod_allowed(verb):

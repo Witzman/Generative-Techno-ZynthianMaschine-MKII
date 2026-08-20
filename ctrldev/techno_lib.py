@@ -1407,6 +1407,20 @@ class techno_lib:
         return max(float(lo), min(float(hi), out))
 
     @staticmethod
+    def mod_depth_scale(depth, mult):
+        """`depth` scaled by the global multiplier, sign preserved.
+
+        THIS IS A VIEW, NOT AN EDIT. The multiplier is stored separately and
+        the stored depths are never multiplied in place: 0 x anything = 0
+        would strand every modulator at zero with no way back, which is the
+        base/offset lesson wearing a new hat.
+
+        The multiplier floors at zero. A negative one would invert every
+        modulator at once - a gesture nobody asked for, reachable by turning
+        one knob too far."""
+        return float(depth) * max(0.0, float(mult))
+
+    @staticmethod
     def mod_span(base, depth, lo, hi):
         """(low, high) as bar fractions 0..1 - the dashed span the indicator
         bar draws to say a value is moving on its own."""
