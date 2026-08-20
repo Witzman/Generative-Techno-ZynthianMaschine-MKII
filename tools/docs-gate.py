@@ -131,7 +131,15 @@ BASELINE = {
     # SKIPS channels you have recorded on, and that it cannot leave a channel
     # silent. A player who does not know the second one will assume it rerolled
     # everything and go looking for a take that was never touched.
-    "generating-patterns.html":    (1486, "2026-08-19"),
+    # +399, 2026-08-20: polymeter, plus a CORRECTION. The page had asserted
+    # "1, 5, 7, 11 and 13 steps cannot be asked for" and that is FALSE - it is
+    # true at 1/16, where a beat is four steps, and false at 1/4, where every
+    # count from 1 to 16 is reachable. A reader was being told a capability
+    # did not exist. The new section carries the per-division table, so the
+    # rule is now readable rather than asserted, and a worked example: the
+    # kick at four beats against a hat at three. Lengths that do not agree
+    # already shipped and no page had ever mentioned them.
+    "generating-patterns.html":    (1885, "2026-08-20"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the

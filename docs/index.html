@@ -169,35 +169,56 @@ a{color:inherit}
 }
 .tbtn:hover{background:linear-gradient(180deg,#fff,#eef2f6);border-color:#cfd4d8;color:#2c2e31}
 
-/* the whole panel cross-fades between pages: headline, screens, knobs, caption */
-.panel-legend,.screens,.encoders,.panel-bar .cap{transition:opacity .3s ease}
+/* the whole panel cross-fades between pages: headline, art, facts, caption */
+.panel-legend,.feat,.feat-tabs,.panel-bar .cap{transition:opacity .3s ease}
 .panel.turning .panel-legend,
-.panel.turning .screens,
-.panel.turning .encoders,
+.panel.turning .feat,
 .panel.turning .panel-bar .cap{opacity:.12}
+
+/* ---------- the feature carousel ----------
+   Six slides, one per thing the instrument does. Each slide borrows ONE of
+   the eight channel colours as its accent, because that eight-colour set is
+   already this instrument's identity - the tabs, the pads and the group
+   buttons all use it. --ac is set per slide and everything else reads it. */
+.feat{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:1.25rem;align-items:stretch}
+@media (max-width:760px){ .feat{grid-template-columns:1fr} }
+
+.feat-screen{display:flex;align-items:center;justify-content:center;padding:1rem;min-height:190px}
+.feat-screen svg{width:100%;height:auto;max-height:190px;display:block}
+
+.feat-facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:center;gap:.7rem}
+.feat-facts li{
+  display:flex;gap:.7rem;align-items:baseline;
+  font-family:var(--body);font-size:.86rem;line-height:1.45;color:#43403a;
+}
+.feat-facts li::before{
+  content:"";flex:0 0 auto;width:7px;height:7px;margin-top:.32rem;border-radius:1px;
+  background:var(--ac);box-shadow:0 0 7px var(--ac);
+}
+.feat-facts a{color:#2f2c25;text-decoration-color:var(--ac);text-underline-offset:2px}
+.feat-facts a:hover{color:#000}
+
+/* The slide indicator is the instrument's OWN TAB ROW - six tabs, the active
+   one inverted, exactly the way screen_packets draws a selected channel. Dots
+   or 01/02/03 would be a lie here: these features are not a sequence. */
+.feat-tabs{display:flex;gap:.3rem;flex:0 0 auto;margin:0}
+.feat-tabs button{
+  cursor:pointer;padding:.2rem .5rem;border-radius:2px;
+  border:1px solid #a49d8d;background:transparent;
+  font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;color:#6b6559;
+}
+.feat-tabs button[aria-current="true"]{background:#37342b;border-color:#37342b;color:var(--ivory)}
+.feat-tabs button:hover{border-color:#6f6857;color:#37342b}
+.feat-tabs button[aria-current="true"]:hover{color:var(--ivory)}
+
+@media (prefers-reduced-motion:reduce){
+  .panel-legend,.feat,.feat-tabs,.panel-bar .cap{transition:none}
+  .feat-screen svg .anim{animation:none !important}
+}
 
 /* ---------- the LCD ---------- */
 /* the LCD and the pad grid now live in components.css */
 
-
-/* ---------- encoders ---------- */
-.encoders{display:grid;grid-template-columns:repeat(8,1fr);gap:.5rem;margin-top:1.15rem}
-@media (max-width:640px){ .encoders{grid-template-columns:repeat(4,1fr);gap:.7rem} }
-.enc{display:flex;flex-direction:column;align-items:center;gap:.35rem}
-.knob{
-  width:100%;max-width:52px;aspect-ratio:1;border-radius:50%;
-  background:radial-gradient(circle at 38% 30%,#fdfaf3,#e7e0d1 46%,#bdb5a4 100%);
-  box-shadow:0 3px 6px rgba(0,0,0,.28), inset 0 -2px 4px rgba(0,0,0,.16);
-  position:relative;
-}
-.knob::after{
-  content:"";position:absolute;left:50%;top:9%;width:2px;height:34%;
-  background:var(--silkscreen);border-radius:1px;
-  transform-origin:50% 100%;transform:translateX(-50%) rotate(var(--a,0deg));
-  transition:transform .5s cubic-bezier(.22,.8,.3,1);
-}
-.enc.dead .knob{filter:saturate(.5) brightness(.9);opacity:.5}
-.enc .silk{font-size:.55rem;letter-spacing:.14em;text-align:center}
 
 /* ---------- buttons ---------- */
 .btn{
@@ -522,16 +543,15 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
         <h1 class="engrave" id="pageTitle">You steer the pattern.<br><em>You never draw it.</em></h1>
       </div>
 
-      <div class="screens" id="screens" aria-live="polite">
-        <div class="lcd" id="lcdL"></div>
-        <div class="lcd" id="lcdR"></div>
+      <div class="feat" id="feat" aria-live="polite">
+        <div class="lcd feat-screen" id="featArt" role="img" aria-label=""></div>
+        <ul class="feat-facts" id="featFacts"></ul>
       </div>
 
-      <div class="encoders" id="encoders" aria-hidden="true"></div>
-
       <div class="panel-bar">
-        <button class="tbtn" type="button" id="pagePrev" aria-label="Previous display page">&#9664;</button>
-        <button class="tbtn" type="button" id="pageNext" aria-label="Next display page">&#9654;</button>
+        <button class="tbtn" type="button" id="pagePrev" aria-label="Previous feature">&#9664;</button>
+        <button class="tbtn" type="button" id="pageNext" aria-label="Next feature">&#9654;</button>
+        <div class="feat-tabs" id="featTabs" role="tablist" aria-label="Features"></div>
         <p class="cap" id="pageCap"></p>
       </div>
     </div>
@@ -860,119 +880,245 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
 
 <script>
 /* ============================================================
-   The display carousel — one drawn panel, six real pages, one per
-   mode. The headline turns with the screens: page one carries the
-   pitch, the other five are named by what the encoders are doing.
+   The feature carousel — six slides, one per thing the instrument
+   does. Each slide takes ONE of the eight channel colours as its
+   accent, because that eight-colour set is already the instrument's
+   identity: the tabs, the pads and the group buttons all use it.
+
+   The art is drawn in the LCD idiom on purpose. This machine has two
+   small blue displays and everything it tells you arrives on them, so
+   a feature explained on a drawn screen is the instrument speaking in
+   its own voice rather than a stock icon set.
+
+   Every number here is measured and lives on a guide page that shows
+   the working. Nothing is rounded up for the landing page.
    ============================================================ */
 (function(){
   'use strict';
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* col: [label, value, unit, fill 0-8, dead] */
-  var PAGES=[
-    {
-      title:'You steer the pattern.<br><em>You never draw it.</em>', tabs:[0,-1],
-      cap:'<b>STEP · drum.</b> Seven knobs write the beat. The eighth has no source on this page, so it draws dashes.',
-      L:[['HITS','0008','',4],['ROTATE','0000','',0],['DIVIDE','1/16','',3],['LENGTH','0016','',8]],
-      R:[['VELO','0110','',7],['CHANCE','0100','',8],['SWING','0050','',4],['ratchet','----','',0,1]]
-    },
-    {
-      title:'STEP on a voice,<br><em>RANDOM at zero.</em>', tabs:[-1,2],
-      cap:'The readout says LOCK rather than a number, because a number could be a coincidence. The shift register is frozen and the line repeats bit for bit.',
-      L:[['LENGTH','0016','',8],['DIVIDE','1/8','',5],['RANDOM','LOCK','',0],['GATE','0040','',3]],
-      R:[['OCTAVE','+00','',4],['RANGE','0002','',2],['LENGTH','0008','',6],['VELO','0110','',7]]
-    },
-    {
-      title:'CONTROL<br><em>on a drum channel.</em>', tabs:[0,-1],
-      cap:'Lower-case labels are controls this engine does not expose — the column greys out instead of showing a number the encoder cannot move.',
-      L:[['KIT','808','',5],['SAMPLE','808','',5],['tune','----','',0,1],['decay','----','',0,1]],
-      R:[['filtr','----','',0,1],['LEVEL','0100','',8],['REVERB','0000','',0],['DELAY','0000','',0]]
-    },
-    {
-      title:'CONTROL<br><em>on a voice.</em>', tabs:[-1,1],
-      cap:'Eight live controls, no menu. The synth is played from the panel while it runs, not configured on the touchscreen between takes.',
-      L:[['PRESET','0012','',2],['CUTOFF','0068','',5],['RESO','0035','',3],['ENV','0050','',4]],
-      R:[['DECAY','0040','',3],['LEVEL','0100','',8],['REVERB','0020','',2],['DELAY','0015','',1]]
-    },
-    {
-      title:'ALL<br><em>moves the whole rig at once.</em>', tabs:[-1,-1],
-      cap:'Root, scale and tempo belong to every channel. Change the scale and all three voices follow, mid-bar, without stopping.',
-      L:[['ROOT','A','',3],['SCALE','MIN','',2],['BPM','0128','',5],['MASTER','0100','',8]],
-      R:[['REVSIZE','0060','',5],['REVTYPE','HALL','',3],['DLYTIME','3/16','',3],['DLYFBK','0040','',3]]
-    },
-    {
-      title:'MIXER<br><em>one control across all eight.</em>', tabs:[-1,-1],
-      cap:'The eight encoders become the eight channels: one gesture, whole mix. FILTER puts a cutoff on the same eight.',
-      L:[['A KICK','0075','',6],['B SNAR','0068','',5],['C CLAP','0055','',4],['D CHAT','0048','',4]],
-      R:[['E OHAT','0052','',4],['F BASS','0080','',6],['G LEAD','0064','',5],['H PADS','0058','',5]]
-    }
-  ];
-  var TABS_L=['A KICK','B SNAR','C CLAP','D CHAT'];
-  var TABS_R=['E OHAT','F BASS','G LEAD','H PADS'];
+  var INK='#cfeaff', DIM='#4f83b0', DIMMER='#2c5c85';
 
-  var lcdL=document.getElementById('lcdL'), lcdR=document.getElementById('lcdR');
-  var encs=document.getElementById('encoders'), title=document.getElementById('pageTitle');
-  var cap=document.getElementById('pageCap'), plate=document.getElementById('panel');
+  /* --- the drawn screens -------------------------------------------- */
+
+  function svg(inner){
+    return '<svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet" '
+         + 'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+inner+'</svg>';
+  }
+  function spin(dur){
+    return reduce ? '' :
+      '<animateTransform attributeName="transform" type="rotate" '
+      + 'from="0 150 78" to="360 150 78" dur="'+dur+'s" repeatCount="indefinite"/>';
+  }
+
+  /* 1. The generator. Sixteen steps around a ring, eight of them hits,
+        spaced the way euclid actually spaces them. */
+  function artEuclid(ac){
+    var hits={0:1,2:1,4:1,6:1,8:1,10:1,12:1,14:1}, o='', i, a, x, y;
+    for(i=0;i<16;i++){
+      a=(i/16)*Math.PI*2 - Math.PI/2;
+      x=150+Math.cos(a)*52; y=78+Math.sin(a)*52;
+      o += hits[i]
+        ? '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="6.5" fill="'+ac+'"/>'
+        : '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4" fill="none" stroke="'+DIMMER+'" stroke-width="1.4"/>';
+    }
+    o += '<circle cx="150" cy="78" r="52" fill="none" stroke="'+DIMMER+'" stroke-width="1" opacity=".55"/>';
+    o += '<g>'+spin(9)+'<line x1="150" y1="78" x2="150" y2="20" stroke="'+INK+'" stroke-width="1.6" opacity=".85"/>'
+       + '<circle cx="150" cy="20" r="4.5" fill="'+INK+'"/></g>';
+    o += '<text x="150" y="74" text-anchor="middle" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="19">0008</text>';
+    o += '<text x="150" y="90" text-anchor="middle" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">HITS OF 16</text>';
+    return svg(o);
+  }
+
+  /* 2. Modulation. The value bar, the dashed span it sweeps between,
+        and the tick showing where the wave is right now. */
+  function artMod(ac){
+    var o='';
+    o += '<text x="26" y="34" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="10" letter-spacing="2">CUTOFF</text>';
+    o += '<text x="274" y="34" text-anchor="end" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="10">0068</text>';
+    o += '<rect x="26" y="50" width="248" height="20" fill="none" stroke="'+DIMMER+'" stroke-width="1.4" rx="2"/>';
+    o += '<rect x="26" y="50" width="112" height="20" fill="'+ac+'" opacity=".85"/>';
+    o += '<rect x="96" y="44" width="130" height="32" fill="none" stroke="'+INK+'" stroke-width="1.3" stroke-dasharray="5 4" rx="2" opacity=".9"/>';
+    o += '<g><rect x="150" y="40" width="3" height="40" fill="'+INK+'"/>'
+       + (reduce ? '' : '<animateTransform attributeName="transform" type="translate" values="-52 0;72 0;-52 0" dur="6s" repeatCount="indefinite"/>')
+       + '</g>';
+    o += '<text x="26" y="104" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">TRI   4 BARS   DEPTH 0040</text>';
+    o += '<text x="26" y="124" fill="'+DIMMER+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">THE DASHES ARE WHERE IT WILL GO</text>';
+    return svg(o);
+  }
+
+  /* 3. The sounds. Twenty-four blocks and twenty-two blocks, drawn
+        one per engine and one per effect - the count IS the picture. */
+  function artSounds(ac){
+    var o='', i, x, y;
+    o += '<text x="26" y="26" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">SYNTH ENGINES</text>';
+    o += '<text x="274" y="26" text-anchor="end" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="15">24</text>';
+    for(i=0;i<24;i++){
+      x=26+(i%12)*21; y=36+Math.floor(i/12)*15;
+      o += '<rect x="'+x+'" y="'+y+'" width="15" height="10" rx="1.5" fill="'+ac+'" opacity="'+(0.45+0.55*(i%3===0?1:0.4)).toFixed(2)+'"/>';
+    }
+    o += '<text x="26" y="92" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">EFFECTS</text>';
+    o += '<text x="274" y="92" text-anchor="end" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="15">22</text>';
+    for(i=0;i<22;i++){
+      x=26+(i%12)*21; y=102+Math.floor(i/12)*15;
+      o += '<rect x="'+x+'" y="'+y+'" width="15" height="10" rx="1.5" fill="'+INK+'" opacity="'+(i%2?'.45':'.75')+'"/>';
+    }
+    return svg(o);
+  }
+
+  /* 4. Live play. The pad grid, one pad struck, REC lit. */
+  function artPads(ac){
+    var o='', i, x, y, hit=6;
+    for(i=0;i<16;i++){
+      x=96+(i%4)*28; y=30+Math.floor(i/4)*28;
+      if(i===hit){
+        o += '<rect x="'+x+'" y="'+y+'" width="23" height="23" rx="3" fill="'+ac+'">'
+           + (reduce ? '' : '<animate attributeName="opacity" values="1;.35;1" dur="2.4s" repeatCount="indefinite"/>')
+           + '</rect>';
+      } else {
+        o += '<rect x="'+x+'" y="'+y+'" width="23" height="23" rx="3" fill="none" stroke="'+DIMMER+'" stroke-width="1.3"/>';
+      }
+    }
+    o += '<circle cx="222" cy="36" r="6" fill="#e03a2f"/>';
+    o += '<text x="234" y="40" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="10" letter-spacing="2">REC</text>';
+    o += '<text x="26" y="140" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">HOLD REC AND PLAY — THE TAKE IS YOURS</text>';
+    return svg(o);
+  }
+
+  /* 5. Eight channels. The tab row, and ONE tab drawn dashed - which is
+        exactly how this instrument admits a channel is not sounding. */
+  function artChannels(ac){
+    var names=['A','B','C','D','E','F','G','H'], o='', i, x;
+    var cols=['#e03a2f','#f07a22','#f5b21a','#b8c725','#3fbf5f','#2e7fe8','#8b5cf0','#22c7d6'];
+    for(i=0;i<8;i++){
+      x=22+i*33;
+      var silent=(i===5);
+      o += '<rect x="'+x+'" y="34" width="28" height="26" rx="2" fill="none" stroke="'+cols[i]+'" stroke-width="1.8"'
+         + (silent ? ' stroke-dasharray="4 3"' : '') + '/>';
+      o += '<text x="'+(x+14)+'" y="52" text-anchor="middle" fill="'+cols[i]+'" font-family="Share Tech Mono,monospace" font-size="12">'+names[i]+'</text>';
+      o += '<rect x="'+x+'" y="66" width="28" height="'+(silent?2:[16,9,13,7,11,2,14,8][i])+'" fill="'+cols[i]+'" opacity=".7"/>';
+    }
+    o += '<text x="22" y="110" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">FIVE DRUMS   THREE VOICES</text>';
+    o += '<text x="22" y="128" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">F IS DASHED — IT IS SILENT, AND IT SAYS SO</text>';
+    return svg(o);
+  }
+
+  /* 6. No cloud. Four dashes: this instrument's own glyph for "there is
+        no source behind this control". Here it is the whole answer. */
+  function artOffline(ac){
+    var o='';
+    o += '<text x="150" y="72" text-anchor="middle" fill="'+ac+'" font-family="Share Tech Mono,monospace" font-size="46" letter-spacing="8">----</text>';
+    o += '<text x="150" y="98" text-anchor="middle" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">NO SOURCE BEHIND THIS CONTROL</text>';
+    o += '<text x="150" y="124" text-anchor="middle" fill="'+DIMMER+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">UNPLUG THE NETWORK. NOTHING CHANGES.</text>';
+    return svg(o);
+  }
+
+  /* --- the slides ---------------------------------------------------- */
+
+  var SLIDES=[
+    { tab:'GEN', ac:'var(--ch-a)', raw:'#e03a2f', art:artEuclid,
+      title:'You steer the pattern.<br><em>You never draw it.</em>',
+      alt:'A ring of sixteen steps with eight hits spaced evenly, and a playhead sweeping round it.',
+      facts:['Euclidean hits, rotation and chance on five drum channels',
+             'Three shift-register voices that mutate as they play',
+             'The notes are written into the sequencer, so the touchscreen editor shows the same pattern the pads do'],
+      cap:'<b>Generation.</b> Set hits, rotation and randomness — the machine writes the beat and keeps writing it.' },
+
+    { tab:'MOD', ac:'var(--ch-g)', raw:'#8b5cf0', art:artMod,
+      title:'Bind a knob to a wave.<br><em>Then take your hand off.</em>',
+      alt:'A value bar with a dashed span around it and a tick sweeping back and forth.',
+      facts:['Twelve rates, from sixteen bars down to a sixteenth',
+             'Four shapes, all locked to the bar, so they follow a tempo change',
+             'The dashed box is where the value will travel; the tick is where it is now'],
+      cap:'<b>Modulation.</b> MOD binds an LFO to any timbre control, and the display shows you the whole sweep.' },
+
+    { tab:'SOUND', ac:'var(--ch-f)', raw:'#2e7fe8', art:artSounds,
+      title:'24 synth engines.<br><em>22 effects.</em>',
+      alt:'Twenty-four blocks above twenty-two blocks, one per engine and one per effect.',
+      facts:['Measured on this Pi under real load, not counted out of a catalogue',
+             'Every drum channel is an SFZ sampler with kits you can walk through',
+             'Six effects are named and banned — they cost too much at eight instances'],
+      cap:'<b>Sound.</b> Every engine and effect here was run on the rig and timed. The <a href="sound-and-presets.html">synths</a> and <a href="mixing-and-effects.html">effects</a> pages carry the numbers.' },
+
+    { tab:'PLAY', ac:'var(--ch-c)', raw:'#f5b21a', art:artPads,
+      title:'Play it live.<br><em>Overdub on top.</em>',
+      alt:'A four by four pad grid with one pad struck and the REC light on.',
+      facts:['Sixteen velocity pads, straight into the running pattern',
+             'Hold REC and what you play is captured, quantised, with its held length',
+             'The channel becomes yours and the generator stands back — it will not overwrite your take'],
+      cap:'<b>Live play.</b> The generator owns a channel until you take it. Then it stops touching it.' },
+
+    { tab:'CHANS', ac:'var(--ch-e)', raw:'#3fbf5f', art:artChannels,
+      title:'Eight channels.<br><em>All alive, always.</em>',
+      alt:'Eight coloured channel tabs with level bars; one tab is drawn dashed to show it is silent.',
+      facts:['Five drum channels and three voices, running from the moment it boots',
+             'Nothing is created or torn down while you play',
+             'A channel that makes no sound draws its tab dashed — silence always has a reason you can read'],
+      cap:'<b>Eight channels.</b> No track to arm, no slot to fill. They are all already running.' },
+
+    { tab:'YOURS', ac:'var(--ch-h)', raw:'#22c7d6', art:artOffline,
+      title:'No cloud.<br><em>No account. No subscription.</em>',
+      alt:'Four dashes on a display, the instrument\'s own symbol for nothing behind a control.',
+      facts:['It runs with the network cable out',
+             'Your patterns live in your own snapshot, on your own SD card',
+             'Open source, and the whole build is documented here'],
+      cap:'<b>Yours.</b> Four dashes is how this machine says a control has nothing behind it. It is also the honest answer about who owns your music.' }
+  ];
+
+  var panel=document.getElementById('panel'),
+      title=document.getElementById('pageTitle'),
+      art  =document.getElementById('featArt'),
+      facts=document.getElementById('featFacts'),
+      tabs =document.getElementById('featTabs'),
+      cap  =document.getElementById('pageCap'),
+      feat =document.getElementById('feat');
   var cur=0, timer=null, held=false;
 
-  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function buildTabs(){
+    var h='', i;
+    for(i=0;i<SLIDES.length;i++){
+      h+='<button type="button" role="tab" data-i="'+i+'">'+SLIDES[i].tab+'</button>';
+    }
+    tabs.innerHTML=h;
+    tabs.addEventListener('click', function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      go(+b.getAttribute('data-i')); rest();
+    });
+  }
 
-  function meter(n){
-    var h='<div class="meter">';
-    for(var i=0;i<8;i++) h+= '<i'+(i<n?' class="on"':'')+'></i>';
-    return h+'</div>';
-  }
-  function screen(el,cols,tabs,names,onIdx){
-    var h='<div class="tabrow">';
-    for(var t=0;t<4;t++) h+='<span class="tab'+(t===onIdx?' on':'')+'">'+names[t]+'</span>';
-    h+='</div><div class="cols">';
-    for(var i=0;i<4;i++){
-      var c=cols[i];
-      h+='<div class="col'+(c[4]?' dead':'')+'">'
-       +  '<div class="lab">'+esc(c[0])+'</div>'
-       +  '<div class="val">'+esc(c[1])+'</div>'
-       +  meter(c[3])
-       +  '<div class="unit">'+esc(c[2]||'')+'</div>'
-       + '</div>';
-    }
-    return el.innerHTML = h+'</div>';
-  }
-  function encoders(p){
-    var all=p.L.concat(p.R), h='';
-    for(var i=0;i<8;i++){
-      var c=all[i], dead=!!c[4];
-      var ang = dead ? -140 : (-140 + (c[3]/8)*280);
-      h+='<div class="enc'+(dead?' dead':'')+'">'
-       + '<div class="knob" style="--a:'+ang.toFixed(0)+'deg"></div>'
-       + '<span class="silk">'+esc(c[0])+'</span></div>';
-    }
-    encs.innerHTML=h;
-  }
   function paint(){
-    var p=PAGES[cur];
-    title.innerHTML=p.title;
-    screen(lcdL,p.L,p.tabs,TABS_L,p.tabs[0]);
-    screen(lcdR,p.R,p.tabs,TABS_R,p.tabs[1]);
-    encoders(p);
-    cap.innerHTML=p.cap;
+    var s=SLIDES[cur], h='', i;
+    feat.style.setProperty('--ac', s.raw);
+    title.innerHTML=s.title;
+    art.innerHTML=s.art(s.raw);
+    art.setAttribute('aria-label', s.alt);
+    for(i=0;i<s.facts.length;i++) h+='<li>'+s.facts[i]+'</li>';
+    facts.innerHTML=h;
+    cap.innerHTML=s.cap;
+    var b=tabs.querySelectorAll('button');
+    for(i=0;i<b.length;i++) b[i].setAttribute('aria-current', i===cur ? 'true' : 'false');
   }
+
   /* the panel fades out, swaps, fades back — it never slides */
   function go(i){
-    cur=(i+PAGES.length)%PAGES.length;
+    cur=(i+SLIDES.length)%SLIDES.length;
     if(reduce){ paint(); return; }
-    plate.classList.add('turning');
-    setTimeout(function(){ paint(); plate.classList.remove('turning'); }, 280);
+    panel.classList.add('turning');
+    setTimeout(function(){ paint(); panel.classList.remove('turning'); }, 280);
   }
 
   document.getElementById('pagePrev').addEventListener('click',function(){ go(cur-1); rest(); });
   document.getElementById('pageNext').addEventListener('click',function(){ go(cur+1); rest(); });
 
   function rest(){ if(timer){ clearInterval(timer); timer=null; } if(!reduce) start(); }
-  function start(){ timer=setInterval(function(){ if(!held) go(cur+1); }, 7000); }
+  /* Ten seconds. Long enough to read three facts without being made to
+     hurry, which is the whole reason these slides exist. */
+  function start(){ timer=setInterval(function(){ if(!held) go(cur+1); }, 10000); }
 
-  ['mouseenter','focusin'].forEach(function(e){ plate.addEventListener(e,function(){ held=true; }); });
-  ['mouseleave','focusout'].forEach(function(e){ plate.addEventListener(e,function(){ held=false; }); });
+  ['mouseenter','focusin'].forEach(function(e){ panel.addEventListener(e,function(){ held=true; }); });
+  ['mouseleave','focusout'].forEach(function(e){ panel.addEventListener(e,function(){ held=false; }); });
 
+  buildTabs();
   paint();
   if(!reduce) start();
 })();

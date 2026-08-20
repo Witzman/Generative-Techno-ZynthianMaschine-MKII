@@ -118,8 +118,34 @@
 <p><strong>Structure lands on the bar; timbre lands instantly.</strong> A change to what the pattern <em>is</em> waits for the channel's own next wrap, so the groove never jumps under your hand. DIVIDE and LENGTH show in angle brackets — <code>&gt;1/8&lt;</code> — while a change is waiting to take.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
-<p><strong>Pattern length is quantised to whole beats, and always will be.</strong> The sequencer stores a pattern as a number of beats, so the reachable step counts are whole beats times the steps in a beat. <strong>1, 5, 7, 11 and 13 steps cannot be asked for.</strong> Turning LENGTH lands on the nearest count that exists rather than refusing to move — so if the number skips past where you aimed, that is the grid and not a fault.</p>
+<p><strong>Pattern length is quantised to whole beats, and always will be.</strong> The sequencer stores a pattern as a number of beats, so the reachable step counts are whole beats times the steps in a beat. Turning LENGTH lands on the nearest count that exists rather than refusing to move &mdash; so if the number skips past where you aimed, that is the grid and not a fault.</p>
+<p><strong>Which step counts you can reach depends on DIVIDE, not on the sequencer.</strong> At 1/16 a beat is four steps, so LENGTH moves in fours: 4, 8, 12, 16. At 1/4 a beat <em>is</em> one step, so every count from 1 to 16 is available. An odd number that DIVIDE cannot express is not missing from the instrument &mdash; it is on another division.</p>
 <p><strong>A silent channel says so.</strong> HITS at 0 is a silent channel, not a broken one, and CHANCE at 0 emits nothing at all. Both draw the channel's tab dashed — the instrument's one mechanism for explaining silence. Read the tab row before suspecting the rig.</p>
+<hr>
+
+<h2 id="polymeter">Lengths that do not agree</h2>
+<p><strong>LENGTH is per channel, and nothing makes the eight agree.</strong> Give the kick four beats and the hat three, and they start together, drift apart, and meet again twelve beats later. Nothing is generating that &mdash; it is two loops of different lengths running side by side, which is the oldest trick in machine music and costs one encoder turn here.</p>
+<p>Set it on the STEP page with <strong>LENGTH</strong>. Every other channel is untouched, because length was never global.</p>
+
+<h3>Which lengths each division reaches</h3>
+<p>A pattern has to fit the sixteen pads, so the finer the division, the fewer beats it holds:</p>
+<table>
+  <thead><tr><th>DIVIDE</th><th>Beats you can set</th><th>Steps that gives</th></tr></thead>
+  <tbody>
+    <tr><td>1/32</td><td>1&ndash;2</td><td>8, 16</td></tr>
+    <tr><td>1/16</td><td>1&ndash;4</td><td>4, 8, 12, 16</td></tr>
+    <tr><td>1/8</td><td>1&ndash;8</td><td>2, 4, 6, 8, 10, 12, 14, 16</td></tr>
+    <tr><td>1/16T</td><td>1&ndash;2</td><td>6, 12</td></tr>
+    <tr><td>1/8T</td><td>1&ndash;5</td><td>3, 6, 9, 12, 15</td></tr>
+    <tr><td>1/4</td><td>1&ndash;16</td><td>every count from 1 to 16</td></tr>
+  </tbody>
+</table>
+<p><strong>Odd beat counts live at 1/8, 1/8T and 1/4.</strong> Three, five and seven beats are all reachable there. At 1/16 and finer they are not &mdash; a five-beat pattern at 1/16 would be twenty steps and there are sixteen pads to show it on.</p>
+
+<h3>Try it</h3>
+<p>Leave the kick on group A at four beats. Put a hat on group B, set DIVIDE to 1/8 and turn LENGTH down to <strong>three</strong> beats. Let it run: the hat walks around the kick and lands back on the one every twelve beats. Take group C to <strong>five</strong> beats and the three of them do not agree again for sixty.</p>
+<p>Shortening keeps the steps that fit and drops the ones past the new end; growing back leaves the new steps empty rather than restoring what a shrink discarded.</p>
+
 <hr>
 <h2 id="probability">A step that sounds <em>sometimes</em></h2>
 <p><strong>Hold SHIFT and tap a step to set how often it plays.</strong> Each press steps it down &mdash; always, three times in four, half the time, one time in four &mdash; and the fifth press brings it back to always. A bare tap still turns the step on and off; SHIFT is what changes the odds.</p>
