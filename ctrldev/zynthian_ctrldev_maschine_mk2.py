@@ -527,6 +527,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # attributes so "is a ramp running" is one truth, not four that can
         # disagree.
         self._chance_ramp = None
+        # A running HALF/DOUBLE-time move: channel -> the (div, beats, hits,
+        # rot) tuple captured before it, plus what the macro managed. The
+        # CAPTURE is restored, never the computed inverse - drift, reroll and
+        # the encoders all move those values, so the inverse is only
+        # arithmetically identical while nothing else touches them.
+        self._timescale_restore = {}
+        self._timescale_note = None
+        # Bars for a BREAK the player just armed, drained by the poll thread.
+        self._break_due = None
+        # A running RATCHET ramp, or None: the same dict shape as the CHANCE
+        # ramp, and for the same reason - one truth about whether a ramp is
+        # running rather than three attributes that can disagree.
+        self._ratchet_ramp = None
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -1237,7 +1250,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         if self.owner.get(channel) == "player":
             return
-        beats = self._elapsed_beats()
+        beats = self._mod_beats()
         moved = False
         for (chan, verb), entry in list(self.mod.items()):
             if chan != channel or not tlib.is_drift(verb):
@@ -2100,7 +2113,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Once, outside the comprehension below: it takes the lock for a
         # tempo read, and asking eight modulators for it eight times would
         # take the lock eight times for one answer.
-        beats = self._elapsed_beats()
+        beats = self._mod_beats()
         return {
             "globals": {k: v for k, v in self.globals.items() if k != "pending"},
             "mode": self.mode,
@@ -2634,6 +2647,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # many pads to extinguish - so the length is kept here rather than
             # widening the queue's contract for a display.
             self._arm_bars[self._arm_picked] = bars
+            if self._arm_picked in tlib.MUTEPATH_MACROS:
+                # One capture of the mute picture, so only one of DROP and
+                # BREAK may be live. Arming either drops the other and its
+                # return leg - replace-not-stack, extended from the queue's
+                # own rule to the pair, with no refcount and no second
+                # lifetime rule to get wrong.
+                for other in tlib.MUTEPATH_MACROS:
+                    if other != self._arm_picked:
+                        self._pending_macros.cancel(other)
+                        self._armed_while_stopped.pop(other, None)
+                        self._arm_bars.pop(other, None)
+            if self._arm_picked == "break":
+                # BREAK fires NOW and resolves in N bars, so the length is
+                # only the SECOND number. There is no "fires in N" for a macro
+                # whose whole point is that it happens immediately - which is
+                # why its own queue entry is taken straight back out again:
+                # the generic arm above put it there, and leaving it would
+                # give the countdown ruler a landing that never lands.
+                #
+                # Drained by the poll thread within a tick rather than written
+                # here: this runs on the MIDI thread under the lock, and eight
+                # set_mute(update=True) calls dispatch eight zynsigman signals
+                # into the touchscreen mixer. DROP already does its muting on
+                # the poll thread; BREAK has no reason to be the exception.
+                self._pending_macros.cancel("break")
+                self._armed_while_stopped.pop("break", None)
+                self._arm_bars.pop("break", None)
+                self._break_due = bars
         else:
             return
         with self.lock:
@@ -3169,6 +3210,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         desc = self._page()
         shape = desc["shape"]
+        if shape == tlib.SHAPE_PENDING:
+            # The audit page has no verbs and no values to turn. Its ONE
+            # gesture is ERASE + the encoder under a column, which kills that
+            # entry; a bare turn does nothing, deliberately, because a page
+            # you read mid-performance must not change under a knock.
+            if self.erase_down and self._enc_delta(cc_num, cc_val):
+                if self._cancel_pending(column):
+                    with self.lock:
+                        self._render_all()
+            return
         if shape == tlib.SHAPE_SPREAD:
             verb, channel = desc["verb"], column
         else:
@@ -3408,6 +3459,73 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         except Exception:
             return False
 
+    def _pending_view(self):
+        """(macro, bars left, armed bars) for everything armed right now.
+
+        Reads the queue, never a second copy of it. The page is an AUDIT
+        surface and an audit that keeps its own tally is not an audit."""
+
+        bar = self._phrase_bar or 0
+        out = []
+        for macro, bars in self._armed_while_stopped.items():
+            # Armed while stopped: nothing is counting down yet, so the whole
+            # length is still to come. Drawn rather than hidden - a macro the
+            # player armed and cannot see is exactly what this page is for.
+            out.append((macro, bars, bars))
+        for macro in self._pending_macros.pending():
+            left = self._pending_macros.remaining(macro, bar)
+            if left is None:
+                continue
+            out.append((macro, left, self._arm_bars.get(macro, left)))
+        return out
+
+    def _cancel_pending(self, column):
+        """ERASE + the encoder under a column kills that one armed macro.
+
+        ERASE is already this instrument's take-it-back modifier, and
+        encoder-under-column is already how every page on the ring is edited -
+        so per-entry cancel costs no new control and no new capture.
+
+        A bare ARM tap still cancels EVERYTHING. This is the addition, not the
+        replacement: cancel-all is the panic gesture and has to stay one
+        press."""
+
+        rows = tlib.pending_sort(self._pending_view())
+        if not 0 <= column < len(rows):
+            return False
+        macro = rows[column][0]
+        self._armed_while_stopped.pop(macro, None)
+        self._arm_bars.pop(macro, None)
+        self._pending_macros.cancel(macro)
+        logging.debug("Maschine: cancelled pending macro %s", macro)
+        return True
+
+    def _mod_beats(self):
+        """The beat count every modulator is measured against.
+
+        THE PHRASE, not the driver's uptime. `_elapsed_beats()` is
+        time.monotonic() scaled by BPM and free-running from construction, so
+        an 8-bar sweep used to be an 8-bar sweep at an arbitrary offset -
+        never THE 8 bars. Anchoring it to the phrase makes a sweep start where
+        the player hears the phrase start, and re-zeros the whole modulation
+        system at transport start and at RESTART.
+
+        This does NOT remove the .0573 drift measured over an hour at the SP10
+        gate: the phrase clock has the same time base, and the sequencer runs
+        on the audio clock. It BOUNDS it - to one performance instead of one
+        uptime, because both anchor sites re-zero it. **Do not build a second
+        correction here.** If the owed 5-minute measurement says the drift is
+        real inside a single performance, the fix is the phrase clock's own
+        soft re-anchor and this inherits it for free.
+
+        Falls back to the raw clock before the transport has ever run, so
+        modulators still sweep on a stopped rig rather than freezing at zero
+        with nothing saying why."""
+
+        if self._phrase_anchor is None:
+            return self._elapsed_beats()
+        return self._elapsed_beats() - self._phrase_anchor
+
     def _mod_write(self):
         """Advance every modulator and write base+offset.
 
@@ -3438,7 +3556,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         while self._mod_restore_due:
             channel, verb, base = self._mod_restore_due.pop(0)
             self._mod_base_set(channel, verb, base)
-        beats = self._elapsed_beats()
+        beats = self._mod_beats()
         for key, entry in list(self.mod.items()):
             channel, verb = key
             span = self._mod_range(channel, verb)
@@ -4838,6 +4956,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # fixed order the same macros would lose it every time.
                 self._log_poll_error(f"macro {macro}", e)
         self._chance_tick(bar)
+        self._ratchet_tick(bar)
         with self.lock:
             self._render_display()
             self._render_transport()
@@ -4850,6 +4969,147 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # picture the rest of the time and repainting it every bar
                 # would fight the playhead.
                 self._paint_arm_legend()
+
+    def _ratchet_tick(self, bar):
+        """Walk a running RATCHET ramp one bar. ONCE PER BAR.
+
+        Written through apply(ch, "ratchet", n) - the SHIPPED path, which
+        reaches _write_pattern and computes the stutter count AND its duration
+        from ratchet_stutter(). That pairing is the whole reason this route
+        was taken over the in-place changeStutterCountAll:
+
+        - Both stutter-all calls are RELATIVE and clamped, not assignments
+          (pattern.cpp:485-509), and _write_pattern already carries a comment
+          saying so.
+        - A fresh StepEvent defaults its duration to ONE CLOCK. Bumping the
+          count without moving the duration emits events that fall outside the
+          note, and on a LinuxSampler one-shot that is inaudible - the exact
+          mistake that made x2 sound identical to OFF, twice, by ear.
+        - The in-place route also assumes every NOTE_ON in the pattern carries
+          the same stutter values, which the touchscreen pattern editor can
+          break behind us.
+
+        Its cost is that _write_pattern regenerates from euclid, so this is
+        confined to generated_channels() and a recorded take never ratchets.
+        That is the trade, written down rather than discovered later."""
+
+        if not self._ratchet_ramp:
+            return
+        ramp = self._ratchet_ramp
+        step = bar - ramp["start"]
+        if step >= ramp["bars"]:
+            for channel, base in ramp["base"].items():
+                self.apply(channel, "ratchet", base)
+            self._ratchet_ramp = None
+            return
+        value = tlib.ratchet_rung(step, ramp["bars"])
+        for channel in ramp["base"]:
+            self.apply(channel, "ratchet", value)
+
+    def _break_fire(self, bars):
+        """The nominated channels fall out NOW and come back on the landing.
+
+        DROP with its two ends swapped, sharing every piece of its
+        bookkeeping: the same survivors, the same capture, the same restore.
+        The survivors are the ones that KEEP PLAYING in both - so a player who
+        has learnt the nomination for one already knows it for the other.
+
+        Poll thread, drained from _break_due. See _arm_pad for why."""
+
+        mixer = self.state_manager.zynmixer
+        self._drop_restore = {}
+        for group in range(8):
+            chan = self._mixer_chan(group)
+            if chan is None:
+                continue
+            self._drop_restore[group] = bool(mixer.get_mute(chan))
+            if group not in self._drop_survivors:
+                mixer.set_mute(chan, True, update=True)
+        bar = self._phrase_bar
+        if bar is None:
+            # Stopped. Nothing is counting, so hold the length and let the
+            # transport start arm the return - the same rule _arm_pad already
+            # applies to everything else armed while stopped.
+            self._armed_while_stopped["break_end"] = bars
+        else:
+            self._pending_macros.arm("break_end", bars, bar)
+        self._arm_bars["break_end"] = bars
+        with self.lock:
+            self._render_mutes()
+            self._render_groups()
+            self._render_display()
+
+    def _timescale_fire(self, macro, bar):
+        """Take every generated channel to half or double speed.
+
+        THE TRANSFORM IS NOT A DIV MOVE. tlib.time_scale halves the steps per
+        beat AND doubles the beat count, which keeps beats * spb - the step
+        count the sixteen pads draw - invariant. That is what makes it the
+        same rhythm slower rather than a coarser rhythm at the same speed, and
+        it is also why _clamp_params never fires: the new length always fits
+        the grid exactly.
+
+        Structure lands at the channel's own wrap, through the pending set
+        that already ships. THE LIMIT THAT CREATES, on the record: the macro
+        fires on the PHRASE bar and pending is taken at each channel's wrap,
+        which are the same moment only when every channel's length divides the
+        bar. Under polymeter - which already ships - a 3-beat channel takes it
+        up to three beats late. Accepted deliberately: writing immediately
+        would rewrite mid-bar and trip the groove, which is what law L2 exists
+        to stop, and firing per channel would turn one musical event into
+        eight."""
+
+        factor = 0.5 if macro == "half" else 2.0
+        channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+        moved = 0
+        with self.lock:
+            for channel in channels:
+                got = tlib.time_scale(self.div[channel], self.beats[channel],
+                                      factor)
+                if got is None:
+                    # This channel's division has nowhere to go - four of the
+                    # six do not, in one direction or the other. Skipped, and
+                    # counted, so the label can say so.
+                    continue
+                self._timescale_restore[channel] = (
+                    self.div[channel], self.beats[channel],
+                    self.hits[channel], self.rot[channel])
+                self.div[channel], self.beats[channel] = got
+                self.state[channel]["pending"].add("div")
+                self.state[channel]["pending"].add("length")
+                moved += 1
+        self._timescale_note = (macro.upper(), moved, len(channels))
+        bars = self._arm_bars.get(macro, 4)
+        self._pending_macros.arm("timescale_end", bars, bar)
+        self._arm_bars["timescale_end"] = bars
+        logging.info("Maschine: %s took %d of %d channels",
+                     macro, moved, len(channels))
+        with self.lock:
+            self._render_display()
+
+    def _timescale_restore_apply(self):
+        """Put back the captured tuple, and regenerate from it.
+
+        Restoring through the pending set rather than writing now, for the
+        same reason the move itself lands there: structure belongs on the bar.
+
+        A channel the player has since turned DIV on by hand is left alone.
+        A macro must not overwrite a deliberate move made after it was armed -
+        the take-back rule points the other way."""
+
+        with self.lock:
+            for channel, (div, beats, hits, rot) in \
+                    list(self._timescale_restore.items()):
+                self.div[channel] = div
+                self.beats[channel] = beats
+                self.hits[channel] = hits
+                self.rot[channel] = rot
+                self.state[channel]["pending"].add("div")
+                self.state[channel]["pending"].add("length")
+        self._timescale_restore = {}
+        self._timescale_note = None
+        with self.lock:
+            self._render_display()
 
     def _chance_tick(self, bar):
         """Walk a running CHANCE ramp one bar. ONCE PER BAR, never on the
@@ -4936,6 +5196,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._drop_fire(bar)
         elif macro == "drop_end":
             self._drop_restore_apply()
+        elif macro == "ratchet":
+            # Capture each channel's OWN ratchet, walk away from it, land back
+            # on it. Never assume 1: a channel the player left ratcheting must
+            # come back ratcheting.
+            channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+            self._ratchet_ramp = {
+                "bars": self._arm_bars.get("ratchet", 4),
+                "start": bar,
+                "base": {ch: int(self.state[ch].get("ratchet", 1))
+                         for ch in channels},
+            }
+        elif macro == "break_end":
+            # The same restore DROP uses. BREAK is DROP's second entry point,
+            # not a parallel implementation - one capture, one restore, and
+            # therefore one place where the "put back what was captured, never
+            # all-on" rule lives.
+            self._drop_restore_apply()
+        elif macro in ("half", "double"):
+            self._timescale_fire(macro, bar)
+        elif macro == "timescale_end":
+            self._timescale_restore_apply()
         elif macro == "chance":
             # Capture every channel's OWN value at fire time. The ramp walks
             # away from it and lands back on it; nothing here assumes 100.
@@ -5068,6 +5349,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if self._record_due:
                     self._record_due = False
                     self._toggle_capture()
+                if self._break_due is not None:
+                    bars, self._break_due = self._break_due, None
+                    self._break_fire(bars)
                 # Drain queued note-map rebuilds here, never on the MIDI
                 # thread: the scan takes the lock for a whole pattern.
                 while self._rebuild_due:
@@ -5607,6 +5891,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # refusal must not hold two opinions about which columns are live.
         frozen = self.frozen or self.freeze_deep
         shape = desc["shape"]
+        if shape == tlib.SHAPE_PENDING:
+            return tlib.columns(desc, None, self._pending_view(), mod,
+                                frozen=frozen)
         if desc.get("generated"):
             return tlib.columns(desc, None, self._generated_view(desc), mod,
                                 frozen=frozen)
@@ -5947,6 +6234,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # And FREEZE says the machine is being held, which is the difference
         # between held and broken.
         label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
+        if self._timescale_note is not None:
+            name, moved, asked = self._timescale_note
+            label = tlib.scope_label(label, name, moved, asked)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.

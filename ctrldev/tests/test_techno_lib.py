@@ -3531,3 +3531,278 @@ class TestFreezeGreysTheGenerativeColumns(unittest.TestCase):
 
     def test_only_the_two_generative_verbs_are_frozen(self):
         self.assertEqual(tl.FREEZE_VERBS, frozenset(("random", "rhythm")))
+
+
+class TestPendingPage(unittest.TestCase):
+    """The audit surface that makes every armed macro safe to use on stage."""
+
+    def test_nothing_armed_says_NONE(self):
+        # Eight blank columns admit nothing, and law L4 is about controls that
+        # do nothing and do not say so. A page is the same object as a knob in
+        # that respect.
+        cols = tl.pending_columns([])
+        self.assertEqual(cols[0]["name"], "NONE")
+        self.assertEqual(cols[0]["value"], "----")
+        self.assertTrue(cols[0]["grey"])
+
+    def test_it_always_returns_eight_columns(self):
+        for entries in ([], [("drop", 1, 4)], [("drop", 1, 4)] * 3):
+            self.assertEqual(len(tl.pending_columns(entries)), 8)
+
+    def test_a_macro_draws_its_name_and_its_bars_left(self):
+        cols = tl.pending_columns([("drop", 3, 4)])
+        self.assertEqual(cols[0]["name"], "DROP")
+        self.assertEqual(cols[0]["value"], "0003")
+        self.assertEqual(cols[0]["bar"], "seg")
+        self.assertEqual(cols[0]["frac"], (3, 4))
+
+    def test_soonest_first(self):
+        cols = tl.pending_columns([("drop", 8, 8), ("chance", 2, 4)])
+        self.assertEqual([c["name"] for c in cols[:2]], ["THIN", "DROP"])
+
+    def test_ties_break_by_name_so_the_page_does_not_shuffle(self):
+        a = tl.pending_columns([("drop", 4, 4), ("chance", 4, 8)])
+        b = tl.pending_columns([("chance", 4, 8), ("drop", 4, 4)])
+        self.assertEqual([c["name"] for c in a], [c["name"] for c in b])
+
+    def test_more_than_eight_are_truncated_not_crashed(self):
+        entries = [(f"m{i}", i, 16) for i in range(12)]
+        self.assertEqual(len(tl.pending_columns(entries)), 8)
+
+    def test_an_unknown_macro_still_gets_a_word(self):
+        # A page that drew a blank for a macro it did not recognise would be
+        # hiding exactly the thing it exists to show.
+        cols = tl.pending_columns([("wibble", 1, 2)])
+        self.assertTrue(cols[0]["name"])
+
+    def test_the_bar_cannot_exceed_its_length(self):
+        cols = tl.pending_columns([("drop", 99, 4)])
+        self.assertEqual(cols[0]["frac"], (4, 4))
+
+    def test_the_page_is_on_the_ALL_ring(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[tl.ring_key("ALL", None)]]
+        self.assertIn("PENDING", titles)
+        # The ring had exactly one page before this, so the big encoder did
+        # nothing at all on ALL.
+        self.assertGreater(len(titles), 1)
+
+
+class TestPendingQueueCancel(unittest.TestCase):
+
+    def test_cancel_removes_only_that_macro(self):
+        q = tl.PendingQueue()
+        q.arm("drop", 4, 0)
+        q.arm("chance", 8, 0)
+        self.assertTrue(q.cancel("drop"))
+        self.assertEqual(q.pending(), ["chance"])
+
+    def test_cancel_does_not_move_the_survivors(self):
+        # The reason cancel() exists rather than rebuilding the queue at the
+        # caller: arm() takes a LENGTH and floors it at one, so re-arming the
+        # survivors would push every one of them by at least a bar.
+        q = tl.PendingQueue()
+        q.arm("drop", 4, 0)
+        q.arm("chance", 8, 0)
+        q.cancel("drop")
+        self.assertEqual(q.remaining("chance", 0), 8)
+
+    def test_cancelling_something_not_armed_is_false_not_an_error(self):
+        self.assertFalse(tl.PendingQueue().cancel("nothing"))
+
+
+class TestTimeScale(unittest.TestCase):
+    """Half-time is NOT a DIV move, and DIVISIONS is not sorted by speed."""
+
+    IDX = {"1/32": 0, "1/16": 1, "1/8": 2, "1/16T": 3, "1/8T": 4, "1/4": 5}
+
+    def test_half_time_halves_spb_and_doubles_the_beats(self):
+        # 16 steps over 4 beats becomes 16 steps over 8 beats: the identical
+        # rhythm, played at half speed.
+        self.assertEqual(tl.time_scale(self.IDX["1/16"], 4, 0.5),
+                         (self.IDX["1/8"], 8))
+
+    def test_double_time_doubles_spb_and_halves_the_beats(self):
+        self.assertEqual(tl.time_scale(self.IDX["1/8"], 8, 2.0),
+                         (self.IDX["1/16"], 4))
+
+    def test_the_step_count_is_invariant(self):
+        # THE WHOLE POINT. beats * spb is what the sixteen pads draw, so a
+        # transform that preserves it always fits the grid exactly and
+        # _clamp_params never truncates anything.
+        for name, idx in self.IDX.items():
+            spb = tl.DIVISION_SPB[idx]
+            for beats in range(1, 16 // spb + 1):
+                for factor in (0.5, 2.0):
+                    got = tl.time_scale(idx, beats, factor)
+                    if got is None:
+                        continue
+                    new_idx, new_beats = got
+                    self.assertEqual(tl.DIVISION_SPB[new_idx] * new_beats,
+                                     spb * beats,
+                                     f"{name} {beats} beats x{factor}")
+
+    def test_it_never_crosses_between_straight_and_triplet(self):
+        # div + 1 from 1/8 lands on 1/16T - FASTER, and triplet. A half-time
+        # that turned a straight channel into a triplet one would be a
+        # different feature arriving unannounced.
+        self.assertEqual(tl.time_scale(self.IDX["1/16T"], 2, 0.5),
+                         (self.IDX["1/8T"], 4))
+        self.assertEqual(tl.time_scale(self.IDX["1/8T"], 4, 2.0),
+                         (self.IDX["1/16T"], 2))
+
+    def test_the_four_unreachable_edges_return_None(self):
+        self.assertIsNone(tl.time_scale(self.IDX["1/32"], 2, 2.0))   # no spb 16
+        self.assertIsNone(tl.time_scale(self.IDX["1/16T"], 2, 2.0))  # no spb 12
+        self.assertIsNone(tl.time_scale(self.IDX["1/8T"], 4, 0.5))   # no spb 1.5
+        self.assertIsNone(tl.time_scale(self.IDX["1/4"], 8, 0.5))    # no spb 0.5
+
+    def test_a_one_beat_pattern_cannot_double_time(self):
+        # Not a table edge: halving the beat count would go below MIN_BEATS.
+        self.assertIsNone(tl.time_scale(self.IDX["1/16"], 1, 2.0))
+
+    def test_an_odd_beat_count_cannot_double_time(self):
+        # 3 beats halved is 1.5, which is not a length zynseq can hold.
+        self.assertIsNone(tl.time_scale(self.IDX["1/8"], 3, 2.0))
+
+    def test_odd_beat_counts_CAN_half_time(self):
+        # Polymeter already ships; half-timing a 3-beat channel must work.
+        self.assertEqual(tl.time_scale(self.IDX["1/8"], 3, 0.5),
+                         (self.IDX["1/4"], 6))
+
+    def test_a_round_trip_returns_the_original(self):
+        for idx in self.IDX.values():
+            spb = tl.DIVISION_SPB[idx]
+            for beats in range(1, 16 // spb + 1):
+                down = tl.time_scale(idx, beats, 0.5)
+                if down is None:
+                    continue
+                self.assertEqual(tl.time_scale(down[0], down[1], 2.0),
+                                 (idx, beats))
+
+    def test_an_unknown_factor_is_refused_rather_than_guessed(self):
+        self.assertIsNone(tl.time_scale(self.IDX["1/16"], 4, 3.0))
+
+
+class TestDivisionTablesAgree(unittest.TestCase):
+
+    def test_division_spb_mirrors_the_hardware_lib(self):
+        # Two tables that must agree and are not compared will not.
+        import maschine_mk2_lib as mlib
+        self.assertEqual(tl.DIVISION_SPB,
+                         tuple(d[1] for d in mlib.maschine_mk2_lib.DIVISIONS))
+
+    def test_division_labels_mirror_it_too(self):
+        import maschine_mk2_lib as mlib
+        self.assertEqual(tl.DIVISION_LABELS,
+                         tuple(d[0] for d in mlib.maschine_mk2_lib.DIVISIONS))
+
+    def test_the_table_really_is_not_sorted_by_speed(self):
+        # The assumption that broke the feature entry, asserted so nobody
+        # re-derives it: stepping this table by index is not a tempo change.
+        self.assertNotEqual(list(tl.DIVISION_SPB),
+                            sorted(tl.DIVISION_SPB, reverse=True))
+
+    def test_the_two_families_share_no_steps_per_beat(self):
+        # time_scale matches on spb alone and needs no family tag. That is
+        # only safe while the straight set and the triplet set are disjoint.
+        straight = {8, 4, 2, 1}
+        triplet = {6, 3}
+        self.assertFalse(straight & triplet)
+        self.assertEqual(set(tl.DIVISION_SPB), straight | triplet)
+
+
+class TestGeneratedChannels(unittest.TestCase):
+    """The scope a pattern-rewriting macro takes."""
+
+    def test_all_eight_by_default(self):
+        self.assertEqual(tl.generated_channels({}), tuple(range(8)))
+
+    def test_player_owned_channels_are_skipped(self):
+        # Not a courtesy - these macros regenerate from euclid, so on a
+        # recorded take there is nothing to regenerate from and it would be
+        # gone.
+        owners = {0: "gen", 3: "player", 7: "player"}
+        self.assertEqual(tl.generated_channels(owners), (0, 1, 2, 4, 5, 6))
+
+    def test_an_absent_channel_counts_as_generated(self):
+        self.assertIn(5, tl.generated_channels({0: "player"}))
+
+
+class TestScopeLabel(unittest.TestCase):
+
+    def test_a_full_take_says_only_the_name(self):
+        self.assertEqual(tl.scope_label("CTRL", "HALF", 8, 8), "CTRL HALF")
+
+    def test_a_partial_take_shows_the_count(self):
+        # Four of the six divisions cannot move in one direction, so a partial
+        # result is ordinary here - and a macro that silently did nothing to
+        # three of eight channels is the unexplained-silence law in disguise.
+        self.assertEqual(tl.scope_label("CTRL", "HALF", 5, 8), "CTRL HALF 5/8")
+
+    def test_taking_nothing_still_says_so(self):
+        self.assertEqual(tl.scope_label("CTRL", "DOUBLE", 0, 8),
+                         "CTRL DOUBLE 0/8")
+
+
+class TestRatchetRamp(unittest.TestCase):
+    """The roll into the drop: every note subdivides, 1 through 4."""
+
+    def test_it_starts_at_one_which_is_OFF(self):
+        self.assertEqual(tl.ratchet_rung(0, 4), 1)
+
+    def test_it_reaches_the_maximum_on_the_last_bar(self):
+        # The ramp always ARRIVES. A build that reached x3 because the player
+        # armed three bars is a build that does not land.
+        for bars in (1, 2, 3, 4, 6, 8, 12, 16):
+            self.assertEqual(tl.ratchet_rung(bars - 1, bars), tl.RATCHET_MAX,
+                             f"{bars} bars")
+
+    def test_a_four_bar_ramp_walks_one_two_three_four(self):
+        self.assertEqual([tl.ratchet_rung(s, 4) for s in range(4)],
+                         [1, 2, 3, 4])
+
+    def test_a_one_bar_ramp_is_just_the_maximum(self):
+        self.assertEqual(tl.ratchet_rung(0, 1), tl.RATCHET_MAX)
+
+    def test_it_never_goes_backwards(self):
+        for bars in (2, 3, 4, 6, 8, 12, 16):
+            values = [tl.ratchet_rung(s, bars) for s in range(bars)]
+            self.assertEqual(values, sorted(values), f"{bars} bars")
+
+    def test_it_stays_inside_the_legal_range(self):
+        for bars in (1, 2, 4, 8, 16):
+            for step in range(-2, bars + 3):
+                value = tl.ratchet_rung(step, bars)
+                self.assertGreaterEqual(value, 1)
+                self.assertLessEqual(value, tl.RATCHET_MAX)
+
+    def test_past_the_end_it_holds_the_maximum(self):
+        # A missed poll must not drop the roll back to nothing mid-build.
+        self.assertEqual(tl.ratchet_rung(99, 4), tl.RATCHET_MAX)
+
+    def test_a_zero_length_ramp_is_the_maximum_not_a_division_by_zero(self):
+        self.assertEqual(tl.ratchet_rung(0, 0), tl.RATCHET_MAX)
+
+
+class TestArmMacroTable(unittest.TestCase):
+    """ARM's pad row, which a snapshot may store by index."""
+
+    def test_it_is_append_only_in_the_shipped_order(self):
+        self.assertEqual(tl.ARM_MACROS[:2], ("drop", "chance"))
+        self.assertEqual(tl.ARM_MACROS[2:6],
+                         ("half", "double", "break", "ratchet"))
+
+    def test_it_still_fits_the_top_half_of_the_grid(self):
+        # Pads 0-7 are the macros and 8-15 the length ring. A seventh entry is
+        # fine; a ninth would silently land on a length pad.
+        self.assertLessEqual(len(tl.ARM_MACROS), 8)
+
+    def test_every_macro_has_a_word_on_the_pending_page(self):
+        # A page that drew a blank for an armed macro would be hiding exactly
+        # what it exists to show.
+        for macro in tl.ARM_MACROS:
+            self.assertIn(macro, tl.PENDING_NAMES, macro)
+
+    def test_the_mutepath_pair_is_both_macros_and_both_return_legs(self):
+        for name in tl.MUTEPATH_MACROS:
+            self.assertIn(name, tl.PENDING_NAMES, name)
