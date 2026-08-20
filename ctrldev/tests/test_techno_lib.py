@@ -3742,3 +3742,67 @@ class TestScopeLabel(unittest.TestCase):
     def test_taking_nothing_still_says_so(self):
         self.assertEqual(tl.scope_label("CTRL", "DOUBLE", 0, 8),
                          "CTRL DOUBLE 0/8")
+
+
+class TestRatchetRamp(unittest.TestCase):
+    """The roll into the drop: every note subdivides, 1 through 4."""
+
+    def test_it_starts_at_one_which_is_OFF(self):
+        self.assertEqual(tl.ratchet_rung(0, 4), 1)
+
+    def test_it_reaches_the_maximum_on_the_last_bar(self):
+        # The ramp always ARRIVES. A build that reached x3 because the player
+        # armed three bars is a build that does not land.
+        for bars in (1, 2, 3, 4, 6, 8, 12, 16):
+            self.assertEqual(tl.ratchet_rung(bars - 1, bars), tl.RATCHET_MAX,
+                             f"{bars} bars")
+
+    def test_a_four_bar_ramp_walks_one_two_three_four(self):
+        self.assertEqual([tl.ratchet_rung(s, 4) for s in range(4)],
+                         [1, 2, 3, 4])
+
+    def test_a_one_bar_ramp_is_just_the_maximum(self):
+        self.assertEqual(tl.ratchet_rung(0, 1), tl.RATCHET_MAX)
+
+    def test_it_never_goes_backwards(self):
+        for bars in (2, 3, 4, 6, 8, 12, 16):
+            values = [tl.ratchet_rung(s, bars) for s in range(bars)]
+            self.assertEqual(values, sorted(values), f"{bars} bars")
+
+    def test_it_stays_inside_the_legal_range(self):
+        for bars in (1, 2, 4, 8, 16):
+            for step in range(-2, bars + 3):
+                value = tl.ratchet_rung(step, bars)
+                self.assertGreaterEqual(value, 1)
+                self.assertLessEqual(value, tl.RATCHET_MAX)
+
+    def test_past_the_end_it_holds_the_maximum(self):
+        # A missed poll must not drop the roll back to nothing mid-build.
+        self.assertEqual(tl.ratchet_rung(99, 4), tl.RATCHET_MAX)
+
+    def test_a_zero_length_ramp_is_the_maximum_not_a_division_by_zero(self):
+        self.assertEqual(tl.ratchet_rung(0, 0), tl.RATCHET_MAX)
+
+
+class TestArmMacroTable(unittest.TestCase):
+    """ARM's pad row, which a snapshot may store by index."""
+
+    def test_it_is_append_only_in_the_shipped_order(self):
+        self.assertEqual(tl.ARM_MACROS[:2], ("drop", "chance"))
+        self.assertEqual(tl.ARM_MACROS[2:6],
+                         ("half", "double", "break", "ratchet"))
+
+    def test_it_still_fits_the_top_half_of_the_grid(self):
+        # Pads 0-7 are the macros and 8-15 the length ring. A seventh entry is
+        # fine; a ninth would silently land on a length pad.
+        self.assertLessEqual(len(tl.ARM_MACROS), 8)
+
+    def test_every_macro_has_a_word_on_the_pending_page(self):
+        # A page that drew a blank for an armed macro would be hiding exactly
+        # what it exists to show.
+        for macro in tl.ARM_MACROS:
+            self.assertIn(macro, tl.PENDING_NAMES, macro)
+
+    def test_the_mutepath_pair_is_both_macros_and_both_return_legs(self):
+        for name in tl.MUTEPATH_MACROS:
+            self.assertIn(name, tl.PENDING_NAMES, name)

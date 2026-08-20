@@ -608,7 +608,8 @@ class techno_lib:
     # surface must never commit. APPEND-ONLY - a snapshot may store the name,
     # so an existing entry never moves index. drop and chance shipped with
     # package 1; half and double joined them with package 3.
-    ARM_MACROS = ("drop", "chance", "half", "double", "break")
+    ARM_MACROS = ("drop", "chance", "half", "double", "break",
+                  "ratchet")
 
     # Pads 8-15, the length ring, in bars. Eight lengths for eight pads, and
     # the odd ones (3, 6, 12) are there because a build does not have to be a
@@ -857,6 +858,39 @@ class techno_lib:
     # and a stutter duration, and the installed .so exports setStutterCount and
     # setStutterDur; a ratchet is exactly what those fields are for.
     RATCHET_MAX = 4
+
+    @staticmethod
+    def ratchet_rung(step, bars):
+        """The ratchet setting `step` bars into a `bars`-long ramp.
+
+        ONE RUNG PER BAR, spread across the armed length, and it ALWAYS
+        ARRIVES: the last bar is RATCHET_MAX whatever the length. A build that
+        reached x3 because the player armed three bars is a build that does
+        not land.
+
+        A two-bar arm therefore gives 1 then 4 rather than 1 then 3 - the
+        rungs are distributed, not walked. Arriving matters more than the
+        shape of the approach.
+
+        The entry describes all four rungs inside the FINAL bar instead. The
+        clock can serve that - phrase_pos returns a fraction and a quarter-bar
+        at 124 BPM is 484 ms against a ~33 ms tick - but PendingQueue is
+        bar-granular and no other payload in three packages wants sub-bar
+        timing. Build it once, when a second one does.
+
+        Past the end it HOLDS the maximum rather than falling back: a missed
+        poll must not drop the roll to nothing mid-build."""
+
+        top = techno_lib.RATCHET_MAX
+        bars = int(bars)
+        step = int(step)
+        if bars <= 1:
+            return top
+        if step <= 0:
+            return 1
+        if step >= bars - 1:
+            return top
+        return 1 + int(round((top - 1) * step / float(bars - 1)))
 
     @staticmethod
     def ratchet_stutter(ratchet, clocks_per_step):

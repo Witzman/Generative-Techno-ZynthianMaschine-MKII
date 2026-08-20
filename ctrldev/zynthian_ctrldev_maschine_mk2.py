@@ -536,6 +536,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._timescale_note = None
         # Bars for a BREAK the player just armed, drained by the poll thread.
         self._break_due = None
+        # A running RATCHET ramp, or None: the same dict shape as the CHANCE
+        # ramp, and for the same reason - one truth about whether a ramp is
+        # running rather than three attributes that can disagree.
+        self._ratchet_ramp = None
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -4952,6 +4956,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # fixed order the same macros would lose it every time.
                 self._log_poll_error(f"macro {macro}", e)
         self._chance_tick(bar)
+        self._ratchet_tick(bar)
         with self.lock:
             self._render_display()
             self._render_transport()
@@ -4964,6 +4969,42 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # picture the rest of the time and repainting it every bar
                 # would fight the playhead.
                 self._paint_arm_legend()
+
+    def _ratchet_tick(self, bar):
+        """Walk a running RATCHET ramp one bar. ONCE PER BAR.
+
+        Written through apply(ch, "ratchet", n) - the SHIPPED path, which
+        reaches _write_pattern and computes the stutter count AND its duration
+        from ratchet_stutter(). That pairing is the whole reason this route
+        was taken over the in-place changeStutterCountAll:
+
+        - Both stutter-all calls are RELATIVE and clamped, not assignments
+          (pattern.cpp:485-509), and _write_pattern already carries a comment
+          saying so.
+        - A fresh StepEvent defaults its duration to ONE CLOCK. Bumping the
+          count without moving the duration emits events that fall outside the
+          note, and on a LinuxSampler one-shot that is inaudible - the exact
+          mistake that made x2 sound identical to OFF, twice, by ear.
+        - The in-place route also assumes every NOTE_ON in the pattern carries
+          the same stutter values, which the touchscreen pattern editor can
+          break behind us.
+
+        Its cost is that _write_pattern regenerates from euclid, so this is
+        confined to generated_channels() and a recorded take never ratchets.
+        That is the trade, written down rather than discovered later."""
+
+        if not self._ratchet_ramp:
+            return
+        ramp = self._ratchet_ramp
+        step = bar - ramp["start"]
+        if step >= ramp["bars"]:
+            for channel, base in ramp["base"].items():
+                self.apply(channel, "ratchet", base)
+            self._ratchet_ramp = None
+            return
+        value = tlib.ratchet_rung(step, ramp["bars"])
+        for channel in ramp["base"]:
+            self.apply(channel, "ratchet", value)
 
     def _break_fire(self, bars):
         """The nominated channels fall out NOW and come back on the landing.
@@ -5155,6 +5196,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._drop_fire(bar)
         elif macro == "drop_end":
             self._drop_restore_apply()
+        elif macro == "ratchet":
+            # Capture each channel's OWN ratchet, walk away from it, land back
+            # on it. Never assume 1: a channel the player left ratcheting must
+            # come back ratcheting.
+            channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+            self._ratchet_ramp = {
+                "bars": self._arm_bars.get("ratchet", 4),
+                "start": bar,
+                "base": {ch: int(self.state[ch].get("ratchet", 1))
+                         for ch in channels},
+            }
         elif macro == "break_end":
             # The same restore DROP uses. BREAK is DROP's second entry point,
             # not a parallel implementation - one capture, one restore, and
