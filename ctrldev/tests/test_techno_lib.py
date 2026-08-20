@@ -3042,3 +3042,27 @@ class TestPendingQueue(unittest.TestCase):
         self.q.arm("drop", 0, at_bar=5)
         self.assertEqual(self.q.due(5), [])
         self.assertEqual(self.q.due(6), ["drop"])
+
+
+class TestArmOverlay(unittest.TestCase):
+
+    def test_arm_owns_the_pads_when_held_alone(self):
+        self.assertEqual(tl.overlay_owner(arm=True), "arm")
+
+    def test_shift_still_outranks_arm(self):
+        self.assertEqual(tl.overlay_owner(shift=True, arm=True), "shift")
+
+    def test_arm_outranks_mod(self):
+        self.assertEqual(tl.overlay_owner(mod=True, arm=True), "arm")
+
+    def test_arm_outranks_navigate(self):
+        self.assertEqual(tl.overlay_owner(navigate=True, arm=True), "arm")
+
+    def test_arm_pads_are_not_steps(self):
+        self.assertFalse(tl.overlay_is_stepwise("arm"))
+
+    def test_every_existing_caller_is_unaffected(self):
+        self.assertIsNone(tl.overlay_owner())
+        self.assertEqual(tl.overlay_owner(shift=True), "shift")
+        self.assertEqual(tl.overlay_owner(mod=True), "mod")
+        self.assertEqual(tl.overlay_owner(navigate=True), "navigate")

@@ -425,13 +425,18 @@ class techno_lib:
     # Highest priority first. MOD LATCHES, so mod-active and shift-held really
     # do co-occur; the owner's rule (2026-08-19) is that a momentary gesture
     # takes the pads from a latched state and hands them back on release.
-    OVERLAY_PRIORITY = ("shift", "mod", "navigate")
+    # ARM sits above MOD and below SHIFT. SHIFT is the oldest and most-used
+    # binding and must not move; a player holding ARM has committed to
+    # scheduling, so it outranks the timbre overlay underneath it.
+    OVERLAY_PRIORITY = ("shift", "arm", "mod", "navigate")
 
     # Whether an overlay's pads still MEAN steps. The playhead is drawn over
     # the top only where they do: under SHIFT pad 3 is step 3 carrying a
     # probability, so the sweep helps; under MOD pad 3 is a RATE and a playhead
-    # marker on it would point at nothing.
-    OVERLAY_STEPWISE = {"shift": True, "mod": False, "navigate": False}
+    # marker on it would point at nothing. Under ARM a pad is a macro or a bar
+    # count, which is the same story again.
+    OVERLAY_STEPWISE = {"shift": True, "arm": False, "mod": False,
+                        "navigate": False}
 
     @staticmethod
     def overlay_is_stepwise(owner):
@@ -439,9 +444,11 @@ class techno_lib:
         return techno_lib.OVERLAY_STEPWISE.get(owner, True)
 
     @staticmethod
-    def overlay_owner(shift=False, mod=False, navigate=False):
-        """Which modifier owns the pads, or None for the ordinary step picture."""
-        held = {"shift": shift, "mod": mod, "navigate": navigate}
+    def overlay_owner(shift=False, mod=False, navigate=False, arm=False):
+        """Which modifier owns the pads, or None for the ordinary step picture.
+
+        `arm` defaults False so every existing caller keeps its meaning."""
+        held = {"shift": shift, "arm": arm, "mod": mod, "navigate": navigate}
         for name in techno_lib.OVERLAY_PRIORITY:
             if held[name]:
                 return name
