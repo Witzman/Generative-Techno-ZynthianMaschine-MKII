@@ -608,7 +608,7 @@ class techno_lib:
     # surface must never commit. APPEND-ONLY - a snapshot may store the name,
     # so an existing entry never moves index. drop and chance shipped with
     # package 1; half and double joined them with package 3.
-    ARM_MACROS = ("drop", "chance", "half", "double")
+    ARM_MACROS = ("drop", "chance", "half", "double", "break")
 
     # Pads 8-15, the length ring, in bars. Eight lengths for eight pads, and
     # the odd ones (3, 6, 12) are there because a build does not have to be a
@@ -1450,6 +1450,18 @@ class techno_lib:
     # BETWEEN them at indices 3 and 4. So `div + 1` from 1/8 lands on 1/16T -
     # faster, and triplet. Never step this table by index.
     DIVISION_SPB = (8, 4, 2, 6, 3, 1)
+
+    # DROP and BREAK are the same mechanism with its ends swapped and they
+    # share one capture of the mute picture, so only ONE of them may be live.
+    # Arming either cancels the other and its return leg.
+    #
+    # Mutual exclusion rather than a refcounted shared capture: the entry's
+    # own trap is that two of them pending at once can each hold a different
+    # idea of the pre-mute state and the second restore undoes the first. A
+    # refcount is more expressive - a BREAK inside a DROP becomes meaningful -
+    # but it is a second lifetime rule beside the queue's own, and a
+    # half-restored mute is exactly the failure being avoided.
+    MUTEPATH_MACROS = ("drop", "drop_end", "break", "break_end")
 
     @staticmethod
     def generated_channels(owners, count=8):

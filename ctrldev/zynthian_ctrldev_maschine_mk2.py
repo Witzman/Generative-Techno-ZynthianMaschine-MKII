@@ -534,6 +534,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # arithmetically identical while nothing else touches them.
         self._timescale_restore = {}
         self._timescale_note = None
+        # Bars for a BREAK the player just armed, drained by the poll thread.
+        self._break_due = None
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -2641,6 +2643,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # many pads to extinguish - so the length is kept here rather than
             # widening the queue's contract for a display.
             self._arm_bars[self._arm_picked] = bars
+            if self._arm_picked in tlib.MUTEPATH_MACROS:
+                # One capture of the mute picture, so only one of DROP and
+                # BREAK may be live. Arming either drops the other and its
+                # return leg - replace-not-stack, extended from the queue's
+                # own rule to the pair, with no refcount and no second
+                # lifetime rule to get wrong.
+                for other in tlib.MUTEPATH_MACROS:
+                    if other != self._arm_picked:
+                        self._pending_macros.cancel(other)
+                        self._armed_while_stopped.pop(other, None)
+                        self._arm_bars.pop(other, None)
+            if self._arm_picked == "break":
+                # BREAK fires NOW and resolves in N bars, so the length is
+                # only the SECOND number. There is no "fires in N" for a macro
+                # whose whole point is that it happens immediately - which is
+                # why its own queue entry is taken straight back out again:
+                # the generic arm above put it there, and leaving it would
+                # give the countdown ruler a landing that never lands.
+                #
+                # Drained by the poll thread within a tick rather than written
+                # here: this runs on the MIDI thread under the lock, and eight
+                # set_mute(update=True) calls dispatch eight zynsigman signals
+                # into the touchscreen mixer. DROP already does its muting on
+                # the poll thread; BREAK has no reason to be the exception.
+                self._pending_macros.cancel("break")
+                self._armed_while_stopped.pop("break", None)
+                self._arm_bars.pop("break", None)
+                self._break_due = bars
         else:
             return
         with self.lock:
@@ -4935,6 +4965,39 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # would fight the playhead.
                 self._paint_arm_legend()
 
+    def _break_fire(self, bars):
+        """The nominated channels fall out NOW and come back on the landing.
+
+        DROP with its two ends swapped, sharing every piece of its
+        bookkeeping: the same survivors, the same capture, the same restore.
+        The survivors are the ones that KEEP PLAYING in both - so a player who
+        has learnt the nomination for one already knows it for the other.
+
+        Poll thread, drained from _break_due. See _arm_pad for why."""
+
+        mixer = self.state_manager.zynmixer
+        self._drop_restore = {}
+        for group in range(8):
+            chan = self._mixer_chan(group)
+            if chan is None:
+                continue
+            self._drop_restore[group] = bool(mixer.get_mute(chan))
+            if group not in self._drop_survivors:
+                mixer.set_mute(chan, True, update=True)
+        bar = self._phrase_bar
+        if bar is None:
+            # Stopped. Nothing is counting, so hold the length and let the
+            # transport start arm the return - the same rule _arm_pad already
+            # applies to everything else armed while stopped.
+            self._armed_while_stopped["break_end"] = bars
+        else:
+            self._pending_macros.arm("break_end", bars, bar)
+        self._arm_bars["break_end"] = bars
+        with self.lock:
+            self._render_mutes()
+            self._render_groups()
+            self._render_display()
+
     def _timescale_fire(self, macro, bar):
         """Take every generated channel to half or double speed.
 
@@ -5092,6 +5155,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._drop_fire(bar)
         elif macro == "drop_end":
             self._drop_restore_apply()
+        elif macro == "break_end":
+            # The same restore DROP uses. BREAK is DROP's second entry point,
+            # not a parallel implementation - one capture, one restore, and
+            # therefore one place where the "put back what was captured, never
+            # all-on" rule lives.
+            self._drop_restore_apply()
         elif macro in ("half", "double"):
             self._timescale_fire(macro, bar)
         elif macro == "timescale_end":
@@ -5228,6 +5297,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if self._record_due:
                     self._record_due = False
                     self._toggle_capture()
+                if self._break_due is not None:
+                    bars, self._break_due = self._break_due, None
+                    self._break_fire(bars)
                 # Drain queued note-map rebuilds here, never on the MIDI
                 # thread: the scan takes the lock for a whole pattern.
                 while self._rebuild_due:
