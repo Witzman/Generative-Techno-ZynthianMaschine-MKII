@@ -285,6 +285,14 @@ KIT_RETRY_S = 2.0            # floor between kit-list retries on a bare chain
 MIN_BEATS = 1
 PADS = 16              # a pattern longer than the pad grid is not displayable
 
+# How often the animated MOD legend repaints, in poll ticks. 3 gives ~10 Hz.
+#
+# NOT a style choice and not a performance tweak: at every tick this overlay
+# writes all sixteen pads, and 480 HID writes a second on the fd the input
+# arrives on starves the daemon's reader and wedges the controller until it is
+# physically unplugged. Measured on the rig 2026-08-20, three times.
+MOD_LEGEND_TICKS = 3
+
 # What each encoder does now depends on the mode, the page and the channel
 # type - see techno_lib.PAGE_RINGS. LEVEL drives the group's MIXER STRIP
 # rather than an engine
@@ -5630,11 +5638,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     self._mod_write()
                 with self.lock:
                     owner = self._pad_owner()
-                    if owner == "mod":
-                        # The ONLY animated overlay, and it has to run here at
-                        # 30 Hz rather than on the 200 ms modulator tick: a
-                        # 5 Hz fade looks steppy, not slow. Poll thread only,
-                        # never the MIDI thread.
+                    if owner == "mod" and tick % MOD_LEGEND_TICKS == 0:
+                        # The ONLY animated overlay. It used to run at the
+                        # full 30 Hz, and that is SIXTEEN PAD WRITES PER TICK -
+                        # roughly 480 HID writes a second, on the same fd the
+                        # input arrives on.
+                        #
+                        # THAT WEDGES THE CONTROLLER. The daemon says so in its
+                        # own comment: "16 HID writes per report on the same fd
+                        # the input arrives on ... starved the reader and set
+                        # the watchdog off". Once starved, the device stops
+                        # streaming reports and does NOT recover - not from a
+                        # daemon restart and not from USB re-enumeration. It
+                        # took a physical replug, three times in one session,
+                        # each time within seconds of MOD being latched.
+                        #
+                        # Throttled to MOD_LEGEND_TICKS. A fade at this rate is
+                        # still a fade; a dead Maschine is not a surface.
+                        # Poll thread only, never the MIDI thread.
                         self._paint_mod_legend()
                     elif tlib.overlay_is_stepwise(owner):
                         head = self._playhead()

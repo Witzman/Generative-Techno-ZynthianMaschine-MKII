@@ -1092,6 +1092,14 @@ class techno_lib:
     # Quantised so led_cache.changed() swallows most ticks. Fading twelve pads
     # at 30 Hz is up to 360 pad messages a second, and the daemon has been
     # "flooded off the USB bus once".
+    #
+    # QUANTISING ALONE WAS NOT ENOUGH. On 2026-08-20 this wedged the controller
+    # three times in one session, each within seconds of MOD being latched:
+    # the daemon's reader starves, the device stops streaming HID reports, and
+    # it does NOT come back from a daemon restart or from USB re-enumeration -
+    # only from a physical replug. The repaint is now also THROTTLED, in the
+    # driver, by MOD_LEGEND_TICKS. Both mitigations are needed; neither is
+    # decoration.
     MOD_LEGEND_LEVELS = 12
 
     @staticmethod
