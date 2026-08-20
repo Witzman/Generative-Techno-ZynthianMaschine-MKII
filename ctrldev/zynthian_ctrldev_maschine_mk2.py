@@ -5315,12 +5315,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             for channel, (div, beats, hits, rot) in \
                     list(self._timescale_restore.items()):
-                logging.warning(
-                    "TIMESCALE restore ch%s: %s x %s -> %s x %s hits %s->%s "
-                    "rot %s->%s", channel,
-                    tlib.DIVISION_LABELS[self.div[channel]],
-                    self.beats[channel], tlib.DIVISION_LABELS[div], beats,
-                    self.hits[channel], hits, self.rot[channel], rot)
                 self.div[channel] = div
                 self.beats[channel] = beats
                 self.hits[channel] = hits
