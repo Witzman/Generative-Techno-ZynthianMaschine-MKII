@@ -200,6 +200,8 @@ CC_TR = 6                # unbound, free
 # Mode buttons, all measured at G4 alongside the arrows. Unlike the arrows,
 # every one of these matched what the daemon's source said.
 CC_SOLO = 31             # measured
+CC_FREEZE = 27           # PAD MODE. Measured at G4; LED index 19, measured.
+LED_FREEZE = "padmode"   # index 19
 
 # REC's LED, one row per state tlib.rec_led_state can return. RED means a file
 # is being written and nothing else on this panel is red for any other reason -
@@ -532,6 +534,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the whole event. The same law that keeps a preset load off the MIDI
         # thread.
         self._record_due = False
+        # FREEZE. Two stages on one button, law L1: `frozen` is the LATCH a
+        # tap toggles, `freeze_deep` is the MOMENTARY hold that parks the LFOs
+        # as well.
+        self.frozen = False
+        self.freeze_deep = False
         self.solo_down = False
         self.solo_mode = False           # latched: the F row means solo
         # TEMPO held: every encoder returns to the pre-2026-08-16 feel, three
@@ -1167,6 +1174,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _drift_channel(self, channel):
         """Apply this channel's drift modulators. Called ONCE PER WRAP.
 
+        Held still by FREEZE: drift rewrites the pattern, which is exactly
+        what a player freezes the machine to stop.
+
         Drift is the half of MOD that rewrites the PATTERN - hits gained and
         lost, the bar rotating under itself, a channel thinning out and coming
         back. It runs here and never in _mod_write(): a pattern verb written on
@@ -1182,6 +1192,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         Writes through apply(), the single write path, so drift is not a second
         writer with rules of its own - which the SP10 design rejected by name."""
+        if self._frozen("drift"):
+            # FREEZE holds the pattern still, and drift is the half of MOD
+            # that rewrites it - which is most of what a player freezes the
+            # machine to stop. The modulator entry is left in place, so
+            # thawing resumes rather than needing a re-bind.
+            return
 
         if self.owner.get(channel) == "player":
             return
@@ -1223,6 +1239,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         line being heard is the line kept, bit for bit, for as long as the
         knob stays down. Law L6 is not an approximation here - nothing
         rewrites the pattern, so nothing can change it."""
+        if self._frozen("melody"):
+            # FREEZE holds the line still: the register stops walking and the
+            # notes being heard are the notes kept, exactly as RANDOM at 0
+            # does - the same guarantee reached from a different control.
+            return
 
         st = self.state[channel]
         melody, rhythm = st["random"], st["rhythm"]
@@ -1555,6 +1576,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     def _reroll_channel(self, channel):
         """Fire the pending reroll for one channel, at its own wrap."""
+        if self._frozen("reroll"):
+            # A pending reroll is HELD, not dropped: the flag stays in
+            # _reroll_pending and the tab stays dotted, so thawing fires it at
+            # the next wrap. Discarding it would silently eat a gesture the
+            # player already made and the surface still shows as coming.
+            return
 
         if channel not in self._reroll_pending:
             return
@@ -2481,6 +2508,55 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _act_erase(self, down):
         self.erase_down = down
 
+    def _act_freeze(self, down):
+        """FREEZE: tap latches pattern generation, hold parks the LFOs too.
+
+        Law L1 exactly, which is the reason this is one button and not two -
+        nothing new has to be learned. The 250 ms rule is _act_mod's and
+        _solo_button's, unchanged.
+
+        NEVER a SHIFT chord: the daemon eats SHIFT + PAD MODE for its own
+        sequencer mode and it never reaches the driver."""
+
+        if down:
+            self._down_at["freeze"] = (time.monotonic(), False)
+            self.freeze_deep = True
+            with self.lock:
+                self._render_freeze()
+                self._render_display()
+            return
+        went_down, _ = self._down_at.pop("freeze", (None, False))
+        self.freeze_deep = False
+        if went_down is not None and \
+                (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
+            self.frozen = not self.frozen
+        with self.lock:
+            self._render_freeze()
+            self._render_display()
+
+    def _frozen(self, what):
+        """Is `what` held still right now? One predicate, five call sites."""
+        return tlib.freeze_blocks(what, self.frozen, self.freeze_deep)
+
+    def _render_freeze(self):
+        """PAD MODE lights while anything is frozen.
+
+        A frozen instrument must never read as a broken one. The 2026-08-18
+        poll-thread death is the precedent: generation stopped, nothing on the
+        surface said so, and it went unexplained for three hours. Between this
+        LED, the FRZ label and the columns losing their bars, there are three
+        independent things saying the machine is being held."""
+
+        if self.freeze_deep:
+            bright = 2.0            # the total hold, and it looks like it
+        elif self.frozen:
+            bright = 1.0
+        else:
+            bright = 0.0
+        state = (tlib.COLOR_FREEZE, bright)
+        if self.leds.changed("freeze", state):
+            self._send_osc(lib.button_osc(LED_FREEZE, state[0], state[1]))
+
     def _toggle_capture(self):
         """Start or stop the audio recorder. POLL THREAD ONLY.
 
@@ -3102,6 +3178,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Runs on the poll thread and NEVER on the MIDI thread: midi_event holds
         the lock for the whole event, and a parameter write can block."""
         if not self.mod and not self._mod_restore_due:
+            return
+        if self._frozen("lfo"):
+            # THE HELD FLAG ONLY - a FREEZE tap deliberately leaves the LFOs
+            # sweeping, so the notes stop changing under you while the sound
+            # keeps breathing. Parking them takes the deeper gesture.
+            #
+            # Returning before the restore drain is deliberate too: a base
+            # owed to MOD + ERASE while everything is parked can wait one
+            # let-go, and writing it here would move a parameter during a
+            # gesture whose whole promise is that nothing moves.
             return
         if self._snapshot_busy():
             # A load rewrites every chain and every mixer strip, and set_state
@@ -5065,19 +5151,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # flag reaches _column_dead through this one method - so the painter
         # and the bind's refusal cannot disagree about which columns are live.
         mod = self.mod_down
+        # FREEZE strips the bar off the generative columns through the SAME
+        # method, for the same reason MOD does: the painter and the encoder's
+        # refusal must not hold two opinions about which columns are live.
+        frozen = self.frozen or self.freeze_deep
         shape = desc["shape"]
         if desc.get("generated"):
-            return tlib.columns(desc, None, self._generated_view(desc), mod)
+            return tlib.columns(desc, None, self._generated_view(desc), mod,
+                                frozen=frozen)
         if shape == tlib.SHAPE_SPREAD:
             views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
                      for i in range(len(tlib.CHANNELS))]
-            return tlib.columns(desc, None, views, mod)
+            return tlib.columns(desc, None, views, mod, frozen=frozen)
         if shape == tlib.SHAPE_GLOBAL:
-            return tlib.columns(desc, None, self.globals_view(), mod)
+            return tlib.columns(desc, None, self.globals_view(), mod,
+                                frozen=frozen)
         channel = self.group
         owned = self.owner.get(channel) == "player"
         return tlib.columns(desc, self._page_kind(channel),
-                            self.state_view(channel), mod, owned)
+                            self.state_view(channel), mod, owned,
+                            frozen=frozen)
 
     def _column_dead(self, column):
         """True when this column is drawn dead (law L4): greyed, showing ----,
@@ -5397,6 +5490,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         label = tlib.mod_label(label, mod)
         # A pending reroll says so, and the tabs say which channels.
         label = tlib.reroll_label(label, bool(self._reroll_pending))
+        # And FREEZE says the machine is being held, which is the difference
+        # between held and broken.
+        label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.

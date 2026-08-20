@@ -3012,3 +3012,111 @@ class TestRecLedState(unittest.TestCase):
                 for o in (False, True)
                 for r in (False, True)}
         self.assertEqual(seen, {"off", "ready", "overdub", "recording", "both"})
+
+
+class TestFreeze(unittest.TestCase):
+    """Two stages on one button, mapped onto law L1: tap latches, hold is
+    momentary."""
+
+    def test_nothing_is_blocked_when_thawed(self):
+        self.assertFalse(tl.freeze_blocks("melody", False, False))
+        self.assertFalse(tl.freeze_blocks("lfo", False, False))
+
+    def test_a_tap_freezes_pattern_generation(self):
+        self.assertTrue(tl.freeze_blocks("melody", True, False))
+        self.assertTrue(tl.freeze_blocks("rhythm", True, False))
+        self.assertTrue(tl.freeze_blocks("drift", True, False))
+        self.assertTrue(tl.freeze_blocks("reroll", True, False))
+
+    def test_a_tap_LEAVES_THE_LFOS_SWEEPING(self):
+        # The owner's choice: the notes stop changing under you while the
+        # sound keeps breathing. A rig with everything parked sounds dead
+        # rather than held.
+        self.assertFalse(tl.freeze_blocks("lfo", True, False))
+
+    def test_a_hold_parks_the_lfos_too(self):
+        self.assertTrue(tl.freeze_blocks("lfo", True, True))
+
+    def test_a_hold_alone_parks_the_lfos_without_a_latch(self):
+        self.assertTrue(tl.freeze_blocks("lfo", False, True))
+
+    def test_a_hold_alone_also_freezes_generation(self):
+        # A hold is the TOTAL hold - everything the tap freezes, plus the
+        # LFOs. If a hold parked the LFOs but let the pattern keep evolving,
+        # the deeper gesture would be doing less than the shallower one.
+        self.assertTrue(tl.freeze_blocks("melody", False, True))
+
+    def test_an_unknown_subject_is_never_blocked(self):
+        # A typo must not silently freeze something, and must not silently
+        # unfreeze it either.
+        self.assertFalse(tl.freeze_blocks("nonsense", True, True))
+
+    def test_the_frozen_subjects_are_the_documented_set(self):
+        self.assertEqual(tl.FREEZE_GENERATIVE,
+                         frozenset(("melody", "rhythm", "drift", "reroll")))
+
+
+class TestFreezeLabel(unittest.TestCase):
+
+    def test_thawed_says_nothing(self):
+        self.assertEqual(tl.freeze_label("CTRL", False, False), "CTRL")
+
+    def test_the_latch_says_frz(self):
+        self.assertEqual(tl.freeze_label("CTRL", True, False), "CTRL FRZ")
+
+    def test_the_total_hold_says_frz_bang(self):
+        # Two words, not one: the stages stop different things and a player
+        # who cannot tell them apart cannot tell whether the LFOs still move.
+        self.assertEqual(tl.freeze_label("CTRL", True, True), "CTRL FRZ!")
+
+    def test_a_hold_without_a_latch_still_says_the_total_hold(self):
+        self.assertEqual(tl.freeze_label("CTRL", False, True), "CTRL FRZ!")
+
+
+class TestFreezeGreysTheGenerativeColumns(unittest.TestCase):
+    """FREEZE reuses MOD's grammar for 'this control cannot act right now'."""
+
+    def _page(self):
+        # The page that actually carries RANDOM and RHYTHM - found rather than
+        # hard-coded, so a layout change moves the test with it instead of
+        # breaking it.
+        for desc in tl.PAGE_RINGS[tl.ring_key("STEP", "voice")]:
+            if "random" in (desc.get("verbs") or ()):
+                return desc
+        self.fail("no voice page carries RANDOM")
+
+    def _cols(self, frozen):
+        return tl.columns(self._page(), "voice",
+                          TestColumnModel().voice_state(), frozen=frozen)
+
+    def _verb_index(self, verb):
+        return self._page()["verbs"].index(verb)
+
+    def test_thawed_leaves_every_bar_alone(self):
+        live = self._cols(False)
+        for verb in tl.FREEZE_VERBS:
+            self.assertIsNotNone(live[self._verb_index(verb)].get("bar"), verb)
+
+    def test_frozen_strips_the_bar_off_random_and_rhythm(self):
+        cold = self._cols(True)
+        for verb in tl.FREEZE_VERBS:
+            self.assertIsNone(cold[self._verb_index(verb)].get("bar"), verb)
+
+    def test_frozen_leaves_every_other_column_untouched(self):
+        live, cold = self._cols(False), self._cols(True)
+        frozen_at = {self._verb_index(v) for v in tl.FREEZE_VERBS}
+        for index in range(8):
+            if index in frozen_at:
+                continue
+            self.assertEqual(live[index], cold[index],
+                             f"column {index} changed under FREEZE")
+
+    def test_the_value_survives_the_freeze(self):
+        # The bar goes, the value stays: it is still the value that resumes
+        # the moment the machine thaws.
+        index = self._verb_index("random")
+        self.assertEqual(self._cols(True)[index].get("value"),
+                         self._cols(False)[index].get("value"))
+
+    def test_only_the_two_generative_verbs_are_frozen(self):
+        self.assertEqual(tl.FREEZE_VERBS, frozenset(("random", "rhythm")))
