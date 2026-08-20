@@ -3176,3 +3176,54 @@ class TestArmLegendPad(unittest.TestCase):
         self.assertEqual(tl.overlay_owner(arm=True, mod=True), "arm")
         self.assertEqual(tl.overlay_owner(shift=True, arm=True), "shift")
         self.assertEqual(tl.overlay_owner(arm=True), "arm")
+
+
+class TestChanceRamp(unittest.TestCase):
+    """The breakdown that thins instead of muting."""
+
+    def test_it_starts_at_the_players_own_value(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 0, 8), 100)
+
+    def test_it_reaches_the_floor_half_way(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 4, 8), 25)
+
+    def test_it_returns_to_the_players_own_value(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 8, 8), 100)
+
+    def test_it_returns_to_SEVENTY_not_one_hundred(self):
+        # The whole point: a channel the player left at 70 comes back at 70.
+        # Assuming 100 is the original bug that made a saved channel come back
+        # silent while the surface read full.
+        self.assertEqual(tl.chance_ramp(70, 25, 8, 8), 70)
+
+    def test_it_thins_on_the_way_down(self):
+        self.assertLess(tl.chance_ramp(100, 25, 2, 8), 100)
+        self.assertGreater(tl.chance_ramp(100, 25, 2, 8), 25)
+
+    def test_it_is_symmetric_about_the_middle(self):
+        for step in range(9):
+            self.assertEqual(tl.chance_ramp(100, 25, step, 8),
+                             tl.chance_ramp(100, 25, 8 - step, 8))
+
+    def test_a_base_below_the_floor_never_rises_to_meet_it(self):
+        # A breakdown that made a quiet channel louder would be the gesture
+        # backwards.
+        self.assertEqual(tl.chance_ramp(10, 25, 4, 8), 10)
+
+    def test_a_zero_length_ramp_is_the_identity(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 0, 0), 100)
+
+    def test_it_never_leaves_the_legal_range(self):
+        for bars in (1, 2, 3, 4, 8, 16):
+            for step in range(bars + 2):
+                value = tl.chance_ramp(100, 25, step, bars)
+                self.assertGreaterEqual(value, 0)
+                self.assertLessEqual(value, 100)
+
+    def test_past_the_end_it_is_back_at_base(self):
+        # A missed poll must not strand a channel thinned forever.
+        self.assertEqual(tl.chance_ramp(100, 25, 99, 8), 100)
+
+    def test_the_floor_is_the_lowest_chance_rung(self):
+        # Reuses CHANCE_RUNGS' own vocabulary rather than inventing a number.
+        self.assertEqual(tl.CHANCE_RUNGS[-1], 25)

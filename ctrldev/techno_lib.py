@@ -462,6 +462,32 @@ class techno_lib:
     # bare tap is for, and that reads differently on the pads.
     CHANCE_RUNGS = (100, 75, 50, 25)
 
+    @staticmethod
+    def chance_ramp(base, floor, bar, bars):
+        """Play chance `bar` bars into a ramp that dips to `floor` and back.
+
+        Down over the first half, up over the second, landing exactly on
+        `base` - THE PLAYER'S OWN VALUE, never 100. CHANCE lives in the
+        snapshot's own riff and is read back on load; assuming 100 is the
+        original bug that made a channel saved at chance 0 come back silent
+        while the surface read full.
+
+        A base already at or below the floor is left alone: a breakdown that
+        made a quiet channel louder would be the gesture backwards.
+
+        Past the end it returns `base` rather than continuing past it, so a
+        missed poll cannot strand a channel thinned forever - the same
+        reasoning as PendingQueue.due() using >= rather than ==."""
+
+        base = int(base)
+        if bars <= 0 or base <= floor:
+            return base
+        half = bars / 2.0
+        # 1.0 at both ends, 0.0 in the middle, clamped so a step past the end
+        # lands back on base instead of overshooting above it.
+        pos = min(1.0, abs(bar - half) / half)
+        return int(round(floor + (base - floor) * pos))
+
     # The macros ARM can compose, one per pad from 0. TWO, not eight: pads 2-7
     # stay dark and unbound, because a lit pad that does nothing is the fault
     # this surface must never commit. APPEND-ONLY - a snapshot may store the

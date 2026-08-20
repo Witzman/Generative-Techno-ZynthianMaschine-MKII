@@ -501,6 +501,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # The mute picture as it was the instant the drop fired, restored
         # verbatim afterwards. Never "all on".
         self._drop_restore = {}
+        # A running CHANCE ramp, or None. One dict rather than four
+        # attributes so "is a ramp running" is one truth, not four that can
+        # disagree.
+        self._chance_ramp = None
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -4566,6 +4570,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # a single raise would abort the rest of the drain, and in a
                 # fixed order the same macros would lose it every time.
                 self._log_poll_error(f"macro {macro}", e)
+        self._chance_tick(bar)
         with self.lock:
             self._render_display()
             self._render_transport()
@@ -4575,6 +4580,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # picture the rest of the time and repainting it every bar
                 # would fight the playhead.
                 self._paint_arm_legend()
+
+    def _chance_tick(self, bar):
+        """Walk a running CHANCE ramp one bar. ONCE PER BAR, never on the
+        200 ms modulator tick.
+
+        setPlayChance is read live in Track::getEvent(), so this costs no
+        pattern rewrite at all - the whole breakdown is one shipped verb
+        called eight times a bar. That is also why it is safe on a
+        player-owned channel: nothing is regenerated and no take is touched.
+
+        At chance 0 a tab still draws dashed. The silent-channel law does not
+        pause for a performance macro."""
+
+        if not self._chance_ramp:
+            return
+        ramp = self._chance_ramp
+        step = bar - ramp["start"]
+        floor = tlib.CHANCE_RUNGS[-1]
+        for channel, base in ramp["base"].items():
+            self.apply(channel, "chance",
+                       tlib.chance_ramp(base, floor, step, ramp["bars"]))
+        if step >= ramp["bars"]:
+            self._chance_ramp = None
 
     def _drop_fire(self, bar):
         """Everything that is not a survivor falls silent for the drop.
@@ -4638,6 +4666,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._drop_fire(bar)
         elif macro == "drop_end":
             self._drop_restore_apply()
+        elif macro == "chance":
+            # Capture every channel's OWN value at fire time. The ramp walks
+            # away from it and lands back on it; nothing here assumes 100.
+            self._chance_ramp = {
+                "bars": self._arm_bars.get("chance", 8),
+                "start": bar,
+                "base": {ch: int(self.state[ch].get("chance", 100))
+                         for ch in range(len(tlib.CHANNELS))},
+            }
 
     def _wrap_channel(self, channel):
 
