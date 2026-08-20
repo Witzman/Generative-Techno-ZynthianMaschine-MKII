@@ -471,6 +471,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # lengths is polyrhythm, and a single global bar would fight it.
         self._reroll_pending = set()
         self._reroll_undo = {}
+        # PHRASE: bars since the transport was started or RESTARTed. None
+        # while stopped - there is no bar to be on, and a stale number reads
+        # as a clock that has stuck.
+        #
+        # Anchored to the TRANSPORT, never to a channel's own wrap: each
+        # channel owns its length, so a polymetric rig has eight different
+        # bars and any one of them would be a lie on the other seven.
+        self._phrase_anchor = None
+        self._phrase_bar = None
+        self._pending_macros = tlib.PendingQueue()
+        # Lengths armed while the transport was stopped. The absolute landing
+        # bar cannot be known until there is a bar zero, so only the length is
+        # kept and the queue is filled at transport start. Without this a
+        # macro armed on a stopped rig either fires the instant it is armed -
+        # the way _wrap_channel takes a pending structure change - or is
+        # silently lost.
+        self._armed_while_stopped = {}
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -2622,6 +2639,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for group in range(8):
             # Installed signature: setPlayPosition(bank, sequence, clock)
             self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+        # RESTART re-zeros the phrase with the playheads. Without this the
+        # count keeps running while every pattern jumps to its start, which is
+        # precisely the disagreement this clock exists to prevent.
+        if self._phrase_anchor is not None:
+            self._phrase_anchor = self._elapsed_beats()
+            self._phrase_bar = 0
 
     def _act_page_prev(self):
         self._step_page(-1)
@@ -4026,9 +4049,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         target = zynseq_lib.SEQ_STOPPED if self._any_playing() else zynseq_lib.SEQ_STARTING
         if target == zynseq_lib.SEQ_STARTING:
             self._force_loop_mode()
+            self._phrase_anchor = self._elapsed_beats()
+            self._phrase_bar = 0
+            # Anything armed with the transport stopped gets its landing bar
+            # now, counted from this bar zero.
+            for macro, bars in self._armed_while_stopped.items():
+                self._pending_macros.arm(macro, bars, at_bar=0)
+            self._armed_while_stopped.clear()
         else:
             # Stopping the rig must not leave a held pad droning over silence.
             self._release_all()
+            self._phrase_anchor = None
+            self._phrase_bar = None
         for group in range(8):
             self.libseq.setPlayState(self.zynseq.bank, group, target)
         self._render_pads()
@@ -4344,6 +4376,46 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # one that stops evolving; the others must not pay for it.
                 self._log_poll_error(f"voice wrap on channel {channel}", e)
 
+    def _phrase_tick(self):
+        """Advance the phrase clock and fire anything the bar has reached.
+
+        Runs at 30 Hz, so a boundary is caught within ~33 ms - about 1.7% of a
+        bar at 124 BPM. Adequate for mutes and levels. NOTHING that needs step
+        accuracy may ride this clock.
+
+        Deliberately NOT in _wrap_channel: a wrap is per channel, and eight
+        channels have eight different bars the moment anyone uses an odd
+        length. One transport-anchored count is the only one that stays true
+        for all of them."""
+
+        if self._phrase_anchor is None:
+            return
+        bar, _frac = tlib.phrase_pos(self._elapsed_beats(), self._phrase_anchor)
+        if bar == self._phrase_bar:
+            return
+        self._phrase_bar = bar
+        for macro in self._pending_macros.due(bar):
+            try:
+                self._fire_macro(macro, bar)
+            except Exception as e:
+                # PER MACRO, the same reason _voice_wraps catches per channel:
+                # a single raise would abort the rest of the drain, and in a
+                # fixed order the same macros would lose it every time.
+                self._log_poll_error(f"macro {macro}", e)
+        with self.lock:
+            self._render_display()
+            self._render_transport()
+
+    def _fire_macro(self, macro, bar):
+        """Dispatch one landed macro.
+
+        A stub with one arm per payload, extended by the DROP and CHANCE-ramp
+        tasks. Unknown macros are logged rather than raised: an unrecognised
+        name in a restored snapshot must not kill the poll thread, which is
+        the 2026-08-18 failure."""
+
+        logging.debug(f"Maschine: macro {macro} landed on bar {bar}")
+
     def _wrap_channel(self, channel):
 
         """One channel's share of _voice_wraps.
@@ -4468,6 +4540,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 while self._rebuild_due:
                     self._rebuild_notes(self._rebuild_due.pop())
                 self._voice_wraps()
+                self._phrase_tick()
                 if tick % VOLUME_POLL_TICKS == 0:
                     # Tempo can move from the touchscreen or from a snapshot,
                     # and the delay's musical division has to follow it.
@@ -5277,6 +5350,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         label = tlib.mod_label(label, mod)
         # A pending reroll says so, and the tabs say which channels.
         label = tlib.reroll_label(label, bool(self._reroll_pending))
+        # The bar of the phrase, so every timed gesture has something to
+        # resolve against that the player can see.
+        label = tlib.phrase_label(label, self._phrase_bar)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.
@@ -5286,7 +5362,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # tuple moves when MOD goes down, and a latched MOD made the pads
             # inert and the encoders mean something else with no indication.
             state = (self._tabs(screen), self._columns(screen), label, mod,
-                     frozenset(self._reroll_pending))
+                     frozenset(self._reroll_pending), self._phrase_bar)
             if not self.leds.changed(f"disp{screen}", state):
                 continue
             for packet in lib.screen_packets(screen, state[0], state[1], state[2]):
