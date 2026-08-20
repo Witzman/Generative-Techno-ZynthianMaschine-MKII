@@ -3797,7 +3797,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 pos = tlib.mod_pos(entry["phase0"], beats,
                                    tlib.MOD_RATES[entry["rate"]])
                 wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
-            value = tlib.mod_value(entry["base"], wave, entry["depth"],
+            # THE MULTIPLIER BELONGS HERE TOO. Without it the big encoder
+            # scaled drift and the drawn span while the LFO writes went out at
+            # their raw depth - so the knob moved the picture and changed
+            # nothing anyone could hear. Found on the rig 2026-08-20: "encoder
+            # does nothing". _drift_channel had it from the start; this, the
+            # main writer, did not.
+            value = tlib.mod_value(entry["base"], wave,
+                                   tlib.mod_depth_scale(entry["depth"],
+                                                        self.mod_depth_mult),
                                    span[0], span[1])
             # set_value() already returns early on an unchanged value and
             # integer controls dedupe for free, so a slow or parked modulator
