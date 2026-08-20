@@ -3560,8 +3560,28 @@ class TestPendingPage(unittest.TestCase):
         cols = tl.pending_columns([("drop", 3, 4)])
         self.assertEqual(cols[0]["name"], "DROP")
         self.assertEqual(cols[0]["value"], "0003")
-        self.assertEqual(cols[0]["bar"], "seg")
-        self.assertEqual(cols[0]["frac"], (3, 4))
+        self.assertEqual(cols[0]["bar"], "uni")
+        self.assertAlmostEqual(cols[0]["frac"], 0.75)
+
+    def test_the_bar_never_leaves_0_to_1(self):
+        # A "seg" bar divides by (count - 1), so a FULL ruler gave a fraction
+        # above 1.0 and drew past its own box. Caught on the rig.
+        for armed in (1, 2, 4, 8, 16):
+            for left in range(0, armed + 2):
+                frac = tl.pending_columns([("drop", left, armed)])[0]["frac"]
+                self.assertGreaterEqual(frac, 0.0)
+                self.assertLessEqual(frac, 1.0, f"{left}/{armed}")
+
+    def test_a_page_with_no_verbs_is_a_real_case(self):
+        # PENDING is the first page whose columns are not verbs. The renderer
+        # subscripted desc["verbs"] unconditionally and took the whole UI down
+        # every render tick once this page was reached.
+        for desc in tl.PAGE_RINGS[tl.ring_key("ALL", None)]:
+            if desc["shape"] == tl.SHAPE_PENDING:
+                self.assertIsNone(desc.get("verbs"))
+                break
+        else:
+            self.fail("no PENDING page on the ALL ring")
 
     def test_soonest_first(self):
         cols = tl.pending_columns([("drop", 8, 8), ("chance", 2, 4)])
@@ -3584,7 +3604,7 @@ class TestPendingPage(unittest.TestCase):
 
     def test_the_bar_cannot_exceed_its_length(self):
         cols = tl.pending_columns([("drop", 99, 4)])
-        self.assertEqual(cols[0]["frac"], (4, 4))
+        self.assertAlmostEqual(cols[0]["frac"], 1.0)
 
     def test_the_page_is_on_the_ALL_ring(self):
         titles = [d["title"] for d in tl.PAGE_RINGS[tl.ring_key("ALL", None)]]

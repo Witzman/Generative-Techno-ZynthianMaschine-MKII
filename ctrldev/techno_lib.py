@@ -2442,8 +2442,13 @@ class techno_lib:
             # A seg bar counting DOWN, so the ink on the glass shrinks as the
             # bars run out. The same direction as ARM's pad ruler, because two
             # countdowns that ran opposite ways would be worse than one.
+            # A PLAIN fraction, not a "seg" bar. seg divides by (count - 1),
+            # so a full ruler - left == armed - gives a fraction ABOVE 1.0 and
+            # draws past its own box. The countdown is a continuous quantity
+            # anyway; seg is for a switch with named positions.
             out.append(techno_lib._col(
-                name, f"{int(left):04d}", "seg", (left, armed)))
+                name, f"{int(left):04d}", "uni",
+                max(0.0, min(1.0, left / float(armed)))))
         if not out:
             out.append(techno_lib._col("NONE", "----", None, 0.0, grey=True))
         while len(out) < 8:

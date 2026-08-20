@@ -5289,15 +5289,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._timescale_restore[channel] = (
                     self.div[channel], self.beats[channel],
                     self.hits[channel], self.rot[channel])
-                logging.warning(
-                    "TIMESCALE %s ch%s: %s x %s beats (%s steps) -> %s x %s "
-                    "beats (%s steps) hits=%s rot=%s", macro, channel,
-                    tlib.DIVISION_LABELS[self.div[channel]],
-                    self.beats[channel],
-                    tlib.DIVISION_SPB[self.div[channel]] * self.beats[channel],
-                    tlib.DIVISION_LABELS[got[0]], got[1],
-                    tlib.DIVISION_SPB[got[0]] * got[1],
-                    self.hits[channel], self.rot[channel])
                 self.div[channel], self.beats[channel] = got
                 self.state[channel]["pending"].add("div")
                 self.state[channel]["pending"].add("length")
@@ -6221,7 +6212,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if shape == tlib.SHAPE_SPREAD:
                 verb, channel = desc["verb"], col_idx
             else:
-                verb, channel = desc["verbs"][col_idx], self.group
+                # `verbs` is None on a page whose columns are not verbs at all
+                # - PENDING is the first. Subscripting it raised on EVERY
+                # render tick, which took the whole UI down the moment the
+                # page was reached. Asked with .get so the next such page
+                # inherits the guard rather than repeating the crash.
+                verbs = desc.get("verbs")
+                verb = verbs[col_idx] if verbs else None
+                channel = self.group
             col = tlib.mark_modulated(col, self._mod_column_span(channel, verb))
             bar = BAR_KINDS[col["bar"]]
             frac = col["frac"]
