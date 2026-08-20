@@ -425,23 +425,84 @@ class techno_lib:
     # Highest priority first. MOD LATCHES, so mod-active and shift-held really
     # do co-occur; the owner's rule (2026-08-19) is that a momentary gesture
     # takes the pads from a latched state and hands them back on release.
-    OVERLAY_PRIORITY = ("shift", "mod", "navigate")
+    # ARM sits above MOD and below SHIFT. SHIFT is the oldest and most-used
+    # binding and must not move; a player holding ARM has committed to
+    # scheduling, so it outranks the timbre overlay underneath it.
+    OVERLAY_PRIORITY = ("shift", "arm", "mod", "navigate")
 
     # Whether an overlay's pads still MEAN steps. The playhead is drawn over
     # the top only where they do: under SHIFT pad 3 is step 3 carrying a
     # probability, so the sweep helps; under MOD pad 3 is a RATE and a playhead
-    # marker on it would point at nothing.
-    OVERLAY_STEPWISE = {"shift": True, "mod": False, "navigate": False}
+    # marker on it would point at nothing. Under ARM a pad is a macro or a bar
+    # count, which is the same story again.
+    OVERLAY_STEPWISE = {"shift": True, "arm": False, "mod": False,
+                        "navigate": False}
 
     @staticmethod
     def overlay_is_stepwise(owner):
         """True when the pads under this overlay still stand for steps."""
         return techno_lib.OVERLAY_STEPWISE.get(owner, True)
 
+    # The phrase page's two brightnesses. TWO, not three: past and now read at
+    # a glance, and a third level for "ahead" would need a legend to be read
+    # at all. Ahead is simply dark.
+    COLOR_PHRASE = 0x00D0FF
+    PHRASE_PAST = 0.4
+
     @staticmethod
-    def overlay_owner(shift=False, mod=False, navigate=False):
-        """Which modifier owns the pads, or None for the ordinary step picture."""
-        held = {"shift": shift, "mod": mod, "navigate": navigate}
+    def phrase_pad(index, bar, phrase_bars=16):
+        """(colour, brightness) for one pad of the NAVIGATE phrase page.
+
+        `bar` is the absolute bar count, or None when the transport is
+        stopped. Stopped draws EVERY pad dark rather than freezing the last
+        picture: a phrase page showing bar 1 lit while nothing plays reads as
+        a running clock that has stuck, which is the unexplained-silence law
+        wearing a display."""
+
+        if bar is None:
+            return (techno_lib.COLOR_PHRASE, techno_lib.PAD_OFF)
+        now = techno_lib.phrase_bar(bar, phrase_bars)
+        if index == now:
+            return (techno_lib.COLOR_PHRASE, techno_lib.PAD_FULL)
+        if index < now:
+            return (techno_lib.COLOR_PHRASE, techno_lib.PHRASE_PAST)
+        return (techno_lib.COLOR_PHRASE, techno_lib.PAD_OFF)
+
+    @staticmethod
+    def pad_owner(shift=False, mod=False, arm=False, navigate=False):
+        """Which overlay the PADS obey, chord exceptions included.
+
+        THE SINGLE PREDICATE for the pad dispatcher, the pad painter and the
+        poll loop, for the reason _switch_row exists: a second approximation
+        of "what do the pads mean right now" drifts from the first, and pads
+        that disagree with what a press does is the worst object this surface
+        can produce.
+
+        The one exception to OVERLAY_PRIORITY: **MOD latched AND ARM held is
+        MOD**, not ARM. MOD+ARM is how a modulator is made one-shot, so the
+        pads must go on showing the rate and shape legend the player is
+        choosing from. Sending them to ARM's macro picker would take the menu
+        away at the exact moment it is being read.
+
+        It is safe as a CHORD where SHIFT+button was not, because MOD LATCHES:
+        the player is not holding two things at once, they pressed MOD earlier
+        and are now holding ARM.
+
+        **SHIFT still outranks the chord.** SHIFT is the oldest and most-used
+        binding on this surface and the exception is not allowed to move it -
+        a player holding SHIFT gets SHIFT, whatever else is latched."""
+
+        if mod and arm and not shift:
+            return "mod"
+        return techno_lib.overlay_owner(shift=shift, mod=mod, arm=arm,
+                                        navigate=navigate)
+
+    @staticmethod
+    def overlay_owner(shift=False, mod=False, navigate=False, arm=False):
+        """Which modifier owns the pads, or None for the ordinary step picture.
+
+        `arm` defaults False so every existing caller keeps its meaning."""
+        held = {"shift": shift, "arm": arm, "mod": mod, "navigate": navigate}
         for name in techno_lib.OVERLAY_PRIORITY:
             if held[name]:
                 return name
@@ -454,6 +515,94 @@ class techno_lib:
     # why" is the law that cost this project a jam. Turning a step off is what a
     # bare tap is for, and that reads differently on the pads.
     CHANCE_RUNGS = (100, 75, 50, 25)
+
+    @staticmethod
+    def chance_ramp(base, floor, bar, bars):
+        """Play chance `bar` bars into a ramp that dips to `floor` and back.
+
+        Down over the first half, up over the second, landing exactly on
+        `base` - THE PLAYER'S OWN VALUE, never 100. CHANCE lives in the
+        snapshot's own riff and is read back on load; assuming 100 is the
+        original bug that made a channel saved at chance 0 come back silent
+        while the surface read full.
+
+        A base already at or below the floor is left alone: a breakdown that
+        made a quiet channel louder would be the gesture backwards.
+
+        Past the end it returns `base` rather than continuing past it, so a
+        missed poll cannot strand a channel thinned forever - the same
+        reasoning as PendingQueue.due() using >= rather than ==."""
+
+        base = int(base)
+        if bars <= 0 or base <= floor:
+            return base
+        half = bars / 2.0
+        # 1.0 at both ends, 0.0 in the middle, clamped so a step past the end
+        # lands back on base instead of overshooting above it.
+        pos = min(1.0, abs(bar - half) / half)
+        return int(round(floor + (base - floor) * pos))
+
+    # The macros ARM can compose, one per pad from 0. TWO, not eight: pads 2-7
+    # stay dark and unbound, because a lit pad that does nothing is the fault
+    # this surface must never commit. APPEND-ONLY - a snapshot may store the
+    # name, so an existing entry never moves index.
+    ARM_MACROS = ("drop", "chance")
+
+    # Pads 8-15, the length ring, in bars. Eight lengths for eight pads, and
+    # the odd ones (3, 6, 12) are there because a build does not have to be a
+    # power of two.
+    ARM_LENGTHS = (1, 2, 3, 4, 6, 8, 12, 16)
+
+    # ARM's three colours, and they are three because the grid says three
+    # different kinds of thing. Amber for "which macro", green for "how many
+    # bars", red for the countdown - red only ever means time running out, so
+    # it cannot be confused with either picker.
+    COLOR_ARM_MACRO = 0xFF6000
+    COLOR_ARM_LENGTH = 0x00FF60
+    COLOR_ARM_COUNT = 0xFF2000
+    ARM_DIM = 0.35
+    PAD_OFF = 0.0
+
+    @staticmethod
+    def arm_legend_pad(index, picked=None, armed_bars=None, remaining=None):
+        """(colour, brightness) for one pad of the ARM overlay.
+
+        TWO pictures on one grid, chosen by whether anything is pending.
+
+        Nothing pending - a PICKER. Pads 0..len(ARM_MACROS)-1 are the macros,
+        the picked one at full and the others dim; pads 8-15 are the length
+        ring. **Everything between them is dark**, because pads 2-7 have no
+        macro behind them yet and a lit pad that does nothing is the fault
+        this surface must never commit.
+
+        Something pending - the COUNTDOWN RULER. One pad per bar of the armed
+        length, extinguishing from the top left as the bars pass, so the pads
+        still lit ARE the bars still to come. The picker is not drawn at all:
+        reading the countdown must not also offer to change it.
+
+        Brightness 0.0 rather than None for a dark pad - _paint_pad wants a
+        tuple, and an unlit pad still has to be WRITTEN or the previous
+        picture stays on the hardware."""
+
+        off = (techno_lib.COLOR_ARM_COUNT, techno_lib.PAD_OFF)
+        if armed_bars is not None and remaining is not None:
+            bars = max(1, min(16, int(armed_bars)))
+            left = max(0, min(bars, int(remaining)))
+            if index >= bars or index < bars - left:
+                return off
+            return (techno_lib.COLOR_ARM_COUNT, techno_lib.PAD_FULL)
+
+        if index < len(techno_lib.ARM_MACROS):
+            macro = techno_lib.ARM_MACROS[index]
+            bright = (techno_lib.PAD_FULL if macro == picked
+                      else techno_lib.ARM_DIM)
+            return (techno_lib.COLOR_ARM_MACRO, bright)
+        if index >= 8:
+            # The whole ring is lit whether or not a macro is picked. It is a
+            # menu of lengths, not a confirmation - dimming it until a macro
+            # was chosen would hide the choice the player is about to make.
+            return (techno_lib.COLOR_ARM_LENGTH, techno_lib.ARM_DIM)
+        return (techno_lib.COLOR_ARM_MACRO, techno_lib.PAD_OFF)
 
     @staticmethod
     def chance_ladder(chance):
@@ -538,6 +687,19 @@ class techno_lib:
         and the second press is the cancel, so they would silently undo their
         own gesture."""
         return f"{label} REROLL>" if pending else label
+
+    @staticmethod
+    def phrase_label(label, bar, phrase_bars=16):
+        """Append bar N of the phrase to the page indicator.
+
+        Counts from ONE. The player is reading a bar number, not an array
+        index, and every other number on this surface is one-based.
+
+        `bar` is None when the transport is stopped: there is no bar to be on,
+        and a frozen "1/16" would read as a running clock that had stuck."""
+        if bar is None:
+            return label
+        return f"{label} {techno_lib.phrase_bar(bar, phrase_bars) + 1}/{phrase_bars}"
 
     @staticmethod
     def reroll_scope(which, samplers, owners, selected, shift):
@@ -1076,6 +1238,24 @@ class techno_lib:
         # Held, it restores the pre-2026-08-16 encoder feel. Every encoder is
         # half as sensitive by default now; see lib.STEP_FACTOR.
         35: "coarse",
+        # SELECT. CC 30 MEASURED in notes/findings/2026-08-11-g4-capture.log,
+        # LED index 22 MEASURED 2026-08-15 - both halves of working rule 7 are
+        # satisfied, and neither was read off the daemon's token name.
+        #
+        # STATEFUL and HELD, never latched. Deliberately unlike MOD: MOD
+        # latches because both hands then go to encoders, while ARM is composed
+        # with the pads under the same hand. A latched ARM would leave armed
+        # state a player can walk away from and trip four bars later.
+        30: "arm",
+        # NAVIGATE. CC 34 MEASURED in the G4 runbook, LED index 20 MEASURED
+        # 2026-08-16 in the third round of the LED probe - it was carried as
+        # "inferred, high" in a stale summary block for four days, which is
+        # what blocked this page.
+        #
+        # Held, never latched: the phrase page is something you glance at
+        # mid-bar, and a latched one would hide the step picture until you
+        # noticed it had.
+        34: "navigate",
     }
 
     # Buttons that act on press only.
@@ -1368,6 +1548,35 @@ class techno_lib:
         return float(phase0) + float(elapsed_beats) / span
 
     @staticmethod
+    def phrase_pos(elapsed_beats, anchor_beats, beats_per_bar=4):
+        """Bars since the anchor as (bar_index, fraction through that bar).
+
+        Anchored to the TRANSPORT rather than to any channel's own length:
+        each channel owns its length, and a polymetric rig has eight
+        different bars. One channel-derived count would be a lie on seven of
+        them. Derived from beats rather than seconds so it follows a tempo
+        change without being told about it.
+
+        Clamps at zero: the anchor is set on transport start, and a poll that
+        lands a hair before it must read bar 0, not bar -1."""
+        span = float(beats_per_bar)
+        if span <= 0.0:
+            return (0, 0.0)
+        delta = float(elapsed_beats) - float(anchor_beats)
+        if delta <= 0.0:
+            return (0, 0.0)
+        bars = delta / span
+        index = int(bars)
+        return (index, bars - index)
+
+    @staticmethod
+    def phrase_bar(bar_index, phrase_bars=16):
+        """Which bar of the phrase, 0..phrase_bars-1."""
+        if phrase_bars <= 0:
+            return 0
+        return int(bar_index) % int(phrase_bars)
+
+    @staticmethod
     def mod_sh(seed, cycle):
         """Deterministic sample-and-hold in -1.0..1.0.
 
@@ -1380,6 +1589,35 @@ class techno_lib:
         h = (h * 0xFF51AFD7ED558CCD) & 0xFFFFFFFFFFFFFFFF
         h ^= h >> 33
         return (h / float(0xFFFFFFFFFFFFFFFF)) * 2.0 - 1.0
+
+    # The position a FINISHED one-shot is evaluated at. Not 1.0, and the
+    # reason is a real trap: mod_wave takes pos % 1.0, and 1.0 % 1.0 is 0.0 -
+    # so passing the endpoint straight through would put a completed ramp at
+    # its MINIMUM, which is the exact opposite of landing on the downbeat.
+    MOD_ONCE_END = 0.999999
+
+    @staticmethod
+    def mod_once_pos(phase0, elapsed_beats, rate_bars, beats_per_bar=4):
+        """A ONE-SHOT position: 0.0 to 1.0, then held there forever.
+
+        The only difference from mod_pos is the clamp, and the clamp is the
+        whole feature. mod_pos returns an UNWRAPPED cycle count because
+        sample-and-hold needs the integer part; a riser must instead arrive
+        and STAY, or it snaps back to the bottom on the downbeat it was built
+        to land on.
+
+        `phase0` is normally NEGATIVE here - _arm_once stores minus the
+        elapsed position at the moment of arming, so the sweep starts when the
+        player asked for it rather than when the driver booted.
+
+        Do not feed the return value straight to mod_wave at the endpoint:
+        see MOD_ONCE_END."""
+
+        span = float(rate_bars) * float(beats_per_bar)
+        if span <= 0.0:
+            return 1.0
+        pos = float(phase0) + float(elapsed_beats) / span
+        return max(0.0, min(1.0, pos))
 
     @staticmethod
     def mod_wave(shape, pos, seed=0):
@@ -1994,6 +2232,59 @@ class techno_lib:
             c("RANGE", str(state["range"]), "seg", (state["range"] - 1, 4)),
             c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
         ]
+
+    class PendingQueue:
+        """Macros waiting for a bar boundary.
+
+        A bar index in, a list of macro names out. No zynseq, no driver, no
+        clock of its own - which is what makes it testable on WSL, where the
+        driver cannot even be imported.
+
+        NESTED in techno_lib on purpose. The driver does `from
+        ...techno_lib import techno_lib as tlib`, so `tlib` is the CLASS,
+        not the module: a module-level class here would be unreachable
+        through it and `tlib.PendingQueue` would raise AttributeError on the
+        rig, where nothing catches it early.
+
+        Keyed by MACRO NAME rather than by an arming id, so arming a macro
+        that is already pending REPLACES it. Two DROPs can then never land
+        on different bars and fight over the same restore state."""
+
+        def __init__(self):
+            self._due = {}
+
+        def arm(self, macro, bars, at_bar):
+            """Schedule `macro` for `bars` bars after `at_bar`.
+
+            A zero-bar arm lands on the NEXT bar, never the current one:
+            firing inside the bar the player is already in would be
+            indistinguishable from firing immediately, and the countdown
+            would never be seen."""
+            self._due[macro] = int(at_bar) + max(1, int(bars))
+
+        def due(self, bar_index):
+            """Every macro whose landing bar has arrived or passed, removed.
+
+            Uses >= rather than == so a missed poll cannot strand a macro
+            pending forever - a 30 Hz poll against a two-second bar has
+            margin, but a blocked thread does not."""
+            firing = [m for m, bar in self._due.items() if int(bar_index) >= bar]
+            for macro in firing:
+                del self._due[macro]
+            return firing
+
+        def remaining(self, macro, bar_index):
+            """Bars left before `macro` lands, or None if it is not pending."""
+            bar = self._due.get(macro)
+            if bar is None:
+                return None
+            return max(0, bar - int(bar_index))
+
+        def pending(self):
+            return list(self._due)
+
+        def clear(self):
+            self._due.clear()
 
 
 # Rings are built after the class body so page_desc() is callable. Keeping them

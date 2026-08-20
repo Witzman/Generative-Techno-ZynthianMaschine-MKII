@@ -128,6 +128,25 @@
 <p>There is no playhead here: under MOD the pads are not steps, so a sweep would point at nothing. Let MOD go and your pattern comes straight back.</p>
 <p><strong>The fade speeds are readable, not literal.</strong> The real rates span more than two hundred to one &mdash; the slowest is over half a minute per cycle and the fastest a tenth of a second &mdash; and at both ends an LED shows you nothing useful: one looks switched on, the other looks like a flicker. The pads use a compressed range instead. Further right and further down is genuinely faster; the exact speed on the pad is not the exact speed of the modulator.</p>
 <hr>
+<h2 id="rise">RISE &mdash; a sweep that happens once</h2>
+<div class="warn">
+<p><strong>New, and not yet played in.</strong> RISE went onto the rig with the phrase clock and ARM. What follows describes what the instrument does; it has not been through a session on the hardware yet.</p>
+</div>
+<p><strong>A modulator normally cycles for ever. Hold ARM &mdash; that is SELECT &mdash; and tap a shape pad, and it sweeps once and stays where it ends.</strong> That is the riser: the cutoff climbs over eight bars and sits at the top instead of falling back down.</p>
+<p>It acts on <strong>the modulator you bound most recently</strong>, which is the same one MOD + pad has always steered. MOD latches, so there is no chord to catch: tap MOD, then hold ARM and tap pads 13&ndash;16. <strong>SHIFT still outranks both</strong> &mdash; a pad under SHIFT is a step's odds, whatever else is latched.</p>
+<p><strong>Where it holds depends on the shape you tap</strong>, because holding at the end of one sweep is not the same place for all four:</p>
+<table><thead><tr><th>Pad</th><th>Shape</th><th>Once, it</th></tr></thead><tbody>
+<tr><td>13</td><td>triangle</td><td>rises, falls, and holds at the bottom</td></tr>
+<tr><td>14</td><td>ramp</td><td>climbs all the way and <strong>holds at the top</strong> &mdash; this is the riser</td></tr>
+<tr><td>15</td><td>square</td><td>jumps to the top for the first half, drops, and holds at the bottom</td></tr>
+<tr><td>16</td><td>sample-and-hold</td><td>picks one value and holds it for the whole sweep</td></tr>
+</tbody></table>
+<p><strong>Under a one-shot the rate pads mean length.</strong> Pads 1&ndash;12 are the same twelve numbers, sixteen bars down to a sixteenth, read as how long the whole sweep takes rather than how long one cycle takes. Tapping one restarts the sweep from that moment at the new length &mdash; which is also how you fire the same riser again.</p>
+<p><strong>The sweep starts when you tap, not on the next downbeat.</strong> It runs for the length you chose from that instant and then holds, so aim the tap, or arm a long one and let it arrive.</p>
+<p><strong>Nothing on the panel marks a modulator as one-shot.</strong> The column keeps its <code>~</code> and its dashed span and the pads keep their menu; what you see is the tick reaching one end of the span and stopping there.</p>
+<p><strong>It refuses exactly what MOD refuses.</strong> Running once is a shape, not a new permission: the pattern-rewriting columns still have no bar, and drift still refuses a channel you have recorded on.</p>
+<p><strong>A one-shot is not saved as one.</strong> Reload the set and that modulator is cycling again &mdash; hold ARM and tap its shape pad to make it one-shot once more. To turn one back into a cycle without reloading, clear it with MOD + ERASE and that encoder, then bind it again.</p>
+<hr>
 <h2 id="clear-everything">Clearing everything at once</h2>
 <p>Hold <strong>MOD and ERASE</strong> and press <strong>ALL</strong>. Every modulator goes, and every value lands back where you put it.</p>
 <p>The markers vanish the instant you press it; the values themselves settle a moment later. That gap is deliberate — the instrument will not write twenty parameters inside a single button press, because doing that on the button thread once froze the whole machine.</p>
@@ -136,6 +155,7 @@
 <ul>
 <li><a href="02-features.html">Features</a> — everything the instrument does, in one list</li>
 <li><a href="03-playing.html">Quick start</a> — your first two minutes</li>
+<li><a href="the-surface.html">The surface</a> — ARM, the phrase clock, and what SELECT is telling you</li>
 </ul>
 </article>
 </main>

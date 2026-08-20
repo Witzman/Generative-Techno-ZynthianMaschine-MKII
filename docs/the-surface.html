@@ -102,9 +102,36 @@
   <figcaption>A drum channel on CONTROL. CUTOFF and RESO draw dead in lower case with <code>----</code>: a sampler has no filter to reach, and the encoder does nothing rather than pretending.</figcaption>
 </figure>
 <hr>
+<h2 id="phrase">The phrase &mdash; one bar count for the whole instrument</h2>
+<div class="warn">
+<p><strong>New, and not yet played in.</strong> The phrase clock, ARM, DROP, the CHANCE ramp and RISE went onto the rig together. What follows describes what the instrument does; none of it has been through a session on the hardware yet.</p>
+</div>
+<p><strong>The page name on the display carries a bar number</strong> &mdash; <code>STEP 5/16</code> &mdash; counting one to sixteen and starting again.</p>
+<p><strong>It is one count for all eight channels, not one per channel.</strong> Each channel owns its own length, so eight channels can be on eight different bars; a count taken from any one of them would be a lie on the other seven. This one comes from the transport instead, so it stays true however far apart the lengths are &mdash; see <a href="generating-patterns.html#polymeter">lengths that do not agree</a>.</p>
+<p><strong>Bar 1 is the moment you press Play, and Restart re-zeros it</strong> along with the playheads &mdash; count and patterns are pulled back onto the one together. Stop and the number goes away rather than freezing, because a stuck number reads as a clock that has died. It is a live ruler, not a position: it is not saved, and it starts again from one on the next Play.</p>
+<p><strong>Hold NAVIGATE and the sixteen pads become the phrase</strong>, one pad per bar: the bars behind you dim, the bar you are in full, the bars ahead dark. With the transport stopped every pad is dark. Let go and your pattern comes straight back.</p>
+<p><strong>NAVIGATE changes what the pads show, not what they do.</strong> A pad hit while you hold it still toggles a step or plays the channel, exactly as it would without it. Read the phrase page, do not play it.</p>
+<p>The count is read thirty times a second, so anything scheduled against it lands within a few hundredths of a bar. That is close enough for a mute or a level, and deliberately not close enough for anything that has to sit on a step.</p>
+<hr>
+<h2 id="arm">ARM &mdash; landing a change on a bar</h2>
+<p><strong>SELECT is ARM.</strong> Hold it &mdash; it never latches &mdash; and compose two things on the pads: <em>what</em> is going to happen, and <em>how many bars away</em>.</p>
+<table><thead><tr><th>Pads while ARM is held</th><th>What they are</th></tr></thead><tbody>
+<tr><td>1 and 2</td><td>the macro &mdash; <strong>DROP</strong>, then the <strong>CHANCE ramp</strong>. Amber, and the one you picked lights full</td></tr>
+<tr><td>3&ndash;8</td><td>dark, and they do nothing. This is where later macros go</td></tr>
+<tr><td>9&ndash;16</td><td>the length in bars &mdash; 1, 2, 3, 4, 6, 8, 12, 16. Green</td></tr>
+</tbody></table>
+<p><strong>Pick the macro first, then the length.</strong> The length is the commit: tapping it arms the macro. A length on its own does nothing at all, because guessing which macro you meant would fire something you never named.</p>
+<p><strong>The grid becomes a countdown the instant something is armed.</strong> One red pad per bar of the length you chose, going out from the top left as the bars pass, so the pads still lit are the bars still to come. While that is showing every pad is inert &mdash; reading the countdown must not also change it.</p>
+<p><strong>Let ARM go without touching a pad and everything pending is cancelled.</strong> That is the same window a reroll gives you, and it cancels all rather than one for the same reason: a half-cancelled gesture is harder to think about than none.</p>
+<p><strong>SELECT is the indicator once your hand has left it.</strong> Dark when nothing is armed, <strong>one flash per bar</strong> while a macro counts down, and steady through the bar it lands on. The flash is driven by the bar count rather than by a timer, so it cannot drift away from the thing it is counting.</p>
+<p><strong>Arming with the transport stopped keeps the length and waits.</strong> There is no bar to count from yet, so nothing can fire; press Play and the macro lands that many bars in. SELECT sits steady rather than flashing meanwhile, because nothing is counting down yet.</p>
+<p><strong>Arming a macro that is already pending replaces it</strong> instead of stacking a second one, so two drops can never land on different bars and fight over the same restore.</p>
+<p><strong>With MOD active, ARM belongs to the modulators instead.</strong> MOD latches, so MOD held or latched plus ARM is the gesture that makes a modulator sweep once &mdash; see <a href="modulation.html#rise">RISE</a>. Tap MOD off first if you want to arm a macro. <strong>SHIFT outranks both</strong>: a pad under SHIFT is a step's odds, whatever else is latched.</p>
+<p>The two macros are written up where they land: <a href="mixing-and-effects.html#drop">DROP</a> and the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a>.</p>
+<hr>
 <h2 id="what-the-lights-mean">What the lights mean</h2>
 <table><thead><tr><th>Surface</th><th>What it says</th></tr></thead><tbody>
-<tr><td>Group A&ndash;H</td><td>hue is the channel, brightness is its level, dark means it is not sounding</td></tr>
+<tr><td>Group A&ndash;H</td><td>hue is the channel, brightness is its level, dark means it is not sounding &mdash; <strong>while ARM is held it shows who survives a drop instead</strong></td></tr>
 <tr><td>Mode buttons</td><td>exactly one lit, always — it cannot disagree with the display</td></tr>
 <tr><td>F1&ndash;F8</td><td>lit while that channel is muted — <strong>in CONTROL, lit while that column's switch is off its first position</strong>, and dark where there is no switch</td></tr>
 <tr><td>PLAY</td><td>lit while anything is running</td></tr>
@@ -113,6 +140,8 @@
 <tr><td>NOTE REPEAT</td><td>lit only while the selected channel behaves as a voice</td></tr>
 <tr><td>SWING</td><td>lit while MOD is held or latched</td></tr>
 <tr><td>TEMPO</td><td>lit while it is held, and only then — it does not latch</td></tr>
+<tr><td>SELECT</td><td>dark until a macro is armed &mdash; then <strong>one flash per bar</strong> while it counts down, steady through the bar it lands on</td></tr>
+<tr><td>NAVIGATE</td><td>never lights. Hold it to see the phrase on the pads</td></tr>
 <tr><td>Arrows, ERASE, SHIFT</td><td>lit whenever the instrument is running — they always do the same thing</td></tr>
 </tbody></table>
 <hr>
@@ -142,6 +171,7 @@
 <tr><td>CHANCE at 0 on a drum, no steps left on a voice</td><td>nothing fires</td></tr>
 <tr><td>Is something soloed?</td><td>every non-soloed Group button goes dark</td></tr>
 <tr><td>MASTER on the ALL page</td><td>the global level, easy to leave down</td></tr>
+<tr><td>Did a drop run?</td><td>it mutes every channel you did not nominate; F1&ndash;F8 lift a mute by hand</td></tr>
 <tr><td>GATE at its floor on a voice</td><td>a slow-attack patch never gets far enough to sound</td></tr>
 </tbody></table>
 <p>A voice that is <strong>locked is not silent</strong> — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">Manual installation</a> for the checks that catch a stale MIDI route.</p>

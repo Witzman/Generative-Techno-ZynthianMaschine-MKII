@@ -200,6 +200,10 @@ CC_TR = 6                # unbound, free
 # Mode buttons, all measured at G4 alongside the arrows. Unlike the arrows,
 # every one of these matched what the daemon's source said.
 CC_SOLO = 31             # measured
+CC_ARM = 30              # SELECT. Measured at G4; LED index 22, measured.
+CC_NAVIGATE = 34         # NAVIGATE. Measured at G4; LED index 20, measured.
+LED_ARM = "select"       # the daemon's own name for index 22, corrected in
+                         # c141d70 - light a button by ITS OWN name now.
 CC_DUPLICATE = 29        # measured
 CC_MODE_CONTROL = 11
 CC_MODE_STEP = 32
@@ -471,6 +475,38 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # lengths is polyrhythm, and a single global bar would fight it.
         self._reroll_pending = set()
         self._reroll_undo = {}
+        # PHRASE: bars since the transport was started or RESTARTed. None
+        # while stopped - there is no bar to be on, and a stale number reads
+        # as a clock that has stuck.
+        #
+        # Anchored to the TRANSPORT, never to a channel's own wrap: each
+        # channel owns its length, so a polymetric rig has eight different
+        # bars and any one of them would be a lie on the other seven.
+        self._phrase_anchor = None
+        self._phrase_bar = None
+        self._pending_macros = tlib.PendingQueue()
+        # Lengths armed while the transport was stopped. The absolute landing
+        # bar cannot be known until there is a bar zero, so only the length is
+        # kept and the queue is filled at transport start. Without this a
+        # macro armed on a stopped rig either fires the instant it is armed -
+        # the way _wrap_channel takes a pending structure change - or is
+        # silently lost.
+        self._armed_while_stopped = {}
+        self.arm_down = False
+        self.navigate_down = False
+        self._arm_picked = None
+        self._arm_bars = {}
+        # Who survives a DROP. Nominated on the Group buttons while ARM is
+        # held; empty means the drop takes everything, which is a real and
+        # useful setting rather than an unconfigured one.
+        self._drop_survivors = set()
+        # The mute picture as it was the instant the drop fired, restored
+        # verbatim afterwards. Never "all on".
+        self._drop_restore = {}
+        # A running CHANCE ramp, or None. One dict rather than four
+        # attributes so "is a ramp running" is one truth, not four that can
+        # disagree.
+        self._chance_ramp = None
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -2325,6 +2361,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # hands them back on release (owner, 2026-08-19).
                 self._shift_pad(step)
                 return True
+            if self._pad_owner() == "arm":
+                # Between SHIFT and MOD, which is OVERLAY_PRIORITY's order and
+                # not a coincidence: SHIFT is the oldest and most-used binding
+                # and must not move, and a player holding ARM has committed to
+                # scheduling, so it outranks MOD. Ahead of the STEP branch for
+                # the same reason MOD is - a pad under a modifier must never
+                # fall through and silently edit the pattern.
+                #
+                # Asked through _pad_owner, not through self.arm_down, so the
+                # MOD+ARM chord goes to the MOD legend instead of here.
+                self._arm_pad(step)
+                return True
             if self.mod_down:
                 # Ahead of the STEP branch deliberately. In STEP mode a pad
                 # hit goes to _toggle_step, so intercepting further down in
@@ -2391,6 +2439,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 return True
             group = cc_num - GROUP_CC_FIRST
             if 0 <= group < 8:
+                if self.arm_down:
+                    # SURVIVORS, not mutes. The Group buttons are free while
+                    # ARM is held because ARM claims only the PADS - different
+                    # controls under the same modifier, no conflict.
+                    #
+                    # Ahead of the ERASE branch: ARM+ERASE+Group is not a
+                    # gesture, and if a player finds it the nomination is the
+                    # safer of the two to win, since silencing a channel from
+                    # inside a scheduling gesture is a surprise.
+                    if group in self._drop_survivors:
+                        self._drop_survivors.discard(group)
+                    else:
+                        self._drop_survivors.add(group)
+                    with self.lock:
+                        self._render_groups()
+                    return True
                 if self.erase_down:
                     if self.owner[group] == "player":
                         # On a player-owned channel this is an undo, not a
@@ -2414,6 +2478,133 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # One method per entry in techno_lib.BUTTONS_*. Stateful actions take
     # `down`; press-only actions take none. Keeping them as methods rather
     # than inline lambdas is what makes the table swappable later (SP9).
+
+    def _act_arm(self, down):
+        """ARM composes a macro and a length and lands it on a bar.
+
+        HELD, not latched - see the CC table for why. A BARE TAP while
+        anything is pending cancels EVERYTHING pending: the identical window
+        _act_reroll implements, and cancel-all rather than cancel-one for the
+        identical reason, that a half-cancelled gesture is harder to reason
+        about than none.
+
+        The pick is cleared on press rather than on release so a second hold
+        starts from nothing. Leaving it set would let a bare length tap re-arm
+        a macro the player composed a minute ago."""
+
+        self.arm_down = down
+        if down:
+            self._arm_picked = None
+            with self.lock:
+                self._render_pads()
+                self._render_display()
+            return
+
+        if self._arm_picked is None and (self._pending_macros.pending()
+                                         or self._armed_while_stopped):
+            self._pending_macros.clear()
+            self._armed_while_stopped.clear()
+            self._arm_bars.clear()
+        self._arm_picked = None
+        with self.lock:
+            self._render_all()
+
+    def _arm_pad(self, step):
+        """A pad while ARM is held: 0-1 pick the macro, 8-15 the length.
+
+        Pads 2-7 are DARK and do nothing - a lit pad that does nothing is the
+        fault this surface must never commit, so they are not lit either.
+        They are where the later payloads land.
+
+        While something is pending the grid is the COUNTDOWN RULER, not a
+        picker. Reading it must not also change it, so every pad is inert."""
+
+        if self._pending_macros.pending() or self._armed_while_stopped:
+            return
+        if step < len(tlib.ARM_MACROS):
+            self._arm_picked = tlib.ARM_MACROS[step]
+        elif step >= 8:
+            if self._arm_picked is None:
+                # A length with nothing to arm. Deliberately silent rather
+                # than guessing a macro: guessing would fire something the
+                # player never named.
+                return
+            bars = tlib.ARM_LENGTHS[step - 8]
+            if self._phrase_anchor is None:
+                # Stopped: the clock does not advance, so an absolute target
+                # bar would be a lie. Keep the LENGTH only; _act_play computes
+                # the landing bar at transport start. Nothing fires the
+                # instant it is armed and nothing is lost.
+                self._armed_while_stopped[self._arm_picked] = bars
+            else:
+                self._pending_macros.arm(self._arm_picked, bars,
+                                         self._phrase_bar or 0)
+            # The queue stores only the LANDING BAR, which is all it needs to
+            # fire. The ruler needs the length as well, or it cannot know how
+            # many pads to extinguish - so the length is kept here rather than
+            # widening the queue's contract for a display.
+            self._arm_bars[self._arm_picked] = bars
+        else:
+            return
+        with self.lock:
+            self._render_pads()
+            self._render_display()
+
+    def _arm_state(self):
+        """(picked, armed_bars, remaining) - what the ARM grid and LED show.
+
+        armed_bars and remaining are both None when nothing is pending, which
+        is how the legend and the LED tell the PICKER apart from the RULER
+        without either of them re-deriving the rule.
+
+        The SOONEST pending macro owns the ruler. Two macros can be pending at
+        once and only one grid exists; showing the nearest is the only choice
+        that cannot mislead, because the nearest is the one about to change
+        what the player hears."""
+
+        if self._armed_while_stopped:
+            # Armed while stopped: no bar has passed, so nothing is
+            # extinguished. Full ruler, and the LED goes steady rather than
+            # flashing - see _render_transport.
+            bars = min(self._armed_while_stopped.values())
+            return (self._arm_picked, bars, bars)
+
+        pending = self._pending_macros.pending()
+        if not pending:
+            return (self._arm_picked, None, None)
+
+        bar = self._phrase_bar or 0
+        soonest, left = None, None
+        for macro in pending:
+            rem = self._pending_macros.remaining(macro, bar)
+            if rem is None:
+                continue
+            if left is None or rem < left:
+                soonest, left = macro, rem
+        if soonest is None:
+            return (self._arm_picked, None, None)
+        return (self._arm_picked, self._arm_bars.get(soonest, left), left)
+
+    def _paint_arm_legend(self):
+        """The sixteen pads as ARM's grid. Caller holds the lock."""
+
+        picked, bars, left = self._arm_state()
+        for pad in range(16):
+            self._paint_pad(pad, tlib.arm_legend_pad(
+                pad, picked=picked, armed_bars=bars, remaining=left))
+
+    def _act_navigate(self, down):
+        """NAVIGATE holds the phrase page on the pads."""
+
+        self.navigate_down = down
+        with self.lock:
+            self._render_pads()
+
+    def _paint_phrase_pads(self):
+        """Sixteen pads, one per bar of the phrase. Caller holds the lock."""
+
+        for pad in range(16):
+            self._paint_pad(pad, tlib.phrase_pad(pad, self._phrase_bar))
 
     def _act_erase(self, down):
         self.erase_down = down
@@ -2622,6 +2813,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for group in range(8):
             # Installed signature: setPlayPosition(bank, sequence, clock)
             self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+        # RESTART re-zeros the phrase with the playheads. Without this the
+        # count keeps running while every pattern jumps to its start, which is
+        # precisely the disagreement this clock exists to prevent.
+        if self._phrase_anchor is not None:
+            self._phrase_anchor = self._elapsed_beats()
+            self._phrase_bar = 0
 
     def _act_page_prev(self):
         self._step_page(-1)
@@ -2892,9 +3089,44 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         if pad < len(tlib.MOD_RATES):
             entry["rate"] = pad
+            if entry.get("once"):
+                # Re-arm. A new length must restart the sweep from here rather
+                # than leave a finished one clamped at its old span, which
+                # would look like a dead pad.
+                self._arm_once(entry)
         else:
             entry["shape"] = tlib.MOD_SHAPES[pad - len(tlib.MOD_RATES)]
+            if self.arm_down:
+                # MOD + ARM on a shape pad: that shape now runs ONCE. The rate
+                # pads need no branch at all - they already write
+                # entry["rate"], and under a one-shot that number is read as a
+                # sweep LENGTH instead of a cycle time. Same table, new
+                # meaning, no second table to drift.
+                self._arm_once(entry)
         self._render_display()
+
+    def _arm_once(self, entry):
+        """Make this modulator a one-shot whose sweep starts NOW.
+
+        phase0 is stored NEGATIVE - minus the position already elapsed - so
+        mod_once_pos reaches 1.0 one span from this moment rather than one
+        span from driver start-up. That is what "lands on the downbeat" means,
+        and it also makes the sweep slightly shorter than the nominal rate.
+
+        RISE adds no new permission surface: it goes through mod_allowed()
+        unchanged, so gate and velo stay refused and the drift verbs still
+        refuse on a player-owned channel. The deny list stays absolute by
+        construction rather than by a second copy that can drift."""
+
+        span = tlib.MOD_RATES[entry["rate"]] * 4.0
+        entry["once"] = True
+        entry["phase0"] = -self._elapsed_beats() / span if span else 0.0
+
+    def _pad_owner(self):
+        """What the pads mean right now. One predicate, every caller."""
+        return tlib.pad_owner(shift=self.shift_down, mod=self.mod_down,
+                              arm=self.arm_down,
+                              navigate=self.navigate_down)
 
     def _mod_clear(self, key):
         """Drop a modulator and restore its base, so the parameter is left
@@ -2902,6 +3134,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         entry = self.mod.pop(key, None)
         if entry is None:
             return
+        # Dropped from self.mod, so `once` goes with it. Kept explicit because
+        # set_state rebuilds entries from a saved dict and a stale `once` there
+        # would come back clamped, with no pad to un-clamp it.
+        entry.pop("once", None)
         channel, verb = key
         self._mod_base_set(channel, verb, entry["base"])
         if self.mod_last == key:
@@ -3015,9 +3251,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # under the lock, five times a second, forever - the velo
                 # defect exactly.
                 continue
-            pos = tlib.mod_pos(entry["phase0"], beats,
-                               tlib.MOD_RATES[entry["rate"]])
-            wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
+            if entry.get("once"):
+                pos = tlib.mod_once_pos(entry["phase0"], beats,
+                                        tlib.MOD_RATES[entry["rate"]])
+                # HOLD at the end. mod_wave takes pos % 1.0 and 1.0 % 1.0 is
+                # 0.0, which would drop a finished ramp back to its minimum -
+                # the exact opposite of landing on the downbeat.
+                wave = tlib.mod_wave(
+                    entry["shape"],
+                    tlib.MOD_ONCE_END if pos >= 1.0 else pos,
+                    entry["seed"])
+            else:
+                pos = tlib.mod_pos(entry["phase0"], beats,
+                                   tlib.MOD_RATES[entry["rate"]])
+                wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
             value = tlib.mod_value(entry["base"], wave, entry["depth"],
                                    span[0], span[1])
             # set_value() already returns early on an unchanged value and
@@ -3510,6 +3757,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if chan is None:
             return BRIGHT_GROUP_NO_CHAIN
         mixer = self.state_manager.zynmixer
+        if self.arm_down:
+            # While ARM is held the Group row stops reporting the mix and
+            # starts reporting the NOMINATION - who survives the drop. It is
+            # the only feedback the gesture has, and without it a player is
+            # tapping buttons in the dark and finding out four bars later.
+            #
+            # Deliberately overriding mute and solo rather than blending with
+            # them: three meanings on one LED is how "solo mode lit VOLUME"
+            # went unnoticed for months. While the modifier is down the LED
+            # answers exactly one question.
+            return (BRIGHT_GROUP_MAX if group in self._drop_survivors
+                    else BRIGHT_GROUP_MIN)
         if mixer.get_mute(chan):
             return 0.0
         if self._any_soloed() and not mixer.get_solo(chan):
@@ -4026,9 +4285,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         target = zynseq_lib.SEQ_STOPPED if self._any_playing() else zynseq_lib.SEQ_STARTING
         if target == zynseq_lib.SEQ_STARTING:
             self._force_loop_mode()
+            self._phrase_anchor = self._elapsed_beats()
+            self._phrase_bar = 0
+            # Anything armed with the transport stopped gets its landing bar
+            # now, counted from this bar zero.
+            for macro, bars in self._armed_while_stopped.items():
+                self._pending_macros.arm(macro, bars, at_bar=0)
+            self._armed_while_stopped.clear()
         else:
             # Stopping the rig must not leave a held pad droning over silence.
             self._release_all()
+            self._phrase_anchor = None
+            self._phrase_bar = None
         for group in range(8):
             self.libseq.setPlayState(self.zynseq.bank, group, target)
         self._render_pads()
@@ -4344,6 +4612,141 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # one that stops evolving; the others must not pay for it.
                 self._log_poll_error(f"voice wrap on channel {channel}", e)
 
+    def _phrase_tick(self):
+        """Advance the phrase clock and fire anything the bar has reached.
+
+        Runs at 30 Hz, so a boundary is caught within ~33 ms - about 1.7% of a
+        bar at 124 BPM. Adequate for mutes and levels. NOTHING that needs step
+        accuracy may ride this clock.
+
+        Deliberately NOT in _wrap_channel: a wrap is per channel, and eight
+        channels have eight different bars the moment anyone uses an odd
+        length. One transport-anchored count is the only one that stays true
+        for all of them."""
+
+        if self._phrase_anchor is None:
+            return
+        bar, _frac = tlib.phrase_pos(self._elapsed_beats(), self._phrase_anchor)
+        if bar == self._phrase_bar:
+            return
+        self._phrase_bar = bar
+        for macro in self._pending_macros.due(bar):
+            try:
+                self._fire_macro(macro, bar)
+            except Exception as e:
+                # PER MACRO, the same reason _voice_wraps catches per channel:
+                # a single raise would abort the rest of the drain, and in a
+                # fixed order the same macros would lose it every time.
+                self._log_poll_error(f"macro {macro}", e)
+        self._chance_tick(bar)
+        with self.lock:
+            self._render_display()
+            self._render_transport()
+            if self.navigate_down:
+                # One pad per bar, so the lit pad has to advance here.
+                self._paint_phrase_pads()
+            if self.arm_down:
+                # The ruler loses a pad per bar, so it has to be repainted
+                # here. Only while ARM is actually held: the grid is the step
+                # picture the rest of the time and repainting it every bar
+                # would fight the playhead.
+                self._paint_arm_legend()
+
+    def _chance_tick(self, bar):
+        """Walk a running CHANCE ramp one bar. ONCE PER BAR, never on the
+        200 ms modulator tick.
+
+        setPlayChance is read live in Track::getEvent(), so this costs no
+        pattern rewrite at all - the whole breakdown is one shipped verb
+        called eight times a bar. That is also why it is safe on a
+        player-owned channel: nothing is regenerated and no take is touched.
+
+        At chance 0 a tab still draws dashed. The silent-channel law does not
+        pause for a performance macro."""
+
+        if not self._chance_ramp:
+            return
+        ramp = self._chance_ramp
+        step = bar - ramp["start"]
+        floor = tlib.CHANCE_RUNGS[-1]
+        for channel, base in ramp["base"].items():
+            self.apply(channel, "chance",
+                       tlib.chance_ramp(base, floor, step, ramp["bars"]))
+        if step >= ramp["bars"]:
+            self._chance_ramp = None
+
+    def _drop_fire(self, bar):
+        """Everything that is not a survivor falls silent for the drop.
+
+        The MIXER STRIP is muted, never the zynseq track. zynseq's file format
+        has no mute field at all, so a zynseq mute is lost by every snapshot
+        save; the mixer's is in the zs3 state and shows on the touchscreen
+        mixer. And a sequencer-level stop would be worse than useless here -
+        Sequence::setPlayState turns STOPPING into STOPPED immediately under
+        LOOP and then resets the position to 0, so the channel would come back
+        out of sync with the other seven.
+
+        THE STATE IS CAPTURED HERE AND RESTORED VERBATIM. Restoring "all on"
+        would un-mute a channel the player had killed by hand, and they would
+        blame the drop for it."""
+
+        self._drop_restore = {}
+        mixer = self.state_manager.zynmixer
+        for group in range(8):
+            chan = self._mixer_chan(group)
+            if chan is None:
+                continue
+            self._drop_restore[group] = bool(mixer.get_mute(chan))
+            if group not in self._drop_survivors:
+                mixer.set_mute(chan, True, update=True)
+        # Symmetric by design: the ARM length is BOTH when it fires and how
+        # long it lasts. A second gesture for the duration was rejected - the
+        # queue already carries a per-macro length, so adding one later is
+        # additive rather than a rewrite.
+        bars = self._arm_bars.get("drop", 4)
+        self._pending_macros.arm("drop_end", bars, bar)
+        self._arm_bars["drop_end"] = bars
+        with self.lock:
+            self._render_mutes()
+            self._render_groups()
+
+    def _drop_restore_apply(self):
+        """Put back exactly what _drop_fire captured, then forget it."""
+
+        mixer = self.state_manager.zynmixer
+        for group, muted in self._drop_restore.items():
+            chan = self._mixer_chan(group)
+            if chan is None:
+                continue
+            mixer.set_mute(chan, muted, update=True)
+        self._drop_restore = {}
+        with self.lock:
+            self._render_mutes()
+            self._render_groups()
+
+    def _fire_macro(self, macro, bar):
+        """Dispatch one landed macro.
+
+        A stub with one arm per payload, extended by the DROP and CHANCE-ramp
+        tasks. Unknown macros are logged rather than raised: an unrecognised
+        name in a restored snapshot must not kill the poll thread, which is
+        the 2026-08-18 failure."""
+
+        logging.debug(f"Maschine: macro {macro} landed on bar {bar}")
+        if macro == "drop":
+            self._drop_fire(bar)
+        elif macro == "drop_end":
+            self._drop_restore_apply()
+        elif macro == "chance":
+            # Capture every channel's OWN value at fire time. The ramp walks
+            # away from it and lands back on it; nothing here assumes 100.
+            self._chance_ramp = {
+                "bars": self._arm_bars.get("chance", 8),
+                "start": bar,
+                "base": {ch: int(self.state[ch].get("chance", 100))
+                         for ch in range(len(tlib.CHANNELS))},
+            }
+
     def _wrap_channel(self, channel):
 
         """One channel's share of _voice_wraps.
@@ -4468,6 +4871,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 while self._rebuild_due:
                     self._rebuild_notes(self._rebuild_due.pop())
                 self._voice_wraps()
+                self._phrase_tick()
                 if tick % VOLUME_POLL_TICKS == 0:
                     # Tempo can move from the touchscreen or from a snapshot,
                     # and the delay's musical division has to follow it.
@@ -4479,17 +4883,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # for a target that proves it needs more.
                     self._mod_write()
                 with self.lock:
-                    if tlib.overlay_owner(shift=self.shift_down,
-                                          mod=self.mod_down) == "mod":
+                    owner = self._pad_owner()
+                    if owner == "mod":
                         # The ONLY animated overlay, and it has to run here at
                         # 30 Hz rather than on the 200 ms modulator tick: a
                         # 5 Hz fade looks steppy, not slow. Poll thread only,
                         # never the MIDI thread.
                         self._paint_mod_legend()
-                    else:
+                    elif tlib.overlay_is_stepwise(owner):
                         head = self._playhead()
                         if head != self.head_shown:
                             self._move_playhead(head)
+                    # A non-stepwise overlay that is NOT animated - ARM - is
+                    # left alone. Asked by the predicate rather than by name so
+                    # the next such overlay inherits it: moving a playhead
+                    # across pads that no longer stand for steps would paint
+                    # white over whatever they DO stand for, once per tick.
                     if tick % VOLUME_POLL_TICKS == 0:
                         self._render_groups()
                         # GRID blinks while the selected channel is on an
@@ -4613,7 +5022,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # playhead is still drawn over the top, in white, unchanged - the
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
-        owner = tlib.overlay_owner(shift=self.shift_down, mod=self.mod_down)
+        owner = self._pad_owner()
+        if owner == "navigate":
+            self._paint_phrase_pads()
+            return
+        if owner == "arm":
+            # Ahead of MOD only because the priority table says so; neither
+            # can be true at once here.
+            self._paint_arm_legend()
+            return
         if owner == "mod":
             # The pads stop standing for steps entirely, so there is no step
             # loop and no playhead - see tlib.overlay_is_stepwise().
@@ -4651,7 +5068,41 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         state = (COLOR_PLAY, bright)
         if self.leds.changed("play", state):
             self._send_osc(lib.button_osc("play", state[0], state[1]))
+        self._render_arm()
         self._render_modes()
+
+    def _render_arm(self):
+        """SELECT flashes once per bar while something is pending, and goes
+        STEADY through the landing bar.
+
+        Once ARM is released this LED is the only thing on the panel that says
+        a macro is coming, so it is not decoration. The BAR NUMBER drives the
+        flash rather than a timer - the flash IS the countdown, not an
+        animation running alongside one, and a timer would drift away from the
+        bars it claims to be counting.
+
+        Steady rather than flashing when the transport is stopped: nothing is
+        counting down yet, and a flash would say it was.
+
+        LED index 22, MEASURED. Lit by the daemon's own name for that index,
+        which has been correct since c141d70 - before that the names were
+        attached to the wrong buttons and two shipped features lit the wrong
+        LED for months."""
+
+        pending = bool(self._pending_macros.pending()
+                       or self._armed_while_stopped)
+        if not pending:
+            bright = BRIGHT_PAGE_OFF
+        elif self._phrase_bar is None or self._armed_while_stopped:
+            bright = BRIGHT_PAGE_ON
+        else:
+            _picked, _bars, left = self._arm_state()
+            bright = (BRIGHT_PAGE_ON if left == 0
+                      else (BRIGHT_PAGE_ON if self._phrase_bar % 2
+                            else BRIGHT_PAGE_OFF))
+        state = (tlib.COLOR_ARM_COUNT, bright)
+        if self.leds.changed("arm", state):
+            self._send_osc(lib.button_osc(LED_ARM, state[0], state[1]))
 
     def _render_reroll(self):
         """SCENE and PATTERN light when the SELECTED group is theirs to reroll.
@@ -5277,6 +5728,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         label = tlib.mod_label(label, mod)
         # A pending reroll says so, and the tabs say which channels.
         label = tlib.reroll_label(label, bool(self._reroll_pending))
+        # The bar of the phrase, so every timed gesture has something to
+        # resolve against that the player can see.
+        label = tlib.phrase_label(label, self._phrase_bar)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.
@@ -5286,7 +5740,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # tuple moves when MOD goes down, and a latched MOD made the pads
             # inert and the encoders mean something else with no indication.
             state = (self._tabs(screen), self._columns(screen), label, mod,
-                     frozenset(self._reroll_pending))
+                     frozenset(self._reroll_pending), self._phrase_bar)
             if not self.leds.changed(f"disp{screen}", state):
                 continue
             for packet in lib.screen_packets(screen, state[0], state[1], state[2]):

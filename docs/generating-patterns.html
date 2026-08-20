@@ -157,6 +157,17 @@
 <p><strong>Encoder 8 on a drum's STEP page was empty. It is RATCHET now.</strong> Turn it up and every step of that channel fires two, three or four times inside its own slot &mdash; a roll rather than a hit. It reads <code>OFF</code> at the bottom, because one hit is not a ratchet.</p>
 <p>It applies to the whole channel, not one step, which is what makes it a knob rather than an edit: turn it up for a bar of rolls and back down again without touching the pattern you wrote.</p>
 <hr>
+<h2 id="chance-ramp">The CHANCE ramp &mdash; the kit thins out and re-forms</h2>
+<div class="warn">
+<p><strong>New, and not yet played in.</strong> The CHANCE ramp went onto the rig with the phrase clock and ARM. What follows describes what the instrument does; it has not been through a session on the hardware yet.</p>
+</div>
+<p><strong>Hold ARM &mdash; that is SELECT &mdash; tap pad 2, then tap a length.</strong> The gesture is on <a href="the-surface.html#arm">The surface</a>; this is what it does.</p>
+<p>From the landing bar every channel's play chance walks down, one step per bar. Halfway through the length all eight are at <strong>one time in four</strong> &mdash; still playing, but most of it missing &mdash; and over the second half they walk back up. An eight-bar ramp is four bars falling apart and four bars coming back.</p>
+<p><strong>It lands back on each channel's own value, not on always.</strong> A channel sitting at half the time comes back at half the time. Assuming everything wants to be at full is exactly how a channel saved quiet comes back loud, and this does not do it.</p>
+<p><strong>A channel already at one time in four or below is left alone.</strong> A breakdown that made a quiet channel louder would be the gesture backwards.</p>
+<p><strong>It is safe on a take you recorded.</strong> Play chance belongs to the pattern rather than to the notes: nothing is regenerated, no step is moved, added or removed, and the ramp writes once per bar rather than continuously. Same reason SHIFT + pad is safe.</p>
+<p>Play chance is in the snapshot, so a set saved mid-ramp saves the thinned values. Let it finish before you save.</p>
+<hr>
 <h2 id="reroll">Reroll — two buttons that ask for a different bar</h2>
 <p><strong>Hold PATTERN or SCENE to reroll the channel you are on.</strong> Hold, do not tap &mdash; let go early and nothing happens. A drum channel gets a new hit count and rotation; a channel played by the Turing register gets a new rhythm and a new play chance, and its MELODY is left at <code>LOCK</code> so you hear the new line held rather than already drifting.</p>
 <p><strong>Hold SHIFT with them to reroll a whole family at once.</strong> SHIFT + PATTERN rerolls every sampler channel, SHIFT + SCENE every synth. That split follows the <em>engine</em>, not how the channel is being played &mdash; a drum sampler switched to Turing is still a sampler, so asking for new synth lines never hands you a new drum pattern as well. The two buttons light to show which family you are standing in.</p>

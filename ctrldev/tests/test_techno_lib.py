@@ -1271,7 +1271,16 @@ class TestButtonTables(unittest.TestCase):
         # them the two reroll buttons. They were free and are now spent, which
         # is what the list is for - it tracks what is UNCLAIMED, not what is
         # unclaimable. CC 15 (big encoder turn) left it the same day.
-        for cc in (5, 6, 12, 29, 30, 34):
+        #
+        # SELECT 30 LEFT it 2026-08-20: ARM took it. Its CC was measured at G4
+        # and its LED index 22 measured 2026-08-15, so both halves of working
+        # rule 7 were satisfied before it was spent.
+        #
+        # NAVIGATE 34 LEFT it the same day, for the phrase page. Its LED index
+        # 20 turned out to have been measured on 2026-08-16 all along - it was
+        # carried as "inferred" by a stale summary block, which is the only
+        # thing that had blocked it.
+        for cc in (5, 6, 12, 29):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
@@ -1291,10 +1300,13 @@ class TestButtonTables(unittest.TestCase):
         self.assertNotIn(35, tl.BUTTONS_PRESS)
 
     def test_coarse_did_not_land_on_select(self):
-        # SELECT (CC 30) was the design's first home for this and the owner
-        # moved it to TEMPO. SELECT stays free surface.
-        self.assertNotIn(30, tl.BUTTONS_STATEFUL)
+        # SELECT (CC 30) was the design's first home for COARSE and the owner
+        # moved it to TEMPO. The guard survives the move that spent SELECT on
+        # ARM: what it exists to catch is COARSE drifting back onto SELECT, so
+        # it now asserts the OWNER of CC 30 rather than that CC 30 is empty.
+        self.assertEqual(tl.BUTTONS_STATEFUL[30], "arm")
         self.assertNotIn(30, tl.BUTTONS_PRESS)
+        self.assertEqual(tl.BUTTONS_STATEFUL[35], "coarse")
 
     def test_mod_lives_on_swing_not_auto(self):
         self.assertEqual(tl.BUTTONS_STATEFUL[50], "mod")
@@ -2944,3 +2956,404 @@ class TestGeneratedColumnNames(unittest.TestCase):
         self.assertTrue(cols[0]["grey"])
         self.assertEqual(cols[0]["value"], "----")
         self.assertEqual(cols[0]["name"], "assign")
+
+
+class TestPhraseClock(unittest.TestCase):
+
+    def test_at_the_anchor_it_is_bar_zero(self):
+        self.assertEqual(tl.phrase_pos(10.0, 10.0), (0, 0.0))
+
+    def test_one_bar_after_the_anchor(self):
+        self.assertEqual(tl.phrase_pos(14.0, 10.0), (1, 0.0))
+
+    def test_half_way_through_bar_two(self):
+        bar, frac = tl.phrase_pos(20.0, 10.0)
+        self.assertEqual(bar, 2)
+        self.assertAlmostEqual(frac, 0.5)
+
+    def test_before_the_anchor_never_goes_negative(self):
+        self.assertEqual(tl.phrase_pos(5.0, 10.0), (0, 0.0))
+
+    def test_a_three_beat_bar_is_honoured(self):
+        self.assertEqual(tl.phrase_pos(6.0, 0.0, beats_per_bar=3), (2, 0.0))
+
+    def test_bar_zero_of_the_phrase(self):
+        self.assertEqual(tl.phrase_bar(0), 0)
+
+    def test_the_phrase_wraps(self):
+        self.assertEqual(tl.phrase_bar(16), 0)
+        self.assertEqual(tl.phrase_bar(17), 1)
+
+    def test_a_shorter_phrase_wraps_sooner(self):
+        self.assertEqual(tl.phrase_bar(4, phrase_bars=4), 0)
+
+    def test_a_nonsense_phrase_length_does_not_divide_by_zero(self):
+        self.assertEqual(tl.phrase_bar(5, phrase_bars=0), 0)
+
+
+class TestPendingQueue(unittest.TestCase):
+
+    def setUp(self):
+        self.q = tl.PendingQueue()
+
+    def test_a_fresh_queue_has_nothing_pending(self):
+        self.assertEqual(self.q.pending(), [])
+
+    def test_nothing_is_due_before_the_landing_bar(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.due(3), [])
+
+    def test_it_fires_on_the_landing_bar(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.due(4), ["drop"])
+
+    def test_firing_removes_it(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.due(4)
+        self.assertEqual(self.q.pending(), [])
+
+    def test_a_late_poll_still_fires_it(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.due(7), ["drop"])
+
+    def test_arming_the_same_macro_replaces_it(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("drop", 8, at_bar=0)
+        self.assertEqual(self.q.pending(), ["drop"])
+        self.assertEqual(self.q.due(4), [])
+        self.assertEqual(self.q.due(8), ["drop"])
+
+    def test_two_different_macros_coexist(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("chance", 8, at_bar=0)
+        self.assertEqual(sorted(self.q.pending()), ["chance", "drop"])
+
+    def test_both_due_at_once_come_back_together(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("chance", 4, at_bar=0)
+        self.assertEqual(sorted(self.q.due(4)), ["chance", "drop"])
+
+    def test_bars_remaining_counts_down(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.remaining("drop", 1), 3)
+
+    def test_bars_remaining_is_none_for_nothing_pending(self):
+        self.assertIsNone(self.q.remaining("drop", 1))
+
+    def test_bars_remaining_never_goes_negative(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.remaining("drop", 9), 0)
+
+    def test_clear_cancels_everything(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("chance", 8, at_bar=0)
+        self.q.clear()
+        self.assertEqual(self.q.pending(), [])
+
+    def test_a_zero_bar_arm_fires_on_the_next_bar_not_now(self):
+        self.q.arm("drop", 0, at_bar=5)
+        self.assertEqual(self.q.due(5), [])
+        self.assertEqual(self.q.due(6), ["drop"])
+
+
+class TestArmOverlay(unittest.TestCase):
+
+    def test_arm_owns_the_pads_when_held_alone(self):
+        self.assertEqual(tl.overlay_owner(arm=True), "arm")
+
+    def test_shift_still_outranks_arm(self):
+        self.assertEqual(tl.overlay_owner(shift=True, arm=True), "shift")
+
+    def test_arm_outranks_mod(self):
+        self.assertEqual(tl.overlay_owner(mod=True, arm=True), "arm")
+
+    def test_arm_outranks_navigate(self):
+        self.assertEqual(tl.overlay_owner(navigate=True, arm=True), "arm")
+
+    def test_arm_pads_are_not_steps(self):
+        self.assertFalse(tl.overlay_is_stepwise("arm"))
+
+    def test_every_existing_caller_is_unaffected(self):
+        self.assertIsNone(tl.overlay_owner())
+        self.assertEqual(tl.overlay_owner(shift=True), "shift")
+        self.assertEqual(tl.overlay_owner(mod=True), "mod")
+        self.assertEqual(tl.overlay_owner(navigate=True), "navigate")
+
+
+class TestPhraseLabel(unittest.TestCase):
+
+    def test_it_appends_the_bar_of_the_phrase(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", 0), "LEVEL 1/3 1/16")
+
+    def test_it_counts_from_one_for_the_player(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", 3), "LEVEL 1/3 4/16")
+
+    def test_a_shorter_phrase_says_so(self):
+        self.assertEqual(tl.phrase_label("X", 1, phrase_bars=4), "X 2/4")
+
+    def test_no_bar_means_no_suffix(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", None), "LEVEL 1/3")
+
+
+class TestArmLegendPad(unittest.TestCase):
+    """The ARM overlay's sixteen pads: a picker, or a countdown ruler."""
+
+    def test_macro_pads_are_lit_and_the_picked_one_is_full(self):
+        for index, macro in enumerate(tl.ARM_MACROS):
+            colour, bright = tl.arm_legend_pad(index, picked=macro)
+            self.assertEqual(colour, tl.COLOR_ARM_MACRO)
+            self.assertEqual(bright, tl.PAD_FULL)
+            _c, other = tl.arm_legend_pad(index, picked=None)
+            self.assertEqual(other, tl.ARM_DIM)
+
+    def test_pads_between_the_macros_and_the_lengths_are_dark(self):
+        # The whole point: pads 2-7 have no macro behind them, and a lit pad
+        # that does nothing is the fault this surface must never commit.
+        for index in range(len(tl.ARM_MACROS), 8):
+            _colour, bright = tl.arm_legend_pad(index, picked="drop")
+            self.assertEqual(bright, tl.PAD_OFF)
+
+    def test_the_length_ring_is_lit_whether_or_not_a_macro_is_picked(self):
+        for index in range(8, 16):
+            for picked in (None, "drop"):
+                colour, bright = tl.arm_legend_pad(index, picked=picked)
+                self.assertEqual(colour, tl.COLOR_ARM_LENGTH)
+                self.assertEqual(bright, tl.ARM_DIM)
+
+    def test_the_length_ring_has_one_pad_per_length(self):
+        self.assertEqual(len(tl.ARM_LENGTHS), 8)
+
+    def test_a_full_ruler_lights_exactly_the_armed_bars(self):
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=4, remaining=4)[1]]
+        self.assertEqual(lit, [0, 1, 2, 3])
+
+    def test_the_ruler_extinguishes_from_the_top_left(self):
+        # Three bars left of four: pad 0 has gone out, 1-3 remain. Extinguishing
+        # from the left is what makes the lit pads READ as the time remaining.
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=4, remaining=3)[1]]
+        self.assertEqual(lit, [1, 2, 3])
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=4, remaining=1)[1]]
+        self.assertEqual(lit, [3])
+
+    def test_a_spent_ruler_is_entirely_dark(self):
+        for i in range(16):
+            self.assertEqual(tl.arm_legend_pad(i, armed_bars=4, remaining=0)[1],
+                             tl.PAD_OFF)
+
+    def test_the_ruler_never_lights_a_pad_that_does_not_exist(self):
+        # 16 bars is the longest ARM_LENGTHS offers and it fills the grid
+        # exactly. Anything beyond has to clamp rather than index past the end.
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=16, remaining=16)[1]]
+        self.assertEqual(lit, list(range(16)))
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=99, remaining=99)[1]]
+        self.assertEqual(lit, list(range(16)))
+
+    def test_the_ruler_replaces_the_picker_entirely(self):
+        # Reading the countdown must not also offer to change it, so no macro
+        # pad and no length pad survives underneath.
+        picker = [tl.arm_legend_pad(i, picked="drop") for i in range(16)]
+        ruler = [tl.arm_legend_pad(i, picked="drop", armed_bars=2, remaining=2)
+                 for i in range(16)]
+        self.assertNotEqual(picker, ruler)
+        for i in range(2, 16):
+            self.assertEqual(ruler[i][1], tl.PAD_OFF)
+
+    def test_arm_macros_are_append_only_in_the_documented_order(self):
+        # A snapshot may store the name, so an existing entry never moves.
+        self.assertEqual(tl.ARM_MACROS[:2], ("drop", "chance"))
+
+    def test_arm_is_registered_as_a_stateful_button(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[30], "arm")
+        self.assertNotIn(30, tl.BUTTONS_PRESS)
+
+    def test_arm_sits_between_shift_and_mod_in_the_overlay_order(self):
+        order = tl.OVERLAY_PRIORITY
+        self.assertLess(order.index("shift"), order.index("arm"))
+        self.assertLess(order.index("arm"), order.index("mod"))
+        self.assertFalse(tl.overlay_is_stepwise("arm"))
+
+    def test_arm_wins_over_mod_and_loses_to_shift(self):
+        self.assertEqual(tl.overlay_owner(arm=True, mod=True), "arm")
+        self.assertEqual(tl.overlay_owner(shift=True, arm=True), "shift")
+        self.assertEqual(tl.overlay_owner(arm=True), "arm")
+
+
+class TestChanceRamp(unittest.TestCase):
+    """The breakdown that thins instead of muting."""
+
+    def test_it_starts_at_the_players_own_value(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 0, 8), 100)
+
+    def test_it_reaches_the_floor_half_way(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 4, 8), 25)
+
+    def test_it_returns_to_the_players_own_value(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 8, 8), 100)
+
+    def test_it_returns_to_SEVENTY_not_one_hundred(self):
+        # The whole point: a channel the player left at 70 comes back at 70.
+        # Assuming 100 is the original bug that made a saved channel come back
+        # silent while the surface read full.
+        self.assertEqual(tl.chance_ramp(70, 25, 8, 8), 70)
+
+    def test_it_thins_on_the_way_down(self):
+        self.assertLess(tl.chance_ramp(100, 25, 2, 8), 100)
+        self.assertGreater(tl.chance_ramp(100, 25, 2, 8), 25)
+
+    def test_it_is_symmetric_about_the_middle(self):
+        for step in range(9):
+            self.assertEqual(tl.chance_ramp(100, 25, step, 8),
+                             tl.chance_ramp(100, 25, 8 - step, 8))
+
+    def test_a_base_below_the_floor_never_rises_to_meet_it(self):
+        # A breakdown that made a quiet channel louder would be the gesture
+        # backwards.
+        self.assertEqual(tl.chance_ramp(10, 25, 4, 8), 10)
+
+    def test_a_zero_length_ramp_is_the_identity(self):
+        self.assertEqual(tl.chance_ramp(100, 25, 0, 0), 100)
+
+    def test_it_never_leaves_the_legal_range(self):
+        for bars in (1, 2, 3, 4, 8, 16):
+            for step in range(bars + 2):
+                value = tl.chance_ramp(100, 25, step, bars)
+                self.assertGreaterEqual(value, 0)
+                self.assertLessEqual(value, 100)
+
+    def test_past_the_end_it_is_back_at_base(self):
+        # A missed poll must not strand a channel thinned forever.
+        self.assertEqual(tl.chance_ramp(100, 25, 99, 8), 100)
+
+    def test_the_floor_is_the_lowest_chance_rung(self):
+        # Reuses CHANCE_RUNGS' own vocabulary rather than inventing a number.
+        self.assertEqual(tl.CHANCE_RUNGS[-1], 25)
+
+
+class TestRise(unittest.TestCase):
+    """A modulator shape that runs ONCE and holds, instead of cycling."""
+
+    def test_it_starts_at_zero(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 0.0, 4.0), 0.0)
+
+    def test_it_is_half_way_at_half_the_span(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 8.0, 4.0), 0.5)
+
+    def test_it_reaches_exactly_one_at_the_end(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 16.0, 4.0), 1.0)
+
+    def test_it_CLAMPS_and_never_wraps(self):
+        # The whole difference from mod_pos: a free LFO would be back at 0.0.
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 32.0, 4.0), 1.0)
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 999.0, 4.0), 1.0)
+
+    def test_a_negative_position_is_clamped_to_zero(self):
+        self.assertAlmostEqual(tl.mod_once_pos(-1.0, 0.0, 4.0), 0.0)
+
+    def test_a_zero_span_lands_at_the_end_rather_than_dividing(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 5.0, 0.0), 1.0)
+
+    def test_the_endpoint_cannot_be_passed_to_mod_wave_directly(self):
+        # THE TRAP, asserted so it cannot come back. mod_wave takes pos % 1.0
+        # and 1.0 % 1.0 is 0.0, which puts a FINISHED ramp at its MINIMUM -
+        # the exact opposite of landing on the downbeat. _mod_write must
+        # substitute the endpoint rather than passing 1.0 through.
+        self.assertAlmostEqual(tl.mod_wave("ramp", 1.0),
+                               tl.mod_wave("ramp", 0.0))
+        self.assertGreater(tl.mod_wave("ramp", tl.MOD_ONCE_END),
+                           tl.mod_wave("ramp", 0.5))
+
+    def test_the_endpoint_constant_is_just_under_one(self):
+        self.assertLess(tl.MOD_ONCE_END, 1.0)
+        self.assertGreater(tl.MOD_ONCE_END, 0.999)
+
+    def test_phase0_can_start_the_sweep_from_anywhere(self):
+        # _arm_once stores a negative phase0 so the sweep begins at the
+        # moment of arming rather than at driver start-up.
+        self.assertAlmostEqual(tl.mod_once_pos(-1.0, 16.0, 4.0), 0.0)
+        self.assertAlmostEqual(tl.mod_once_pos(-1.0, 32.0, 4.0), 1.0)
+
+
+class TestPadOwnerChord(unittest.TestCase):
+    """MOD latched + ARM held is MOD, and it is the only chord exception."""
+
+    def test_mod_and_arm_together_are_mod(self):
+        # RISE lives here: the pads must keep showing the rate/shape legend
+        # the player is choosing from, not ARM's macro picker.
+        self.assertEqual(tl.pad_owner(mod=True, arm=True), "mod")
+
+    def test_arm_alone_is_still_arm(self):
+        self.assertEqual(tl.pad_owner(arm=True), "arm")
+
+    def test_mod_alone_is_still_mod(self):
+        self.assertEqual(tl.pad_owner(mod=True), "mod")
+
+    def test_shift_still_outranks_everything(self):
+        self.assertEqual(tl.pad_owner(shift=True, arm=True, mod=True), "shift")
+        self.assertEqual(tl.pad_owner(shift=True, arm=True), "shift")
+
+    def test_nothing_held_is_the_step_picture(self):
+        self.assertIsNone(tl.pad_owner())
+
+    def test_it_agrees_with_overlay_owner_everywhere_else(self):
+        # The chord is the ONLY divergence. If a future overlay changes the
+        # priority table, this catches a pad_owner that quietly stopped
+        # following it.
+        for shift in (False, True):
+            for mod in (False, True):
+                for arm in (False, True):
+                    if mod and arm and not shift:
+                        continue
+                    self.assertEqual(
+                        tl.pad_owner(shift=shift, mod=mod, arm=arm),
+                        tl.overlay_owner(shift=shift, mod=mod, arm=arm),
+                        f"shift={shift} mod={mod} arm={arm}")
+
+
+class TestPhrasePad(unittest.TestCase):
+    """NAVIGATE's phrase page: one pad per bar, past dim, now full."""
+
+    def test_stopped_draws_every_pad_dark(self):
+        # A phrase page showing bar 1 lit while nothing plays reads as a
+        # running clock that has stuck.
+        for pad in range(16):
+            self.assertEqual(tl.phrase_pad(pad, None)[1], tl.PAD_OFF)
+
+    def test_the_current_bar_is_the_only_full_pad(self):
+        full = [i for i in range(16) if tl.phrase_pad(i, 5)[1] == tl.PAD_FULL]
+        self.assertEqual(full, [5])
+
+    def test_the_bars_already_played_are_dim(self):
+        for pad in range(5):
+            self.assertEqual(tl.phrase_pad(pad, 5)[1], tl.PHRASE_PAST)
+
+    def test_the_bars_still_to_come_are_dark(self):
+        for pad in range(6, 16):
+            self.assertEqual(tl.phrase_pad(pad, 5)[1], tl.PAD_OFF)
+
+    def test_it_wraps_with_the_phrase(self):
+        # Bar 16 is bar 0 of the next phrase, not a seventeenth pad.
+        full = [i for i in range(16) if tl.phrase_pad(i, 16)[1] == tl.PAD_FULL]
+        self.assertEqual(full, [0])
+        full = [i for i in range(16) if tl.phrase_pad(i, 21)[1] == tl.PAD_FULL]
+        self.assertEqual(full, [5])
+
+    def test_only_two_brightnesses_are_used(self):
+        # Three levels would need a legend; two read at a glance.
+        seen = {tl.phrase_pad(i, 7)[1] for i in range(16)}
+        self.assertEqual(seen, {tl.PAD_FULL, tl.PHRASE_PAST, tl.PAD_OFF})
+
+    def test_navigate_is_bound_and_not_stepwise(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[34], "navigate")
+        self.assertFalse(tl.overlay_is_stepwise("navigate"))
+        self.assertEqual(tl.pad_owner(navigate=True), "navigate")
+
+    def test_navigate_loses_to_every_other_overlay(self):
+        # Last in OVERLAY_PRIORITY: it is a glance, not a gesture.
+        self.assertEqual(tl.pad_owner(navigate=True, mod=True), "mod")
+        self.assertEqual(tl.pad_owner(navigate=True, arm=True), "arm")
+        self.assertEqual(tl.pad_owner(navigate=True, shift=True), "shift")
