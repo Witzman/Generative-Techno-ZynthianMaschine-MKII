@@ -2977,3 +2977,68 @@ class TestPhraseClock(unittest.TestCase):
 
     def test_a_nonsense_phrase_length_does_not_divide_by_zero(self):
         self.assertEqual(tl.phrase_bar(5, phrase_bars=0), 0)
+
+
+class TestPendingQueue(unittest.TestCase):
+
+    def setUp(self):
+        self.q = tl.PendingQueue()
+
+    def test_a_fresh_queue_has_nothing_pending(self):
+        self.assertEqual(self.q.pending(), [])
+
+    def test_nothing_is_due_before_the_landing_bar(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.due(3), [])
+
+    def test_it_fires_on_the_landing_bar(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.due(4), ["drop"])
+
+    def test_firing_removes_it(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.due(4)
+        self.assertEqual(self.q.pending(), [])
+
+    def test_a_late_poll_still_fires_it(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.due(7), ["drop"])
+
+    def test_arming_the_same_macro_replaces_it(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("drop", 8, at_bar=0)
+        self.assertEqual(self.q.pending(), ["drop"])
+        self.assertEqual(self.q.due(4), [])
+        self.assertEqual(self.q.due(8), ["drop"])
+
+    def test_two_different_macros_coexist(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("chance", 8, at_bar=0)
+        self.assertEqual(sorted(self.q.pending()), ["chance", "drop"])
+
+    def test_both_due_at_once_come_back_together(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("chance", 4, at_bar=0)
+        self.assertEqual(sorted(self.q.due(4)), ["chance", "drop"])
+
+    def test_bars_remaining_counts_down(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.remaining("drop", 1), 3)
+
+    def test_bars_remaining_is_none_for_nothing_pending(self):
+        self.assertIsNone(self.q.remaining("drop", 1))
+
+    def test_bars_remaining_never_goes_negative(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.assertEqual(self.q.remaining("drop", 9), 0)
+
+    def test_clear_cancels_everything(self):
+        self.q.arm("drop", 4, at_bar=0)
+        self.q.arm("chance", 8, at_bar=0)
+        self.q.clear()
+        self.assertEqual(self.q.pending(), [])
+
+    def test_a_zero_bar_arm_fires_on_the_next_bar_not_now(self):
+        self.q.arm("drop", 0, at_bar=5)
+        self.assertEqual(self.q.due(5), [])
+        self.assertEqual(self.q.due(6), ["drop"])

@@ -2024,6 +2024,59 @@ class techno_lib:
             c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
         ]
 
+    class PendingQueue:
+        """Macros waiting for a bar boundary.
+
+        A bar index in, a list of macro names out. No zynseq, no driver, no
+        clock of its own - which is what makes it testable on WSL, where the
+        driver cannot even be imported.
+
+        NESTED in techno_lib on purpose. The driver does `from
+        ...techno_lib import techno_lib as tlib`, so `tlib` is the CLASS,
+        not the module: a module-level class here would be unreachable
+        through it and `tlib.PendingQueue` would raise AttributeError on the
+        rig, where nothing catches it early.
+
+        Keyed by MACRO NAME rather than by an arming id, so arming a macro
+        that is already pending REPLACES it. Two DROPs can then never land
+        on different bars and fight over the same restore state."""
+
+        def __init__(self):
+            self._due = {}
+
+        def arm(self, macro, bars, at_bar):
+            """Schedule `macro` for `bars` bars after `at_bar`.
+
+            A zero-bar arm lands on the NEXT bar, never the current one:
+            firing inside the bar the player is already in would be
+            indistinguishable from firing immediately, and the countdown
+            would never be seen."""
+            self._due[macro] = int(at_bar) + max(1, int(bars))
+
+        def due(self, bar_index):
+            """Every macro whose landing bar has arrived or passed, removed.
+
+            Uses >= rather than == so a missed poll cannot strand a macro
+            pending forever - a 30 Hz poll against a two-second bar has
+            margin, but a blocked thread does not."""
+            firing = [m for m, bar in self._due.items() if int(bar_index) >= bar]
+            for macro in firing:
+                del self._due[macro]
+            return firing
+
+        def remaining(self, macro, bar_index):
+            """Bars left before `macro` lands, or None if it is not pending."""
+            bar = self._due.get(macro)
+            if bar is None:
+                return None
+            return max(0, bar - int(bar_index))
+
+        def pending(self):
+            return list(self._due)
+
+        def clear(self):
+            self._due.clear()
+
 
 # Rings are built after the class body so page_desc() is callable. Keeping them
 # out of the class body is the only reason they are down here; they are read as
