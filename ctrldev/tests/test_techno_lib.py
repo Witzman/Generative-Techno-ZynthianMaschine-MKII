@@ -3357,3 +3357,177 @@ class TestPhrasePad(unittest.TestCase):
         self.assertEqual(tl.pad_owner(navigate=True, mod=True), "mod")
         self.assertEqual(tl.pad_owner(navigate=True, arm=True), "arm")
         self.assertEqual(tl.pad_owner(navigate=True, shift=True), "shift")
+class TestModDepthScale(unittest.TestCase):
+
+    def test_unity_is_the_identity(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 1.0), 50.0)
+
+    def test_it_halves(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 0.5), 25.0)
+
+    def test_it_doubles(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 2.0), 100.0)
+
+    def test_a_NEGATIVE_depth_keeps_its_sign(self):
+        # Depths are signed. Scaling magnitude must not flip a modulator.
+        self.assertAlmostEqual(tl.mod_depth_scale(-50.0, 2.0), -100.0)
+
+    def test_zero_multiplier_parks_it(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, 0.0), 0.0)
+
+    def test_a_parked_modulator_COMES_BACK(self):
+        # The whole reason the multiplier is stored separately: if the stored
+        # depth were multiplied in place, 0 x anything = 0 would strand every
+        # modulator at zero with no way back.
+        depth = -37.0
+        self.assertAlmostEqual(tl.mod_depth_scale(depth, 0.0), 0.0)
+        self.assertAlmostEqual(tl.mod_depth_scale(depth, 1.0), -37.0)
+
+    def test_a_negative_multiplier_cannot_invert(self):
+        self.assertAlmostEqual(tl.mod_depth_scale(50.0, -1.0), 0.0)
+
+
+class TestRecLedState(unittest.TestCase):
+    """REC's LED, from every fact at once. ONE predicate, no second writer."""
+
+    def test_not_possible_is_off(self):
+        # In STEP mode, and while MOD owns the pads, holding REC does nothing
+        # at all - a lit REC would be promising a take it cannot make.
+        self.assertEqual(tl.rec_led_state(False, False, False), "off")
+
+    def test_possible_and_idle_is_ready(self):
+        self.assertEqual(tl.rec_led_state(True, False, False), "ready")
+
+    def test_overdub_armed(self):
+        self.assertEqual(tl.rec_led_state(True, True, False), "overdub")
+
+    def test_recording_to_disk(self):
+        self.assertEqual(tl.rec_led_state(True, False, True), "recording")
+
+    def test_both_at_once_is_its_own_state(self):
+        # If overdub and capture each wrote the LED they would fight and it
+        # would lie about which mode the instrument is in.
+        self.assertEqual(tl.rec_led_state(True, True, True), "both")
+
+    def test_capture_outranks_impossible_overdub(self):
+        # THE CASE THAT MATTERS. Capture is running, but the player has
+        # switched to STEP mode where overdub is not possible. The LED must
+        # still say a recording is in progress - going dark would hide a
+        # running capture, and a file quietly filling the disk with nothing on
+        # the panel saying so is the unexplained-silence law in reverse.
+        self.assertEqual(tl.rec_led_state(False, False, True), "recording")
+
+    def test_every_state_is_distinct(self):
+        seen = {tl.rec_led_state(p, o, r)
+                for p in (False, True)
+                for o in (False, True)
+                for r in (False, True)}
+        self.assertEqual(seen, {"off", "ready", "overdub", "recording", "both"})
+
+
+class TestFreeze(unittest.TestCase):
+    """Two stages on one button, mapped onto law L1: tap latches, hold is
+    momentary."""
+
+    def test_nothing_is_blocked_when_thawed(self):
+        self.assertFalse(tl.freeze_blocks("melody", False, False))
+        self.assertFalse(tl.freeze_blocks("lfo", False, False))
+
+    def test_a_tap_freezes_pattern_generation(self):
+        self.assertTrue(tl.freeze_blocks("melody", True, False))
+        self.assertTrue(tl.freeze_blocks("rhythm", True, False))
+        self.assertTrue(tl.freeze_blocks("drift", True, False))
+        self.assertTrue(tl.freeze_blocks("reroll", True, False))
+
+    def test_a_tap_LEAVES_THE_LFOS_SWEEPING(self):
+        # The owner's choice: the notes stop changing under you while the
+        # sound keeps breathing. A rig with everything parked sounds dead
+        # rather than held.
+        self.assertFalse(tl.freeze_blocks("lfo", True, False))
+
+    def test_a_hold_parks_the_lfos_too(self):
+        self.assertTrue(tl.freeze_blocks("lfo", True, True))
+
+    def test_a_hold_alone_parks_the_lfos_without_a_latch(self):
+        self.assertTrue(tl.freeze_blocks("lfo", False, True))
+
+    def test_a_hold_alone_also_freezes_generation(self):
+        # A hold is the TOTAL hold - everything the tap freezes, plus the
+        # LFOs. If a hold parked the LFOs but let the pattern keep evolving,
+        # the deeper gesture would be doing less than the shallower one.
+        self.assertTrue(tl.freeze_blocks("melody", False, True))
+
+    def test_an_unknown_subject_is_never_blocked(self):
+        # A typo must not silently freeze something, and must not silently
+        # unfreeze it either.
+        self.assertFalse(tl.freeze_blocks("nonsense", True, True))
+
+    def test_the_frozen_subjects_are_the_documented_set(self):
+        self.assertEqual(tl.FREEZE_GENERATIVE,
+                         frozenset(("melody", "rhythm", "drift", "reroll")))
+
+
+class TestFreezeLabel(unittest.TestCase):
+
+    def test_thawed_says_nothing(self):
+        self.assertEqual(tl.freeze_label("CTRL", False, False), "CTRL")
+
+    def test_the_latch_says_frz(self):
+        self.assertEqual(tl.freeze_label("CTRL", True, False), "CTRL FRZ")
+
+    def test_the_total_hold_says_frz_bang(self):
+        # Two words, not one: the stages stop different things and a player
+        # who cannot tell them apart cannot tell whether the LFOs still move.
+        self.assertEqual(tl.freeze_label("CTRL", True, True), "CTRL FRZ!")
+
+    def test_a_hold_without_a_latch_still_says_the_total_hold(self):
+        self.assertEqual(tl.freeze_label("CTRL", False, True), "CTRL FRZ!")
+
+
+class TestFreezeGreysTheGenerativeColumns(unittest.TestCase):
+    """FREEZE reuses MOD's grammar for 'this control cannot act right now'."""
+
+    def _page(self):
+        # The page that actually carries RANDOM and RHYTHM - found rather than
+        # hard-coded, so a layout change moves the test with it instead of
+        # breaking it.
+        for desc in tl.PAGE_RINGS[tl.ring_key("STEP", "voice")]:
+            if "random" in (desc.get("verbs") or ()):
+                return desc
+        self.fail("no voice page carries RANDOM")
+
+    def _cols(self, frozen):
+        return tl.columns(self._page(), "voice",
+                          TestColumnModel().voice_state(), frozen=frozen)
+
+    def _verb_index(self, verb):
+        return self._page()["verbs"].index(verb)
+
+    def test_thawed_leaves_every_bar_alone(self):
+        live = self._cols(False)
+        for verb in tl.FREEZE_VERBS:
+            self.assertIsNotNone(live[self._verb_index(verb)].get("bar"), verb)
+
+    def test_frozen_strips_the_bar_off_random_and_rhythm(self):
+        cold = self._cols(True)
+        for verb in tl.FREEZE_VERBS:
+            self.assertIsNone(cold[self._verb_index(verb)].get("bar"), verb)
+
+    def test_frozen_leaves_every_other_column_untouched(self):
+        live, cold = self._cols(False), self._cols(True)
+        frozen_at = {self._verb_index(v) for v in tl.FREEZE_VERBS}
+        for index in range(8):
+            if index in frozen_at:
+                continue
+            self.assertEqual(live[index], cold[index],
+                             f"column {index} changed under FREEZE")
+
+    def test_the_value_survives_the_freeze(self):
+        # The bar goes, the value stays: it is still the value that resumes
+        # the moment the machine thaws.
+        index = self._verb_index("random")
+        self.assertEqual(self._cols(True)[index].get("value"),
+                         self._cols(False)[index].get("value"))
+
+    def test_only_the_two_generative_verbs_are_frozen(self):
+        self.assertEqual(tl.FREEZE_VERBS, frozenset(("random", "rhythm")))

@@ -516,6 +516,67 @@ class techno_lib:
     # bare tap is for, and that reads differently on the pads.
     CHANCE_RUNGS = (100, 75, 50, 25)
 
+    # What a FREEZE tap stops. Everything here rewrites notes; the LFOs do
+    # not, which is why they are not in the set and need the deeper gesture.
+    FREEZE_GENERATIVE = frozenset(("melody", "rhythm", "drift", "reroll"))
+
+    # Ice blue, and nothing else on the panel uses it.
+    COLOR_FREEZE = 0x60D0FF
+
+    @staticmethod
+    def freeze_blocks(what, frozen, deep):
+        """Is `what` held still right now?
+
+        TWO STAGES ON ONE BUTTON, and they map onto law L1 exactly, which is
+        the reason to prefer them over a second button - nothing new has to be
+        learned or documented as an exception:
+
+            tap PAD MODE   -> `frozen`, LATCHED. Pattern generation holds and
+                              the LFOs keep sweeping, so the notes stop
+                              changing under you while the sound keeps
+                              breathing.
+            hold PAD MODE  -> `deep`, MOMENTARY. Everything above PLUS the
+                              LFOs, released on let-go.
+
+        A hold is the TOTAL hold: it blocks everything a tap blocks as well as
+        the LFOs. A deeper gesture that did less than the shallower one would
+        be a rule nobody could remember.
+
+        An unrecognised subject is never blocked. A typo must not silently
+        freeze something, and it must not silently thaw it either."""
+
+        if what == "lfo":
+            return bool(deep)
+        if what in techno_lib.FREEZE_GENERATIVE:
+            return bool(frozen or deep)
+        return False
+
+    @staticmethod
+    def rec_led_state(possible, overdub, recording):
+        """What REC's LED means, from ALL THREE facts at once.
+
+        REC's LED already meant "an overdub is possible here" - dark in STEP
+        mode and while MOD owns the pads, because holding REC does nothing
+        there. Audio capture is a SECOND meaning on the same LED, and two
+        writers would fight over it, so there is one predicate taking every
+        fact and no second writer anywhere. That is the same rule that made
+        _switch_row the single predicate for the F row.
+
+        CAPTURE OUTRANKS POSSIBILITY. A capture running while the player is in
+        STEP mode must still light the button: a file quietly filling the disk
+        with nothing on the panel saying so is the unexplained-silence law
+        pointed the other way."""
+
+        if recording and overdub:
+            return "both"
+        if recording:
+            return "recording"
+        if not possible:
+            return "off"
+        if overdub:
+            return "overdub"
+        return "ready"
+
     @staticmethod
     def chance_ramp(base, floor, bar, bars):
         """Play chance `bar` bars into a ramp that dips to `floor` and back.
@@ -678,6 +739,24 @@ class techno_lib:
     # failure this instrument is built to explain, and a reroll that mutes a
     # channel by accident is that failure with a new cause.
     REROLL_CHANCE_FLOOR = 40
+
+    @staticmethod
+    def freeze_label(label, frozen, deep):
+        """The page indicator says the machine is being held.
+
+        FRZ for the latch, FRZ! for the total hold - two words rather than
+        one, because the two stages stop different things and a player who
+        cannot tell them apart cannot tell whether their LFOs are still
+        moving.
+
+        A frozen instrument must never read as a broken one. This is one of
+        three independent things saying so, alongside PAD MODE's LED and the
+        frozen columns losing their bars."""
+        if deep:
+            return f"{label} FRZ!"
+        if frozen:
+            return f"{label} FRZ"
+        return label
 
     @staticmethod
     def reroll_label(label, pending):
@@ -1256,6 +1335,15 @@ class techno_lib:
         # mid-bar, and a latched one would hide the step picture until you
         # noticed it had.
         34: "navigate",
+        # PAD MODE. CC 27 MEASURED at G4; LED index 19 MEASURED 2026-08-16.
+        #
+        # SAFE, and that was checked rather than assumed: daemon/src/main.rs
+        # gates its own pad_mode handling on `modpress`, its SHIFT state. Bare
+        # PAD MODE emits CC 27 and the daemon does nothing else with it.
+        # SHIFT + PAD MODE never reaches us at all - the daemon eats it and
+        # enters its own sequencer mode - so FREEZE must never be a SHIFT
+        # chord on this button.
+        27: "freeze",
     }
 
     # Buttons that act on press only.
@@ -1643,6 +1731,20 @@ class techno_lib:
         half = (float(hi) - float(lo)) / 2.0
         out = float(base) + float(wave) * (float(depth) / 100.0) * half
         return max(float(lo), min(float(hi), out))
+
+    @staticmethod
+    def mod_depth_scale(depth, mult):
+        """`depth` scaled by the global multiplier, sign preserved.
+
+        THIS IS A VIEW, NOT AN EDIT. The multiplier is stored separately and
+        the stored depths are never multiplied in place: 0 x anything = 0
+        would strand every modulator at zero with no way back, which is the
+        base/offset lesson wearing a new hat.
+
+        The multiplier floors at zero. A negative one would invert every
+        modulator at once - a gesture nobody asked for, reachable by turning
+        one knob too far."""
+        return float(depth) * max(0.0, float(mult))
 
     @staticmethod
     def mod_span(base, depth, lo, hi):
@@ -2070,7 +2172,7 @@ class techno_lib:
         return out
 
     @staticmethod
-    def columns(desc, kind, state, mod=False, owned=False):
+    def columns(desc, kind, state, mod=False, owned=False, frozen=False):
         """The 8 columns for a page, with MOD's refusals drawn.
 
         `mod` is whether MOD is down. While it is, a column whose verb cannot
@@ -2087,8 +2189,40 @@ class techno_lib:
         agree by construction. Adding an eighth modulatable verb later touches
         one frozenset."""
 
-        return techno_lib._mod_grey(
-            techno_lib._columns_inner(desc, kind, state), desc, mod, owned)
+        return techno_lib._freeze_grey(
+            techno_lib._mod_grey(
+                techno_lib._columns_inner(desc, kind, state), desc, mod, owned),
+            desc, frozen)
+
+    # The verbs a FREEZE makes inert. Only the two that DRIVE generation -
+    # everything else on a page is a value the player may still want to move
+    # while the machine is held, and greying them would say the instrument had
+    # stopped rather than that it was holding still.
+    FREEZE_VERBS = frozenset(("random", "rhythm"))
+
+    @staticmethod
+    def _freeze_grey(cols, desc, frozen):
+        """Strip the bar off the generative columns while FREEZE is on.
+
+        The same grammar MOD already established for "this control cannot act
+        right now", reused rather than invented - a second look for the same
+        idea is a second thing to learn. The VALUE stays, because it is still
+        the value that will resume the moment the machine thaws.
+
+        An already-dead column is left alone: FREEZE must not invent a second
+        appearance for "no source at all"."""
+
+        if not frozen:
+            return cols
+        verbs = desc.get("verbs") or ()
+        out = []
+        for index, col in enumerate(cols):
+            verb = verbs[index] if index < len(verbs) else None
+            if verb in techno_lib.FREEZE_VERBS and not col.get("grey"):
+                col = dict(col)
+                col["bar"] = None
+            out.append(col)
+        return out
 
     @staticmethod
     def _mod_grey(cols, desc, mod, owned=False):

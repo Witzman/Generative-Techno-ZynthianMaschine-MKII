@@ -202,8 +202,28 @@ CC_TR = 6                # unbound, free
 CC_SOLO = 31             # measured
 CC_ARM = 30              # SELECT. Measured at G4; LED index 22, measured.
 CC_NAVIGATE = 34         # NAVIGATE. Measured at G4; LED index 20, measured.
+CC_FREEZE = 27           # PAD MODE. Measured at G4; LED index 19, measured.
 LED_ARM = "select"       # the daemon's own name for index 22, corrected in
                          # c141d70 - light a button by ITS OWN name now.
+LED_FREEZE = "padmode"   # index 19
+
+# REC's LED, one row per state tlib.rec_led_state can return. RED means a file
+# is being written and nothing else on this panel is red for any other reason -
+# the player should never have to work out whether they are recording.
+REC_LED_COLOURS = {
+    "off": 0xFFFFFF,
+    "ready": 0xFFFFFF,
+    "overdub": 0xFFFFFF,
+    "recording": 0xFF2000,
+    "both": 0xFF2000,
+}
+REC_LED_BRIGHT = {
+    "off": 0.0,
+    "ready": 0.35,
+    "overdub": 1.0,
+    "recording": 1.0,
+    "both": 2.0,
+}
 CC_DUPLICATE = 29        # measured
 CC_MODE_CONTROL = 11
 CC_MODE_STEP = 32
@@ -507,6 +527,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # attributes so "is a ramp running" is one truth, not four that can
         # disagree.
         self._chance_ramp = None
+        # Global modulator depth, driven by the big encoder while MOD is
+        # latched. Stored SEPARATELY from every entry's own depth - see
+        # techno_lib.mod_depth_scale for why that is not a style choice:
+        # multiplying the stored depths in place would strand every modulator
+        # at zero the first time this reached 0.
+        self.mod_depth_mult = 1.0
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -537,6 +563,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Law L1 bookkeeping: when each held button went down, and whether it
         # changed anything, so the release knows what to undo.
         self.erase_down = False
+        # Audio capture to disk. Separate from rec_down, which is overdub.
+        self._recording = False
+        # Set on the MIDI thread, drained on the poll thread: start_recording
+        # spawns jack_capture and can block, and midi_event holds the lock for
+        # the whole event. The same law that keeps a preset load off the MIDI
+        # thread.
+        self._record_due = False
+        # FREEZE. Two stages on one button, law L1: `frozen` is the LATCH a
+        # tap toggles, `freeze_deep` is the MOMENTARY hold that parks the LFOs
+        # as well.
+        self.frozen = False
+        self.freeze_deep = False
         self.solo_down = False
         self.solo_mode = False           # latched: the F row means solo
         # TEMPO held: every encoder returns to the pre-2026-08-16 feel, three
@@ -675,7 +713,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # (_mod_write) is normalised against the raw lo_hi width, not this
         # narrowed span. If either normalisation changes without the other,
         # the tick will no longer land visually inside this envelope.
-        return tlib.mod_span(entry["base"], entry["depth"], lo_hi[0], lo_hi[1])
+        return tlib.mod_span(entry["base"],
+                             tlib.mod_depth_scale(entry["depth"],
+                                                  self.mod_depth_mult),
+                             lo_hi[0], lo_hi[1])
 
     def _mod_tick_frac(self, channel, verb):
         """Where the modulator's wave currently sits, as a bar fraction, or
@@ -1169,6 +1210,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _drift_channel(self, channel):
         """Apply this channel's drift modulators. Called ONCE PER WRAP.
 
+        Held still by FREEZE: drift rewrites the pattern, which is exactly
+        what a player freezes the machine to stop.
+
         Drift is the half of MOD that rewrites the PATTERN - hits gained and
         lost, the bar rotating under itself, a channel thinning out and coming
         back. It runs here and never in _mod_write(): a pattern verb written on
@@ -1184,6 +1228,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         Writes through apply(), the single write path, so drift is not a second
         writer with rules of its own - which the SP10 design rejected by name."""
+        if self._frozen("drift"):
+            # FREEZE holds the pattern still, and drift is the half of MOD
+            # that rewrites it - which is most of what a player freezes the
+            # machine to stop. The modulator entry is left in place, so
+            # thawing resumes rather than needing a re-bind.
+            return
 
         if self.owner.get(channel) == "player":
             return
@@ -1197,7 +1247,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             pos = tlib.mod_pos(entry["phase0"], beats, tlib.MOD_RATES[entry["rate"]])
             wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
-            value = tlib.mod_value(entry["base"], wave, entry["depth"],
+            value = tlib.mod_value(entry["base"], wave,
+                                   tlib.mod_depth_scale(entry["depth"],
+                                                        self.mod_depth_mult),
                                    span[0], span[1])
             # Integer verbs: a pattern cannot have 3.4 hits.
             before = self.param_get(channel, verb)
@@ -1223,6 +1275,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         line being heard is the line kept, bit for bit, for as long as the
         knob stays down. Law L6 is not an approximation here - nothing
         rewrites the pattern, so nothing can change it."""
+        if self._frozen("melody"):
+            # FREEZE holds the line still: the register stops walking and the
+            # notes being heard are the notes kept, exactly as RANDOM at 0
+            # does - the same guarantee reached from a different control.
+            return
 
         st = self.state[channel]
         melody, rhythm = st["random"], st["rhythm"]
@@ -1555,6 +1612,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     def _reroll_channel(self, channel):
         """Fire the pending reroll for one channel, at its own wrap."""
+        if self._frozen("reroll"):
+            # A pending reroll is HELD, not dropped: the flag stays in
+            # _reroll_pending and the tab stays dotted, so thawing fires it at
+            # the next wrap. Discarding it would silently eat a gesture the
+            # player already made and the surface still shows as coming.
+            return
 
         if channel not in self._reroll_pending:
             return
@@ -1610,6 +1673,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if not units:
             return
         steps, self._big_carry = tlib.big_detents(self._big_carry + units)
+        if not steps:
+            return
+        if self.mod_down:
+            # WHILE MOD IS LATCHED THE BIG ENCODER IS NOT THE PAGE RING. It
+            # scales every live modulator's depth at once instead. This is an
+            # exception on the most prominent control, so the guide has to
+            # state it plainly - MOD's own label already announces MOD is on,
+            # so the surface is not silent about it.
+            self.mod_depth_mult = max(0.0, min(
+                2.0, self.mod_depth_mult + steps * 0.05))
+            with self.lock:
+                self._render_display()
+            return
         for _ in range(abs(steps)):
             self._step_page(1 if steps > 0 else -1)
 
@@ -2057,6 +2133,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # BASE IS SAVED. It is the driver's own truth: the chain holds
             # wherever the LFO happened to be at save time, which is not the
             # value the player dialled in.
+            # The GLOBAL depth multiplier, saved beside the modulators it
+            # scales rather than inside them - the stored depths stay the
+            # player's own numbers, so a snapshot saved at multiplier 0 still
+            # carries every depth it had.
+            "mod_depth_mult": self.mod_depth_mult,
             "mods": {
                 f"{'' if ch is None else ch}|{verb}": {
                     "depth": e["depth"], "rate": e["rate"],
@@ -2167,6 +2248,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # after this load would write a stale base over a value the snapshot
         # just restored.
         self._mod_restore_due = []
+        # Read with a DEFAULT rather than through an upgrade path: a snapshot
+        # written before this key existed simply restores at 1.0, which is the
+        # unity multiplier and exactly what those snapshots meant. Validated
+        # rather than trusted, for the reason CHANCE and SWING were - a
+        # hand-edited value must not reach the poll thread unchecked.
+        mult = state.get("mod_depth_mult", 1.0)
+        self.mod_depth_mult = (float(mult) if isinstance(mult, (int, float))
+                               and 0.0 <= mult <= 2.0 else 1.0)
+
         for key, entry in (state.get("mods") or {}).items():
             chan_s, _, verb = str(key).partition("|")
             if not verb or not tlib.mod_allowed(verb):
@@ -2609,10 +2699,109 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _act_erase(self, down):
         self.erase_down = down
 
+    def _act_freeze(self, down):
+        """FREEZE: tap latches pattern generation, hold parks the LFOs too.
+
+        Law L1 exactly, which is the reason this is one button and not two -
+        nothing new has to be learned. The 250 ms rule is _act_mod's and
+        _solo_button's, unchanged.
+
+        NEVER a SHIFT chord: the daemon eats SHIFT + PAD MODE for its own
+        sequencer mode and it never reaches the driver."""
+
+        if down:
+            self._down_at["freeze"] = (time.monotonic(), False)
+            self.freeze_deep = True
+            with self.lock:
+                self._render_freeze()
+                self._render_display()
+            return
+        went_down, _ = self._down_at.pop("freeze", (None, False))
+        self.freeze_deep = False
+        if went_down is not None and \
+                (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
+            self.frozen = not self.frozen
+        with self.lock:
+            self._render_freeze()
+            self._render_display()
+
+    def _frozen(self, what):
+        """Is `what` held still right now? One predicate, five call sites."""
+        return tlib.freeze_blocks(what, self.frozen, self.freeze_deep)
+
+    def _render_freeze(self):
+        """PAD MODE lights while anything is frozen.
+
+        A frozen instrument must never read as a broken one. The 2026-08-18
+        poll-thread death is the precedent: generation stopped, nothing on the
+        surface said so, and it went unexplained for three hours. Between this
+        LED, the FRZ label and the columns losing their bars, there are three
+        independent things saying the machine is being held."""
+
+        if self.freeze_deep:
+            bright = 2.0            # the total hold, and it looks like it
+        elif self.frozen:
+            bright = 1.0
+        else:
+            bright = 0.0
+        state = (tlib.COLOR_FREEZE, bright)
+        if self.leds.changed("freeze", state):
+            self._send_osc(lib.button_osc(LED_FREEZE, state[0], state[1]))
+
+    def _toggle_capture(self):
+        """Start or stop the audio recorder. POLL THREAD ONLY.
+
+        Explicit start/stop, NEVER cuia_toggle_audio_record: upstream that
+        branches on `current_screen == 'control' and is_shown_audio_player()`
+        (zynthian_gui.py:1187), and this rig runs headless much of the time,
+        so the toggle's behaviour is not predictable from here. Explicit calls
+        also mean the driver always knows which state it put the recorder in
+        rather than inferring it.
+
+        Reached through state_manager directly rather than through send_cuia,
+        which this driver has never called once - a new thread-safety story to
+        establish for no gain.
+
+        MEASURED 2026-08-20: start_recording() shells out to jack_capture
+        against zynmixer:output_17a/b and touches no screen state, so it works
+        on a headless boot. The probe recorded four seconds and the file was
+        the right size for the elapsed time."""
+
+        recorder = getattr(self.state_manager, "audio_recorder", None)
+        if recorder is None:
+            # Not a crash: an older or stripped state manager simply has no
+            # recorder, and a poll thread that raised here would take the
+            # whole instrument down with it.
+            logging.warning("Maschine: no audio_recorder on the state manager")
+            return
+        try:
+            if self._recording:
+                recorder.stop_recording()
+                self._recording = False
+            else:
+                self._recording = bool(recorder.start_recording())
+        except Exception as e:
+            self._log_poll_error("audio capture", e)
+            return
+        logging.info("Maschine: audio capture %s",
+                     "started" if self._recording else "stopped")
+        with self.lock:
+            self._render_transport()
+
     def _act_rec(self, down):
         # Held, and it overdubs: release ends the take. Held notes are NOT
         # released here - letting go of REC stops capturing, it does not stop
         # the instrument sounding.
+        if down and self.shift_down:
+            # SHIFT + REC is AUDIO CAPTURE, and it cannot collide with overdub
+            # because overdub is bare-REC-HELD. That is also why the feature
+            # entry's "long-press REC" was impossible: a long press IS that
+            # hold.
+            #
+            # Deliberately does not set rec_down, so releasing SHIFT+REC
+            # cannot end an overdub the player never started.
+            self._record_due = True
+            return
         self.rec_down = down
         self._render_display()
 
@@ -3225,6 +3414,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Runs on the poll thread and NEVER on the MIDI thread: midi_event holds
         the lock for the whole event, and a parameter write can block."""
         if not self.mod and not self._mod_restore_due:
+            return
+        if self._frozen("lfo"):
+            # THE HELD FLAG ONLY - a FREEZE tap deliberately leaves the LFOs
+            # sweeping, so the notes stop changing under you while the sound
+            # keeps breathing. Parking them takes the deeper gesture.
+            #
+            # Returning before the restore drain is deliberate too: a base
+            # owed to MOD + ERASE while everything is parked can wait one
+            # let-go, and writing it here would move a parameter during a
+            # gesture whose whole promise is that nothing moves.
             return
         if self._snapshot_busy():
             # A load rewrites every chain and every mixer strip, and set_state
@@ -4866,6 +5065,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # LinuxSampler over a socket and can block.
                 self._commit_kit()
                 self._commit_preset()
+                if self._record_due:
+                    self._record_due = False
+                    self._toggle_capture()
                 # Drain queued note-map rebuilds here, never on the MIDI
                 # thread: the scan takes the lock for a whole pattern.
                 while self._rebuild_due:
@@ -5272,8 +5474,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         it follows a mode change, and from both edges of _act_mod, so it
         follows MOD being held or latched."""
 
-        lit = self.mode != "STEP" and not self.mod_down
-        state = (0xFFFFFF, self.BRIGHT_STATIC if lit else 0.0)
+        possible = self.mode != "STEP" and not self.mod_down
+        # ONE predicate, every fact. Capture is a second meaning on this LED
+        # and a second writer would fight the first, so there is no second
+        # writer - this is the only place REC's LED is written.
+        meaning = tlib.rec_led_state(possible, self.rec_down, self._recording)
+        state = (REC_LED_COLOURS[meaning], REC_LED_BRIGHT[meaning])
         if self.leds.changed("rec_possible", state):
             self._send_osc(lib.button_osc("rec", state[0], state[1]))
 
@@ -5396,19 +5602,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # flag reaches _column_dead through this one method - so the painter
         # and the bind's refusal cannot disagree about which columns are live.
         mod = self.mod_down
+        # FREEZE strips the bar off the generative columns through the SAME
+        # method, for the same reason MOD does: the painter and the encoder's
+        # refusal must not hold two opinions about which columns are live.
+        frozen = self.frozen or self.freeze_deep
         shape = desc["shape"]
         if desc.get("generated"):
-            return tlib.columns(desc, None, self._generated_view(desc), mod)
+            return tlib.columns(desc, None, self._generated_view(desc), mod,
+                                frozen=frozen)
         if shape == tlib.SHAPE_SPREAD:
             views = [(chr(ord("A") + i), tlib.CHANNELS[i][1], self.state_view(i))
                      for i in range(len(tlib.CHANNELS))]
-            return tlib.columns(desc, None, views, mod)
+            return tlib.columns(desc, None, views, mod, frozen=frozen)
         if shape == tlib.SHAPE_GLOBAL:
-            return tlib.columns(desc, None, self.globals_view(), mod)
+            return tlib.columns(desc, None, self.globals_view(), mod,
+                                frozen=frozen)
         channel = self.group
         owned = self.owner.get(channel) == "player"
         return tlib.columns(desc, self._page_kind(channel),
-                            self.state_view(channel), mod, owned)
+                            self.state_view(channel), mod, owned,
+                            frozen=frozen)
 
     def _column_dead(self, column):
         """True when this column is drawn dead (law L4): greyed, showing ----,
@@ -5731,6 +5944,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # The bar of the phrase, so every timed gesture has something to
         # resolve against that the player can see.
         label = tlib.phrase_label(label, self._phrase_bar)
+        # And FREEZE says the machine is being held, which is the difference
+        # between held and broken.
+        label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.
