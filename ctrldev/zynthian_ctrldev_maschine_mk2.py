@@ -3568,6 +3568,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # sweep LENGTH instead of a cycle time. Same table, new
                 # meaning, no second table to drift.
                 self._arm_once(entry)
+        # BOTH, and the pads are not optional. The legend used to be repainted
+        # by its own 30 Hz animation, so the "selected" highlight followed a
+        # tap as a side effect. With the animation gone - it wedged the
+        # controller - nothing else repaints the grid, and picking a rate
+        # moved the highlight nowhere. Found by the owner asking whether rate
+        # selection still worked, 2026-08-20: it did, and it had stopped
+        # SAYING so, which on this surface is the same fault.
+        self._render_pads()
         self._render_display()
 
     def _arm_once(self, entry):
@@ -6516,7 +6524,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # MOD repurposes every encoder on whatever page is showing, so the
         # page indicator has to say it is on.
         mod = self.mod_down
-        label = tlib.mod_label(label, mod)
+        # The rate of the LAST-BOUND modulator, as a word. This is what
+        # replaced the moving tick: a number that changes when you change it,
+        # rather than an animation that rebuilt both screens six times a
+        # second and killed the controller.
+        rate_bars = None
+        if mod and self.mod_last is not None:
+            entry = self.mod.get(self.mod_last)
+            if entry is not None:
+                rate_bars = tlib.MOD_RATES[entry["rate"]]
+        label = tlib.mod_rate_label(label, mod, rate_bars)
         # A pending reroll says so, and the tabs say which channels.
         label = tlib.reroll_label(label, bool(self._reroll_pending))
         # The bar of the phrase, so every timed gesture has something to
@@ -6539,11 +6556,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # _act_mod() were literal no-ops, because nothing else in the
             # tuple moves when MOD goes down, and a latched MOD made the pads
             # inert and the encoders mean something else with no indication.
-            state = (self._tabs(screen), self._columns(screen), label, mod,
+            cols = self._columns(screen)
+            # THE LIVE TICK IS DRAWN BUT DOES NOT TRIGGER A REDRAW. It is the
+            # marker showing where a modulator's wave is RIGHT NOW, and it was
+            # quantised only to the bar's pixel width - so every pixel of
+            # movement rebuilt BOTH SCREENS. Measured on the rig 2026-08-20:
+            # ~190 messages a second, essentially all of them display, about
+            # six full rebuilds per second, and the controller was dead within
+            # seconds of a modulator being bound. Four physical replugs.
+            #
+            # Quantising it more coarsely does not fix it: a fast rate crosses
+            # any threshold many times a second. The only reliable answer is
+            # that a continuously moving value must not be in the
+            # change-detection key at all.
+            #
+            # So the tick redraws when something ELSE does. What is lost is
+            # its animation; what is kept is a controller that answers.
+            key = tuple(c[:5] + (None,) + c[6:] for c in cols)
+            state = (self._tabs(screen), key, label, mod,
                      frozenset(self._reroll_pending), self._phrase_bar)
             if not self.leds.changed(f"disp{screen}", state):
                 continue
-            for packet in lib.screen_packets(screen, state[0], state[1], state[2]):
+            # Drawn from `cols`, which still carries the live tick - only the
+            # comparison above ignores it.
+            for packet in lib.screen_packets(screen, state[0], cols, state[2]):
                 self._send_osc(packet)
 
     def _render_all(self):

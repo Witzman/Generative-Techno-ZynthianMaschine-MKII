@@ -3988,3 +3988,33 @@ class TestArmLabel(unittest.TestCase):
             out = tl.arm_label("X", True, macro)
             self.assertNotEqual(out, "X ARM?")
             self.assertTrue(out.startswith("X ARM "))
+
+
+class TestModRateLabel(unittest.TestCase):
+    """A number instead of a moving marker - owner's idea, 2026-08-20."""
+
+    def test_bars_above_one_read_as_a_count(self):
+        self.assertEqual(tl.rate_word(16.0), "16B")
+        self.assertEqual(tl.rate_word(4.0), "4B")
+        self.assertEqual(tl.rate_word(1.0), "1B")
+
+    def test_below_one_reads_as_a_fraction(self):
+        # "0.25B" is a number nobody thinks in; 1/4 is already the word on the
+        # DIVIDE column.
+        self.assertEqual(tl.rate_word(0.5), "1/2")
+        self.assertEqual(tl.rate_word(0.25), "1/4")
+        self.assertEqual(tl.rate_word(0.0625), "1/16")
+
+    def test_every_shipped_rate_has_a_word(self):
+        for rate in tl.MOD_RATES:
+            self.assertTrue(tl.rate_word(rate))
+
+    def test_the_label_is_untouched_when_mod_is_off(self):
+        self.assertEqual(tl.mod_rate_label("CTRL", False, 4.0), "CTRL")
+
+    def test_mod_on_with_nothing_bound_still_says_MOD(self):
+        self.assertEqual(tl.mod_rate_label("CTRL", True, None), "CTRL MOD")
+
+    def test_mod_on_with_a_binding_names_the_rate(self):
+        self.assertEqual(tl.mod_rate_label("CTRL", True, 8.0), "CTRL MOD 8B")
+        self.assertEqual(tl.mod_rate_label("CTRL", True, 0.25), "CTRL MOD 1/4")

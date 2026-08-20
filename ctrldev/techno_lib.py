@@ -1256,6 +1256,36 @@ class techno_lib:
         return f"{label} MOD" if active else label
 
     @staticmethod
+    def rate_word(rate_bars):
+        """A rate as a short word: 16B, 4B, 1B, 1/2, 1/16.
+
+        Bars above one read as a count; below one as the fraction, because
+        "0.25B" is a number nobody thinks in and "1/4" is the word already
+        printed on the DIVIDE column."""
+        if rate_bars is None:
+            return ""
+        if rate_bars >= 1.0:
+            return f"{int(round(rate_bars))}B"
+        return f"1/{int(round(1.0 / rate_bars))}"
+
+    @staticmethod
+    def mod_rate_label(label, active, rate_bars=None):
+        """MOD's label carries the LAST-BOUND modulator's rate.
+
+        Owner's idea, 2026-08-20, and it replaces something better than it
+        replaces nothing: the moving tick inside the bar showed where the wave
+        was in real time, and that animation is what wedged the controller -
+        every pixel of movement rebuilt both screens, ~190 messages a second.
+
+        A NUMBER carries the useful half of that - how fast is this thing
+        moving - and changes only when the rate does, so it costs one repaint
+        per decision instead of six a second forever."""
+        if not active:
+            return label
+        word = techno_lib.rate_word(rate_bars)
+        return f"{label} MOD {word}" if word else f"{label} MOD"
+
+    @staticmethod
     def owner_label(label, owner, recording, playing):
         """The page indicator also carries who owns the channel and whether a
         take is being captured.
