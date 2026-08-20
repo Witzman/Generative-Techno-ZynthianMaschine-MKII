@@ -791,6 +791,30 @@ class techno_lib:
     # channel by accident is that failure with a new cause.
     REROLL_CHANCE_FLOOR = 40
 
+    # The floor a beat repeat collapses to. ONE BEAT, and there is no
+    # half-bar repeat: getLength() is beats * PPQN, so a length is whole
+    # beats and always will be.
+    #
+    # NOTE WHAT ONE BEAT MEANS, because it is not what a reader expects: at
+    # 1/4 a beat is ONE STEP and at 1/32 it is EIGHT. The floor is stated in
+    # beats and felt in steps, so the same gesture is a single repeated hit on
+    # a coarse channel and a tight stutter on a fine one. The guide has to say
+    # this - a limit stated without its division is how the polymeter claim
+    # came to be false.
+    REPEAT_BEATS = 1
+
+    @staticmethod
+    def repeat_label(label, active, count=0):
+        """The page indicator says the loop is being squeezed.
+
+        Carries the channel COUNT because beat repeat skips player-owned
+        channels: a take has no euclid parameters to regenerate from, so
+        there is nothing to put back afterwards. A gesture that quietly missed
+        two of eight channels must say so."""
+        if not active:
+            return label
+        return f"{label} RPT{int(count)}"
+
     @staticmethod
     def freeze_label(label, frozen, deep):
         """The page indicator says the machine is being held.
@@ -1401,6 +1425,15 @@ class techno_lib:
         # Held, it restores the pre-2026-08-16 encoder feel. Every encoder is
         # half as sensitive by default now; see lib.STEP_FACTOR.
         35: "coarse",
+        # STEP > , the transport arrow. CC 6 MEASURED at G4 (both edges), LED
+        # index 51 MEASURED 2026-08-15, and grep of daemon/src finds nothing
+        # acting on it - so it is free on every one of the three counts that
+        # matter.
+        #
+        # HELD, never latched: a beat repeat that latched would be a broken
+        # instrument until the player found the button again, and the release
+        # is the natural restore trigger.
+        6: "repeat",
         # MUTE. CC 33 MEASURED at G4 (both edges), LED index 24 MEASURED
         # 2026-08-15 - the ONE index the daemon had guessed right. Both halves
         # of working rule 7 satisfied, and this is the only feature in four

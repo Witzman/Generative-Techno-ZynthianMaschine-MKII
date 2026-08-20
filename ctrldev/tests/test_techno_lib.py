@@ -1284,7 +1284,10 @@ class TestButtonTables(unittest.TestCase):
         # MUTE 33 LEFT it 2026-08-20 for the mute grid - the only feature in
         # four packages with no blocking measurement at all, since CC 33 and
         # LED index 24 were both already measured.
-        for cc in (5, 6, 12, 29):
+        #
+        # STEP > 6 LEFT it 2026-08-20 for beat repeat. Measured CC, measured
+        # LED index 51, and the daemon acts on it nowhere.
+        for cc in (5, 12, 29):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
@@ -3875,3 +3878,31 @@ class TestMuteGrid(unittest.TestCase):
         self.assertEqual(tl.pad_owner(mute=True, arm=True), "arm")
         self.assertEqual(tl.pad_owner(mute=True, shift=True), "shift")
         self.assertEqual(tl.pad_owner(mute=True), "mute")
+
+
+class TestRepeatLabel(unittest.TestCase):
+
+    def test_inactive_says_nothing(self):
+        self.assertEqual(tl.repeat_label("CTRL", False), "CTRL")
+
+    def test_active_says_how_many_channels_it_took(self):
+        # Beat repeat skips player-owned channels because a take has no euclid
+        # parameters to regenerate from. A gesture that quietly missed two of
+        # eight must say so.
+        self.assertEqual(tl.repeat_label("CTRL", True, 8), "CTRL RPT8")
+        self.assertEqual(tl.repeat_label("CTRL", True, 6), "CTRL RPT6")
+
+    def test_the_floor_is_one_beat(self):
+        # There is no half-bar repeat: getLength() is beats * PPQN.
+        self.assertEqual(tl.REPEAT_BEATS, 1)
+
+    def test_one_beat_is_a_different_number_of_steps_per_division(self):
+        # The floor is stated in beats and FELT in steps: one step at 1/4,
+        # eight at 1/32. A limit stated without its division is how the
+        # polymeter claim came to be false.
+        self.assertEqual(tl.DIVISION_SPB[tl.DIVISION_LABELS.index("1/4")], 1)
+        self.assertEqual(tl.DIVISION_SPB[tl.DIVISION_LABELS.index("1/32")], 8)
+
+    def test_repeat_is_bound_stateful_because_the_release_is_the_event(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[6], "repeat")
+        self.assertNotIn(6, tl.BUTTONS_PRESS)

@@ -547,6 +547,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # non-"div" member as a length change and calls _set_length(), so a
         # "mute" member there would rewrite the pattern on every queued mute.
         self._mute_pending = {}
+        # Beat repeat. `_repeat_due` is the edge the MIDI thread hands to the
+        # poll thread; `_repeat_restore` is channel -> (beats, hits, rot)
+        # captured before the collapse.
+        self._repeat_due = None
+        self._repeat_restore = {}
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -2733,6 +2738,72 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for pad in range(16):
             self._paint_pad(pad, tlib.arm_legend_pad(
                 pad, picked=picked, armed_bars=bars, remaining=left))
+
+    def _act_repeat(self, down):
+        """STEP > held: every generated channel collapses to its first beat.
+
+        The write itself is handed to the poll thread. It clears and rewrites
+        a pattern per channel under the lock, and midi_event holds that lock
+        for the whole event - the same law that keeps a preset load off this
+        thread. The release has to survive a press whose collapse is still in
+        flight, which is why both edges go through one attribute rather than
+        two flags that can cross."""
+
+        self._repeat_due = bool(down)
+        with self.lock:
+            self._render_display()
+
+    def _repeat_apply(self, collapse):
+        """Collapse to one beat, or put back what was captured.
+
+        THE CAPTURE IS THE WHOLE DESIGN. _set_length recounts hits from the
+        notes that survive the shrink - correct for its own purpose, since
+        encoder 1 must resume from what is really there - which makes
+        collapse-and-restore LOSSY: a 4-beat 16-step channel collapsed to one
+        beat comes back with however many hits fell in that beat, permanently
+        thinned, with the surface showing the smaller number as if the player
+        had set it. The feature entry only warned about recorded takes.
+
+        So the restore writes back the captured (beats, hits, rot) and
+        regenerates through _write_pattern. Growing the length back would not
+        do it: zynseq's resize() DELETED the notes past the end, and the
+        captured euclid parameters are the only place they still exist.
+
+        Player-owned channels are skipped, which the same fact forces: their
+        notes are a take, and there is nothing to regenerate them from."""
+
+        if collapse:
+            if self._repeat_restore:
+                return                      # already collapsed
+            channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+            with self.lock:
+                for channel in channels:
+                    self._repeat_restore[channel] = (
+                        self.beats[channel], self.hits[channel],
+                        self.rot[channel])
+                    try:
+                        self._set_length(channel, tlib.REPEAT_BEATS)
+                    except Exception as e:
+                        self._log_poll_error(f"beat repeat ch{channel}", e)
+            with self.lock:
+                self._render_display()
+            return
+
+        if not self._repeat_restore:
+            return
+        with self.lock:
+            for channel, (beats, hits, rot) in \
+                    list(self._repeat_restore.items()):
+                self.beats[channel] = beats
+                self.hits[channel] = hits
+                self.rot[channel] = rot
+                try:
+                    self._write_pattern(channel)
+                except Exception as e:
+                    self._log_poll_error(f"beat repeat restore ch{channel}", e)
+        self._repeat_restore = {}
+        with self.lock:
+            self._render_all()
 
     def _act_mute(self, down):
         """MUTE holds the eight-channel mute grid on the pads."""
@@ -5444,6 +5515,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if self._record_due:
                     self._record_due = False
                     self._toggle_capture()
+                if self._repeat_due is not None:
+                    want, self._repeat_due = self._repeat_due, None
+                    self._repeat_apply(want)
                 if self._break_due is not None:
                     bars, self._break_due = self._break_due, None
                     self._break_fire(bars)
@@ -6332,6 +6406,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # And FREEZE says the machine is being held, which is the difference
         # between held and broken.
         label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
+        label = tlib.repeat_label(label, bool(self._repeat_restore),
+                                  len(self._repeat_restore))
         if self._timescale_note is not None:
             name, moved, asked = self._timescale_note
             label = tlib.scope_label(label, name, moved, asked)
