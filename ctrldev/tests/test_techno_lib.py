@@ -3066,3 +3066,18 @@ class TestArmOverlay(unittest.TestCase):
         self.assertEqual(tl.overlay_owner(shift=True), "shift")
         self.assertEqual(tl.overlay_owner(mod=True), "mod")
         self.assertEqual(tl.overlay_owner(navigate=True), "navigate")
+
+
+class TestPhraseLabel(unittest.TestCase):
+
+    def test_it_appends_the_bar_of_the_phrase(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", 0), "LEVEL 1/3 1/16")
+
+    def test_it_counts_from_one_for_the_player(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", 3), "LEVEL 1/3 4/16")
+
+    def test_a_shorter_phrase_says_so(self):
+        self.assertEqual(tl.phrase_label("X", 1, phrase_bars=4), "X 2/4")
+
+    def test_no_bar_means_no_suffix(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", None), "LEVEL 1/3")

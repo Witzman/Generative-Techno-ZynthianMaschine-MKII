@@ -547,6 +547,19 @@ class techno_lib:
         return f"{label} REROLL>" if pending else label
 
     @staticmethod
+    def phrase_label(label, bar, phrase_bars=16):
+        """Append bar N of the phrase to the page indicator.
+
+        Counts from ONE. The player is reading a bar number, not an array
+        index, and every other number on this surface is one-based.
+
+        `bar` is None when the transport is stopped: there is no bar to be on,
+        and a frozen "1/16" would read as a running clock that had stuck."""
+        if bar is None:
+            return label
+        return f"{label} {techno_lib.phrase_bar(bar, phrase_bars) + 1}/{phrase_bars}"
+
+    @staticmethod
     def reroll_scope(which, samplers, owners, selected, shift):
         """The channels a reroll will touch.
 
