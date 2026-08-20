@@ -2944,3 +2944,36 @@ class TestGeneratedColumnNames(unittest.TestCase):
         self.assertTrue(cols[0]["grey"])
         self.assertEqual(cols[0]["value"], "----")
         self.assertEqual(cols[0]["name"], "assign")
+
+
+class TestPhraseClock(unittest.TestCase):
+
+    def test_at_the_anchor_it_is_bar_zero(self):
+        self.assertEqual(tl.phrase_pos(10.0, 10.0), (0, 0.0))
+
+    def test_one_bar_after_the_anchor(self):
+        self.assertEqual(tl.phrase_pos(14.0, 10.0), (1, 0.0))
+
+    def test_half_way_through_bar_two(self):
+        bar, frac = tl.phrase_pos(20.0, 10.0)
+        self.assertEqual(bar, 2)
+        self.assertAlmostEqual(frac, 0.5)
+
+    def test_before_the_anchor_never_goes_negative(self):
+        self.assertEqual(tl.phrase_pos(5.0, 10.0), (0, 0.0))
+
+    def test_a_three_beat_bar_is_honoured(self):
+        self.assertEqual(tl.phrase_pos(6.0, 0.0, beats_per_bar=3), (2, 0.0))
+
+    def test_bar_zero_of_the_phrase(self):
+        self.assertEqual(tl.phrase_bar(0), 0)
+
+    def test_the_phrase_wraps(self):
+        self.assertEqual(tl.phrase_bar(16), 0)
+        self.assertEqual(tl.phrase_bar(17), 1)
+
+    def test_a_shorter_phrase_wraps_sooner(self):
+        self.assertEqual(tl.phrase_bar(4, phrase_bars=4), 0)
+
+    def test_a_nonsense_phrase_length_does_not_divide_by_zero(self):
+        self.assertEqual(tl.phrase_bar(5, phrase_bars=0), 0)

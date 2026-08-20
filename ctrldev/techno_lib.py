@@ -1368,6 +1368,35 @@ class techno_lib:
         return float(phase0) + float(elapsed_beats) / span
 
     @staticmethod
+    def phrase_pos(elapsed_beats, anchor_beats, beats_per_bar=4):
+        """Bars since the anchor as (bar_index, fraction through that bar).
+
+        Anchored to the TRANSPORT rather than to any channel's own length:
+        each channel owns its length, and a polymetric rig has eight
+        different bars. One channel-derived count would be a lie on seven of
+        them. Derived from beats rather than seconds so it follows a tempo
+        change without being told about it.
+
+        Clamps at zero: the anchor is set on transport start, and a poll that
+        lands a hair before it must read bar 0, not bar -1."""
+        span = float(beats_per_bar)
+        if span <= 0.0:
+            return (0, 0.0)
+        delta = float(elapsed_beats) - float(anchor_beats)
+        if delta <= 0.0:
+            return (0, 0.0)
+        bars = delta / span
+        index = int(bars)
+        return (index, bars - index)
+
+    @staticmethod
+    def phrase_bar(bar_index, phrase_bars=16):
+        """Which bar of the phrase, 0..phrase_bars-1."""
+        if phrase_bars <= 0:
+            return 0
+        return int(bar_index) % int(phrase_bars)
+
+    @staticmethod
     def mod_sh(seed, cycle):
         """Deterministic sample-and-hold in -1.0..1.0.
 
