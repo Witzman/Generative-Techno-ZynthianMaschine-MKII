@@ -168,6 +168,19 @@
 <p><strong>It is safe on a take you recorded.</strong> Play chance belongs to the pattern rather than to the notes: nothing is regenerated, no step is moved, added or removed, and the ramp writes once per bar rather than continuously. Same reason SHIFT + pad is safe.</p>
 <p>Play chance is in the snapshot, so a set saved mid-ramp saves the thinned values. Let it finish before you save.</p>
 <hr>
+<h2 id="half-double">HALF and DOUBLE &mdash; the same rhythm, at another speed</h2>
+<p><strong>Arm HALF or DOUBLE and every generated channel changes speed on the bar, then changes back.</strong> The pattern is not redrawn coarser or finer: the step count is kept and the beat count moves with the division, so what you hear is the rhythm you already had, played at half or twice the speed.</p>
+<p><strong>Some channels cannot make the move, and the display says how many did.</strong> <code>HALF 5/8</code> means five of the eight went. A division needs somewhere to go: 1/8 triplet has no half-speed partner, 1/4 has none either, and 1/32 and 1/16 triplet cannot double. Double-time also needs an even number of beats to halve. A channel that cannot move is left exactly as it was rather than approximated.</p>
+<p><strong>Straight stays straight and triplet stays triplet.</strong> A speed change that turned a straight channel into a triplet one would be a second, unasked-for change riding along with the first.</p>
+<p><strong>It comes back to what was captured</strong>, not to a calculated opposite &mdash; drift, reroll and the encoders can all move a channel while the macro is out, and only the snapshot taken at the moment it fired is reliable.</p>
+<p><strong>Channels you have recorded onto are left alone.</strong> The move regenerates from the generator settings, and a take has none to regenerate from.</p>
+<p><strong>Under polymeter it can arrive up to a bar late on the odd channels.</strong> The macro fires on the phrase bar, but a structure change is taken at each channel&rsquo;s own wrap &mdash; the same rule that stops a division change tripping the groove mid-bar. On a rig where every channel is four beats the question never comes up.</p>
+<hr>
+<h2 id="ratchet-ramp">The ratchet ramp &mdash; the roll into the drop</h2>
+<p><strong>Arm the ratchet ramp and every note subdivides further each bar</strong>, arriving at x4 exactly on the last bar of the length you chose. A four-bar arm walks 1&ndash;2&ndash;3&ndash;4; a two-bar arm goes 1 then 4. <strong>It always arrives</strong> &mdash; a build that stopped at x3 because you armed three bars would be a build that never lands.</p>
+<p>Each channel goes back to its own RATCHET setting afterwards, so a channel you had already left ratcheting comes back ratcheting.</p>
+<p><strong>Recorded channels are skipped</strong>, for the same reason as above: the ramp rewrites the pattern from the generator settings each bar.</p>
+<hr>
 <h2 id="reroll">Reroll — two buttons that ask for a different bar</h2>
 <p><strong>Hold PATTERN or SCENE to reroll the channel you are on.</strong> Hold, do not tap &mdash; let go early and nothing happens. A drum channel gets a new hit count and rotation; a channel played by the Turing register gets a new rhythm and a new play chance, and its MELODY is left at <code>LOCK</code> so you hear the new line held rather than already drifting.</p>
 <p><strong>Hold SHIFT with them to reroll a whole family at once.</strong> SHIFT + PATTERN rerolls every sampler channel, SHIFT + SCENE every synth. That split follows the <em>engine</em>, not how the channel is being played &mdash; a drum sampler switched to Turing is still a sampler, so asking for new synth lines never hands you a new drum pattern as well. The two buttons light to show which family you are standing in.</p>

@@ -157,8 +157,17 @@ BASELINE = {
     # floor is left alone, and that it is safe on a recorded take because play
     # chance rewrites no pattern. A reader who does not know the first one will
     # assume the ramp reset their mix.
-    "generating-patterns.html":    (2155, "2026-08-20"),
-    "playing-and-recording.html":  (818,  "2026-08-16"),
+    # +396, 2026-08-20 (third move that day): HALF/DOUBLE and the ratchet
+    # ramp. Half the words are the refusals, and they have to be: four of the
+    # six divisions cannot move in one direction or the other, so a partial
+    # result is the ORDINARY case here rather than an error, and a reader who
+    # does not know that will report the display's "5/8" as a bug.
+    "generating-patterns.html":    (2551, "2026-08-20"),
+    # +132, 2026-08-20: audio capture on SHIFT + REC, and what REC's light
+    # means now that it carries two facts. The red-while-recording rule is
+    # here so a capture running on a page where overdub is impossible is
+    # still visible.
+    "playing-and-recording.html":  (950, "2026-08-20"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the
     # "known defect" published here was withdrawn - the buttons always
@@ -208,7 +217,13 @@ BASELINE = {
     # that cancelling mid-drop leaves the mutes down because the return is
     # itself pending, and that the silenced tabs still draw dashed. The first
     # two are how a player ends up with a silent rig and no explanation.
-    "mixing-and-effects.html":     (970,  "2026-08-20"),
+    # +302, 2026-08-20 (second move that day): BREAK and the master insert.
+    # The insert's paragraph on silence is the load-bearing one - it is the
+    # single control on this rig that can silence all eight channels at once,
+    # and it is genuinely silent rather than merely dark below about a third
+    # of its range. A reader who meets that without warning will conclude the
+    # instrument is broken.
+    "mixing-and-effects.html":     (1272, "2026-08-20"),
     # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
     # the button list. Same reason as above - it was 24 words under.
     # +163, 2026-08-19: the F row means switches in CONTROL. One row of the
@@ -225,7 +240,14 @@ BASELINE = {
     # step), that releasing ARM bare cancels everything pending, and that MOD
     # takes the ARM chord away from the macro picker. A player who does not
     # know the second one edits a pattern while reading a clock.
-    "the-surface.html":            (1784, "2026-08-20"),
+    # +678, 2026-08-20 (second move that day): five gestures landed on this
+    # page at once - the PENDING page, FREEZE with its two depths, the mute
+    # grid, beat repeat, and ARM's macro row growing from two to six. This is
+    # the page a player reads to find out what a button does, and every one of
+    # those is a button. The SHIFT + PAD MODE trapdoor is here too: it is not
+    # ours, it never reaches the instrument, and a player who trips it has no
+    # other way to find out what happened.
+    "the-surface.html":            (2462, "2026-08-20"),
     # +69, 2026-08-20: what the new gestures do NOT survive - the phrase count,
     # anything armed, and a modulator's one-shot flag - plus the one that cuts
     # the other way, that a set saved mid-drop saves those mutes because mixer

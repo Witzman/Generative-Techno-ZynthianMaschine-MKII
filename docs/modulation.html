@@ -151,6 +151,15 @@
 <p>Hold <strong>MOD and ERASE</strong> and press <strong>ALL</strong>. Every modulator goes, and every value lands back where you put it.</p>
 <p>The markers vanish the instant you press it; the values themselves settle a moment later. That gap is deliberate — the instrument will not write twenty parameters inside a single button press, because doing that on the button thread once froze the whole machine.</p>
 <hr>
+<h2 id="depth">The big encoder &mdash; how much everything moves</h2>
+<p><strong>While MOD is latched, the big encoder scales every live modulator at once</strong>, from nothing up to about twice their set depth. One hand takes a static rig to a churning one and back.</p>
+<p>Every modulated column&rsquo;s dashed span widens and narrows together as you turn, which is the most literal picture of what is happening. Turn it down to zero and everything parks; turn it back and every modulator returns to exactly the depth you gave it &mdash; the multiplier is kept separately rather than multiplied into the depths, so nothing is stranded at zero with no way back.</p>
+<p><strong>This is the one exception to the big encoder being the page ring.</strong> While MOD is latched it is the depth knob instead. MOD&rsquo;s own label on the page indicator is what tells you which of the two you are holding.</p>
+<hr>
+<h2 id="phrase-locked">Sweeps start with the phrase</h2>
+<p><strong>Every modulator counts from the phrase, not from when the instrument was switched on.</strong> An eight-bar sweep is <em>the</em> eight bars rather than an eight-bar sweep at some arbitrary offset, and starting the transport or pressing RESTART re-zeros the whole modulation system along with the bar count.</p>
+<p>The relative spread between modulators is kept, so eight LFOs that were chasing each other go on chasing each other.</p>
+<hr>
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="02-features.html">Features</a> — everything the instrument does, in one list</li>

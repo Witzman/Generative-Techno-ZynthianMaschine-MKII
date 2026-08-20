@@ -100,6 +100,11 @@
 <p>Two details worth carrying: a drum's LENGTH keeps the take, because shortening a pattern preserves the steps that still fit; and MELODY and RHYTHM only hand back when they move <em>off</em> <code>LOCK</code>, since a locked generator rewrites nothing and could not undo your recording anyway. A knob has to actually move — brushing one does nothing.</p>
 <p><strong>On a drum channel the amber colouring does not survive a snapshot reload, and that is not a lost take.</strong> A played drum note carries the same pitch as a generated one, so once the pattern is read back there is nothing left to tell the two apart. The notes are all there and the channel is still yours: the indicator still reads <code>PLAY</code>, and after a reload that indicator, not the pad colour, is the authority. On a voice the amber survives, because the played pitch is its own.</p>
 <hr>
+<h2 id="audio-capture">Capturing the jam to a file</h2>
+<p><strong>SHIFT + REC starts and stops an audio recording.</strong> It captures the master &mdash; all eight channels, the effects, and anything a macro does to them &mdash; to a WAV on the Pi, alongside the other captures.</p>
+<p>It cannot collide with overdub, which is <em>bare REC held</em>. That is also why it is a chord rather than a long press: a long press of REC already <em>is</em> the overdub hold.</p>
+<p><strong>REC&rsquo;s light tells you which one you are in.</strong> Dim when a take is possible, full while you hold it for an overdub, and <strong>red while a recording is being written</strong> &mdash; including when you have moved to a page where overdub is not possible, so a running capture can never be invisible.</p>
+<hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
 <p><strong>You cannot record in STEP mode</strong> — there the pads belong to the step editor — <strong>and you cannot record while MOD is active</strong>, where they pick a modulator's rate and shape.</p>
 <p>In both cases <strong>the REC button is unlit</strong>. A lit REC would be promising a take it cannot make, so it goes dark rather than letting you play a phrase into nothing and wonder why it vanished.</p>

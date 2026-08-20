@@ -116,8 +116,8 @@
 <h2 id="arm">ARM &mdash; landing a change on a bar</h2>
 <p><strong>SELECT is ARM.</strong> Hold it &mdash; it never latches &mdash; and compose two things on the pads: <em>what</em> is going to happen, and <em>how many bars away</em>.</p>
 <table><thead><tr><th>Pads while ARM is held</th><th>What they are</th></tr></thead><tbody>
-<tr><td>1 and 2</td><td>the macro &mdash; <strong>DROP</strong>, then the <strong>CHANCE ramp</strong>. Amber, and the one you picked lights full</td></tr>
-<tr><td>3&ndash;8</td><td>dark, and they do nothing. This is where later macros go</td></tr>
+<tr><td>1&ndash;6</td><td>the macro &mdash; <strong>DROP</strong>, <strong>CHANCE ramp</strong>, <strong>HALF</strong>, <strong>DOUBLE</strong>, <strong>BREAK</strong>, <strong>ratchet ramp</strong>. Amber, and the one you picked lights full</td></tr>
+<tr><td>7 and 8</td><td>dark, and they do nothing. This is where later macros go</td></tr>
 <tr><td>9&ndash;16</td><td>the length in bars &mdash; 1, 2, 3, 4, 6, 8, 12, 16. Green</td></tr>
 </tbody></table>
 <p><strong>Pick the macro first, then the length.</strong> The length is the commit: tapping it arms the macro. A length on its own does nothing at all, because guessing which macro you meant would fire something you never named.</p>
@@ -127,7 +127,40 @@
 <p><strong>Arming with the transport stopped keeps the length and waits.</strong> There is no bar to count from yet, so nothing can fire; press Play and the macro lands that many bars in. SELECT sits steady rather than flashing meanwhile, because nothing is counting down yet.</p>
 <p><strong>Arming a macro that is already pending replaces it</strong> instead of stacking a second one, so two drops can never land on different bars and fight over the same restore.</p>
 <p><strong>With MOD active, ARM belongs to the modulators instead.</strong> MOD latches, so MOD held or latched plus ARM is the gesture that makes a modulator sweep once &mdash; see <a href="modulation.html#rise">RISE</a>. Tap MOD off first if you want to arm a macro. <strong>SHIFT outranks both</strong>: a pad under SHIFT is a step's odds, whatever else is latched.</p>
-<p>The two macros are written up where they land: <a href="mixing-and-effects.html#drop">DROP</a> and the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a>.</p>
+<p><strong>BREAK is the exception to the length.</strong> Every other macro fires in N bars; BREAK fires <em>immediately</em> and comes back in N. There is no &ldquo;in N bars&rdquo; for a gesture whose whole point is that it happens now.</p>
+<p><strong>DROP and BREAK cannot both be armed.</strong> They are the same mechanism with its ends swapped and they share one snapshot of who was muted, so arming either quietly drops the other. Only one thing may own the mutes at a time.</p>
+<p>Each macro is written up where it lands: <a href="mixing-and-effects.html#drop">DROP and BREAK</a>, the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a>, <a href="generating-patterns.html#half-double">HALF and DOUBLE</a>, and the <a href="generating-patterns.html#ratchet-ramp">ratchet ramp</a>.</p>
+<hr>
+<h2 id="pending">PENDING &mdash; what is armed, and how to kill one</h2>
+<p><strong>Go to ALL and turn the big encoder.</strong> The ALL ring has a second page now: one column per armed macro, soonest first, with the bars remaining and a bar counting down. With nothing armed it says <code>NONE</code> rather than drawing eight blank columns.</p>
+<p><strong>Hold ERASE and turn the encoder under a column to cancel that one.</strong> Letting ARM go still cancels everything &mdash; that is the panic gesture and stays a single press. This is the surgical version.</p>
+<p>The columns are sorted by how soon each lands and only move when something really overtakes something else, so the page stays readable while it counts.</p>
+<hr>
+<h2 id="freeze">FREEZE &mdash; stop the machine evolving</h2>
+<p><strong>PAD MODE is FREEZE, and it has two depths.</strong></p>
+<table><thead><tr><th>Gesture</th><th>What holds still</th></tr></thead><tbody>
+<tr><td><strong>Tap</strong> &mdash; latches</td><td>MELODY, RHYTHM, drift and reroll. The notes stop changing under you &mdash; <strong>and the LFOs keep sweeping</strong>, so the sound goes on breathing</td></tr>
+<tr><td><strong>Hold</strong> &mdash; momentary</td><td>all of that <em>plus</em> the LFOs. Everything parks until you let go</td></tr>
+</tbody></table>
+<p>That is the surface&rsquo;s standing rule &mdash; a tap latches, a hold is momentary &mdash; so there is nothing new to learn. Tap again to thaw.</p>
+<p><strong>A frozen instrument says so three times over</strong>, because one that did not would read as a broken one: PAD MODE lights, the page indicator gains <code>FRZ</code> (or <code>FRZ!</code> for the total hold), and the RANDOM and RHYTHM columns lose their bars in the same grey MOD already uses for &ldquo;this control cannot act right now&rdquo;. The values stay &mdash; they are what resumes.</p>
+<p><strong>A pending reroll is held, not thrown away.</strong> Its tab stays dashed and it fires on the next wrap after you thaw.</p>
+<p><strong>Do not hold SHIFT and press PAD MODE.</strong> That combination never reaches the instrument at all: the USB daemon eats it for a mode of its own, where the pads program its internal sequence. It is a pre-existing trapdoor rather than anything FREEZE added, and the way out is to press PAD MODE without SHIFT until the pads behave again.</p>
+<hr>
+<h2 id="mute-grid">The mute grid &mdash; arrangement by pad</h2>
+<p><strong>Hold MUTE and the sixteen pads become your eight channels, twice.</strong></p>
+<table><thead><tr><th>Pads while MUTE is held</th><th>What they do</th></tr></thead><tbody>
+<tr><td>Top two rows, 1&ndash;8</td><td>mute and unmute channel A&ndash;H <strong>now</strong></td></tr>
+<tr><td>Bottom two rows, 9&ndash;16</td><td>queue the same change to that channel&rsquo;s <strong>next wrap</strong></td></tr>
+</tbody></table>
+<p>Each pad wears its channel&rsquo;s own colour, because hue is identity everywhere on this surface. Full means audible, dark means muted. <strong>A pad in the bottom half shows the change, not the state</strong>: half-lit when something is queued for that channel and dark when nothing is. Drawing the state there would only repeat the row above.</p>
+<p><strong>Tap a queued pad twice and the queue is cancelled</strong> rather than reversed &mdash; the second press of a gesture is its undo everywhere else here. Pressing the instant pad also clears anything queued for that channel, so one strip never has two answers waiting.</p>
+<p>It is the mixer strip that mutes, the same one the F row uses, so it is in your snapshot and shows on the touchscreen mixer.</p>
+<hr>
+<h2 id="beat-repeat">Beat repeat &mdash; squeeze it to one beat</h2>
+<p><strong>Hold the transport&rsquo;s <span aria-hidden="true">&#9654;</span> STEP button.</strong> Every generated channel collapses to its first beat and loops it; let go and the patterns come straight back.</p>
+<p><strong>One beat is the floor</strong> &mdash; a pattern&rsquo;s length is whole beats and always will be, so there is no half-bar repeat. Worth knowing that a beat is a different <em>size</em> per channel: at 1/4 it is a single step, at 1/32 it is eight. The same gesture is a repeated hit on a coarse channel and a tight stutter on a fine one.</p>
+<p><strong>Channels you have recorded onto are skipped</strong>, and the page indicator says how many it took &mdash; <code>RPT6</code> means six of the eight. A take has no generator settings to rebuild it from afterwards, so collapsing one would lose it.</p>
 <hr>
 <h2 id="what-the-lights-mean">What the lights mean</h2>
 <table><thead><tr><th>Surface</th><th>What it says</th></tr></thead><tbody>
