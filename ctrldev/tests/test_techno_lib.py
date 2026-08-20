@@ -3531,3 +3531,80 @@ class TestFreezeGreysTheGenerativeColumns(unittest.TestCase):
 
     def test_only_the_two_generative_verbs_are_frozen(self):
         self.assertEqual(tl.FREEZE_VERBS, frozenset(("random", "rhythm")))
+
+
+class TestPendingPage(unittest.TestCase):
+    """The audit surface that makes every armed macro safe to use on stage."""
+
+    def test_nothing_armed_says_NONE(self):
+        # Eight blank columns admit nothing, and law L4 is about controls that
+        # do nothing and do not say so. A page is the same object as a knob in
+        # that respect.
+        cols = tl.pending_columns([])
+        self.assertEqual(cols[0]["name"], "NONE")
+        self.assertEqual(cols[0]["value"], "----")
+        self.assertTrue(cols[0]["grey"])
+
+    def test_it_always_returns_eight_columns(self):
+        for entries in ([], [("drop", 1, 4)], [("drop", 1, 4)] * 3):
+            self.assertEqual(len(tl.pending_columns(entries)), 8)
+
+    def test_a_macro_draws_its_name_and_its_bars_left(self):
+        cols = tl.pending_columns([("drop", 3, 4)])
+        self.assertEqual(cols[0]["name"], "DROP")
+        self.assertEqual(cols[0]["value"], "0003")
+        self.assertEqual(cols[0]["bar"], "seg")
+        self.assertEqual(cols[0]["frac"], (3, 4))
+
+    def test_soonest_first(self):
+        cols = tl.pending_columns([("drop", 8, 8), ("chance", 2, 4)])
+        self.assertEqual([c["name"] for c in cols[:2]], ["THIN", "DROP"])
+
+    def test_ties_break_by_name_so_the_page_does_not_shuffle(self):
+        a = tl.pending_columns([("drop", 4, 4), ("chance", 4, 8)])
+        b = tl.pending_columns([("chance", 4, 8), ("drop", 4, 4)])
+        self.assertEqual([c["name"] for c in a], [c["name"] for c in b])
+
+    def test_more_than_eight_are_truncated_not_crashed(self):
+        entries = [(f"m{i}", i, 16) for i in range(12)]
+        self.assertEqual(len(tl.pending_columns(entries)), 8)
+
+    def test_an_unknown_macro_still_gets_a_word(self):
+        # A page that drew a blank for a macro it did not recognise would be
+        # hiding exactly the thing it exists to show.
+        cols = tl.pending_columns([("wibble", 1, 2)])
+        self.assertTrue(cols[0]["name"])
+
+    def test_the_bar_cannot_exceed_its_length(self):
+        cols = tl.pending_columns([("drop", 99, 4)])
+        self.assertEqual(cols[0]["frac"], (4, 4))
+
+    def test_the_page_is_on_the_ALL_ring(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[tl.ring_key("ALL", None)]]
+        self.assertIn("PENDING", titles)
+        # The ring had exactly one page before this, so the big encoder did
+        # nothing at all on ALL.
+        self.assertGreater(len(titles), 1)
+
+
+class TestPendingQueueCancel(unittest.TestCase):
+
+    def test_cancel_removes_only_that_macro(self):
+        q = tl.PendingQueue()
+        q.arm("drop", 4, 0)
+        q.arm("chance", 8, 0)
+        self.assertTrue(q.cancel("drop"))
+        self.assertEqual(q.pending(), ["chance"])
+
+    def test_cancel_does_not_move_the_survivors(self):
+        # The reason cancel() exists rather than rebuilding the queue at the
+        # caller: arm() takes a LENGTH and floors it at one, so re-arming the
+        # survivors would push every one of them by at least a bar.
+        q = tl.PendingQueue()
+        q.arm("drop", 4, 0)
+        q.arm("chance", 8, 0)
+        q.cancel("drop")
+        self.assertEqual(q.remaining("chance", 0), 8)
+
+    def test_cancelling_something_not_armed_is_false_not_an_error(self):
+        self.assertFalse(tl.PendingQueue().cancel("nothing"))

@@ -1237,7 +1237,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         if self.owner.get(channel) == "player":
             return
-        beats = self._elapsed_beats()
+        beats = self._mod_beats()
         moved = False
         for (chan, verb), entry in list(self.mod.items()):
             if chan != channel or not tlib.is_drift(verb):
@@ -2100,7 +2100,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Once, outside the comprehension below: it takes the lock for a
         # tempo read, and asking eight modulators for it eight times would
         # take the lock eight times for one answer.
-        beats = self._elapsed_beats()
+        beats = self._mod_beats()
         return {
             "globals": {k: v for k, v in self.globals.items() if k != "pending"},
             "mode": self.mode,
@@ -3169,6 +3169,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         desc = self._page()
         shape = desc["shape"]
+        if shape == tlib.SHAPE_PENDING:
+            # The audit page has no verbs and no values to turn. Its ONE
+            # gesture is ERASE + the encoder under a column, which kills that
+            # entry; a bare turn does nothing, deliberately, because a page
+            # you read mid-performance must not change under a knock.
+            if self.erase_down and self._enc_delta(cc_num, cc_val):
+                if self._cancel_pending(column):
+                    with self.lock:
+                        self._render_all()
+            return
         if shape == tlib.SHAPE_SPREAD:
             verb, channel = desc["verb"], column
         else:
@@ -3408,6 +3418,73 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         except Exception:
             return False
 
+    def _pending_view(self):
+        """(macro, bars left, armed bars) for everything armed right now.
+
+        Reads the queue, never a second copy of it. The page is an AUDIT
+        surface and an audit that keeps its own tally is not an audit."""
+
+        bar = self._phrase_bar or 0
+        out = []
+        for macro, bars in self._armed_while_stopped.items():
+            # Armed while stopped: nothing is counting down yet, so the whole
+            # length is still to come. Drawn rather than hidden - a macro the
+            # player armed and cannot see is exactly what this page is for.
+            out.append((macro, bars, bars))
+        for macro in self._pending_macros.pending():
+            left = self._pending_macros.remaining(macro, bar)
+            if left is None:
+                continue
+            out.append((macro, left, self._arm_bars.get(macro, left)))
+        return out
+
+    def _cancel_pending(self, column):
+        """ERASE + the encoder under a column kills that one armed macro.
+
+        ERASE is already this instrument's take-it-back modifier, and
+        encoder-under-column is already how every page on the ring is edited -
+        so per-entry cancel costs no new control and no new capture.
+
+        A bare ARM tap still cancels EVERYTHING. This is the addition, not the
+        replacement: cancel-all is the panic gesture and has to stay one
+        press."""
+
+        rows = tlib.pending_sort(self._pending_view())
+        if not 0 <= column < len(rows):
+            return False
+        macro = rows[column][0]
+        self._armed_while_stopped.pop(macro, None)
+        self._arm_bars.pop(macro, None)
+        self._pending_macros.cancel(macro)
+        logging.debug("Maschine: cancelled pending macro %s", macro)
+        return True
+
+    def _mod_beats(self):
+        """The beat count every modulator is measured against.
+
+        THE PHRASE, not the driver's uptime. `_elapsed_beats()` is
+        time.monotonic() scaled by BPM and free-running from construction, so
+        an 8-bar sweep used to be an 8-bar sweep at an arbitrary offset -
+        never THE 8 bars. Anchoring it to the phrase makes a sweep start where
+        the player hears the phrase start, and re-zeros the whole modulation
+        system at transport start and at RESTART.
+
+        This does NOT remove the .0573 drift measured over an hour at the SP10
+        gate: the phrase clock has the same time base, and the sequencer runs
+        on the audio clock. It BOUNDS it - to one performance instead of one
+        uptime, because both anchor sites re-zero it. **Do not build a second
+        correction here.** If the owed 5-minute measurement says the drift is
+        real inside a single performance, the fix is the phrase clock's own
+        soft re-anchor and this inherits it for free.
+
+        Falls back to the raw clock before the transport has ever run, so
+        modulators still sweep on a stopped rig rather than freezing at zero
+        with nothing saying why."""
+
+        if self._phrase_anchor is None:
+            return self._elapsed_beats()
+        return self._elapsed_beats() - self._phrase_anchor
+
     def _mod_write(self):
         """Advance every modulator and write base+offset.
 
@@ -3438,7 +3515,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         while self._mod_restore_due:
             channel, verb, base = self._mod_restore_due.pop(0)
             self._mod_base_set(channel, verb, base)
-        beats = self._elapsed_beats()
+        beats = self._mod_beats()
         for key, entry in list(self.mod.items()):
             channel, verb = key
             span = self._mod_range(channel, verb)
@@ -5607,6 +5684,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # refusal must not hold two opinions about which columns are live.
         frozen = self.frozen or self.freeze_deep
         shape = desc["shape"]
+        if shape == tlib.SHAPE_PENDING:
+            return tlib.columns(desc, None, self._pending_view(), mod,
+                                frozen=frozen)
         if desc.get("generated"):
             return tlib.columns(desc, None, self._generated_view(desc), mod,
                                 frozen=frozen)

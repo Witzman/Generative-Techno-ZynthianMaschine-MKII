@@ -1394,6 +1394,13 @@ class techno_lib:
     SHAPE_CHANNEL = "channel"
     SHAPE_SPREAD = "spread"
     SHAPE_GLOBAL = "global"
+    # The audit page. Its columns are whatever is armed right now, so it is
+    # the first page whose vocabulary is not fixed - which is why it is a
+    # shape of its own rather than a GLOBAL page with rewritten verb names.
+    # `verbs` is a static tuple in a page descriptor and four other pages read
+    # it as one; making it dynamic for this page alone would put a special
+    # case in code they all share.
+    SHAPE_PENDING = "pending"
 
     # Keying is a property of the RING, not of the shapes inside it. A ring is
     # keyed on kind when its content differs by kind. STEP is keyed on kind
@@ -2110,6 +2117,62 @@ class techno_lib:
             pages.append(desc)
         return tuple(pages)
 
+    # What the PENDING page calls a macro. Kept apart from ARM_MACROS on
+    # purpose: that tuple is append-only because a snapshot stores its
+    # indices, while these are display words and may be reworded freely.
+    PENDING_NAMES = {
+        "drop": "DROP",
+        "drop_end": "UNDROP",
+        "chance": "THIN",
+        "break": "BREAK",
+        "break_end": "UNBREAK",
+        "half": "HALF",
+        "double": "DOUBLE",
+        "timescale_end": "RETURN",
+        "ratchet": "ROLL",
+        "ratchet_end": "UNROLL",
+    }
+
+    @staticmethod
+    def pending_sort(entries):
+        """Armed macros, soonest first, ties broken by name.
+
+        A page whose columns reorder as the countdown runs is unreadable at a
+        glance. This key only changes when something actually overtakes
+        something else, which is a real event worth seeing."""
+        return sorted(entries, key=lambda e: (int(e[1]), str(e[0])))
+
+    @staticmethod
+    def pending_columns(entries):
+        """The eight columns of the PENDING page.
+
+        `entries` is (macro, bars_left, armed_bars) per armed macro. Eight
+        columns because the surface has eight; a ninth armed macro is not
+        drawn, and nothing in this instrument can arm nine.
+
+        WITH NOTHING ARMED THE PAGE SAYS `NONE`. Eight blank columns admit
+        nothing, and law L4 is about controls that do nothing and do not say
+        so - a page is the same object as a knob in that respect. It is the
+        whole reason this page exists: package 1 shipped four armable things
+        and no way to see or cancel any one of them."""
+
+        rows = techno_lib.pending_sort(entries)[:8]
+        out = []
+        for macro, left, armed in rows:
+            name = techno_lib.PENDING_NAMES.get(macro, str(macro).upper()[:4])
+            armed = max(1, int(armed))
+            left = max(0, min(armed, int(left)))
+            # A seg bar counting DOWN, so the ink on the glass shrinks as the
+            # bars run out. The same direction as ARM's pad ruler, because two
+            # countdowns that ran opposite ways would be worse than one.
+            out.append(techno_lib._col(
+                name, f"{int(left):04d}", "seg", (left, armed)))
+        if not out:
+            out.append(techno_lib._col("NONE", "----", None, 0.0, grey=True))
+        while len(out) < 8:
+            out.append(techno_lib._col("", "", None, 0.0))
+        return out
+
     @staticmethod
     def generated_columns(desc, state):
         """Columns for a generated page. The surface value is 0-100; the driver
@@ -2263,6 +2326,8 @@ class techno_lib:
         dict, as it has always been."""
         if desc["shape"] == techno_lib.SHAPE_SPREAD:
             return techno_lib.spread_columns(desc, state)
+        if desc["shape"] == techno_lib.SHAPE_PENDING:
+            return techno_lib.pending_columns(state)
         if desc.get("generated"):
             return techno_lib.generated_columns(desc, state)
 
@@ -2417,6 +2482,15 @@ class techno_lib:
         def pending(self):
             return list(self._due)
 
+        def cancel(self, macro):
+            """Drop ONE armed macro. Returns True if it was armed.
+
+            Added for the PENDING page, and added HERE rather than rebuilt at
+            the caller: re-arming the survivors through arm() would push every
+            one of them by at least a bar, because arm() takes a LENGTH and
+            floors it at one. A cancel must not move what it did not cancel."""
+            return self._due.pop(macro, None) is not None
+
         def clear(self):
             self._due.clear()
 
@@ -2457,6 +2531,11 @@ techno_lib.PAGE_RINGS = {
         _d(techno_lib.SHAPE_GLOBAL, "GLOBAL",
            verbs=("root", "scale", "bpm", "master", "revsize", "revtype",
                   "dlytime", "dlyfbk")),
+        # The ALL ring held exactly ONE page until 2026-08-20, which meant the
+        # big encoder - the page ring since 2026-08-19 - did nothing at all on
+        # this mode. PENDING is its second stop and the encoder's first job
+        # here.
+        _d(techno_lib.SHAPE_PENDING, "PENDING"),
     ),
     ("MIXER", None): (
         _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),
