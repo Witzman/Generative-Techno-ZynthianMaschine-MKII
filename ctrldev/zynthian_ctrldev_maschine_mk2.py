@@ -6278,9 +6278,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # quantised the same way so it repaints only on a real pixel
                 # move. Nothing sampled yet (just bound) falls back to the
                 # base's own position rather than drawing at 0.
-                live = self._mod_tick_frac(channel, verb)
-                tick = round(float(tlib.quantise_frac(
-                    live if live is not None else frac, self.METER_PIXELS)), 3)
+                # NO LIVE TICK. It used to be sampled here and drawn inside
+                # the span, and redrawing it in real time is what rebuilt both
+                # screens six times a second and wedged the controller.
+                #
+                # It is not merely un-triggered now, it is GONE - because a
+                # marker that is drawn from a live quantity but only refreshed
+                # when something else happens to repaint is a marker that
+                # LIES. It would sit still while the wave moved and jump when
+                # you pressed an unrelated button. This surface does not ship
+                # indicators that mean nothing.
+                #
+                # What it said - how fast is this moving - is now a word on
+                # MOD's own label: MOD 8B, MOD 1/4. Owner's suggestion,
+                # 2026-08-20. The dashed span stays: it is static, and it says
+                # the thing the tick never did, which is HOW FAR the value
+                # will travel.
+                tick = None
             out.append((col["name"], col["value"], bar, round(float(frac), 3),
                        mod, tick, bool(col.get("small"))))
         return tuple(out)
