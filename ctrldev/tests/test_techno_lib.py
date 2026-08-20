@@ -3227,3 +3227,83 @@ class TestChanceRamp(unittest.TestCase):
     def test_the_floor_is_the_lowest_chance_rung(self):
         # Reuses CHANCE_RUNGS' own vocabulary rather than inventing a number.
         self.assertEqual(tl.CHANCE_RUNGS[-1], 25)
+
+
+class TestRise(unittest.TestCase):
+    """A modulator shape that runs ONCE and holds, instead of cycling."""
+
+    def test_it_starts_at_zero(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 0.0, 4.0), 0.0)
+
+    def test_it_is_half_way_at_half_the_span(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 8.0, 4.0), 0.5)
+
+    def test_it_reaches_exactly_one_at_the_end(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 16.0, 4.0), 1.0)
+
+    def test_it_CLAMPS_and_never_wraps(self):
+        # The whole difference from mod_pos: a free LFO would be back at 0.0.
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 32.0, 4.0), 1.0)
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 999.0, 4.0), 1.0)
+
+    def test_a_negative_position_is_clamped_to_zero(self):
+        self.assertAlmostEqual(tl.mod_once_pos(-1.0, 0.0, 4.0), 0.0)
+
+    def test_a_zero_span_lands_at_the_end_rather_than_dividing(self):
+        self.assertAlmostEqual(tl.mod_once_pos(0.0, 5.0, 0.0), 1.0)
+
+    def test_the_endpoint_cannot_be_passed_to_mod_wave_directly(self):
+        # THE TRAP, asserted so it cannot come back. mod_wave takes pos % 1.0
+        # and 1.0 % 1.0 is 0.0, which puts a FINISHED ramp at its MINIMUM -
+        # the exact opposite of landing on the downbeat. _mod_write must
+        # substitute the endpoint rather than passing 1.0 through.
+        self.assertAlmostEqual(tl.mod_wave("ramp", 1.0),
+                               tl.mod_wave("ramp", 0.0))
+        self.assertGreater(tl.mod_wave("ramp", tl.MOD_ONCE_END),
+                           tl.mod_wave("ramp", 0.5))
+
+    def test_the_endpoint_constant_is_just_under_one(self):
+        self.assertLess(tl.MOD_ONCE_END, 1.0)
+        self.assertGreater(tl.MOD_ONCE_END, 0.999)
+
+    def test_phase0_can_start_the_sweep_from_anywhere(self):
+        # _arm_once stores a negative phase0 so the sweep begins at the
+        # moment of arming rather than at driver start-up.
+        self.assertAlmostEqual(tl.mod_once_pos(-1.0, 16.0, 4.0), 0.0)
+        self.assertAlmostEqual(tl.mod_once_pos(-1.0, 32.0, 4.0), 1.0)
+
+
+class TestPadOwnerChord(unittest.TestCase):
+    """MOD latched + ARM held is MOD, and it is the only chord exception."""
+
+    def test_mod_and_arm_together_are_mod(self):
+        # RISE lives here: the pads must keep showing the rate/shape legend
+        # the player is choosing from, not ARM's macro picker.
+        self.assertEqual(tl.pad_owner(mod=True, arm=True), "mod")
+
+    def test_arm_alone_is_still_arm(self):
+        self.assertEqual(tl.pad_owner(arm=True), "arm")
+
+    def test_mod_alone_is_still_mod(self):
+        self.assertEqual(tl.pad_owner(mod=True), "mod")
+
+    def test_shift_still_outranks_everything(self):
+        self.assertEqual(tl.pad_owner(shift=True, arm=True, mod=True), "shift")
+        self.assertEqual(tl.pad_owner(shift=True, arm=True), "shift")
+
+    def test_nothing_held_is_the_step_picture(self):
+        self.assertIsNone(tl.pad_owner())
+
+    def test_it_agrees_with_overlay_owner_everywhere_else(self):
+        # The chord is the ONLY divergence. If a future overlay changes the
+        # priority table, this catches a pad_owner that quietly stopped
+        # following it.
+        for shift in (False, True):
+            for mod in (False, True):
+                for arm in (False, True):
+                    if mod and arm and not shift:
+                        continue
+                    self.assertEqual(
+                        tl.pad_owner(shift=shift, mod=mod, arm=arm),
+                        tl.overlay_owner(shift=shift, mod=mod, arm=arm),
+                        f"shift={shift} mod={mod} arm={arm}")

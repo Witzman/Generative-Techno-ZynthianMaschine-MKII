@@ -444,6 +444,35 @@ class techno_lib:
         return techno_lib.OVERLAY_STEPWISE.get(owner, True)
 
     @staticmethod
+    def pad_owner(shift=False, mod=False, arm=False, navigate=False):
+        """Which overlay the PADS obey, chord exceptions included.
+
+        THE SINGLE PREDICATE for the pad dispatcher, the pad painter and the
+        poll loop, for the reason _switch_row exists: a second approximation
+        of "what do the pads mean right now" drifts from the first, and pads
+        that disagree with what a press does is the worst object this surface
+        can produce.
+
+        The one exception to OVERLAY_PRIORITY: **MOD latched AND ARM held is
+        MOD**, not ARM. MOD+ARM is how a modulator is made one-shot, so the
+        pads must go on showing the rate and shape legend the player is
+        choosing from. Sending them to ARM's macro picker would take the menu
+        away at the exact moment it is being read.
+
+        It is safe as a CHORD where SHIFT+button was not, because MOD LATCHES:
+        the player is not holding two things at once, they pressed MOD earlier
+        and are now holding ARM.
+
+        **SHIFT still outranks the chord.** SHIFT is the oldest and most-used
+        binding on this surface and the exception is not allowed to move it -
+        a player holding SHIFT gets SHIFT, whatever else is latched."""
+
+        if mod and arm and not shift:
+            return "mod"
+        return techno_lib.overlay_owner(shift=shift, mod=mod, arm=arm,
+                                        navigate=navigate)
+
+    @staticmethod
     def overlay_owner(shift=False, mod=False, navigate=False, arm=False):
         """Which modifier owns the pads, or None for the ordinary step picture.
 
@@ -1526,6 +1555,35 @@ class techno_lib:
         h = (h * 0xFF51AFD7ED558CCD) & 0xFFFFFFFFFFFFFFFF
         h ^= h >> 33
         return (h / float(0xFFFFFFFFFFFFFFFF)) * 2.0 - 1.0
+
+    # The position a FINISHED one-shot is evaluated at. Not 1.0, and the
+    # reason is a real trap: mod_wave takes pos % 1.0, and 1.0 % 1.0 is 0.0 -
+    # so passing the endpoint straight through would put a completed ramp at
+    # its MINIMUM, which is the exact opposite of landing on the downbeat.
+    MOD_ONCE_END = 0.999999
+
+    @staticmethod
+    def mod_once_pos(phase0, elapsed_beats, rate_bars, beats_per_bar=4):
+        """A ONE-SHOT position: 0.0 to 1.0, then held there forever.
+
+        The only difference from mod_pos is the clamp, and the clamp is the
+        whole feature. mod_pos returns an UNWRAPPED cycle count because
+        sample-and-hold needs the integer part; a riser must instead arrive
+        and STAY, or it snaps back to the bottom on the downbeat it was built
+        to land on.
+
+        `phase0` is normally NEGATIVE here - _arm_once stores minus the
+        elapsed position at the moment of arming, so the sweep starts when the
+        player asked for it rather than when the driver booted.
+
+        Do not feed the return value straight to mod_wave at the endpoint:
+        see MOD_ONCE_END."""
+
+        span = float(rate_bars) * float(beats_per_bar)
+        if span <= 0.0:
+            return 1.0
+        pos = float(phase0) + float(elapsed_beats) / span
+        return max(0.0, min(1.0, pos))
 
     @staticmethod
     def mod_wave(shape, pos, seed=0):

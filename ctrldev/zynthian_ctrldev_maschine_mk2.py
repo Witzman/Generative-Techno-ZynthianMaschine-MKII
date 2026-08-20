@@ -2359,13 +2359,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # hands them back on release (owner, 2026-08-19).
                 self._shift_pad(step)
                 return True
-            if self.arm_down:
+            if self._pad_owner() == "arm":
                 # Between SHIFT and MOD, which is OVERLAY_PRIORITY's order and
                 # not a coincidence: SHIFT is the oldest and most-used binding
                 # and must not move, and a player holding ARM has committed to
                 # scheduling, so it outranks MOD. Ahead of the STEP branch for
                 # the same reason MOD is - a pad under a modifier must never
                 # fall through and silently edit the pattern.
+                #
+                # Asked through _pad_owner, not through self.arm_down, so the
+                # MOD+ARM chord goes to the MOD legend instead of here.
                 self._arm_pad(step)
                 return True
             if self.mod_down:
@@ -3071,9 +3074,43 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         if pad < len(tlib.MOD_RATES):
             entry["rate"] = pad
+            if entry.get("once"):
+                # Re-arm. A new length must restart the sweep from here rather
+                # than leave a finished one clamped at its old span, which
+                # would look like a dead pad.
+                self._arm_once(entry)
         else:
             entry["shape"] = tlib.MOD_SHAPES[pad - len(tlib.MOD_RATES)]
+            if self.arm_down:
+                # MOD + ARM on a shape pad: that shape now runs ONCE. The rate
+                # pads need no branch at all - they already write
+                # entry["rate"], and under a one-shot that number is read as a
+                # sweep LENGTH instead of a cycle time. Same table, new
+                # meaning, no second table to drift.
+                self._arm_once(entry)
         self._render_display()
+
+    def _arm_once(self, entry):
+        """Make this modulator a one-shot whose sweep starts NOW.
+
+        phase0 is stored NEGATIVE - minus the position already elapsed - so
+        mod_once_pos reaches 1.0 one span from this moment rather than one
+        span from driver start-up. That is what "lands on the downbeat" means,
+        and it also makes the sweep slightly shorter than the nominal rate.
+
+        RISE adds no new permission surface: it goes through mod_allowed()
+        unchanged, so gate and velo stay refused and the drift verbs still
+        refuse on a player-owned channel. The deny list stays absolute by
+        construction rather than by a second copy that can drift."""
+
+        span = tlib.MOD_RATES[entry["rate"]] * 4.0
+        entry["once"] = True
+        entry["phase0"] = -self._elapsed_beats() / span if span else 0.0
+
+    def _pad_owner(self):
+        """What the pads mean right now. One predicate, three callers."""
+        return tlib.pad_owner(shift=self.shift_down, mod=self.mod_down,
+                              arm=self.arm_down)
 
     def _mod_clear(self, key):
         """Drop a modulator and restore its base, so the parameter is left
@@ -3081,6 +3118,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         entry = self.mod.pop(key, None)
         if entry is None:
             return
+        # Dropped from self.mod, so `once` goes with it. Kept explicit because
+        # set_state rebuilds entries from a saved dict and a stale `once` there
+        # would come back clamped, with no pad to un-clamp it.
+        entry.pop("once", None)
         channel, verb = key
         self._mod_base_set(channel, verb, entry["base"])
         if self.mod_last == key:
@@ -3194,9 +3235,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # under the lock, five times a second, forever - the velo
                 # defect exactly.
                 continue
-            pos = tlib.mod_pos(entry["phase0"], beats,
-                               tlib.MOD_RATES[entry["rate"]])
-            wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
+            if entry.get("once"):
+                pos = tlib.mod_once_pos(entry["phase0"], beats,
+                                        tlib.MOD_RATES[entry["rate"]])
+                # HOLD at the end. mod_wave takes pos % 1.0 and 1.0 % 1.0 is
+                # 0.0, which would drop a finished ramp back to its minimum -
+                # the exact opposite of landing on the downbeat.
+                wave = tlib.mod_wave(
+                    entry["shape"],
+                    tlib.MOD_ONCE_END if pos >= 1.0 else pos,
+                    entry["seed"])
+            else:
+                pos = tlib.mod_pos(entry["phase0"], beats,
+                                   tlib.MOD_RATES[entry["rate"]])
+                wave = tlib.mod_wave(entry["shape"], pos, entry["seed"])
             value = tlib.mod_value(entry["base"], wave, entry["depth"],
                                    span[0], span[1])
             # set_value() already returns early on an unchanged value and
@@ -4812,9 +4864,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # for a target that proves it needs more.
                     self._mod_write()
                 with self.lock:
-                    owner = tlib.overlay_owner(shift=self.shift_down,
-                                               mod=self.mod_down,
-                                               arm=self.arm_down)
+                    owner = self._pad_owner()
                     if owner == "mod":
                         # The ONLY animated overlay, and it has to run here at
                         # 30 Hz rather than on the 200 ms modulator tick: a
@@ -4953,8 +5003,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # playhead is still drawn over the top, in white, unchanged - the
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
-        owner = tlib.overlay_owner(shift=self.shift_down, mod=self.mod_down,
-                                   arm=self.arm_down)
+        owner = self._pad_owner()
         if owner == "arm":
             # Ahead of MOD only because the priority table says so; neither
             # can be true at once here.
