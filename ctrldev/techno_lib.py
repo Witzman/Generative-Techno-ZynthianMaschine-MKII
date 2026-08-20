@@ -443,6 +443,31 @@ class techno_lib:
         """True when the pads under this overlay still stand for steps."""
         return techno_lib.OVERLAY_STEPWISE.get(owner, True)
 
+    # The phrase page's two brightnesses. TWO, not three: past and now read at
+    # a glance, and a third level for "ahead" would need a legend to be read
+    # at all. Ahead is simply dark.
+    COLOR_PHRASE = 0x00D0FF
+    PHRASE_PAST = 0.4
+
+    @staticmethod
+    def phrase_pad(index, bar, phrase_bars=16):
+        """(colour, brightness) for one pad of the NAVIGATE phrase page.
+
+        `bar` is the absolute bar count, or None when the transport is
+        stopped. Stopped draws EVERY pad dark rather than freezing the last
+        picture: a phrase page showing bar 1 lit while nothing plays reads as
+        a running clock that has stuck, which is the unexplained-silence law
+        wearing a display."""
+
+        if bar is None:
+            return (techno_lib.COLOR_PHRASE, techno_lib.PAD_OFF)
+        now = techno_lib.phrase_bar(bar, phrase_bars)
+        if index == now:
+            return (techno_lib.COLOR_PHRASE, techno_lib.PAD_FULL)
+        if index < now:
+            return (techno_lib.COLOR_PHRASE, techno_lib.PHRASE_PAST)
+        return (techno_lib.COLOR_PHRASE, techno_lib.PAD_OFF)
+
     @staticmethod
     def pad_owner(shift=False, mod=False, arm=False, navigate=False):
         """Which overlay the PADS obey, chord exceptions included.
@@ -1222,6 +1247,15 @@ class techno_lib:
         # with the pads under the same hand. A latched ARM would leave armed
         # state a player can walk away from and trip four bars later.
         30: "arm",
+        # NAVIGATE. CC 34 MEASURED in the G4 runbook, LED index 20 MEASURED
+        # 2026-08-16 in the third round of the LED probe - it was carried as
+        # "inferred, high" in a stale summary block for four days, which is
+        # what blocked this page.
+        #
+        # Held, never latched: the phrase page is something you glance at
+        # mid-bar, and a latched one would hide the step picture until you
+        # noticed it had.
+        34: "navigate",
     }
 
     # Buttons that act on press only.

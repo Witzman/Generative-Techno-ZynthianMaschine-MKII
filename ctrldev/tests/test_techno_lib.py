@@ -1275,7 +1275,12 @@ class TestButtonTables(unittest.TestCase):
         # SELECT 30 LEFT it 2026-08-20: ARM took it. Its CC was measured at G4
         # and its LED index 22 measured 2026-08-15, so both halves of working
         # rule 7 were satisfied before it was spent.
-        for cc in (5, 6, 12, 29, 34):
+        #
+        # NAVIGATE 34 LEFT it the same day, for the phrase page. Its LED index
+        # 20 turned out to have been measured on 2026-08-16 all along - it was
+        # carried as "inferred" by a stale summary block, which is the only
+        # thing that had blocked it.
+        for cc in (5, 6, 12, 29):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
@@ -3307,3 +3312,48 @@ class TestPadOwnerChord(unittest.TestCase):
                         tl.pad_owner(shift=shift, mod=mod, arm=arm),
                         tl.overlay_owner(shift=shift, mod=mod, arm=arm),
                         f"shift={shift} mod={mod} arm={arm}")
+
+
+class TestPhrasePad(unittest.TestCase):
+    """NAVIGATE's phrase page: one pad per bar, past dim, now full."""
+
+    def test_stopped_draws_every_pad_dark(self):
+        # A phrase page showing bar 1 lit while nothing plays reads as a
+        # running clock that has stuck.
+        for pad in range(16):
+            self.assertEqual(tl.phrase_pad(pad, None)[1], tl.PAD_OFF)
+
+    def test_the_current_bar_is_the_only_full_pad(self):
+        full = [i for i in range(16) if tl.phrase_pad(i, 5)[1] == tl.PAD_FULL]
+        self.assertEqual(full, [5])
+
+    def test_the_bars_already_played_are_dim(self):
+        for pad in range(5):
+            self.assertEqual(tl.phrase_pad(pad, 5)[1], tl.PHRASE_PAST)
+
+    def test_the_bars_still_to_come_are_dark(self):
+        for pad in range(6, 16):
+            self.assertEqual(tl.phrase_pad(pad, 5)[1], tl.PAD_OFF)
+
+    def test_it_wraps_with_the_phrase(self):
+        # Bar 16 is bar 0 of the next phrase, not a seventeenth pad.
+        full = [i for i in range(16) if tl.phrase_pad(i, 16)[1] == tl.PAD_FULL]
+        self.assertEqual(full, [0])
+        full = [i for i in range(16) if tl.phrase_pad(i, 21)[1] == tl.PAD_FULL]
+        self.assertEqual(full, [5])
+
+    def test_only_two_brightnesses_are_used(self):
+        # Three levels would need a legend; two read at a glance.
+        seen = {tl.phrase_pad(i, 7)[1] for i in range(16)}
+        self.assertEqual(seen, {tl.PAD_FULL, tl.PHRASE_PAST, tl.PAD_OFF})
+
+    def test_navigate_is_bound_and_not_stepwise(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[34], "navigate")
+        self.assertFalse(tl.overlay_is_stepwise("navigate"))
+        self.assertEqual(tl.pad_owner(navigate=True), "navigate")
+
+    def test_navigate_loses_to_every_other_overlay(self):
+        # Last in OVERLAY_PRIORITY: it is a glance, not a gesture.
+        self.assertEqual(tl.pad_owner(navigate=True, mod=True), "mod")
+        self.assertEqual(tl.pad_owner(navigate=True, arm=True), "arm")
+        self.assertEqual(tl.pad_owner(navigate=True, shift=True), "shift")

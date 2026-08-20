@@ -201,6 +201,7 @@ CC_TR = 6                # unbound, free
 # every one of these matched what the daemon's source said.
 CC_SOLO = 31             # measured
 CC_ARM = 30              # SELECT. Measured at G4; LED index 22, measured.
+CC_NAVIGATE = 34         # NAVIGATE. Measured at G4; LED index 20, measured.
 LED_ARM = "select"       # the daemon's own name for index 22, corrected in
                          # c141d70 - light a button by ITS OWN name now.
 CC_DUPLICATE = 29        # measured
@@ -492,6 +493,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # silently lost.
         self._armed_while_stopped = {}
         self.arm_down = False
+        self.navigate_down = False
         self._arm_picked = None
         self._arm_bars = {}
         # Who survives a DROP. Nominated on the Group buttons while ARM is
@@ -2591,6 +2593,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._paint_pad(pad, tlib.arm_legend_pad(
                 pad, picked=picked, armed_bars=bars, remaining=left))
 
+    def _act_navigate(self, down):
+        """NAVIGATE holds the phrase page on the pads."""
+
+        self.navigate_down = down
+        with self.lock:
+            self._render_pads()
+
+    def _paint_phrase_pads(self):
+        """Sixteen pads, one per bar of the phrase. Caller holds the lock."""
+
+        for pad in range(16):
+            self._paint_pad(pad, tlib.phrase_pad(pad, self._phrase_bar))
+
     def _act_erase(self, down):
         self.erase_down = down
 
@@ -3108,9 +3123,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         entry["phase0"] = -self._elapsed_beats() / span if span else 0.0
 
     def _pad_owner(self):
-        """What the pads mean right now. One predicate, three callers."""
+        """What the pads mean right now. One predicate, every caller."""
         return tlib.pad_owner(shift=self.shift_down, mod=self.mod_down,
-                              arm=self.arm_down)
+                              arm=self.arm_down,
+                              navigate=self.navigate_down)
 
     def _mod_clear(self, key):
         """Drop a modulator and restore its base, so the parameter is left
@@ -4626,6 +4642,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_display()
             self._render_transport()
+            if self.navigate_down:
+                # One pad per bar, so the lit pad has to advance here.
+                self._paint_phrase_pads()
             if self.arm_down:
                 # The ruler loses a pad per bar, so it has to be repainted
                 # here. Only while ARM is actually held: the grid is the step
@@ -5004,6 +5023,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
         owner = self._pad_owner()
+        if owner == "navigate":
+            self._paint_phrase_pads()
+            return
         if owner == "arm":
             # Ahead of MOD only because the priority table says so; neither
             # can be true at once here.
