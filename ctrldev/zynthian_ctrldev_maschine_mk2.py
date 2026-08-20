@@ -200,6 +200,9 @@ CC_TR = 6                # unbound, free
 # Mode buttons, all measured at G4 alongside the arrows. Unlike the arrows,
 # every one of these matched what the daemon's source said.
 CC_SOLO = 31             # measured
+CC_ARM = 30              # SELECT. Measured at G4; LED index 22, measured.
+LED_ARM = "select"       # the daemon's own name for index 22, corrected in
+                         # c141d70 - light a button by ITS OWN name now.
 CC_DUPLICATE = 29        # measured
 CC_MODE_CONTROL = 11
 CC_MODE_STEP = 32
@@ -488,6 +491,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the way _wrap_channel takes a pending structure change - or is
         # silently lost.
         self._armed_while_stopped = {}
+        self.arm_down = False
+        self._arm_picked = None
+        self._arm_bars = {}
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -2342,6 +2348,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # hands them back on release (owner, 2026-08-19).
                 self._shift_pad(step)
                 return True
+            if self.arm_down:
+                # Between SHIFT and MOD, which is OVERLAY_PRIORITY's order and
+                # not a coincidence: SHIFT is the oldest and most-used binding
+                # and must not move, and a player holding ARM has committed to
+                # scheduling, so it outranks MOD. Ahead of the STEP branch for
+                # the same reason MOD is - a pad under a modifier must never
+                # fall through and silently edit the pattern.
+                self._arm_pad(step)
+                return True
             if self.mod_down:
                 # Ahead of the STEP branch deliberately. In STEP mode a pad
                 # hit goes to _toggle_step, so intercepting further down in
@@ -2431,6 +2446,120 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # One method per entry in techno_lib.BUTTONS_*. Stateful actions take
     # `down`; press-only actions take none. Keeping them as methods rather
     # than inline lambdas is what makes the table swappable later (SP9).
+
+    def _act_arm(self, down):
+        """ARM composes a macro and a length and lands it on a bar.
+
+        HELD, not latched - see the CC table for why. A BARE TAP while
+        anything is pending cancels EVERYTHING pending: the identical window
+        _act_reroll implements, and cancel-all rather than cancel-one for the
+        identical reason, that a half-cancelled gesture is harder to reason
+        about than none.
+
+        The pick is cleared on press rather than on release so a second hold
+        starts from nothing. Leaving it set would let a bare length tap re-arm
+        a macro the player composed a minute ago."""
+
+        self.arm_down = down
+        if down:
+            self._arm_picked = None
+            with self.lock:
+                self._render_pads()
+                self._render_display()
+            return
+
+        if self._arm_picked is None and (self._pending_macros.pending()
+                                         or self._armed_while_stopped):
+            self._pending_macros.clear()
+            self._armed_while_stopped.clear()
+            self._arm_bars.clear()
+        self._arm_picked = None
+        with self.lock:
+            self._render_all()
+
+    def _arm_pad(self, step):
+        """A pad while ARM is held: 0-1 pick the macro, 8-15 the length.
+
+        Pads 2-7 are DARK and do nothing - a lit pad that does nothing is the
+        fault this surface must never commit, so they are not lit either.
+        They are where the later payloads land.
+
+        While something is pending the grid is the COUNTDOWN RULER, not a
+        picker. Reading it must not also change it, so every pad is inert."""
+
+        if self._pending_macros.pending() or self._armed_while_stopped:
+            return
+        if step < len(tlib.ARM_MACROS):
+            self._arm_picked = tlib.ARM_MACROS[step]
+        elif step >= 8:
+            if self._arm_picked is None:
+                # A length with nothing to arm. Deliberately silent rather
+                # than guessing a macro: guessing would fire something the
+                # player never named.
+                return
+            bars = tlib.ARM_LENGTHS[step - 8]
+            if self._phrase_anchor is None:
+                # Stopped: the clock does not advance, so an absolute target
+                # bar would be a lie. Keep the LENGTH only; _act_play computes
+                # the landing bar at transport start. Nothing fires the
+                # instant it is armed and nothing is lost.
+                self._armed_while_stopped[self._arm_picked] = bars
+            else:
+                self._pending_macros.arm(self._arm_picked, bars,
+                                         self._phrase_bar or 0)
+            # The queue stores only the LANDING BAR, which is all it needs to
+            # fire. The ruler needs the length as well, or it cannot know how
+            # many pads to extinguish - so the length is kept here rather than
+            # widening the queue's contract for a display.
+            self._arm_bars[self._arm_picked] = bars
+        else:
+            return
+        with self.lock:
+            self._render_pads()
+            self._render_display()
+
+    def _arm_state(self):
+        """(picked, armed_bars, remaining) - what the ARM grid and LED show.
+
+        armed_bars and remaining are both None when nothing is pending, which
+        is how the legend and the LED tell the PICKER apart from the RULER
+        without either of them re-deriving the rule.
+
+        The SOONEST pending macro owns the ruler. Two macros can be pending at
+        once and only one grid exists; showing the nearest is the only choice
+        that cannot mislead, because the nearest is the one about to change
+        what the player hears."""
+
+        if self._armed_while_stopped:
+            # Armed while stopped: no bar has passed, so nothing is
+            # extinguished. Full ruler, and the LED goes steady rather than
+            # flashing - see _render_transport.
+            bars = min(self._armed_while_stopped.values())
+            return (self._arm_picked, bars, bars)
+
+        pending = self._pending_macros.pending()
+        if not pending:
+            return (self._arm_picked, None, None)
+
+        bar = self._phrase_bar or 0
+        soonest, left = None, None
+        for macro in pending:
+            rem = self._pending_macros.remaining(macro, bar)
+            if rem is None:
+                continue
+            if left is None or rem < left:
+                soonest, left = macro, rem
+        if soonest is None:
+            return (self._arm_picked, None, None)
+        return (self._arm_picked, self._arm_bars.get(soonest, left), left)
+
+    def _paint_arm_legend(self):
+        """The sixteen pads as ARM's grid. Caller holds the lock."""
+
+        picked, bars, left = self._arm_state()
+        for pad in range(16):
+            self._paint_pad(pad, tlib.arm_legend_pad(
+                pad, picked=picked, armed_bars=bars, remaining=left))
 
     def _act_erase(self, down):
         self.erase_down = down
@@ -4405,6 +4534,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_display()
             self._render_transport()
+            if self.arm_down:
+                # The ruler loses a pad per bar, so it has to be repainted
+                # here. Only while ARM is actually held: the grid is the step
+                # picture the rest of the time and repainting it every bar
+                # would fight the playhead.
+                self._paint_arm_legend()
 
     def _fire_macro(self, macro, bar):
         """Dispatch one landed macro.
@@ -4552,17 +4687,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # for a target that proves it needs more.
                     self._mod_write()
                 with self.lock:
-                    if tlib.overlay_owner(shift=self.shift_down,
-                                          mod=self.mod_down) == "mod":
+                    owner = tlib.overlay_owner(shift=self.shift_down,
+                                               mod=self.mod_down,
+                                               arm=self.arm_down)
+                    if owner == "mod":
                         # The ONLY animated overlay, and it has to run here at
                         # 30 Hz rather than on the 200 ms modulator tick: a
                         # 5 Hz fade looks steppy, not slow. Poll thread only,
                         # never the MIDI thread.
                         self._paint_mod_legend()
-                    else:
+                    elif tlib.overlay_is_stepwise(owner):
                         head = self._playhead()
                         if head != self.head_shown:
                             self._move_playhead(head)
+                    # A non-stepwise overlay that is NOT animated - ARM - is
+                    # left alone. Asked by the predicate rather than by name so
+                    # the next such overlay inherits it: moving a playhead
+                    # across pads that no longer stand for steps would paint
+                    # white over whatever they DO stand for, once per tick.
                     if tick % VOLUME_POLL_TICKS == 0:
                         self._render_groups()
                         # GRID blinks while the selected channel is on an
@@ -4686,7 +4828,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # playhead is still drawn over the top, in white, unchanged - the
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
-        owner = tlib.overlay_owner(shift=self.shift_down, mod=self.mod_down)
+        owner = tlib.overlay_owner(shift=self.shift_down, mod=self.mod_down,
+                                   arm=self.arm_down)
+        if owner == "arm":
+            # Ahead of MOD only because the priority table says so; neither
+            # can be true at once here.
+            self._paint_arm_legend()
+            return
         if owner == "mod":
             # The pads stop standing for steps entirely, so there is no step
             # loop and no playhead - see tlib.overlay_is_stepwise().
@@ -4724,7 +4872,41 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         state = (COLOR_PLAY, bright)
         if self.leds.changed("play", state):
             self._send_osc(lib.button_osc("play", state[0], state[1]))
+        self._render_arm()
         self._render_modes()
+
+    def _render_arm(self):
+        """SELECT flashes once per bar while something is pending, and goes
+        STEADY through the landing bar.
+
+        Once ARM is released this LED is the only thing on the panel that says
+        a macro is coming, so it is not decoration. The BAR NUMBER drives the
+        flash rather than a timer - the flash IS the countdown, not an
+        animation running alongside one, and a timer would drift away from the
+        bars it claims to be counting.
+
+        Steady rather than flashing when the transport is stopped: nothing is
+        counting down yet, and a flash would say it was.
+
+        LED index 22, MEASURED. Lit by the daemon's own name for that index,
+        which has been correct since c141d70 - before that the names were
+        attached to the wrong buttons and two shipped features lit the wrong
+        LED for months."""
+
+        pending = bool(self._pending_macros.pending()
+                       or self._armed_while_stopped)
+        if not pending:
+            bright = BRIGHT_PAGE_OFF
+        elif self._phrase_bar is None or self._armed_while_stopped:
+            bright = BRIGHT_PAGE_ON
+        else:
+            _picked, _bars, left = self._arm_state()
+            bright = (BRIGHT_PAGE_ON if left == 0
+                      else (BRIGHT_PAGE_ON if self._phrase_bar % 2
+                            else BRIGHT_PAGE_OFF))
+        state = (tlib.COLOR_ARM_COUNT, bright)
+        if self.leds.changed("arm", state):
+            self._send_osc(lib.button_osc(LED_ARM, state[0], state[1]))
 
     def _render_reroll(self):
         """SCENE and PATTERN light when the SELECTED group is theirs to reroll.

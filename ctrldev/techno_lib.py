@@ -462,6 +462,68 @@ class techno_lib:
     # bare tap is for, and that reads differently on the pads.
     CHANCE_RUNGS = (100, 75, 50, 25)
 
+    # The macros ARM can compose, one per pad from 0. TWO, not eight: pads 2-7
+    # stay dark and unbound, because a lit pad that does nothing is the fault
+    # this surface must never commit. APPEND-ONLY - a snapshot may store the
+    # name, so an existing entry never moves index.
+    ARM_MACROS = ("drop", "chance")
+
+    # Pads 8-15, the length ring, in bars. Eight lengths for eight pads, and
+    # the odd ones (3, 6, 12) are there because a build does not have to be a
+    # power of two.
+    ARM_LENGTHS = (1, 2, 3, 4, 6, 8, 12, 16)
+
+    # ARM's three colours, and they are three because the grid says three
+    # different kinds of thing. Amber for "which macro", green for "how many
+    # bars", red for the countdown - red only ever means time running out, so
+    # it cannot be confused with either picker.
+    COLOR_ARM_MACRO = 0xFF6000
+    COLOR_ARM_LENGTH = 0x00FF60
+    COLOR_ARM_COUNT = 0xFF2000
+    ARM_DIM = 0.35
+    PAD_OFF = 0.0
+
+    @staticmethod
+    def arm_legend_pad(index, picked=None, armed_bars=None, remaining=None):
+        """(colour, brightness) for one pad of the ARM overlay.
+
+        TWO pictures on one grid, chosen by whether anything is pending.
+
+        Nothing pending - a PICKER. Pads 0..len(ARM_MACROS)-1 are the macros,
+        the picked one at full and the others dim; pads 8-15 are the length
+        ring. **Everything between them is dark**, because pads 2-7 have no
+        macro behind them yet and a lit pad that does nothing is the fault
+        this surface must never commit.
+
+        Something pending - the COUNTDOWN RULER. One pad per bar of the armed
+        length, extinguishing from the top left as the bars pass, so the pads
+        still lit ARE the bars still to come. The picker is not drawn at all:
+        reading the countdown must not also offer to change it.
+
+        Brightness 0.0 rather than None for a dark pad - _paint_pad wants a
+        tuple, and an unlit pad still has to be WRITTEN or the previous
+        picture stays on the hardware."""
+
+        off = (techno_lib.COLOR_ARM_COUNT, techno_lib.PAD_OFF)
+        if armed_bars is not None and remaining is not None:
+            bars = max(1, min(16, int(armed_bars)))
+            left = max(0, min(bars, int(remaining)))
+            if index >= bars or index < bars - left:
+                return off
+            return (techno_lib.COLOR_ARM_COUNT, techno_lib.PAD_FULL)
+
+        if index < len(techno_lib.ARM_MACROS):
+            macro = techno_lib.ARM_MACROS[index]
+            bright = (techno_lib.PAD_FULL if macro == picked
+                      else techno_lib.ARM_DIM)
+            return (techno_lib.COLOR_ARM_MACRO, bright)
+        if index >= 8:
+            # The whole ring is lit whether or not a macro is picked. It is a
+            # menu of lengths, not a confirmation - dimming it until a macro
+            # was chosen would hide the choice the player is about to make.
+            return (techno_lib.COLOR_ARM_LENGTH, techno_lib.ARM_DIM)
+        return (techno_lib.COLOR_ARM_MACRO, techno_lib.PAD_OFF)
+
     @staticmethod
     def chance_ladder(chance):
         """The next rung strictly BELOW `chance`, wrapping back to full.
@@ -1096,6 +1158,15 @@ class techno_lib:
         # Held, it restores the pre-2026-08-16 encoder feel. Every encoder is
         # half as sensitive by default now; see lib.STEP_FACTOR.
         35: "coarse",
+        # SELECT. CC 30 MEASURED in notes/findings/2026-08-11-g4-capture.log,
+        # LED index 22 MEASURED 2026-08-15 - both halves of working rule 7 are
+        # satisfied, and neither was read off the daemon's token name.
+        #
+        # STATEFUL and HELD, never latched. Deliberately unlike MOD: MOD
+        # latches because both hands then go to encoders, while ARM is composed
+        # with the pads under the same hand. A latched ARM would leave armed
+        # state a player can walk away from and trip four bars later.
+        30: "arm",
     }
 
     # Buttons that act on press only.

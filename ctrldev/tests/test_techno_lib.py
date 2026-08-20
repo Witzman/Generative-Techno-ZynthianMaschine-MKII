@@ -1271,7 +1271,11 @@ class TestButtonTables(unittest.TestCase):
         # them the two reroll buttons. They were free and are now spent, which
         # is what the list is for - it tracks what is UNCLAIMED, not what is
         # unclaimable. CC 15 (big encoder turn) left it the same day.
-        for cc in (5, 6, 12, 29, 30, 34):
+        #
+        # SELECT 30 LEFT it 2026-08-20: ARM took it. Its CC was measured at G4
+        # and its LED index 22 measured 2026-08-15, so both halves of working
+        # rule 7 were satisfied before it was spent.
+        for cc in (5, 6, 12, 29, 34):
             self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
             self.assertNotIn(cc, tl.BUTTONS_PRESS)
 
@@ -1291,10 +1295,13 @@ class TestButtonTables(unittest.TestCase):
         self.assertNotIn(35, tl.BUTTONS_PRESS)
 
     def test_coarse_did_not_land_on_select(self):
-        # SELECT (CC 30) was the design's first home for this and the owner
-        # moved it to TEMPO. SELECT stays free surface.
-        self.assertNotIn(30, tl.BUTTONS_STATEFUL)
+        # SELECT (CC 30) was the design's first home for COARSE and the owner
+        # moved it to TEMPO. The guard survives the move that spent SELECT on
+        # ARM: what it exists to catch is COARSE drifting back onto SELECT, so
+        # it now asserts the OWNER of CC 30 rather than that CC 30 is empty.
+        self.assertEqual(tl.BUTTONS_STATEFUL[30], "arm")
         self.assertNotIn(30, tl.BUTTONS_PRESS)
+        self.assertEqual(tl.BUTTONS_STATEFUL[35], "coarse")
 
     def test_mod_lives_on_swing_not_auto(self):
         self.assertEqual(tl.BUTTONS_STATEFUL[50], "mod")
@@ -3081,3 +3088,91 @@ class TestPhraseLabel(unittest.TestCase):
 
     def test_no_bar_means_no_suffix(self):
         self.assertEqual(tl.phrase_label("LEVEL 1/3", None), "LEVEL 1/3")
+
+
+class TestArmLegendPad(unittest.TestCase):
+    """The ARM overlay's sixteen pads: a picker, or a countdown ruler."""
+
+    def test_macro_pads_are_lit_and_the_picked_one_is_full(self):
+        for index, macro in enumerate(tl.ARM_MACROS):
+            colour, bright = tl.arm_legend_pad(index, picked=macro)
+            self.assertEqual(colour, tl.COLOR_ARM_MACRO)
+            self.assertEqual(bright, tl.PAD_FULL)
+            _c, other = tl.arm_legend_pad(index, picked=None)
+            self.assertEqual(other, tl.ARM_DIM)
+
+    def test_pads_between_the_macros_and_the_lengths_are_dark(self):
+        # The whole point: pads 2-7 have no macro behind them, and a lit pad
+        # that does nothing is the fault this surface must never commit.
+        for index in range(len(tl.ARM_MACROS), 8):
+            _colour, bright = tl.arm_legend_pad(index, picked="drop")
+            self.assertEqual(bright, tl.PAD_OFF)
+
+    def test_the_length_ring_is_lit_whether_or_not_a_macro_is_picked(self):
+        for index in range(8, 16):
+            for picked in (None, "drop"):
+                colour, bright = tl.arm_legend_pad(index, picked=picked)
+                self.assertEqual(colour, tl.COLOR_ARM_LENGTH)
+                self.assertEqual(bright, tl.ARM_DIM)
+
+    def test_the_length_ring_has_one_pad_per_length(self):
+        self.assertEqual(len(tl.ARM_LENGTHS), 8)
+
+    def test_a_full_ruler_lights_exactly_the_armed_bars(self):
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=4, remaining=4)[1]]
+        self.assertEqual(lit, [0, 1, 2, 3])
+
+    def test_the_ruler_extinguishes_from_the_top_left(self):
+        # Three bars left of four: pad 0 has gone out, 1-3 remain. Extinguishing
+        # from the left is what makes the lit pads READ as the time remaining.
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=4, remaining=3)[1]]
+        self.assertEqual(lit, [1, 2, 3])
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=4, remaining=1)[1]]
+        self.assertEqual(lit, [3])
+
+    def test_a_spent_ruler_is_entirely_dark(self):
+        for i in range(16):
+            self.assertEqual(tl.arm_legend_pad(i, armed_bars=4, remaining=0)[1],
+                             tl.PAD_OFF)
+
+    def test_the_ruler_never_lights_a_pad_that_does_not_exist(self):
+        # 16 bars is the longest ARM_LENGTHS offers and it fills the grid
+        # exactly. Anything beyond has to clamp rather than index past the end.
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=16, remaining=16)[1]]
+        self.assertEqual(lit, list(range(16)))
+        lit = [i for i in range(16)
+               if tl.arm_legend_pad(i, armed_bars=99, remaining=99)[1]]
+        self.assertEqual(lit, list(range(16)))
+
+    def test_the_ruler_replaces_the_picker_entirely(self):
+        # Reading the countdown must not also offer to change it, so no macro
+        # pad and no length pad survives underneath.
+        picker = [tl.arm_legend_pad(i, picked="drop") for i in range(16)]
+        ruler = [tl.arm_legend_pad(i, picked="drop", armed_bars=2, remaining=2)
+                 for i in range(16)]
+        self.assertNotEqual(picker, ruler)
+        for i in range(2, 16):
+            self.assertEqual(ruler[i][1], tl.PAD_OFF)
+
+    def test_arm_macros_are_append_only_in_the_documented_order(self):
+        # A snapshot may store the name, so an existing entry never moves.
+        self.assertEqual(tl.ARM_MACROS[:2], ("drop", "chance"))
+
+    def test_arm_is_registered_as_a_stateful_button(self):
+        self.assertEqual(tl.BUTTONS_STATEFUL[30], "arm")
+        self.assertNotIn(30, tl.BUTTONS_PRESS)
+
+    def test_arm_sits_between_shift_and_mod_in_the_overlay_order(self):
+        order = tl.OVERLAY_PRIORITY
+        self.assertLess(order.index("shift"), order.index("arm"))
+        self.assertLess(order.index("arm"), order.index("mod"))
+        self.assertFalse(tl.overlay_is_stepwise("arm"))
+
+    def test_arm_wins_over_mod_and_loses_to_shift(self):
+        self.assertEqual(tl.overlay_owner(arm=True, mod=True), "arm")
+        self.assertEqual(tl.overlay_owner(shift=True, arm=True), "shift")
+        self.assertEqual(tl.overlay_owner(arm=True), "arm")
