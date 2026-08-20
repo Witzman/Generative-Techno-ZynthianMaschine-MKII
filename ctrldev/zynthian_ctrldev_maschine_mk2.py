@@ -1397,9 +1397,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._write_voice_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "voice":
             self._write_voice_pattern(channel)
-        elif param == "ratchet":
+        elif param == "ratchet" and self.channel_kind(channel) == "drum":
             # The stutter is written into the notes, so it only becomes audible
             # once the pattern is rewritten - exactly like drum VELO below.
+            #
+            # THE KIND CHECK IS NOT DECORATION. Without it this branch called
+            # _write_pattern on a VOICE, and _write_pattern regenerates from
+            # euclid hits and rotation - the DRUM generator - so it overwrote
+            # the Turing melody with a drum pattern. Latent since RATCHET
+            # shipped, because RATCHET only ever lived on the drum STEP page;
+            # the ratchet ramp reached all eight channels and woke it up.
+            # Heard by the owner on 2026-08-20 as "some melody changed after
+            # the roll", and it was.
+            #
+            # Every neighbouring branch here checks the kind. This one was the
+            # exception, and that is exactly the shape of the apply() hole
+            # fixed on 2026-08-19: a dispatcher where one arm forgot the
+            # question all the others ask.
             with self.lock:
                 self._write_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "drum":
@@ -5275,6 +5289,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._timescale_restore[channel] = (
                     self.div[channel], self.beats[channel],
                     self.hits[channel], self.rot[channel])
+                logging.warning(
+                    "TIMESCALE %s ch%s: %s x %s beats (%s steps) -> %s x %s "
+                    "beats (%s steps) hits=%s rot=%s", macro, channel,
+                    tlib.DIVISION_LABELS[self.div[channel]],
+                    self.beats[channel],
+                    tlib.DIVISION_SPB[self.div[channel]] * self.beats[channel],
+                    tlib.DIVISION_LABELS[got[0]], got[1],
+                    tlib.DIVISION_SPB[got[0]] * got[1],
+                    self.hits[channel], self.rot[channel])
                 self.div[channel], self.beats[channel] = got
                 self.state[channel]["pending"].add("div")
                 self.state[channel]["pending"].add("length")
@@ -5301,6 +5324,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             for channel, (div, beats, hits, rot) in \
                     list(self._timescale_restore.items()):
+                logging.warning(
+                    "TIMESCALE restore ch%s: %s x %s -> %s x %s hits %s->%s "
+                    "rot %s->%s", channel,
+                    tlib.DIVISION_LABELS[self.div[channel]],
+                    self.beats[channel], tlib.DIVISION_LABELS[div], beats,
+                    self.hits[channel], hits, self.rot[channel], rot)
                 self.div[channel] = div
                 self.beats[channel] = beats
                 self.hits[channel] = hits
@@ -5401,13 +5430,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Capture each channel's OWN ratchet, walk away from it, land back
             # on it. Never assume 1: a channel the player left ratcheting must
             # come back ratcheting.
-            channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+            # DRUMS ONLY. RATCHET is a drum-page verb: it is written into the
+            # notes as zynseq stutter, and a voice's pattern is rewritten by a
+            # different generator entirely. Taking the voices too is what
+            # overwrote their melodies.
+            channels = [ch for ch
+                        in tlib.generated_channels(self.owner,
+                                                   len(tlib.CHANNELS))
+                        if self.channel_kind(ch) == "drum"]
             self._ratchet_ramp = {
                 "bars": self._arm_bars.get("ratchet", 4),
                 "start": bar,
                 "base": {ch: int(self.state[ch].get("ratchet", 1))
                          for ch in channels},
             }
+            self._timescale_note = ("ROLL", len(channels), len(tlib.CHANNELS))
         elif macro == "break_end":
             # The same restore DROP uses. BREAK is DROP's second entry point,
             # not a parallel implementation - one capture, one restore, and
