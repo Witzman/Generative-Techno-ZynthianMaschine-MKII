@@ -61,7 +61,10 @@ BASELINE = {
     # Rewritten 2026-08-16 as the index: keeps the channel table, the project
     # description and What it is not, and gains one entry per tutorial. The
     # rest moved into the eight tutorial pages, not deleted.
-    "02-features.html":            (443,  "2026-08-16"),
+    # +35, 2026-08-20: the index entry for The surface names the phrase clock
+    # and ARM. The page is the map of what the instrument does, and a whole new
+    # gesture family that is invisible from it is a capability nobody finds.
+    "02-features.html":            (478,  "2026-08-20"),
     # Section 3 was written 2026-08-14; this is its first measurement.
     # +617: MOD published, as three sections - binding one, steering and
     # clearing, and what it refuses. Split rather than waiving the unit cap.
@@ -109,7 +112,15 @@ BASELINE = {
     # on a channel you have recorded, and that recording onto a drifting
     # channel STOPS it rather than losing your take. A reader who does not know
     # those two will either think it is broken or lose a take finding out.
-    "modulation.html":             (1540, "2026-08-19"),
+    # +403, 2026-08-20: RISE. A modulator that sweeps once and holds is a
+    # different instrument from one that cycles, and four of its facts cannot
+    # be inferred from the cycling case: WHERE it holds depends on the shape
+    # (the table - a triangle holds at the BOTTOM, only the ramp is a riser),
+    # the rate pads change meaning to sweep length, the sweep starts on the tap
+    # rather than on a downbeat, and nothing on the panel marks a modulator as
+    # one-shot. The last one is why the section has to exist at all: a feature
+    # with no indicator has to be carried by the documentation or not at all.
+    "modulation.html":             (1943, "2026-08-20"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
     # +171, 2026-08-16: a voice now has TWO generators, not one. MELODY and
@@ -139,7 +150,14 @@ BASELINE = {
     # rule is now readable rather than asserted, and a worked example: the
     # kick at four beats against a hat at three. Lengths that do not agree
     # already shipped and no page had ever mentioned them.
-    "generating-patterns.html":    (1885, "2026-08-20"),
+    # +270, 2026-08-20 (second move that day): the CHANCE ramp, the first ARM
+    # payload that lands on this page. Six paragraphs, and three of them are
+    # safety rather than description: that it returns to each channel's OWN
+    # play chance and not to always, that a channel already at or below the
+    # floor is left alone, and that it is safe on a recorded take because play
+    # chance rewrites no pattern. A reader who does not know the first one will
+    # assume the ramp reset their mix.
+    "generating-patterns.html":    (2155, "2026-08-20"),
     "playing-and-recording.html":  (818,  "2026-08-16"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the
@@ -183,15 +201,36 @@ BASELINE = {
     # at eight instances, and the five plugins that are out with their
     # numbers. Owner-requested, and the sentence that matters is not in a
     # table: loading without an error is not running without a glitch.
-    "mixing-and-effects.html":     (631,  "2026-08-19"),
+    # +339, 2026-08-20: DROP. It belongs here because the payload is mixer
+    # mutes - the same mute F1-F8 set, carrying the post-fader sends with it.
+    # Three of the six paragraphs are safety: that the restore puts back the
+    # mute picture CAPTURED AT FIRE TIME rather than turning everything on,
+    # that cancelling mid-drop leaves the mutes down because the return is
+    # itself pending, and that the silenced tabs still draw dashed. The first
+    # two are how a player ends up with a silent rig and no explanation.
+    "mixing-and-effects.html":     (970,  "2026-08-20"),
     # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
     # the button list. Same reason as above - it was 24 words under.
     # +163, 2026-08-19: the F row means switches in CONTROL. One row of the
     # light table and one paragraph in Mute, solo and erase - the page a
     # player checks when a button does not do what they expect, so the
     # exception has to be stated where the rule is.
-    "the-surface.html":            (1030, "2026-08-19"),
-    "saving.html":                 (327,  "2026-08-16"),
+    # +754, 2026-08-20: the phrase clock and ARM, the largest single move this
+    # page has taken. It is one move rather than two because ARM is unreadable
+    # without the bar count it schedules against. Two sections plus three rows
+    # in the light table and one in the goes-quiet list. Load-bearing rather
+    # than descriptive: that the count is transport-anchored and therefore
+    # still true under lengths that do not agree, that NAVIGATE changes what
+    # the pads SHOW and not what they DO (a pad hit under it still edits a
+    # step), that releasing ARM bare cancels everything pending, and that MOD
+    # takes the ARM chord away from the macro picker. A player who does not
+    # know the second one edits a pattern while reading a clock.
+    "the-surface.html":            (1784, "2026-08-20"),
+    # +69, 2026-08-20: what the new gestures do NOT survive - the phrase count,
+    # anything armed, and a modulator's one-shot flag - plus the one that cuts
+    # the other way, that a set saved mid-drop saves those mutes because mixer
+    # mutes are exactly what a snapshot carries.
+    "saving.html":                 (396,  "2026-08-20"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
     # New 2026-08-20, owner-requested: the ranked idea list. 677 words MEASURED
     # at creation, not estimated. The page is deliberately mostly TABLE - the
@@ -200,7 +239,14 @@ BASELINE = {
     # sections. If the prose grows without the tables growing, something has
     # started explaining instead of listing, and that is what this number is
     # here to catch.
-    "whats-next.html":             (677,  "2026-08-20"),
+    # +73, 2026-08-20 (second move that day): six entries LEFT this page - the
+    # phrase clock, ARM, DROP, RISE, the CHANCE ramp and polymeter are built
+    # and written up, and this page's one law is that nothing on it is built.
+    # The rows going is free (tables are not counted); the prose grew because
+    # the framing had to stop saying the instrument does not know what bar it
+    # is on, and because a reader now needs telling that the numbers do not
+    # shuffle up - a gap is an idea that has left for the guide.
+    "whats-next.html":             (750,  "2026-08-20"),
 }
 SKIP_BUDGET = {"index.html"}
 
