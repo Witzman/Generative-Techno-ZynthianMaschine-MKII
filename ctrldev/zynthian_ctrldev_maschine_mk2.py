@@ -3104,9 +3104,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         is doing. tlib.MOD_LEGEND_PERIODS carries that caveat at length."""
 
         bound, rate, shape = self._mod_legend_state()
-        elapsed = time.monotonic()
+        # STATIC. `elapsed` is fixed rather than read from the clock: the
+        # legend is painted on events now, so a moving time base would make
+        # two repaints of an unchanged grid differ and put sixteen pad writes
+        # on the wire for nothing. Zero is a phase like any other.
         for pad in range(16):
-            self._paint_pad(pad, tlib.mod_legend_pad(pad, elapsed, rate, shape,
+            self._paint_pad(pad, tlib.mod_legend_pad(pad, 0.0, rate, shape,
                                                      bound=bound))
 
     def _probe_step_chance(self):
@@ -5638,26 +5641,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     self._mod_write()
                 with self.lock:
                     owner = self._pad_owner()
-                    if owner == "mod" and tick % MOD_LEGEND_TICKS == 0:
-                        # The ONLY animated overlay. It used to run at the
-                        # full 30 Hz, and that is SIXTEEN PAD WRITES PER TICK -
-                        # roughly 480 HID writes a second, on the same fd the
-                        # input arrives on.
-                        #
-                        # THAT WEDGES THE CONTROLLER. The daemon says so in its
-                        # own comment: "16 HID writes per report on the same fd
-                        # the input arrives on ... starved the reader and set
-                        # the watchdog off". Once starved, the device stops
-                        # streaming reports and does NOT recover - not from a
-                        # daemon restart and not from USB re-enumeration. It
-                        # took a physical replug, three times in one session,
-                        # each time within seconds of MOD being latched.
-                        #
-                        # Throttled to MOD_LEGEND_TICKS. A fade at this rate is
-                        # still a fade; a dead Maschine is not a surface.
-                        # Poll thread only, never the MIDI thread.
-                        self._paint_mod_legend()
-                    elif tlib.overlay_is_stepwise(owner):
+                    # THE MOD LEGEND IS NO LONGER ANIMATED FROM HERE, and
+                    # it is not a throttling question any more. Repainting
+                    # sixteen pads on a timer - at 30 Hz, and then at 10 Hz -
+                    # starved the daemon's reader and wedged the controller
+                    # three times in one session, each within seconds of a
+                    # modulator being bound. It does not recover from a daemon
+                    # restart or from USB re-enumeration; only a physical
+                    # replug brings it back.
+                    #
+                    # The legend is now painted from _render_pads on the
+                    # EVENTS that change it - MOD pressed, a rate or shape
+                    # picked, the selection moved - so a still grid costs
+                    # nothing at all. What is lost is the fade that showed
+                    # what a rate FEELS like. That was a genuine nicety and it
+                    # is written up in new_features.md; a controller that dies
+                    # when you bind a modulator is not a trade worth making.
+                    if tlib.overlay_is_stepwise(owner):
                         head = self._playhead()
                         if head != self.head_shown:
                             self._move_playhead(head)
