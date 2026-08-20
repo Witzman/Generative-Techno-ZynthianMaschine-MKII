@@ -114,6 +114,14 @@
 <p><strong>The drum STEP page</strong> is HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, SWING. HITS and ROTATE are the two you play with; the rest set the frame. CHANCE is how often a hit actually fires — drop it and the pattern starts breathing rather than repeating.</p>
 <p><strong>The voice STEP page</strong> is DIVIDE, GATE, MELODY, RHYTHM, LENGTH, OCTAVE, RANGE, VELO. The two generators sit side by side because they are one idea. LENGTH here is the pitch register&rsquo;s length in bits, not a bar count. GATE is how long each note holds &mdash; up to eight steps, so a pad can be a drone. The pitch value is quantised to ROOT and SCALE from the ALL page, then placed by OCTAVE and RANGE.</p>
 <p><strong>MELODY is the instrument&rsquo;s main gesture.</strong> Set it to 20&ndash;40 and the voice fishes. Snap it to 0 the moment you hear something worth keeping. The cell reads <code>LOCK</code> rather than a number, deliberately: a number could be a coincidence, while <code>LOCK</code> means nothing will rewrite that pattern at all.</p>
+<p><strong>Both ends of MELODY are periodic, and only the middle is unpredictable.</strong> This surprises everyone once, so it is worth knowing before it happens to you:</p>
+<table><thead><tr><th>MELODY</th><th>What you get</th></tr></thead><tbody>
+<tr><td><code>LOCK</code> (0)</td><td>the same bar, bit for bit, forever</td></tr>
+<tr><td>20&ndash;40</td><td>the line fishes &mdash; a neighbouring line each pass. <strong>This is the useful range</strong></td></tr>
+<tr><td>around 50</td><td>the most unpredictable it gets</td></tr>
+<tr><td><strong>100</strong></td><td><strong>a two-bar loop.</strong> Not chaos</td></tr>
+</tbody></table>
+<p>At 100 every fed-back bit is flipped rather than sometimes flipped, so one pass gives you the exact inverse of the register and the next gives you the original back &mdash; pattern, inverse, pattern, inverse. It sounds like the generator has stopped evolving, and in a sense it has: it is evolving into a cycle of two. <strong>If you want it to keep surprising you, keep it below about 60.</strong> The same is true of RHYTHM, for the same reason.</p>
 <p><strong>RHYTHM is the same gesture applied to the beat.</strong> Same range, same <code>LOCK</code> at zero, same freeze. Which steps sound is its own register, one bit per step, so it is independent of the notes: either can run while the other holds. A pad tap in STEP mode flips one of those bits, which is why a rhythm you tap in by hand survives everything &mdash; it is not an edit sitting on top of the generator, it <em>is</em> the generator.</p>
 <p><strong>Structure lands on the bar; timbre lands instantly.</strong> A change to what the pattern <em>is</em> waits for the channel's own next wrap, so the groove never jumps under your hand. DIVIDE and LENGTH show in angle brackets — <code>&gt;1/8&lt;</code> — while a change is waiting to take.</p>
 <hr>
