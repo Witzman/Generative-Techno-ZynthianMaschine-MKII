@@ -5202,10 +5202,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_display()
             self._render_transport()
-            if self.navigate_down:
+            # ASK WHO OWNS THE PADS. Both of these used to paint on the bare
+            # held flag, so with MOD latched and SELECT held - which is the
+            # RISE gesture - the ARM legend overwrote the MOD menu once a bar
+            # and something else painted it back: amber pads flashing over a
+            # grid that belonged to MOD. Seen by the owner, 2026-08-20.
+            #
+            # _pad_owner is the single predicate for exactly this question and
+            # these two were the only writers not asking it.
+            owner = self._pad_owner()
+            if owner == "navigate":
                 # One pad per bar, so the lit pad has to advance here.
                 self._paint_phrase_pads()
-            if self.arm_down:
+            if owner == "arm":
                 # The ruler loses a pad per bar, so it has to be repainted
                 # here. Only while ARM is actually held: the grid is the step
                 # picture the rest of the time and repainting it every bar
