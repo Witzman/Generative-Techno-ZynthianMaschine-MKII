@@ -5189,6 +5189,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if bar == self._phrase_bar:
             return
         self._phrase_bar = bar
+        if self._frozen("macro"):
+            # HELD, NOT DROPPED. The queue is not drained at all while frozen,
+            # so everything armed keeps its place and lands on the first bar
+            # after the thaw. Draining and discarding would eat a gesture the
+            # player made and the countdown is still advertising.
+            #
+            # Found by playing it, 2026-08-20: an armed DROP fired while
+            # frozen and, with no survivors nominated, muted all eight
+            # channels. FREEZE promises that nothing changes under you, and a
+            # macro landing is the largest change this instrument makes.
+            with self.lock:
+                self._render_display()
+                self._render_transport()
+            return
         for macro in self._pending_macros.due(bar):
             try:
                 self._fire_macro(macro, bar)

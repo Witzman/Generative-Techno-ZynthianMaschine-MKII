@@ -565,9 +565,17 @@ class techno_lib:
     # bare tap is for, and that reads differently on the pads.
     CHANCE_RUNGS = (100, 75, 50, 25)
 
-    # What a FREEZE tap stops. Everything here rewrites notes; the LFOs do
-    # not, which is why they are not in the set and need the deeper gesture.
-    FREEZE_GENERATIVE = frozenset(("melody", "rhythm", "drift", "reroll"))
+    # What a FREEZE tap stops. Everything here changes what you are hearing
+    # without you touching anything; the LFOs do not rewrite notes, which is
+    # why they are not in the set and need the deeper gesture.
+    #
+    # "macro" JOINED THE SET 2026-08-20, found by playing it: an armed DROP
+    # fired while the machine was frozen and muted every channel. FREEZE
+    # promises that nothing changes under you, and a macro landing is the
+    # largest change this instrument can make - it is the one thing a player
+    # freezes the machine to prevent.
+    FREEZE_GENERATIVE = frozenset(("melody", "rhythm", "drift", "reroll",
+                                   "macro"))
 
     # Ice blue, and nothing else on the panel uses it.
     COLOR_FREEZE = 0x60D0FF

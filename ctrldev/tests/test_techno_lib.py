@@ -3470,8 +3470,11 @@ class TestFreeze(unittest.TestCase):
         self.assertFalse(tl.freeze_blocks("nonsense", True, True))
 
     def test_the_frozen_subjects_are_the_documented_set(self):
+        # "macro" joined 2026-08-20: an armed DROP fired while frozen and
+        # muted every channel.
         self.assertEqual(tl.FREEZE_GENERATIVE,
-                         frozenset(("melody", "rhythm", "drift", "reroll")))
+                         frozenset(("melody", "rhythm", "drift", "reroll",
+                                    "macro")))
 
 
 class TestFreezeLabel(unittest.TestCase):
@@ -4018,3 +4021,22 @@ class TestModRateLabel(unittest.TestCase):
     def test_mod_on_with_a_binding_names_the_rate(self):
         self.assertEqual(tl.mod_rate_label("CTRL", True, 8.0), "CTRL MOD 8B")
         self.assertEqual(tl.mod_rate_label("CTRL", True, 0.25), "CTRL MOD 1/4")
+
+
+class TestFreezeHoldsMacros(unittest.TestCase):
+    """An armed macro must not land while the machine is frozen."""
+
+    def test_a_tap_freezes_macros(self):
+        # Found by playing it: an armed DROP fired while frozen and muted
+        # every channel. FREEZE promises nothing changes under you, and a
+        # macro landing is the largest change this instrument makes.
+        self.assertTrue(tl.freeze_blocks("macro", True, False))
+
+    def test_a_hold_freezes_macros_too(self):
+        self.assertTrue(tl.freeze_blocks("macro", False, True))
+
+    def test_thawed_lets_them_through(self):
+        self.assertFalse(tl.freeze_blocks("macro", False, False))
+
+    def test_macros_are_in_the_generative_set(self):
+        self.assertIn("macro", tl.FREEZE_GENERATIVE)
