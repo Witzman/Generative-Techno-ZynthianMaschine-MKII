@@ -1113,13 +1113,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             percent = (zctrl.value - zctrl.value_min) / span * 100.0
             percent = min(100.0, max(0.0, percent + delta))
             target = zctrl.value_min + span * (percent / 100.0)
-        for channel in range(len(tlib.CHANNELS)):
-            other = self.fx_handle(channel, which)
-            if other is None:
-                continue
-            zc = other.controllers_dict.get(symbol)
-            if zc is not None:
-                zc.set_value(target, True)
+        if tlib.fx_is_ganged(which):
+            for channel in range(len(tlib.CHANNELS)):
+                other = self.fx_handle(channel, which)
+                if other is None:
+                    continue
+                zc = other.controllers_dict.get(symbol)
+                if zc is not None:
+                    zc.set_value(target, True)
+        else:
+            # ONE instance, one write. A master insert costs a single jalv
+            # host, which is the whole reason it is affordable at all: the
+            # per-chain insert pair sits on eight chains, so an effect there
+            # costs eight times what it looks like.
+            zctrl.set_value(target, True)
         with self.lock:
             self._render_display()
 
@@ -1514,7 +1521,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         elif mode == "ALL":
             for which, table, title in (
                     ("reverb", tlib.FX_REVERB, "REV"),
-                    ("delay", tlib.FX_DELAY, "DLY")):
+                    ("delay", tlib.FX_DELAY, "DLY"),
+                    # The master insert. No hand-written table to exclude -
+                    # nothing else on the surface reaches it, so every port it
+                    # publishes is fair game and the pages are built whole
+                    # from the plugin.
+                    (tlib.FX_MAIN, {}, "MAIN")):
                 proc = self.fx_handle(0, which)
                 exclude = {sym for sym, _, _ in table.values()}
                 pages += tlib.generated_pages(
@@ -1925,6 +1937,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         LinuxSampler's empty _ctrls cannot reach it: both knobs are live on
         drums and on voices with no exception."""
 
+        if which == tlib.FX_MAIN:
+            # THE MAIN CHAIN IS NOT REACHABLE THE ORDINARY WAY. Everything
+            # below resolves through midi_chan_2_chain_ids, and Main's
+            # midi_chan is None - so chain 0 is invisible to every existing
+            # fx resolver and needs this branch rather than a second function.
+            # The KEYING needed nothing: _mod_key already returns (None, verb)
+            # for a global verb.
+            chain = self.chain_manager.chains.get(0)
+            if chain is None:
+                return None
+            for proc in chain.get_processors():
+                name = getattr(proc.engine, "name", "") if proc.engine else ""
+                if "RezFilter" in str(name):
+                    return proc
+            return None
         chain_ids = self.chain_manager.midi_chan_2_chain_ids[tlib.CHANNELS[channel][5]]
         if not chain_ids:
             return None

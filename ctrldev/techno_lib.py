@@ -2069,6 +2069,21 @@ class techno_lib:
     VERB_LV2 = "lv2:"
     VERB_FX = "fx:"
 
+    # The insert families an `fx:` verb can name, and whether one knob moves
+    # ONE object or eight. reverb and delay sit on all eight chains, so a knob
+    # there writes eight times; MAIN is a single processor on chain 0, so it
+    # writes once.
+    #
+    # A predicate rather than an `if which == "main"` at each call site: there
+    # are seven `fx:`-keyed sites and the eighth would forget.
+    FX_GANGED = frozenset(("reverb", "delay"))
+    FX_MAIN = "main"
+
+    @staticmethod
+    def fx_is_ganged(which):
+        """Does one turn of this knob write to all eight chains?"""
+        return which in techno_lib.FX_GANGED
+
     PORT_LABEL_CHARS = 8
 
     NAME_CHARS = 8           # what fits in a column's 5x8 name row

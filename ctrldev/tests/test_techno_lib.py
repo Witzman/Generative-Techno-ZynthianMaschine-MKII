@@ -3906,3 +3906,28 @@ class TestRepeatLabel(unittest.TestCase):
     def test_repeat_is_bound_stateful_because_the_release_is_the_event(self):
         self.assertEqual(tl.BUTTONS_STATEFUL[6], "repeat")
         self.assertNotIn(6, tl.BUTTONS_PRESS)
+
+
+class TestFxGanging(unittest.TestCase):
+    """One knob, how many objects."""
+
+    def test_the_per_chain_inserts_are_ganged(self):
+        # reverb and delay sit on all eight chains, so a knob writes eight
+        # times - which is also why an effect there costs eight times what it
+        # looks like.
+        self.assertTrue(tl.fx_is_ganged("reverb"))
+        self.assertTrue(tl.fx_is_ganged("delay"))
+
+    def test_the_master_insert_is_not(self):
+        # One processor on chain 0. One write.
+        self.assertFalse(tl.fx_is_ganged(tl.FX_MAIN))
+
+    def test_an_unknown_family_is_not_ganged(self):
+        # Fail closed: writing once to something unrecognised is recoverable,
+        # writing eight times to it is not.
+        self.assertFalse(tl.fx_is_ganged("nonsense"))
+
+    def test_a_main_verb_is_global_so_MOD_keys_it_without_a_channel(self):
+        verb = tl.VERB_FX + tl.FX_MAIN + ":freq"
+        self.assertTrue(tl.mod_is_global(verb))
+        self.assertTrue(tl.mod_allowed(verb))
