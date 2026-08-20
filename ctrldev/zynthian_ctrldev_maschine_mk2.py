@@ -494,6 +494,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.arm_down = False
         self._arm_picked = None
         self._arm_bars = {}
+        # Who survives a DROP. Nominated on the Group buttons while ARM is
+        # held; empty means the drop takes everything, which is a real and
+        # useful setting rather than an unconfigured one.
+        self._drop_survivors = set()
+        # The mute picture as it was the instant the drop fired, restored
+        # verbatim afterwards. Never "all on".
+        self._drop_restore = {}
         # Whether this libzynseq exposes per-step play chance, decided by
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
@@ -2423,6 +2430,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 return True
             group = cc_num - GROUP_CC_FIRST
             if 0 <= group < 8:
+                if self.arm_down:
+                    # SURVIVORS, not mutes. The Group buttons are free while
+                    # ARM is held because ARM claims only the PADS - different
+                    # controls under the same modifier, no conflict.
+                    #
+                    # Ahead of the ERASE branch: ARM+ERASE+Group is not a
+                    # gesture, and if a player finds it the nomination is the
+                    # safer of the two to win, since silencing a channel from
+                    # inside a scheduling gesture is a surprise.
+                    if group in self._drop_survivors:
+                        self._drop_survivors.discard(group)
+                    else:
+                        self._drop_survivors.add(group)
+                    with self.lock:
+                        self._render_groups()
+                    return True
                 if self.erase_down:
                     if self.owner[group] == "player":
                         # On a player-owned channel this is an undo, not a
@@ -3662,6 +3685,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if chan is None:
             return BRIGHT_GROUP_NO_CHAIN
         mixer = self.state_manager.zynmixer
+        if self.arm_down:
+            # While ARM is held the Group row stops reporting the mix and
+            # starts reporting the NOMINATION - who survives the drop. It is
+            # the only feedback the gesture has, and without it a player is
+            # tapping buttons in the dark and finding out four bars later.
+            #
+            # Deliberately overriding mute and solo rather than blending with
+            # them: three meanings on one LED is how "solo mode lit VOLUME"
+            # went unnoticed for months. While the modifier is down the LED
+            # answers exactly one question.
+            return (BRIGHT_GROUP_MAX if group in self._drop_survivors
+                    else BRIGHT_GROUP_MIN)
         if mixer.get_mute(chan):
             return 0.0
         if self._any_soloed() and not mixer.get_solo(chan):
@@ -4541,6 +4576,55 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # would fight the playhead.
                 self._paint_arm_legend()
 
+    def _drop_fire(self, bar):
+        """Everything that is not a survivor falls silent for the drop.
+
+        The MIXER STRIP is muted, never the zynseq track. zynseq's file format
+        has no mute field at all, so a zynseq mute is lost by every snapshot
+        save; the mixer's is in the zs3 state and shows on the touchscreen
+        mixer. And a sequencer-level stop would be worse than useless here -
+        Sequence::setPlayState turns STOPPING into STOPPED immediately under
+        LOOP and then resets the position to 0, so the channel would come back
+        out of sync with the other seven.
+
+        THE STATE IS CAPTURED HERE AND RESTORED VERBATIM. Restoring "all on"
+        would un-mute a channel the player had killed by hand, and they would
+        blame the drop for it."""
+
+        self._drop_restore = {}
+        mixer = self.state_manager.zynmixer
+        for group in range(8):
+            chan = self._mixer_chan(group)
+            if chan is None:
+                continue
+            self._drop_restore[group] = bool(mixer.get_mute(chan))
+            if group not in self._drop_survivors:
+                mixer.set_mute(chan, True, update=True)
+        # Symmetric by design: the ARM length is BOTH when it fires and how
+        # long it lasts. A second gesture for the duration was rejected - the
+        # queue already carries a per-macro length, so adding one later is
+        # additive rather than a rewrite.
+        bars = self._arm_bars.get("drop", 4)
+        self._pending_macros.arm("drop_end", bars, bar)
+        self._arm_bars["drop_end"] = bars
+        with self.lock:
+            self._render_mutes()
+            self._render_groups()
+
+    def _drop_restore_apply(self):
+        """Put back exactly what _drop_fire captured, then forget it."""
+
+        mixer = self.state_manager.zynmixer
+        for group, muted in self._drop_restore.items():
+            chan = self._mixer_chan(group)
+            if chan is None:
+                continue
+            mixer.set_mute(chan, muted, update=True)
+        self._drop_restore = {}
+        with self.lock:
+            self._render_mutes()
+            self._render_groups()
+
     def _fire_macro(self, macro, bar):
         """Dispatch one landed macro.
 
@@ -4550,6 +4634,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         the 2026-08-18 failure."""
 
         logging.debug(f"Maschine: macro {macro} landed on bar {bar}")
+        if macro == "drop":
+            self._drop_fire(bar)
+        elif macro == "drop_end":
+            self._drop_restore_apply()
 
     def _wrap_channel(self, channel):
 
