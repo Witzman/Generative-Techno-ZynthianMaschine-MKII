@@ -527,6 +527,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # attributes so "is a ramp running" is one truth, not four that can
         # disagree.
         self._chance_ramp = None
+        # A running HALF/DOUBLE-time move: channel -> the (div, beats, hits,
+        # rot) tuple captured before it, plus what the macro managed. The
+        # CAPTURE is restored, never the computed inverse - drift, reroll and
+        # the encoders all move those values, so the inverse is only
+        # arithmetically identical while nothing else touches them.
+        self._timescale_restore = {}
+        self._timescale_note = None
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -4928,6 +4935,78 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # would fight the playhead.
                 self._paint_arm_legend()
 
+    def _timescale_fire(self, macro, bar):
+        """Take every generated channel to half or double speed.
+
+        THE TRANSFORM IS NOT A DIV MOVE. tlib.time_scale halves the steps per
+        beat AND doubles the beat count, which keeps beats * spb - the step
+        count the sixteen pads draw - invariant. That is what makes it the
+        same rhythm slower rather than a coarser rhythm at the same speed, and
+        it is also why _clamp_params never fires: the new length always fits
+        the grid exactly.
+
+        Structure lands at the channel's own wrap, through the pending set
+        that already ships. THE LIMIT THAT CREATES, on the record: the macro
+        fires on the PHRASE bar and pending is taken at each channel's wrap,
+        which are the same moment only when every channel's length divides the
+        bar. Under polymeter - which already ships - a 3-beat channel takes it
+        up to three beats late. Accepted deliberately: writing immediately
+        would rewrite mid-bar and trip the groove, which is what law L2 exists
+        to stop, and firing per channel would turn one musical event into
+        eight."""
+
+        factor = 0.5 if macro == "half" else 2.0
+        channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+        moved = 0
+        with self.lock:
+            for channel in channels:
+                got = tlib.time_scale(self.div[channel], self.beats[channel],
+                                      factor)
+                if got is None:
+                    # This channel's division has nowhere to go - four of the
+                    # six do not, in one direction or the other. Skipped, and
+                    # counted, so the label can say so.
+                    continue
+                self._timescale_restore[channel] = (
+                    self.div[channel], self.beats[channel],
+                    self.hits[channel], self.rot[channel])
+                self.div[channel], self.beats[channel] = got
+                self.state[channel]["pending"].add("div")
+                self.state[channel]["pending"].add("length")
+                moved += 1
+        self._timescale_note = (macro.upper(), moved, len(channels))
+        bars = self._arm_bars.get(macro, 4)
+        self._pending_macros.arm("timescale_end", bars, bar)
+        self._arm_bars["timescale_end"] = bars
+        logging.info("Maschine: %s took %d of %d channels",
+                     macro, moved, len(channels))
+        with self.lock:
+            self._render_display()
+
+    def _timescale_restore_apply(self):
+        """Put back the captured tuple, and regenerate from it.
+
+        Restoring through the pending set rather than writing now, for the
+        same reason the move itself lands there: structure belongs on the bar.
+
+        A channel the player has since turned DIV on by hand is left alone.
+        A macro must not overwrite a deliberate move made after it was armed -
+        the take-back rule points the other way."""
+
+        with self.lock:
+            for channel, (div, beats, hits, rot) in \
+                    list(self._timescale_restore.items()):
+                self.div[channel] = div
+                self.beats[channel] = beats
+                self.hits[channel] = hits
+                self.rot[channel] = rot
+                self.state[channel]["pending"].add("div")
+                self.state[channel]["pending"].add("length")
+        self._timescale_restore = {}
+        self._timescale_note = None
+        with self.lock:
+            self._render_display()
+
     def _chance_tick(self, bar):
         """Walk a running CHANCE ramp one bar. ONCE PER BAR, never on the
         200 ms modulator tick.
@@ -5013,6 +5092,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._drop_fire(bar)
         elif macro == "drop_end":
             self._drop_restore_apply()
+        elif macro in ("half", "double"):
+            self._timescale_fire(macro, bar)
+        elif macro == "timescale_end":
+            self._timescale_restore_apply()
         elif macro == "chance":
             # Capture every channel's OWN value at fire time. The ramp walks
             # away from it and lands back on it; nothing here assumes 100.
@@ -6027,6 +6110,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # And FREEZE says the machine is being held, which is the difference
         # between held and broken.
         label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
+        if self._timescale_note is not None:
+            name, moved, asked = self._timescale_note
+            label = tlib.scope_label(label, name, moved, asked)
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.

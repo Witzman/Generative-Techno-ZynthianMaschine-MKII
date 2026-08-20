@@ -603,11 +603,12 @@ class techno_lib:
         pos = min(1.0, abs(bar - half) / half)
         return int(round(floor + (base - floor) * pos))
 
-    # The macros ARM can compose, one per pad from 0. TWO, not eight: pads 2-7
-    # stay dark and unbound, because a lit pad that does nothing is the fault
-    # this surface must never commit. APPEND-ONLY - a snapshot may store the
-    # name, so an existing entry never moves index.
-    ARM_MACROS = ("drop", "chance")
+    # The macros ARM can compose, one per pad from 0. The remaining pads stay
+    # dark and unbound, because a lit pad that does nothing is the fault this
+    # surface must never commit. APPEND-ONLY - a snapshot may store the name,
+    # so an existing entry never moves index. drop and chance shipped with
+    # package 1; half and double joined them with package 3.
+    ARM_MACROS = ("drop", "chance", "half", "double")
 
     # Pads 8-15, the length ring, in bars. Eight lengths for eight pads, and
     # the odd ones (3, 6, 12) are there because a build does not have to be a
@@ -1439,6 +1440,108 @@ class techno_lib:
     # Mirrors maschine_mk2_lib.DIVISIONS and is append-only for the same
     # reason: a snapshot stores the index, not the label.
     DIVISION_LABELS = ("1/32", "1/16", "1/8", "1/16T", "1/8T", "1/4")
+
+    # Steps per beat for each of those, in the same order. Mirrors
+    # maschine_mk2_lib.DIVISIONS[i][1] and is checked against it by a test,
+    # because two tables that must agree and are not compared will not.
+    #
+    # NOTE THE ORDER: the table is grouped BY FAMILY, not sorted by speed.
+    # 1/32-1/16-1/8 are straight and 1/4 is too, but 1/16T and 1/8T sit
+    # BETWEEN them at indices 3 and 4. So `div + 1` from 1/8 lands on 1/16T -
+    # faster, and triplet. Never step this table by index.
+    DIVISION_SPB = (8, 4, 2, 6, 3, 1)
+
+    @staticmethod
+    def generated_channels(owners, count=8):
+        """Every channel a pattern-rewriting macro may touch.
+
+        ALL EIGHT, minus the player-owned ones - and the skip is not a
+        courtesy, it is the ownership rule. These macros regenerate from
+        euclid, so on a channel whose notes are a recorded take there is
+        nothing to regenerate them from and the take would be gone.
+
+        reroll_scope is the wrong function for this even though it looks
+        right: a bare press there means the SELECTED channel and SHIFT means
+        one engine type, and neither is "all eight". A macro armed bars in
+        advance has no button under the player's finger to read a scope from.
+        """
+        return tuple(ch for ch in range(count)
+                     if owners.get(ch, "gen") != "player")
+
+    @staticmethod
+    def scope_label(label, name, moved, asked):
+        """Say how many channels a macro actually took.
+
+        A macro that silently did nothing to three of eight channels is the
+        unexplained-silence law wearing a different hat. Four of the six
+        divisions cannot half-time or cannot double-time at all, so a partial
+        result is ORDINARY here rather than exceptional, and the surface has
+        to be able to say so without the player counting tabs."""
+        if moved == asked:
+            return f"{label} {name}"
+        return f"{label} {name} {int(moved)}/{int(asked)}"
+
+    @staticmethod
+    def time_scale(div_idx, beats, factor):
+        """(division, beats) at half or double speed, or None if unreachable.
+
+        `factor` is 0.5 for half-time and 2.0 for double.
+
+        HALF-TIME HALVES STEPS-PER-BEAT AND DOUBLES THE BEAT COUNT. Neither
+        half alone is half-time, and the feature entry that said "DIV already
+        exists, only the automatic return is new" was wrong twice over:
+
+        - Halving spb with the beat count unchanged gives a COARSER PATTERN OF
+          THE SAME DURATION - a different rhythm, not a slower one.
+        - Stepping the division by index crosses between the straight and
+          triplet families, because DIVISION_SPB is grouped rather than
+          sorted.
+
+        Because `beats * spb` is invariant, the step count the sixteen pads
+        draw never changes: the transform always fits the grid exactly, the
+        regenerated euclid pattern from the unchanged hits/rot is the
+        IDENTICAL rhythm, and _clamp_params - which silently truncates beats,
+        hits and rot to fit - never fires. Under the naive div-only route it
+        would, and a self-returning half-time would quietly halve the
+        channel's length every time it was used.
+
+        Returns None rather than approximating. Four edges are genuinely
+        unreachable - no spb 16, 12, 1.5 or 0.5 exists - and double-time also
+        refuses any beat count it cannot halve into a whole number at or above
+        one. A channel that cannot make the move is skipped and SAYS SO; a
+        macro that silently did nothing to three of eight channels is the
+        unexplained-silence law wearing a different hat."""
+
+        if factor not in (0.5, 2.0):
+            return None
+        try:
+            spb = techno_lib.DIVISION_SPB[int(div_idx)]
+        except (IndexError, TypeError, ValueError):
+            return None
+        beats = int(beats)
+        # Half speed needs HALF the steps per beat and TWICE as many beats,
+        # which is factor on the spb and its inverse on the count. Getting
+        # this pair the wrong way round still round-trips and still preserves
+        # the step count, so it passes a careless test while playing the wrong
+        # thing - which is why the test asserts the concrete divisions by name
+        # rather than only the invariant.
+        want_spb = spb * factor
+        want_beats = beats / factor
+        if want_spb != int(want_spb) or want_beats != int(want_beats):
+            return None
+        want_spb, want_beats = int(want_spb), int(want_beats)
+        if want_beats < 1:
+            return None
+        # Matched inside the SAME FAMILY. Straight divisions have even spb
+        # except 1/4, triplets are 6 and 3 - so a plain spb lookup would map
+        # 1/16T (6) down to nothing and up to nothing, which is right, while
+        # never offering a straight division to a triplet channel or the
+        # reverse. The families do not share an spb value, so equality is
+        # enough and no family tag is needed.
+        for idx, candidate in enumerate(techno_lib.DIVISION_SPB):
+            if candidate == want_spb:
+                return (idx, want_beats)
+        return None
 
     @staticmethod
     def _num(v):
