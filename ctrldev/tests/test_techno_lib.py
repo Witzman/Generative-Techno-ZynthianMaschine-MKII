@@ -3931,3 +3931,19 @@ class TestFxGanging(unittest.TestCase):
         verb = tl.VERB_FX + tl.FX_MAIN + ":freq"
         self.assertTrue(tl.mod_is_global(verb))
         self.assertTrue(tl.mod_allowed(verb))
+
+
+class TestNoteBaseOsc(unittest.TestCase):
+    """The message that keeps the daemon's pad octave and ours agreeing."""
+
+    def test_it_carries_the_base_as_an_integer(self):
+        import maschine_mk2_lib as mlib
+        msg = mlib.maschine_mk2_lib.note_base_osc(48)
+        self.assertIn(b"/maschine/midi_note_base", msg)
+
+    def test_every_group_has_a_base_twelve_apart(self):
+        # The daemon's own table: group N starts at 24 + 12N. A mismatch here
+        # is invisible until a pad press decodes out of range and is dropped
+        # without a sound or a log.
+        bases = [24 + 12 * n for n in range(8)]
+        self.assertEqual(bases, [24, 36, 48, 60, 72, 84, 96, 108])

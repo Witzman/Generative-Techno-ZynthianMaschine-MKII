@@ -240,6 +240,24 @@ class maschine_mk2_lib:
         return maschine_mk2_lib.osc_message("/maschine/pad", [int(pad), int(color), float(brightness)])
 
     @staticmethod
+    def note_base_osc(base):
+        """Tell the daemon which note the pads should start from.
+
+        The daemon re-bases the pads on EVERY Group press, on both edges and
+        unconditionally - `main.rs` does `set_midi_note_base(48)` in the else
+        arm of "group_c" and so on for all eight. It does that whatever the
+        driver decides to do with the same button.
+
+        So any driver gesture that INTERCEPTS a Group button has to put the
+        base back, or the daemon's pad notes and the driver's selected group
+        drift apart and every later pad press decodes to an out-of-range step
+        and is dropped in silence. That is exactly what DROP's survivor
+        nomination did until 2026-08-20."""
+
+        return maschine_mk2_lib.osc_message("/maschine/midi_note_base",
+                                            [int(base)])
+
+    @staticmethod
     def button_osc(name, color, brightness):
         """LED write for one named button, e.g. 'f1', 'group_a', 'play'"""
 

@@ -552,6 +552,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # captured before the collapse.
         self._repeat_due = None
         self._repeat_restore = {}
+        # The daemon re-bases the pads on BOTH edges of a Group press, so a
+        # correction sent when we intercept the press is overwritten by the
+        # release we never see - Group buttons are press-only here. Re-asserted
+        # from the poll thread instead, for as long as an intercepting modifier
+        # is held plus one tick after it is let go.
+        self._note_base_due = False
         # Global modulator depth, driven by the big encoder while MOD is
         # latched. Stored SEPARATELY from every entry's own depth - see
         # techno_lib.mod_depth_scale for why that is not a style choice:
@@ -2597,10 +2603,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         self._drop_survivors.discard(group)
                     else:
                         self._drop_survivors.add(group)
+                    # PUT THE PAD BASE BACK - but from the POLL THREAD, not
+                    # here. The daemon re-bases the pads on every Group press
+                    # unconditionally and on BOTH EDGES, whatever we do with
+                    # the button, and Group buttons reach this driver on the
+                    # press only - so a correction sent here is overwritten by
+                    # a release we never see. Left unfixed, its idea of the
+                    # pads and ours point at different octaves and every later
+                    # pad press decodes out of range and is dropped WITHOUT A
+                    # SOUND OR A LOG. Found by the owner on 2026-08-20:
+                    # nominating drop survivors killed the ARM grid itself.
+                    self._note_base_due = True
                     with self.lock:
                         self._render_groups()
                     return True
                 if self.erase_down:
+                    # Same trap as the ARM branch above, and this one has been
+                    # here since ERASE + Group shipped.
+                    self._note_base_due = True
                     if self.owner[group] == "player":
                         # On a player-owned channel this is an undo, not a
                         # silencing: drop the take and let the machine refill.
@@ -5542,6 +5562,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if self._record_due:
                     self._record_due = False
                     self._toggle_capture()
+                if self.arm_down or self.erase_down:
+                    # Held: the daemon may re-base under us at any moment, so
+                    # keep asserting. The LED-style cache does not apply here -
+                    # it is one small OSC message on a tick that already sends
+                    # several.
+                    self._send_osc(lib.note_base_osc(
+                        GROUP_NOTE_BASE[self.group]))
+                    self._note_base_due = True
+                elif self._note_base_due:
+                    # One more after the modifier is released, to land after
+                    # the daemon's own release-edge write.
+                    self._note_base_due = False
+                    self._send_osc(lib.note_base_osc(
+                        GROUP_NOTE_BASE[self.group]))
                 if self._repeat_due is not None:
                     want, self._repeat_due = self._repeat_due, None
                     self._repeat_apply(want)
