@@ -122,11 +122,12 @@
 <hr>
 <h2 id="pad-legend">The pads become the menu</h2>
 <p><strong>While MOD is down the sixteen pads stop showing your pattern and show the modulation menu instead.</strong> They were always the menu &mdash; a pad hit under MOD has always set a rate or a shape &mdash; they just used to keep drawing steps while they did it. Now they say what they are.</p>
-<p><strong>The top three rows are the twelve rates, and each one fades at its own speed.</strong> Slower on the left, faster to the right and down, so you pick the movement you want by looking at it rather than by counting pads and remembering. <strong>The bottom row is the four shapes, each fading in its own shape</strong> &mdash; the triangle breathes, the ramp saws and snaps back, the square blinks hard, and sample-and-hold steps about at random.</p>
-<p><strong>The rate and shape you are using sit still, lit full.</strong> They are the only two pads on the grid not moving, so what is selected reads at a glance. Everything else pulses gently in a narrow band.</p>
+<p><strong>The top three rows are the twelve rates</strong>, slower on the left, faster to the right and down. <strong>The bottom row is the four shapes</strong> &mdash; triangle, ramp, square, and sample-and-hold.</p>
+<p><strong>The pads used to fade, each at its own rate and in its own shape, so you could see what a setting felt like before choosing it. That is gone, for the same reason the tick is</strong> &mdash; repainting sixteen pads on a timer floods the connection the buttons come back on. The grid is still now, and the rate you have chosen is named on the label.</p>
+<p><strong>The rate and shape you are using are lit full</strong>, brighter than the rest, so what is selected reads at a glance.</p>
 <p><strong>If every pad is dim and still, nothing is bound yet.</strong> MOD + pad only has something to act on once a modulator exists, so rather than dance under a gesture that would do nothing, the pads say so. Bind one &mdash; MOD and turn any encoder with a bar &mdash; and the menu comes alive.</p>
 <p>There is no playhead here: under MOD the pads are not steps, so a sweep would point at nothing. Let MOD go and your pattern comes straight back.</p>
-<p><strong>The fade speeds are readable, not literal.</strong> The real rates span more than two hundred to one &mdash; the slowest is over half a minute per cycle and the fastest a tenth of a second &mdash; and at both ends an LED shows you nothing useful: one looks switched on, the other looks like a flicker. The pads use a compressed range instead. Further right and further down is genuinely faster; the exact speed on the pad is not the exact speed of the modulator.</p>
+<p><strong>The rates span more than two hundred to one</strong> &mdash; the slowest is over half a minute per cycle, the fastest a tenth of a second. Further right and further down is faster; the label tells you exactly which one you are on.</p>
 <hr>
 <h2 id="rise">RISE &mdash; a sweep that happens once</h2>
 <div class="warn">
@@ -143,7 +144,7 @@
 </tbody></table>
 <p><strong>Under a one-shot the rate pads mean length.</strong> Pads 1&ndash;12 are the same twelve numbers, sixteen bars down to a sixteenth, read as how long the whole sweep takes rather than how long one cycle takes. Tapping one restarts the sweep from that moment at the new length &mdash; which is also how you fire the same riser again.</p>
 <p><strong>The sweep starts when you tap, not on the next downbeat.</strong> It runs for the length you chose from that instant and then holds, so aim the tap, or arm a long one and let it arrive.</p>
-<p><strong>Nothing on the panel marks a modulator as one-shot.</strong> The column keeps its <code>~</code> and its dashed span and the pads keep their menu; what you see is the tick reaching one end of the span and stopping there.</p>
+<p><strong>Nothing on the panel marks a modulator as one-shot.</strong> The column keeps its <code>~</code> and its dashed span and the pads keep their menu. You hear it rather than see it: the sweep arrives and stays there instead of coming back.</p>
 <p><strong>It refuses exactly what MOD refuses.</strong> Running once is a shape, not a new permission: the pattern-rewriting columns still have no bar, and drift still refuses a channel you have recorded on.</p>
 <p><strong>A one-shot is not saved as one.</strong> Reload the set and that modulator is cycling again &mdash; hold ARM and tap its shape pad to make it one-shot once more. To turn one back into a cycle without reloading, clear it with MOD + ERASE and that encoder, then bind it again.</p>
 <hr>
