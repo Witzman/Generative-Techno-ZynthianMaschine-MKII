@@ -146,6 +146,17 @@ BRIGHT_PLAY_OFF = 0.0
 
 CC_PLAY = 1
 HOLD_MS = 250            # law L1: tap latches, hold is momentary
+
+# How much of the measured phase error the phrase clock takes back each bar.
+# A FRACTION, not the whole error: this clock is also the countdown a player is
+# reading, and a count that jumps is worse than one that is slightly late.
+# Measured drift is ~1.5 clocks a bar, so a quarter converges within a few bars
+# and still moves far faster than the drift it is chasing.
+PHRASE_REANCHOR_GAIN = 0.25
+# The most the anchor may move in one bar, in beats. A guard rather than a
+# tuning knob: it bounds what a misread position can do to a running countdown,
+# and it sits far above anything the real drift needs.
+PHRASE_REANCHOR_MAX_BEATS = 0.25
 CC_ERASE = 2      # hold only: a bare press does nothing (law L3)
 CC_RESTART = 7
 # MEASURED at gate G5, 2026-08-12, with aseqdump: both edges, and free -
@@ -523,6 +534,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # channel owns its length, so a polymetric rig has eight different
         # bars and any one of them would be a lie on the other seven.
         self._phrase_anchor = None
+        # (channel, position, pattern length, clocks per beat) - what the
+        # phrase clock corrects itself against. Re-seeded rather than nudged
+        # whenever the reference stops being comparable: a different channel,
+        # a different length, or an error too large to be drift.
+        self._phrase_ref = None
         self._phrase_bar = None
         self._pending_macros = tlib.PendingQueue()
         # Lengths armed while the transport was stopped. The absolute landing
@@ -5328,6 +5344,70 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # one that stops evolving; the others must not pay for it.
                 self._log_poll_error(f"voice wrap on channel {channel}", e)
 
+    def _reanchor_phrase(self):
+        """Take back a fraction of the phrase clock's drift, once a bar.
+
+        MEASURED BEFORE IT WAS CORRECTED, 2026-08-21: `_elapsed_beats()`
+        integrates getTempo() against the MONOTONIC clock while the sequencer
+        advances on the AUDIO clock, and the two slip **3,896 ppm** - a whole
+        bar every 8.3 minutes, linear to within one poll tick over 350 bars.
+        `notes/findings/2026-08-21-phrase-clock-drift.md` has the series.
+
+        Linear is what makes this safe. The error is taken back a QUARTER at a
+        time rather than snapped out, because this clock is also the countdown
+        a player is reading: a count that jumps backward mid-drop is worse
+        than one that is a poll tick late, and the drift needs a fraction of
+        the correction rate available here.
+
+        The reference is the SELECTED channel's own play position, held as a
+        phase rather than a count. Re-seeded rather than nudged whenever it
+        stops being comparable - a different channel, a different pattern
+        length, or an error too large to be drift, which is what a RESTART
+        looks like from in here.
+
+        Costs one locked read a bar. Silently does nothing if the pattern
+        geometry is unusable: no correction is always better than a wrong one
+        on the clock every timed gesture in the instrument resolves against."""
+
+        channel = self.group
+        cps = self.cps[channel]
+        spb = lib.DIVISIONS[self.div[channel]][1]
+        cpb = float(cps or 0) * float(spb or 0)
+        length = cpb * float(self.beats[channel] or 0)
+        if cpb <= 0.0 or length <= 0.0:
+            return
+        with self.lock:
+            pos = self._play_clock(channel)
+        if pos is None:
+            self._phrase_ref = None
+            return
+
+        ref = self._phrase_ref
+        if ref is None or ref[0] != channel or ref[2] != length:
+            self._phrase_ref = (channel, pos, length, cpb)
+            return
+
+        err = tlib.phase_error(pos, ref[1], length)
+        if err is None:
+            return
+        if abs(err) > length / 4.0:
+            # Not drift. A RESTART, a length change, or a reading taken while
+            # the pattern moved under us - re-seed rather than haul the clock
+            # a quarter of a bar toward a number that means something else.
+            self._phrase_ref = (channel, pos, length, cpb)
+            return
+
+        move = (err / cpb) * PHRASE_REANCHOR_GAIN
+        move = max(-PHRASE_REANCHOR_MAX_BEATS,
+                   min(PHRASE_REANCHOR_MAX_BEATS, move))
+        # MINUS. The anchor is subtracted from elapsed beats, so a sequencer
+        # running AHEAD - a positive error - has to make the next bar arrive
+        # SOONER, which means a smaller anchor.
+        self._phrase_anchor -= move
+        if self._slog_fh is not None:
+            self._slog("reanchor", bar=self._phrase_bar, pos=pos, ref=ref[1],
+                       err=round(err, 2), move=round(move, 5))
+
     def _phrase_tick(self):
         """Advance the phrase clock and fire anything the bar has reached.
 
@@ -5346,6 +5426,33 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if bar == self._phrase_bar:
             return
         self._phrase_bar = bar
+        self._reanchor_phrase()
+        if self._slog_fh is not None:
+            # DRIFT PROBE. _elapsed_beats() integrates getTempo() against the
+            # MONOTONIC clock; the sequencer advances on the AUDIO clock. Same
+            # tempo number, two time bases, and the spec declined to correct a
+            # drift nobody had measured.
+            #
+            # Phase slip, not absolute counting: sample the sequencer's OWN
+            # play position at each phrase-bar tick. If the two clocks agree
+            # the number sits still, jittering by up to one poll tick. If they
+            # drift it WALKS, monotonically, and the rate is the answer. No
+            # wrap accumulation and no second counter to get wrong.
+            # ONE locked section for BOTH zynseq reads. libzynseq is not
+            # thread-safe and this runs on the poll thread; an unlocked reach
+            # into it once took the whole UI down with SIGSEGV mid-jam.
+            # _elapsed_beats takes the lock itself and self.lock is an RLock,
+            # so calling it in here is safe and keeps the tempo read and the
+            # position read on the same side of one acquire - which they must
+            # be, or the two numbers describe different instants and the drift
+            # they are measuring is the thing that separates them.
+            with self.lock:
+                bpm = self.libseq.getTempo()
+                pos = self._play_clock(self.group)
+                beats = self._elapsed_beats()
+            self._slog("drift", bar=bar, beats=round(beats, 4), pos=pos,
+                       group=self.group, bpm=bpm,
+                       mono=round(time.monotonic() - self._t0, 4))
         if self._pending_macros.pending() or self._frozen("macro"):
             # GATED on purpose: a bar with nothing armed and nothing frozen
             # writes no line at all, so an idle jam costs the log nothing and
