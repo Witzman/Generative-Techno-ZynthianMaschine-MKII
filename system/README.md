@@ -13,6 +13,18 @@ Deployed configuration, taken off a working rig and verified by checksum.
 | `maschine-clock-connect.sh` | `/usr/local/bin/` | Wires the bridge's ports. |
 | `maschine.json` | the daemon's working directory | Pad note offsets and encoder CC numbers, and **`"external_pad_leds": true`** — without it the daemon repaints pads on press and release in its own colour, and the first touch destroys the per-channel picture. |
 
+`tests/test-system-files.sh` is the automated check for everything in this
+table — 44 assertions, WSL only, no Pi and no hardware:
+
+    bash system/tests/test-system-files.sh
+
+It parses the helpers, pins the udev rule and `maschine.json` field by field,
+checks the unit ordering, confirms `install.sh` still enables exactly these
+three units and that its path rewrites leave no `/root` path behind, and runs
+`systemd-analyze verify` on all three units inside a `mktemp -d` fake root with
+every `Exec*=` binary stubbed. Where `systemd-analyze` is absent that group
+**skips** rather than passing.
+
 **`maschine.json` here is the TEMPLATE, and the live copy is deliberately
 untracked.** `config.rs` reads `maschine.json` relative to its working
 directory, and `maschine-mk2.service` sets that to `daemon/`, so the file the

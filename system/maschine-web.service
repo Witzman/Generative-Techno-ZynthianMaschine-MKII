@@ -3,7 +3,7 @@ Description=Maschine MK2 web editor HTTP server
 After=network.target
 
 [Service]
-ExecStart=/zynthian/venv/bin/python3 -m http.server 9000 --directory /root/zynth/MaschineMK2_linux/web
+ExecStart=/zynthian/venv/bin/python3 -m http.server 9000 --directory /root/Generative-Techno-ZynthianMaschine-MKII/daemon/web
 Restart=on-failure
 RestartSec=5
 
