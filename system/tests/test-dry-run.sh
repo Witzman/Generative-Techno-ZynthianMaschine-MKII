@@ -86,6 +86,8 @@ head_ "deploy-to-pi.sh sends nothing that install.sh owns"
 hasnt "never sends maschine.json"  "$D" 'maschine\.json'
 hasnt "never sends a systemd unit" "$D" '\.service'
 hasnt "never sends the udev rule"  "$D" '99-maschine\.rules'
+# The UI ordering drop-in is a systemd file, so it is install.sh's to place.
+hasnt "never sends the UI ordering drop-in" "$D" 'zynthian-maschine-order|10-maschine-order'
 hasnt "never touches udev"         "$D" 'udevadm'
 
 head_ "deploy-to-pi.sh flags"
@@ -140,6 +142,10 @@ done
 for u in maschine-mk2.service maschine-clock.service maschine-web.service; do
     has "installs unit $u" "$I" "\[dry-run\] install -m 0644 '[^']*$u[^']*' /etc/systemd/system/$u"
 done
+has "installs the UI ordering drop-in" "$I" \
+    "\\[dry-run\\] install -m 0644 -D '.*/system/zynthian-maschine-order\\.conf'.*zynthian\\.service\\.d/10-maschine-order\\.conf"
+before "the drop-in is in place before daemon-reload" "$I" \
+    '10-maschine-order\.conf' '\[dry-run\] systemctl daemon-reload'
 has "enables the three units"      "$I" '\[dry-run\] systemctl enable maschine-mk2 maschine-web maschine-clock'
 has "reloads systemd"              "$I" '\[dry-run\] systemctl daemon-reload'
 for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do

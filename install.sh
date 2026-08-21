@@ -89,6 +89,14 @@ for f in maschine-mk2.service maschine-web.service maschine-clock.service; do
              '$REPO/system/$f' > '$tmp'"
     run "install -m 0644 '$tmp' /etc/systemd/system/$f"
 done
+# The UI must start after the daemon. A drop-in rather than an edit to
+# zynthian.service: the unit is Zynthian's, and a drop-in survives a ZynthianOS
+# update by construction - unlike the zynautoconnect patch, there is nothing to
+# re-run afterwards.
+say "Order the UI after the daemon (drop-in, does not touch zynthian.service)"
+run "install -m 0644 -D '$REPO/system/zynthian-maschine-order.conf' \
+         /etc/systemd/system/zynthian.service.d/10-maschine-order.conf"
+
 run "systemctl daemon-reload"
 run "systemctl enable maschine-mk2 maschine-web maschine-clock"
 

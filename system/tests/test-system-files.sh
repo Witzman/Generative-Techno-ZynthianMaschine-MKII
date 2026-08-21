@@ -49,7 +49,7 @@ UNITS="maschine-mk2.service maschine-clock.service maschine-web.service"
 
 # ---------------------------------------------------------------- files exist
 head_ "system/ ships what system/README.md says it does"
-for f in 99-maschine.rules maschine.json README.md \
+for f in 99-maschine.rules maschine.json README.md zynthian-maschine-order.conf \
          maschine-jack-connect.sh maschine-clock-connect.sh maschine-clock-bridge.py \
          $UNITS; do
     if [ -f "$SYS/$f" ]; then ok "$f present"; else bad "$f present" "missing"; fi
@@ -133,6 +133,29 @@ for u in $UNITS; do
     assert_grep "$u is WantedBy multi-user.target" '^WantedBy=multi-user\.target' "$SYS/$u"
     assert_grep "$u restarts"                     '^Restart='                    "$SYS/$u"
 done
+# THE law of this rig, now expressed in a unit rather than only in prose.
+# Starting the daemon after the UI leaves the driver bound to a dead zmip slot
+# and the rig goes silent with no error in any log.
+head_ "The UI is ordered after the daemon"
+DROPIN="$SYS/zynthian-maschine-order.conf"
+assert_grep "drop-in orders the UI After the daemon" '^After=maschine-mk2\.service$'  "$DROPIN"
+assert_grep "drop-in Wants the daemon"                '^Wants=maschine-mk2\.service$'  "$DROPIN"
+# Requires= would tie the UI's fate to the daemon's, and the udev rule stops the
+# daemon on unplug - so Requires would make unplugging the cable kill the rig.
+assert_no_grep "drop-in does NOT Requires the daemon" '^Requires='  "$DROPIN"
+# PartOf= would make a daemon stop stop the UI and a daemon restart restart it;
+# the udev rule fires both on ordinary cable handling.
+assert_no_grep "drop-in does NOT use PartOf"          '^PartOf='    "$DROPIN"
+assert_no_grep "drop-in does NOT use BindsTo"         '^BindsTo='   "$DROPIN"
+assert_grep    "drop-in only touches [Unit]"          '^\[Unit\]$'  "$DROPIN"
+if [ "$(grep -c '^\[' "$DROPIN")" = 1 ]; then
+    ok "drop-in has exactly one section"
+else
+    bad "drop-in has exactly one section" "$(grep '^\[' "$DROPIN" | tr '\n' ' ')"
+fi
+assert_grep "install.sh installs the drop-in" \
+    'zynthian\.service\.d/10-maschine-order\.conf' "$REPO/install.sh"
+
 # install.sh enables exactly these three.
 head_ "install.sh enables exactly the units that ship"
 enabled=$(grep -oP 'systemctl enable \K[^"]+' "$REPO/install.sh" | tr -s ' ' '\n' | grep -v '^$' | sort | tr '\n' ' ')
