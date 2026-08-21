@@ -4368,7 +4368,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         key = ("f", index)
         soloing = self.solo_down or self.solo_mode
-        if self._switch_row() is not None:
+        row = self._switch_row()
+        if row is not None:
             # CONTROL, unmodified: the row is the page's switches. Asked
             # through the same predicate the LED is painted from, so the
             # button and its light cannot disagree about what the row means.
@@ -4377,7 +4378,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # SHIFT released before the button, would otherwise leave a
             # _down_at entry behind for a later hold to measure its time from.
             self._down_at.pop(key, None)
-            if down:
+            # A None ENTRY is a dark, inert button - either this column carries
+            # no switch, or MOD has made the whole row inert. Both must do
+            # nothing, and testing the row for `is not None` was not enough:
+            # F_ROW_INERT returns (None,) * 8, which is not None, so under MOD
+            # the row was painted dark and still advanced the switch. Measured
+            # on the rig 2026-08-21 - the page label read MOD, the F LED was
+            # held dark, and three presses walked the switch anyway. That is
+            # the exact object _switch_row's docstring calls the worst this
+            # surface can produce: a light that disagrees with the button.
+            if down and row[index] is not None:
                 self._switch_press(index)
             return
         if down:
