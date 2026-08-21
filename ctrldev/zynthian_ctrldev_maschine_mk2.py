@@ -2683,20 +2683,33 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         identical reason, that a half-cancelled gesture is harder to reason
         about than none.
 
+        A TAP, MEASURED - law L1's 250 ms, the same threshold _act_mod,
+        _act_freeze and _solo_button use. It used to be any release with no
+        pad press, whatever its length, and that made the countdown ruler
+        unreadable: the grid says "reading the countdown must not also change
+        it" and every pad on it is inert, but the button you have to HOLD to
+        see the pads wiped the queue when you let go. Found on the rig
+        2026-08-21, by following this project's own test plan, which says to
+        hold ARM mid-countdown and read the ruler.
+
         The pick is cleared on press rather than on release so a second hold
         starts from nothing. Leaving it set would let a bare length tap re-arm
         a macro the player composed a minute ago."""
 
         self.arm_down = down
         if down:
+            self._down_at["arm"] = (time.monotonic(), False)
             self._arm_picked = None
             with self.lock:
                 self._render_pads()
                 self._render_display()
             return
 
-        if self._arm_picked is None and (self._pending_macros.pending()
-                                         or self._armed_while_stopped):
+        went_down, _ = self._down_at.pop("arm", (None, False))
+        tapped = (went_down is not None
+                  and (time.monotonic() - went_down) * 1000.0 < HOLD_MS)
+        if tapped and self._arm_picked is None and (
+                self._pending_macros.pending() or self._armed_while_stopped):
             self._pending_macros.clear()
             self._armed_while_stopped.clear()
             self._arm_bars.clear()
