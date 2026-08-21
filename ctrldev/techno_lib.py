@@ -12,6 +12,7 @@
 
 import random
 import re
+import time
 from collections import deque
 
 
@@ -2759,6 +2760,36 @@ class techno_lib:
             c("RANGE", str(state["range"]), "seg", (state["range"] - 1, 4)),
             c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
         ]
+
+    @staticmethod
+    def session_line(stamp, tag, fields):
+        """One line of the play-session event log.
+
+        PURE, so it is testable on WSL where the driver cannot be imported -
+        the driver owns the file handle and this owns the grammar.
+
+        `stamp` is seconds since the epoch, printed to the millisecond because
+        the questions this log exists to answer are ordering questions: did
+        the freeze latch before or after the bar tick that should have fired
+        the macro.
+
+        The format is `HH:MM:SS.mmm tag key=value key=value`, deliberately
+        greppable by tag and by key: a session is read with grep, never by
+        eye. None prints as `-` rather than being dropped, because a field
+        that is sometimes absent makes a column that cannot be counted."""
+
+        ms = int((stamp % 1.0) * 1000)
+        clock = time.strftime("%H:%M:%S", time.localtime(stamp))
+        parts = [f"{clock}.{ms:03d}", str(tag)]
+        for key, value in fields.items():
+            if value is None:
+                value = "-"
+            elif isinstance(value, bool):
+                value = "1" if value else "0"
+            elif isinstance(value, (list, tuple, set, frozenset)):
+                value = ",".join(str(v) for v in sorted(value)) or "-"
+            parts.append(f"{key}={value}")
+        return " ".join(parts) + "\n"
 
     class PendingQueue:
         """Macros waiting for a bar boundary.
