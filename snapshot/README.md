@@ -33,6 +33,34 @@ Snapshots **Name:** field renames the selected *bank* instead of saving.
 
 ## What it contains
 
+## `101-dub-mutated` — added 2026-08-21
+
+The one preset in the pack whose three voices are **all the same engine**:
+`JV/Mutated Instruments` on chains 6, 7 and 8. Everything else in the pack
+mixes three different synths; this one leans on one engine's own character and
+separates the voices by register, octave and gate instead.
+
+| | |
+|---|---|
+| Tempo | **120 BPM — chosen because it is EXACT** (see the tempo note below). Of the dub entries only this one and `050` sit on a zero-error tempo |
+| Key | root 10, scale 5 — B♭ pentatonic, the only dub entry in that pair |
+| Drums | TR808 across all five, sparse: kick four-on-floor, snare on 4 and 12, one clap on 12, offbeat hats |
+| Voices | sub on the one and the and (`rhythm_reg` 16705), the stab strictly offbeat (17476), one sustained pad per bar (1, gate 800) |
+| Effects | **`JV/Tal-Dub-3` → `JV/Tal-Reverb-III`** — the dub delay proper into a plate. A pair used nowhere else: `073` is Tal-Dub-3 into Tal-Reverb-II, `076` is Modulay into Tal-Reverb-III |
+
+**Why those effects.** The insert pair sits on **all eight chains**, so an
+effect costs eight times what it looks like — Tal-Reverb-III is the reverb this
+project moved to when Roboverb was measured unusable at eight instances, and
+Tal-Dub-3 is already proven at eight in `073` and `074`. Neither is on the
+banned list.
+
+**Measured on the rig, 2026-08-21**: loads with 8 × Tal-Dub-3 and
+8 × Tal-Reverb-III instantiated, **JACK DSP mean 23.9%, p95 24.1%, zero
+xruns** over 60 s with the transport running — level with the factory
+snapshot's own 23.5-25.4% baseline. `JV/Mutated Instruments` is the zynMI
+engine and does **not** appear as a `jalv` process, so do not look for it
+there; `053-dub-rimshot` behaves the same way.
+
 **125 BPM is a deliberate choice, not a round number.** zynseq truncates the
 length of one sequencer clock to a whole audio frame with no accumulator, so at
 48 kHz the tempo error is the fractional part of `30000 / tempo` — **zero only

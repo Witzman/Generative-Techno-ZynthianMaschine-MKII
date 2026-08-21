@@ -1,5193 +1,5296 @@
 [
- {
-  "file": "031-house-classic",
-  "title": "House Classic",
-  "genre": "house",
-  "tempo": 124,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     2,
-     10
-    ]
-   ],
-   "velo": [
-    112,
-    96,
-    100,
-    84,
-    88
-   ],
-   "gate": [
-    40,
-    40,
-    40,
-    25,
-    70
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    17476,
-    1
-   ],
-   "register": [
-    4354,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    110,
-    96,
-    80
-   ],
-   "gate": [
-    35,
-    45,
-    800
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "The reference 909 house groove - rolling acid bass, offbeat stabs, one sustained pad."
- },
- {
-  "file": "032-house-jackin",
-  "title": "House Jackin",
-  "genre": "house",
-  "tempo": 126,
-  "root": 7,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "SP1200 1",
-    "SP1200 1",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     2,
-     4,
-     6,
-     8,
-     10,
-     12,
-     14
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    114,
-    98,
-    104,
-    80,
-    86
-   ],
-   "gate": [
-    40,
-    35,
-    40,
-    20,
-    60
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Nekobi",
-    "JV/Odin2",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    21845,
-    257
-   ],
-   "register": [
-    4384,
-    19947,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    112,
-    94,
-    78
-   ],
-   "gate": [
-    30,
-    40,
-    700
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Jackin' house - SP1200 hats against a 909 kick, offbeat 16th bassline."
- },
- {
-  "file": "033-house-lofi",
-  "title": "House Lofi",
-  "genre": "house",
-  "tempo": 122,
-  "root": 5,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "SP 12",
-    "SP 12",
-    "SP1200 2",
-    "SP1200 2",
-    "SP 12"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    92,
-    98,
-    78,
-    84
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    25,
-    65
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/MDA JX10",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    1
-   ],
-   "register": [
-    73,
-    24222,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    90,
-    74
-   ],
-   "gate": [
-    40,
-    50,
-    900
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Dusty SP-1200 house in dorian - warm sub, two-note vamp, string wash."
- },
- {
-  "file": "034-house-linn",
-  "title": "House Linn",
-  "genre": "house",
-  "tempo": 123,
-  "root": 2,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "LINN9000 1",
-    "LINN9000 1",
-    "LINN9000 2",
-    "LINN9000 2",
-    "LINN9000 1"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     2,
-     10
-    ]
-   ],
-   "velo": [
-    110,
-    96,
-    100,
-    82,
-    86
-   ],
-   "gate": [
-    40,
-    40,
-    40,
-    25,
-    65
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/Helm",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    4369
-   ],
-   "register": [
-    4360,
-    14249,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    108,
-    92,
-    80
-   ],
-   "gate": [
-    35,
-    40,
-    600
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Classic Linn-driven house, straight and bright, with a moving lead."
- },
- {
-  "file": "035-house-garage",
-  "title": "House Garage",
-  "genre": "house",
-  "tempo": 125,
-  "root": 9,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Akai XR10",
-    "Alesis HR16",
-    "Alesis HR16",
-    "Akai XR10",
-    "Akai XR10"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     2,
-     3,
-     6,
-     8,
-     10,
-     11,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    112,
-    98,
-    102,
-    80,
-    88
-   ],
-   "gate": [
-    40,
-    35,
-    40,
-    20,
-    60
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Obxd",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    17476,
-    257
-   ],
-   "register": [
-    4276,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    110,
-    94,
-    78
-   ],
-   "gate": [
-    30,
-    45,
-    750
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Garage-leaning swing feel with syncopated closed hats and organ-ish stabs."
- },
- {
-  "file": "036-house-hardgroove",
-  "title": "House Hard",
-  "genre": "house",
-  "tempo": 127,
-  "root": 10,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR909",
-    "Roland TR909",
-    "Akai XR10",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    118,
-    100,
-    104,
-    78,
-    90
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Noize Mak3r",
-    "JV/Odin2"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    4369
-   ],
-   "register": [
-    4354,
-    49866,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    98,
-    82
-   ],
-   "gate": [
-    30,
-    35,
-    500
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Hard groove - heavy 808 kick, rolling 16th hats, aggressive acid."
- },
- {
-  "file": "037-deep-warm",
-  "title": "Deep Warm",
-  "genre": "deep-house",
-  "tempo": 120,
-  "root": 7,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    90,
-    92,
-    72,
-    78
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    30,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/MDA JX10",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    104,
-    86,
-    72
-   ],
-   "gate": [
-    45,
-    60,
-    1000
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Warm 808 deep house in dorian - soft sub, sparse vamp, long pad."
- },
- {
-  "file": "038-deep-dusk",
-  "title": "Deep Dusk",
-  "genre": "deep-house",
-  "tempo": 118,
-  "root": 5,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Korg DDD1",
-    "Korg DDD1",
-    "Roland TR808",
-    "Roland CR78",
-    "Korg DDD1"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    102,
-    88,
-    90,
-    70,
-    76
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    30,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/Calf Wavetable",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    73,
-    39893,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    102,
-    84,
-    70
-   ],
-   "gate": [
-    60,
-    60,
-    1200
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Late-night deep house, kick and pad doing most of the work."
- },
- {
-  "file": "039-deep-rhodes",
-  "title": "Deep Rhodes",
-  "genre": "deep-house",
-  "tempo": 121,
-  "root": 0,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "LINN9000 1",
-    "Roland TR808",
-    "Roland TR808",
-    "LINN9000 2",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     2,
-     10
-    ]
-   ],
-   "velo": [
-    106,
-    90,
-    94,
-    74,
-    80
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    30,
-    75
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/MDA ePiano",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    21845,
-    257
-   ],
-   "register": [
-    4354,
-    14249,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    106,
-    88,
-    74
-   ],
-   "gate": [
-    40,
-    55,
-    900
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Rhodes-flavoured deep house - the electric piano carries the chords."
- },
- {
-  "file": "040-deep-sub",
-  "title": "Deep Sub",
-  "genre": "deep-house",
-  "tempo": 119,
-  "root": 3,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR808",
-    "Roland TR808",
-    "Korg DDD1",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    88,
-    90,
-    70,
-    76
-   ],
-   "gate": [
-    55,
-    40,
-    40,
-    30,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    265,
-    24222,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -2,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    110,
-    84,
-    70
-   ],
-   "gate": [
-    70,
-    55,
-    1200
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Sub-forward deep house - bass an octave down, everything else restrained."
- },
- {
-  "file": "041-deep-shuffle",
-  "title": "Deep Shuffle",
-  "genre": "deep-house",
-  "tempo": 122,
-  "root": 9,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "SP1200 1",
-    "SP1200 1",
-    "SP1200 2",
-    "Kawai R50",
-    "SP1200 1"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     3,
-     6,
-     8,
-     11,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    90,
-    96,
-    74,
-    80
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    25,
-    70
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Helm",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    43690,
-    17476,
-    257
-   ],
-   "register": [
-    4384,
-    9974,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    104,
-    88,
-    74
-   ],
-   "gate": [
-    40,
-    50,
-    900
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Shuffled hat pattern against a straight kick - the swing is in the placement."
- },
- {
-  "file": "042-deep-night",
-  "title": "Deep Night",
-  "genre": "deep-house",
-  "tempo": 120,
-  "root": 10,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Kawai R50",
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    102,
-    88,
-    90,
-    68,
-    74
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    30,
-    85
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/MDA DX10",
-    "JV/Mutated Instruments"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    49866,
-    24222
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    102,
-    82,
-    70
-   ],
-   "gate": [
-    60,
-    65,
-    1200
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "The quietest of the deep set - one open hat a bar, everything floating."
- },
- {
-  "file": "043-minimal-tick",
-  "title": "Minimal Tick",
-  "genre": "minimal",
-  "tempo": 128,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR606",
-    "Roland TR606",
-    "Roland TR606",
-    "Roland TR606",
-    "Roland TR606"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     10
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    106,
-    86,
-    88,
-    70,
-    74
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    50
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Nekobi",
-    "JV/JC303",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    0,
-    1
-   ],
-   "register": [
-    73,
-    1,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    1
-   ],
-   "velo": [
-    104,
-    80,
-    66
-   ],
-   "gate": [
-    25,
-    30,
-    600
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "606 minimal - lead deliberately silent, the bass and the space carry it."
- },
- {
-  "file": "044-minimal-space",
-  "title": "Minimal Space",
-  "genre": "minimal",
-  "tempo": 127,
-  "root": 7,
-  "scale": 3,
-  "drums": {
-   "kits": [
-    "Roland TR606",
-    "Boss DR55",
-    "Boss DR55",
-    "Roland TR606",
-    "Boss DR55"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     3,
-     7,
-     11,
-     15
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    84,
-    86,
-    68,
-    72
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    50
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/MDA DX10",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    4369,
-    16448,
-    0
-   ],
-   "register": [
-    265,
-    24222,
-    1
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    1,
-    1
-   ],
-   "velo": [
-    104,
-    78,
-    64
-   ],
-   "gate": [
-    40,
-    35,
-    600
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Phrygian minimal - offbeat 16th hats, two blips a bar, no pad at all."
- },
- {
-  "file": "045-minimal-clicks",
-  "title": "Minimal Clicks",
-  "genre": "minimal",
-  "tempo": 129,
-  "root": 2,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Mattel Synsonic",
-    "Boss DR220",
-    "Boss DR220",
-    "Mattel Synsonic",
-    "Boss DR220"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     1,
-     5,
-     9,
-     13
-    ],
-    []
-   ],
-   "velo": [
-    104,
-    84,
-    88,
-    66,
-    70
-   ],
-   "gate": [
-    30,
-    30,
-    30,
-    12,
-    45
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Kars",
-    "JV/Triceratops",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    32896,
-    0
-   ],
-   "register": [
-    145,
-    14249,
-    1
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    102,
-    76,
-    64
-   ],
-   "gate": [
-    30,
-    30,
-    500
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Click-track minimal - no open hat, tiny percussive lead accents."
- },
- {
-  "file": "046-minimal-dry",
-  "title": "Minimal Dry",
-  "genre": "minimal",
-  "tempo": 126,
-  "root": 5,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Fricke MSB512",
-    "Fricke MSB512",
-    "Fricke MSB512",
-    "Retrobox",
-    "Fricke MSB512"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6
-    ]
-   ],
-   "velo": [
-    106,
-    86,
-    88,
-    68,
-    72
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    45
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/MDA JX10",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    17476,
-    257
-   ],
-   "register": [
-    4360,
-    9974,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    104,
-    80,
-    66
-   ],
-   "gate": [
-    25,
-    35,
-    700
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Dry and mechanical - the Fricke kit with almost no tail on anything."
- },
- {
-  "file": "047-minimal-pulse",
-  "title": "Minimal Pulse",
-  "genre": "minimal",
-  "tempo": 130,
-  "root": 9,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Korg DDM110",
-    "Korg DDM110",
-    "Korg DDM110",
-    "Korg DDM110",
-    "Korg DDM110"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     0,
-     2,
-     4,
-     6,
-     8,
-     10,
-     12,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    106,
-    84,
-    86,
-    66,
-    72
-   ],
-   "gate": [
-    30,
-    30,
-    30,
-    12,
-    45
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Noize Mak3r",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    0,
-    1
-   ],
-   "register": [
-    4354,
-    1,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    1
-   ],
-   "velo": [
-    106,
-    78,
-    64
-   ],
-   "gate": [
-    25,
-    30,
-    600
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Pure pulse - a 16th bassline and a steady eighth hat, nothing else moving."
- },
- {
-  "file": "048-minimal-hypnotic",
-  "title": "Minimal Hypno",
-  "genre": "minimal",
-  "tempo": 128,
-  "root": 3,
-  "scale": 3,
-  "drums": {
-   "kits": [
-    "Roland TR606",
-    "Retrobox",
-    "Retrobox",
-    "Roland TR606",
-    "Retrobox"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     7,
-     10,
-     15
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    86,
-    88,
-    68,
-    74
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    50
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/Calf Wavetable",
-    "JV/Mutated Instruments"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    1
-   ],
-   "register": [
-    73,
-    24222,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    104,
-    80,
-    66
-   ],
-   "gate": [
-    35,
-    40,
-    800
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Hypnotic phrygian loop - syncopated hats, a repeating two-note figure."
- },
- {
-  "file": "049-dub-chord",
-  "title": "Dub Chord",
-  "genre": "dub",
-  "tempo": 122,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     6,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    86,
-    88,
-    66,
-    76
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    25,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    88,
-    72
-   ],
-   "gate": [
-    60,
-    55,
-    1400
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "The dub techno essential - offbeat chord stab into long delay and reverb."
- },
- {
-  "file": "050-dub-deepspace",
-  "title": "Dub Deepspace",
-  "genre": "dub",
-  "tempo": 120,
-  "root": 7,
-  "scale": 5,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     6,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    106,
-    84,
-    86,
-    64,
-    74
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    25,
-    85
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/MDA JX10",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    265,
-    9974,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -2,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    108,
-    86,
-    70
-   ],
-   "gate": [
-    70,
-    60,
-    1500
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Pentatonic dub - sub bass two octaves down, everything drenched."
- },
- {
-  "file": "051-dub-basicchannel",
-  "title": "Dub Basic",
-  "genre": "dub",
-  "tempo": 124,
-  "root": 5,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR606",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    86,
-    88,
-    66,
-    76
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    20,
-    75
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    257
-   ],
-   "register": [
-    4354,
-    24222,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    88,
-    72
-   ],
-   "gate": [
-    40,
-    50,
-    1300
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Berlin dub techno - steady 909, the stab is the whole arrangement."
- },
- {
-  "file": "052-dub-halftime",
-  "title": "Dub Halftime",
-  "genre": "dub",
-  "tempo": 118,
-  "root": 10,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     8
-    ],
-    [],
-    [],
-    [
-     6,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    110,
-    84,
-    86,
-    64,
-    74
-   ],
-   "gate": [
-    60,
-    40,
-    40,
-    25,
-    85
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/MDA DX10",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    257,
-    17476,
-    1
-   ],
-   "register": [
-    265,
-    9974,
-    24222
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -2,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    110,
-    84,
-    70
-   ],
-   "gate": [
-    80,
-    60,
-    1500
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Half-time dub - two kicks a bar, the space between them is the point."
- },
- {
-  "file": "053-dub-rimshot",
-  "title": "Dub Rimshot",
-  "genre": "dub",
-  "tempo": 121,
-  "root": 2,
-  "scale": 5,
-  "drums": {
-   "kits": [
-    "Roland CR78",
-    "SCI Tom",
-    "SCI Tom",
-    "Roland CR78",
-    "SCI Tom"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     6,
-     14
-    ],
-    [
-     6
-    ]
-   ],
-   "velo": [
-    106,
-    86,
-    90,
-    66,
-    74
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    25,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/Calf Wavetable",
-    "JV/Mutated Instruments"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    39893,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    86,
-    70
-   ],
-   "gate": [
-    60,
-    55,
-    1400
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "CR-78 and SCI toms - rimshot-led dub with a pentatonic stab."
- },
- {
-  "file": "054-dub-echo",
-  "title": "Dub Echo",
-  "genre": "dub",
-  "tempo": 123,
-  "root": 9,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR606",
-    "Korg DDM110",
-    "Korg DDM110",
-    "Roland TR606",
-    "Korg DDM110"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    84,
-    86,
-    64,
-    74
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    20,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    257
-   ],
-   "register": [
-    73,
-    24222,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    1
-   ],
-   "velo": [
-    104,
-    88,
-    70
-   ],
-   "gate": [
-    45,
-    50,
-    1300
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "DDM110 percussion dub - lighter kit, the echo doing the heavy lifting."
- },
- {
-  "file": "055-trance-classic",
-  "title": "Trance Classic",
-  "genre": "trance",
-  "tempo": 138,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    102,
-    76,
-    90
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Odin2",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    1
-   ],
-   "register": [
-    4354,
-    19947,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    96,
-    80
-   ],
-   "gate": [
-    30,
-    40,
-    900
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Classic trance - rolling 16ths, offbeat open hats, a melodic lead."
- },
- {
-  "file": "056-trance-uplift",
-  "title": "Trance Uplift",
-  "genre": "trance",
-  "tempo": 140,
-  "root": 7,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Alesis HR16",
-    "Roland TR909",
-    "Alesis HR16",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    118,
-    102,
-    104,
-    74,
-    92
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Nekobi",
-    "JV/Helm",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    257
-   ],
-   "register": [
-    4384,
-    49866,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    116,
-    98,
-    82
-   ],
-   "gate": [
-    28,
-    40,
-    900
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Uplifting trance at 140 - wide lead line over a driving bass."
- },
- {
-  "file": "057-trance-acid",
-  "title": "Trance Acid",
-  "genre": "trance",
-  "tempo": 137,
-  "root": 5,
-  "scale": 4,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Akai XE8",
-    "Akai XE8",
-    "Roland TR909",
-    "Akai XE8"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    102,
-    76,
-    90
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Noize Mak3r",
-    "JV/Odin2"
-   ],
-   "rhythm_reg": [
-    65535,
-    43690,
-    4369
-   ],
-   "register": [
-    4354,
-    14249,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    116,
-    94,
-    80
-   ],
-   "gate": [
-    30,
-    35,
-    700
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Acid trance in harmonic minor - the raised seventh does the tension."
- },
- {
-  "file": "058-trance-rolling",
-  "title": "Trance Rolling",
-  "genre": "trance",
-  "tempo": 139,
-  "root": 2,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "DrumTraks",
-    "Roland TR909",
-    "DrumTraks",
-    "Roland TR909",
-    "DrumTraks"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    102,
-    74,
-    90
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Surge XT",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    1
-   ],
-   "register": [
-    4360,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    96,
-    80
-   ],
-   "gate": [
-    28,
-    40,
-    900
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Rolling trance - Surge on the lead, DrumTraks giving it a harder edge."
- },
- {
-  "file": "059-trance-dark",
-  "title": "Trance Dark",
-  "genre": "trance",
-  "tempo": 136,
-  "root": 3,
-  "scale": 3,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR909",
-    "Roland TR909",
-    "Simmons",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    118,
-    100,
-    102,
-    74,
-    90
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    50
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/Obxd",
-    "JV/Mutated Instruments"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    4369
-   ],
-   "register": [
-    4354,
-    4276,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    116,
-    94,
-    78
-   ],
-   "gate": [
-    30,
-    35,
-    700
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "Dark phrygian trance - heavy kick, brooding lead, no relief."
- },
- {
-  "file": "060-trance-euphoric",
-  "title": "Trance Euphoric",
-  "genre": "trance",
-  "tempo": 140,
-  "root": 9,
-  "scale": 1,
-  "drums": {
-   "kits": [
-    "Yamaha RX11",
-    "Roland TR909",
-    "Yamaha RX11",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    104,
-    74,
-    92
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/Surge XT",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    1
-   ],
-   "register": [
-    4384,
-    19947,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    98,
-    82
-   ],
-   "gate": [
-    28,
-    45,
-    1100
-   ]
-  },
-  "fx": [
-   "JV/TAP Stereo Echo",
-   "JV/TAP Reverberator"
-  ],
-  "notes": "The only major-key preset in the set - euphoric trance, deliberately bright."
- },
- {
-  "file": "061-fx-tape-chorus",
-  "title": "FX Tape Chorus",
-  "genre": "house",
-  "tempo": 124,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "SP1200 1",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     2,
-     10
-    ]
-   ],
-   "velo": [
-    112,
-    96,
-    100,
-    82,
-    88
-   ],
-   "gate": [
-    40,
-    40,
-    40,
-    25,
-    65
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    17476,
-    1
-   ],
-   "register": [
-    4354,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    110,
-    94,
-    78
-   ],
-   "gate": [
-    35,
-    45,
-    800
-   ]
-  },
-  "fx": [
-   "JV/Calf Vinyl",
-   "JV/YK Chorus"
-  ],
-  "notes": "Tape saturation into chorus - no reverb at all, width comes from the modulation."
- },
- {
-  "file": "062-fx-vinyl-room",
-  "title": "FX Vinyl Room",
-  "genre": "house",
-  "tempo": 123,
-  "root": 7,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "SP 12",
-    "SP 12",
-    "SP1200 2",
-    "SP1200 2",
-    "SP 12"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    92,
-    98,
-    78,
-    84
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    25,
-    65
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/MDA JX10",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    1
-   ],
-   "register": [
-    73,
-    24222,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    90,
-    74
-   ],
-   "gate": [
-    40,
-    50,
-    900
-   ]
-  },
-  "fx": [
-   "JV/Calf Vinyl",
-   "JV/Dragonfly Room Reverb"
-  ],
-  "notes": "Vinyl crackle and wear into a small room - lo-fi house with dirt in front of the reverb."
- },
- {
-  "file": "063-fx-regrader-chorus",
-  "title": "FX Regrade",
-  "genre": "house",
-  "tempo": 126,
-  "root": 2,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "LINN9000 1",
-    "LINN9000 1",
-    "LINN9000 2",
-    "LINN9000 2",
-    "LINN9000 1"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     2,
-     10
-    ]
-   ],
-   "velo": [
-    110,
-    96,
-    100,
-    82,
-    86
-   ],
-   "gate": [
-    40,
-    40,
-    40,
-    25,
-    65
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/Helm",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    4369
-   ],
-   "register": [
-    4360,
-    14249,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    108,
-    92,
-    80
-   ],
-   "gate": [
-    35,
-    40,
-    600
-   ]
-  },
-  "fx": [
-   "JV/Regrader",
-   "JV/Multivoice Chorus"
-  ],
-  "notes": "Degrading delay into a thick chorus - the repeats fall apart as they widen."
- },
- {
-  "file": "064-fx-eq-aether",
-  "title": "FX EQ Aether",
-  "genre": "house",
-  "tempo": 125,
-  "root": 9,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Akai XR10",
-    "Alesis HR16",
-    "Alesis HR16",
-    "Akai XR10",
-    "Akai XR10"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     2,
-     3,
-     6,
-     8,
-     10,
-     11,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    112,
-    98,
-    102,
-    80,
-    88
-   ],
-   "gate": [
-    40,
-    35,
-    40,
-    20,
-    60
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Obxd",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    17476,
-    257
-   ],
-   "register": [
-    4276,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    110,
-    94,
-    78
-   ],
-   "gate": [
-    30,
-    45,
-    750
-   ]
-  },
-  "fx": [
-   "JV/ZamEQ2",
-   "JV/Dragonfly Hall Reverb"
-  ],
-  "notes": "Shaped with EQ before a large algorithmic reverb - the cleanest of the effect set."
- },
- {
-  "file": "065-fx-tape-hall",
-  "title": "FX Tape Hall",
-  "genre": "deep-house",
-  "tempo": 120,
-  "root": 7,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    90,
-    92,
-    72,
-    78
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    30,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/MDA JX10",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    104,
-    86,
-    72
-   ],
-   "gate": [
-    45,
-    60,
-    1000
-   ]
-  },
-  "fx": [
-   "JV/Calf Tape Simulator",
-   "JV/Dragonfly Hall Reverb"
-  ],
-  "notes": "Tape warmth into a full hall - deep house with everything softened."
- },
- {
-  "file": "066-fx-phaser-roomy",
-  "title": "FX Phase Room",
-  "genre": "deep-house",
-  "tempo": 119,
-  "root": 5,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Korg DDD1",
-    "Korg DDD1",
-    "Roland TR808",
-    "Roland CR78",
-    "Korg DDD1"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    102,
-    88,
-    90,
-    70,
-    76
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    30,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/Calf Wavetable",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    73,
-    39893,
-    49866
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    102,
-    84,
-    70
-   ],
-   "gate": [
-    60,
-    60,
-    1200
-   ]
-  },
-  "fx": [
-   "JV/YK Chorus",
-   "JV/Roomy"
-  ],
-  "notes": "Slow stereo phasing into a small room - motion without any delay."
- },
- {
-  "file": "067-fx-echo-shiro",
-  "title": "Echo Room",
-  "genre": "deep-house",
-  "tempo": 121,
-  "root": 0,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "LINN9000 1",
-    "Roland TR808",
-    "Roland TR808",
-    "LINN9000 2",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     4,
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     2,
-     10
-    ]
-   ],
-   "velo": [
-    106,
-    90,
-    94,
-    74,
-    80
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    30,
-    75
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/MDA ePiano",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    21845,
-    257
-   ],
-   "register": [
-    4354,
-    14249,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    106,
-    88,
-    74
-   ],
-   "gate": [
-    40,
-    55,
-    900
-   ]
-  },
-  "fx": [
-   "JV/GxEcho-Stereo",
-   "JV/Roomy"
-  ],
-  "notes": "GxEcho-Stereo into Roomy - a tighter room than the plate it started as; the pair it had was already taken by 075."
- },
- {
-  "file": "068-fx-eq-talreverb",
-  "title": "FX EQ Plate",
-  "genre": "deep-house",
-  "tempo": 120,
-  "root": 10,
-  "scale": 2,
-  "drums": {
-   "kits": [
-    "Kawai R50",
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    102,
-    88,
-    90,
-    68,
-    74
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    30,
-    85
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/MDA DX10",
-    "JV/Mutated Instruments"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    49866,
-    24222
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    102,
-    82,
-    70
-   ],
-   "gate": [
-    60,
-    65,
-    1200
-   ]
-  },
-  "fx": [
-   "JV/3 Band EQ",
-   "JV/Tal-Reverb-III"
-  ],
-  "notes": "Three-band shaping into a classic plate - restrained and controllable."
- },
- {
-  "file": "069-fx-ringmod-delay",
-  "title": "FX Ringmod",
-  "genre": "minimal",
-  "tempo": 129,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR606",
-    "Roland TR606",
-    "Roland TR606",
-    "Roland TR606",
-    "Roland TR606"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     10
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    106,
-    86,
-    88,
-    70,
-    74
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    50
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Nekobi",
-    "JV/Triceratops",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    32896,
-    1
-   ],
-   "register": [
-    73,
-    14249,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    1
-   ],
-   "velo": [
-    104,
-    80,
-    66
-   ],
-   "gate": [
-    25,
-    30,
-    600
-   ]
-  },
-  "fx": [
-   "JV/MDA RingMod",
-   "JV/Modulay"
-  ],
-  "notes": "Ring modulation into a modulated delay - metallic and deliberately unmusical."
- },
- {
-  "file": "070-fx-autopan-early",
-  "title": "FX Autopan",
-  "genre": "minimal",
-  "tempo": 128,
-  "root": 7,
-  "scale": 3,
-  "drums": {
-   "kits": [
-    "Roland TR606",
-    "Boss DR55",
-    "Boss DR55",
-    "Roland TR606",
-    "Boss DR55"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     3,
-     7,
-     11,
-     15
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    104,
-    84,
-    86,
-    68,
-    72
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    50
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/MDA DX10",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    4369,
-    16448,
-    0
-   ],
-   "register": [
-    265,
-    24222,
-    1
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    1,
-    1
-   ],
-   "velo": [
-    104,
-    78,
-    64
-   ],
-   "gate": [
-    40,
-    35,
-    600
-   ]
-  },
-  "fx": [
-   "JV/TAP AutoPanner",
-   "JV/Dragonfly Early Reflections"
-  ],
-  "notes": "Auto-panning into early reflections only - movement across the stereo field, no tail."
- },
- {
-  "file": "071-fx-pingpong-roomy",
-  "title": "FX Pingpong",
-  "genre": "minimal",
-  "tempo": 130,
-  "root": 2,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Mattel Synsonic",
-    "Boss DR220",
-    "Boss DR220",
-    "Mattel Synsonic",
-    "Boss DR220"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     1,
-     5,
-     9,
-     13
-    ],
-    []
-   ],
-   "velo": [
-    104,
-    84,
-    88,
-    66,
-    70
-   ],
-   "gate": [
-    30,
-    30,
-    30,
-    12,
-    45
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Kars",
-    "JV/Triceratops",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    32896,
-    0
-   ],
-   "register": [
-    145,
-    14249,
-    1
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    0
-   ],
-   "range": [
-    1,
-    2,
-    1
-   ],
-   "velo": [
-    102,
-    76,
-    64
-   ],
-   "gate": [
-    30,
-    30,
-    500
-   ]
-  },
-  "fx": [
-   "JV/Ping Pong Pan",
-   "JV/Roomy"
-  ],
-  "notes": "Hard ping-pong panning into a small room - the clicks bounce across the field."
- },
- {
-  "file": "072-fx-comp-digital",
-  "title": "FX Comp Delay",
-  "genre": "minimal",
-  "tempo": 127,
-  "root": 5,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Fricke MSB512",
-    "Fricke MSB512",
-    "Fricke MSB512",
-    "Retrobox",
-    "Fricke MSB512"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [
-     12
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6
-    ]
-   ],
-   "velo": [
-    106,
-    86,
-    88,
-    68,
-    72
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    15,
-    45
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/MDA JX10",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    43690,
-    17476,
-    257
-   ],
-   "register": [
-    4360,
-    9974,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    104,
-    80,
-    66
-   ],
-   "gate": [
-    25,
-    35,
-    700
-   ]
-  },
-  "fx": [
-   "JV/ZamCompX2",
-   "JV/Gxdigital_delay_st"
-  ],
-  "notes": "Compressed hard, then a clean digital delay - tight and forward."
- },
- {
-  "file": "073-fx-taldub-aether",
-  "title": "FX Taldub",
-  "genre": "dub",
-  "tempo": 122,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     6,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    86,
-    88,
-    66,
-    76
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    25,
-    80
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    145,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    88,
-    72
-   ],
-   "gate": [
-    60,
-    55,
-    1400
-   ]
-  },
-  "fx": [
-   "JV/Tal-Dub-3",
-   "JV/Tal-Reverb-II"
-  ],
-  "notes": "The dub delay proper into a huge reverb - the deepest tail in the set."
- },
- {
-  "file": "074-fx-taldub-hall",
-  "title": "FX Dub Hall",
-  "genre": "dub",
-  "tempo": 120,
-  "root": 7,
-  "scale": 5,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     6,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    106,
-    84,
-    86,
-    64,
-    74
-   ],
-   "gate": [
-    50,
-    40,
-    40,
-    25,
-    85
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/MiMi-d",
-    "JV/MDA JX10",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    4369,
-    17476,
-    1
-   ],
-   "register": [
-    265,
-    9974,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -2,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    108,
-    86,
-    70
-   ],
-   "gate": [
-    70,
-    60,
-    1500
-   ]
-  },
-  "fx": [
-   "JV/Tal-Dub-3",
-   "JV/Dragonfly Hall Reverb"
-  ],
-  "notes": "Dub delay into a concert hall - pentatonic and very slow to decay."
- },
- {
-  "file": "075-fx-echo-shiro-dub",
-  "title": "FX Dub Shimmer",
-  "genre": "dub",
-  "tempo": 124,
-  "root": 5,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR606",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [],
-    [],
-    [
-     2,
-     6,
-     10,
-     14
-    ],
-    [
-     6,
-     14
-    ]
-   ],
-   "velo": [
-    108,
-    86,
-    88,
-    66,
-    76
-   ],
-   "gate": [
-    45,
-    40,
-    40,
-    20,
-    75
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Obxd",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    21845,
-    17476,
-    257
-   ],
-   "register": [
-    4354,
-    24222,
-    59839
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    106,
-    88,
-    72
-   ],
-   "gate": [
-    40,
-    50,
-    1300
-   ]
-  },
-  "fx": [
-   "JV/GxEcho-Stereo",
-   "JV/Shiroverb"
-  ],
-  "notes": "Tape echo into a shimmer reverb - the Berlin stab sent somewhere brighter."
- },
- {
-  "file": "076-fx-modulay-plate",
-  "title": "FX Modulay",
-  "genre": "dub",
-  "tempo": 121,
-  "root": 10,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR808",
-    "Roland TR808",
-    "Roland CR78",
-    "Roland CR78",
-    "Roland TR808"
-   ],
-   "steps": [
-    [
-     0,
-     8
-    ],
-    [],
-    [],
-    [
-     6,
-     14
-    ],
-    [
-     14
-    ]
-   ],
-   "velo": [
-    110,
-    84,
-    86,
-    64,
-    74
-   ],
-   "gate": [
-    60,
-    40,
-    40,
-    25,
-    85
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Monique",
-    "JV/MDA DX10",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    257,
-    17476,
-    1
-   ],
-   "register": [
-    265,
-    9974,
-    24222
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -2,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    1,
-    2
-   ],
-   "velo": [
-    110,
-    84,
-    70
-   ],
-   "gate": [
-    80,
-    60,
-    1500
-   ]
-  },
-  "fx": [
-   "JV/Modulay",
-   "JV/Tal-Reverb-III"
-  ],
-  "notes": "Modulated delay into a plate - half-time dub with the repeats drifting in pitch."
- },
- {
-  "file": "077-fx-phaser-hall",
-  "title": "FX Phase Hall",
-  "genre": "trance",
-  "tempo": 138,
-  "root": 0,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    102,
-    76,
-    90
-   ],
-   "gate": [
-    35,
-    35,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/JC303",
-    "JV/Odin2",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    1
-   ],
-   "register": [
-    4354,
-    19947,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    96,
-    80
-   ],
-   "gate": [
-    30,
-    40,
-    900
-   ]
-  },
-  "fx": [
-   "JV/YK Chorus",
-   "JV/Dragonfly Hall Reverb"
-  ],
-  "notes": "Phaser sweep into a hall - classic trance width without a delay."
- },
- {
-  "file": "078-fx-chorus-aether",
-  "title": "FX Chorus Aether",
-  "genre": "trance",
-  "tempo": 140,
-  "root": 7,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "Alesis HR16",
-    "Roland TR909",
-    "Alesis HR16",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    118,
-    102,
-    104,
-    74,
-    92
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Nekobi",
-    "JV/Helm",
-    "JV/synthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    257
-   ],
-   "register": [
-    4384,
-    49866,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    116,
-    98,
-    82
-   ],
-   "gate": [
-    28,
-    40,
-    900
-   ]
-  },
-  "fx": [
-   "JV/Multivoice Chorus",
-   "JV/Dragonfly Hall Reverb"
-  ],
-  "notes": "Multivoice chorus into the largest reverb available - maximum lift."
- },
- {
-  "file": "079-fx-regrader-room",
-  "title": "FX Regrade Room",
-  "genre": "trance",
-  "tempo": 139,
-  "root": 2,
-  "scale": 0,
-  "drums": {
-   "kits": [
-    "DrumTraks",
-    "Roland TR909",
-    "DrumTraks",
-    "Roland TR909",
-    "DrumTraks"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    102,
-    74,
-    90
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/Calf Monosynth",
-    "JV/Surge XT",
-    "JV/padthv1"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    1
-   ],
-   "register": [
-    4360,
-    24222,
-    9974
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    96,
-    80
-   ],
-   "gate": [
-    28,
-    40,
-    900
-   ]
-  },
-  "fx": [
-   "JV/Regrader",
-   "JV/Dragonfly Room Reverb"
-  ],
-  "notes": "Degrading repeats in a tight room - trance with the polish taken off."
- },
- {
-  "file": "080-fx-chorus-plate",
-  "title": "FX Chorus Plate",
-  "genre": "trance",
-  "tempo": 140,
-  "root": 9,
-  "scale": 1,
-  "drums": {
-   "kits": [
-    "Yamaha RX11",
-    "Roland TR909",
-    "Yamaha RX11",
-    "Roland TR909",
-    "Roland TR909"
-   ],
-   "steps": [
-    [
-     0,
-     4,
-     8,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     4,
-     12
-    ],
-    [
-     0,
-     1,
-     2,
-     3,
-     4,
-     5,
-     6,
-     7,
-     8,
-     9,
-     10,
-     11,
-     12,
-     13,
-     14,
-     15
-    ],
-    [
-     2,
-     6,
-     10,
-     14
-    ]
-   ],
-   "velo": [
-    116,
-    100,
-    104,
-    74,
-    92
-   ],
-   "gate": [
-    35,
-    30,
-    35,
-    12,
-    55
-   ]
-  },
-  "voices": {
-   "engines": [
-    "JV/amsynth",
-    "JV/Surge XT",
-    "JV/String machine"
-   ],
-   "rhythm_reg": [
-    65535,
-    21845,
-    1
-   ],
-   "register": [
-    4384,
-    19947,
-    39893
-   ],
-   "length": [
-    16,
-    16,
-    16
-   ],
-   "octave": [
-    -1,
-    0,
-    1
-   ],
-   "range": [
-    1,
-    2,
-    2
-   ],
-   "velo": [
-    114,
-    98,
-    82
-   ],
-   "gate": [
-    28,
-    45,
-    1100
-   ]
-  },
-  "fx": [
-   "JV/YK Chorus",
-   "JV/Tal-Reverb-III"
-  ],
-  "notes": "Chorus into a plate - the major-key euphoric preset, drier and more direct."
- }
+  {
+    "file": "031-house-classic",
+    "title": "House Classic",
+    "genre": "house",
+    "tempo": 124,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "velo": [
+        112,
+        96,
+        100,
+        84,
+        88
+      ],
+      "gate": [
+        40,
+        40,
+        40,
+        25,
+        70
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        17476,
+        1
+      ],
+      "register": [
+        4354,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        110,
+        96,
+        80
+      ],
+      "gate": [
+        35,
+        45,
+        800
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "The reference 909 house groove - rolling acid bass, offbeat stabs, one sustained pad."
+  },
+  {
+    "file": "032-house-jackin",
+    "title": "House Jackin",
+    "genre": "house",
+    "tempo": 126,
+    "root": 7,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "SP1200 1",
+        "SP1200 1",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        114,
+        98,
+        104,
+        80,
+        86
+      ],
+      "gate": [
+        40,
+        35,
+        40,
+        20,
+        60
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Nekobi",
+        "JV/Odin2",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        21845,
+        257
+      ],
+      "register": [
+        4384,
+        19947,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        112,
+        94,
+        78
+      ],
+      "gate": [
+        30,
+        40,
+        700
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Jackin' house - SP1200 hats against a 909 kick, offbeat 16th bassline."
+  },
+  {
+    "file": "033-house-lofi",
+    "title": "House Lofi",
+    "genre": "house",
+    "tempo": 122,
+    "root": 5,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "SP 12",
+        "SP 12",
+        "SP1200 2",
+        "SP1200 2",
+        "SP 12"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        92,
+        98,
+        78,
+        84
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        25,
+        65
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/MDA JX10",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        1
+      ],
+      "register": [
+        73,
+        24222,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        90,
+        74
+      ],
+      "gate": [
+        40,
+        50,
+        900
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Dusty SP-1200 house in dorian - warm sub, two-note vamp, string wash."
+  },
+  {
+    "file": "034-house-linn",
+    "title": "House Linn",
+    "genre": "house",
+    "tempo": 123,
+    "root": 2,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "LINN9000 1",
+        "LINN9000 1",
+        "LINN9000 2",
+        "LINN9000 2",
+        "LINN9000 1"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "velo": [
+        110,
+        96,
+        100,
+        82,
+        86
+      ],
+      "gate": [
+        40,
+        40,
+        40,
+        25,
+        65
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/Helm",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        4369
+      ],
+      "register": [
+        4360,
+        14249,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        108,
+        92,
+        80
+      ],
+      "gate": [
+        35,
+        40,
+        600
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Classic Linn-driven house, straight and bright, with a moving lead."
+  },
+  {
+    "file": "035-house-garage",
+    "title": "House Garage",
+    "genre": "house",
+    "tempo": 125,
+    "root": 9,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Akai XR10",
+        "Alesis HR16",
+        "Alesis HR16",
+        "Akai XR10",
+        "Akai XR10"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          2,
+          3,
+          6,
+          8,
+          10,
+          11,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        112,
+        98,
+        102,
+        80,
+        88
+      ],
+      "gate": [
+        40,
+        35,
+        40,
+        20,
+        60
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Obxd",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        17476,
+        257
+      ],
+      "register": [
+        4276,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        110,
+        94,
+        78
+      ],
+      "gate": [
+        30,
+        45,
+        750
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Garage-leaning swing feel with syncopated closed hats and organ-ish stabs."
+  },
+  {
+    "file": "036-house-hardgroove",
+    "title": "House Hard",
+    "genre": "house",
+    "tempo": 127,
+    "root": 10,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR909",
+        "Roland TR909",
+        "Akai XR10",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        118,
+        100,
+        104,
+        78,
+        90
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Noize Mak3r",
+        "JV/Odin2"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        4369
+      ],
+      "register": [
+        4354,
+        49866,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        98,
+        82
+      ],
+      "gate": [
+        30,
+        35,
+        500
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Hard groove - heavy 808 kick, rolling 16th hats, aggressive acid."
+  },
+  {
+    "file": "037-deep-warm",
+    "title": "Deep Warm",
+    "genre": "deep-house",
+    "tempo": 120,
+    "root": 7,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        90,
+        92,
+        72,
+        78
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        30,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/MDA JX10",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        104,
+        86,
+        72
+      ],
+      "gate": [
+        45,
+        60,
+        1000
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Warm 808 deep house in dorian - soft sub, sparse vamp, long pad."
+  },
+  {
+    "file": "038-deep-dusk",
+    "title": "Deep Dusk",
+    "genre": "deep-house",
+    "tempo": 118,
+    "root": 5,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Korg DDD1",
+        "Korg DDD1",
+        "Roland TR808",
+        "Roland CR78",
+        "Korg DDD1"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        102,
+        88,
+        90,
+        70,
+        76
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        30,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/Calf Wavetable",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        73,
+        39893,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        102,
+        84,
+        70
+      ],
+      "gate": [
+        60,
+        60,
+        1200
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Late-night deep house, kick and pad doing most of the work."
+  },
+  {
+    "file": "039-deep-rhodes",
+    "title": "Deep Rhodes",
+    "genre": "deep-house",
+    "tempo": 121,
+    "root": 0,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "LINN9000 1",
+        "Roland TR808",
+        "Roland TR808",
+        "LINN9000 2",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "velo": [
+        106,
+        90,
+        94,
+        74,
+        80
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        30,
+        75
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/MDA ePiano",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        21845,
+        257
+      ],
+      "register": [
+        4354,
+        14249,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        106,
+        88,
+        74
+      ],
+      "gate": [
+        40,
+        55,
+        900
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Rhodes-flavoured deep house - the electric piano carries the chords."
+  },
+  {
+    "file": "040-deep-sub",
+    "title": "Deep Sub",
+    "genre": "deep-house",
+    "tempo": 119,
+    "root": 3,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR808",
+        "Roland TR808",
+        "Korg DDD1",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        88,
+        90,
+        70,
+        76
+      ],
+      "gate": [
+        55,
+        40,
+        40,
+        30,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        265,
+        24222,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -2,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        110,
+        84,
+        70
+      ],
+      "gate": [
+        70,
+        55,
+        1200
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Sub-forward deep house - bass an octave down, everything else restrained."
+  },
+  {
+    "file": "041-deep-shuffle",
+    "title": "Deep Shuffle",
+    "genre": "deep-house",
+    "tempo": 122,
+    "root": 9,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "SP1200 1",
+        "SP1200 1",
+        "SP1200 2",
+        "Kawai R50",
+        "SP1200 1"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          3,
+          6,
+          8,
+          11,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        90,
+        96,
+        74,
+        80
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        25,
+        70
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Helm",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        43690,
+        17476,
+        257
+      ],
+      "register": [
+        4384,
+        9974,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        104,
+        88,
+        74
+      ],
+      "gate": [
+        40,
+        50,
+        900
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Shuffled hat pattern against a straight kick - the swing is in the placement."
+  },
+  {
+    "file": "042-deep-night",
+    "title": "Deep Night",
+    "genre": "deep-house",
+    "tempo": 120,
+    "root": 10,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Kawai R50",
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        102,
+        88,
+        90,
+        68,
+        74
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        30,
+        85
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/MDA DX10",
+        "JV/Mutated Instruments"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        49866,
+        24222
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        102,
+        82,
+        70
+      ],
+      "gate": [
+        60,
+        65,
+        1200
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "The quietest of the deep set - one open hat a bar, everything floating."
+  },
+  {
+    "file": "043-minimal-tick",
+    "title": "Minimal Tick",
+    "genre": "minimal",
+    "tempo": 128,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR606",
+        "Roland TR606",
+        "Roland TR606",
+        "Roland TR606",
+        "Roland TR606"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        106,
+        86,
+        88,
+        70,
+        74
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        50
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Nekobi",
+        "JV/JC303",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        0,
+        1
+      ],
+      "register": [
+        73,
+        1,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        1
+      ],
+      "velo": [
+        104,
+        80,
+        66
+      ],
+      "gate": [
+        25,
+        30,
+        600
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "606 minimal - lead deliberately silent, the bass and the space carry it."
+  },
+  {
+    "file": "044-minimal-space",
+    "title": "Minimal Space",
+    "genre": "minimal",
+    "tempo": 127,
+    "root": 7,
+    "scale": 3,
+    "drums": {
+      "kits": [
+        "Roland TR606",
+        "Boss DR55",
+        "Boss DR55",
+        "Roland TR606",
+        "Boss DR55"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          3,
+          7,
+          11,
+          15
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        84,
+        86,
+        68,
+        72
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        50
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/MDA DX10",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        4369,
+        16448,
+        0
+      ],
+      "register": [
+        265,
+        24222,
+        1
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        1,
+        1
+      ],
+      "velo": [
+        104,
+        78,
+        64
+      ],
+      "gate": [
+        40,
+        35,
+        600
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Phrygian minimal - offbeat 16th hats, two blips a bar, no pad at all."
+  },
+  {
+    "file": "045-minimal-clicks",
+    "title": "Minimal Clicks",
+    "genre": "minimal",
+    "tempo": 129,
+    "root": 2,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Mattel Synsonic",
+        "Boss DR220",
+        "Boss DR220",
+        "Mattel Synsonic",
+        "Boss DR220"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          1,
+          5,
+          9,
+          13
+        ],
+        []
+      ],
+      "velo": [
+        104,
+        84,
+        88,
+        66,
+        70
+      ],
+      "gate": [
+        30,
+        30,
+        30,
+        12,
+        45
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Kars",
+        "JV/Triceratops",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        32896,
+        0
+      ],
+      "register": [
+        145,
+        14249,
+        1
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        102,
+        76,
+        64
+      ],
+      "gate": [
+        30,
+        30,
+        500
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Click-track minimal - no open hat, tiny percussive lead accents."
+  },
+  {
+    "file": "046-minimal-dry",
+    "title": "Minimal Dry",
+    "genre": "minimal",
+    "tempo": 126,
+    "root": 5,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Fricke MSB512",
+        "Fricke MSB512",
+        "Fricke MSB512",
+        "Retrobox",
+        "Fricke MSB512"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6
+        ]
+      ],
+      "velo": [
+        106,
+        86,
+        88,
+        68,
+        72
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        45
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/MDA JX10",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        17476,
+        257
+      ],
+      "register": [
+        4360,
+        9974,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        104,
+        80,
+        66
+      ],
+      "gate": [
+        25,
+        35,
+        700
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Dry and mechanical - the Fricke kit with almost no tail on anything."
+  },
+  {
+    "file": "047-minimal-pulse",
+    "title": "Minimal Pulse",
+    "genre": "minimal",
+    "tempo": 130,
+    "root": 9,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Korg DDM110",
+        "Korg DDM110",
+        "Korg DDM110",
+        "Korg DDM110",
+        "Korg DDM110"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          0,
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        106,
+        84,
+        86,
+        66,
+        72
+      ],
+      "gate": [
+        30,
+        30,
+        30,
+        12,
+        45
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Noize Mak3r",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        0,
+        1
+      ],
+      "register": [
+        4354,
+        1,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        1
+      ],
+      "velo": [
+        106,
+        78,
+        64
+      ],
+      "gate": [
+        25,
+        30,
+        600
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Pure pulse - a 16th bassline and a steady eighth hat, nothing else moving."
+  },
+  {
+    "file": "048-minimal-hypnotic",
+    "title": "Minimal Hypno",
+    "genre": "minimal",
+    "tempo": 128,
+    "root": 3,
+    "scale": 3,
+    "drums": {
+      "kits": [
+        "Roland TR606",
+        "Retrobox",
+        "Retrobox",
+        "Roland TR606",
+        "Retrobox"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          7,
+          10,
+          15
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        86,
+        88,
+        68,
+        74
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        50
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/Calf Wavetable",
+        "JV/Mutated Instruments"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        1
+      ],
+      "register": [
+        73,
+        24222,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        104,
+        80,
+        66
+      ],
+      "gate": [
+        35,
+        40,
+        800
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Hypnotic phrygian loop - syncopated hats, a repeating two-note figure."
+  },
+  {
+    "file": "049-dub-chord",
+    "title": "Dub Chord",
+    "genre": "dub",
+    "tempo": 122,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          6,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        86,
+        88,
+        66,
+        76
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        25,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        88,
+        72
+      ],
+      "gate": [
+        60,
+        55,
+        1400
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "The dub techno essential - offbeat chord stab into long delay and reverb."
+  },
+  {
+    "file": "050-dub-deepspace",
+    "title": "Dub Deepspace",
+    "genre": "dub",
+    "tempo": 120,
+    "root": 7,
+    "scale": 5,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          6,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        106,
+        84,
+        86,
+        64,
+        74
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        25,
+        85
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/MDA JX10",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        265,
+        9974,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -2,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        108,
+        86,
+        70
+      ],
+      "gate": [
+        70,
+        60,
+        1500
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Pentatonic dub - sub bass two octaves down, everything drenched."
+  },
+  {
+    "file": "051-dub-basicchannel",
+    "title": "Dub Basic",
+    "genre": "dub",
+    "tempo": 124,
+    "root": 5,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR606",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        86,
+        88,
+        66,
+        76
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        20,
+        75
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        257
+      ],
+      "register": [
+        4354,
+        24222,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        88,
+        72
+      ],
+      "gate": [
+        40,
+        50,
+        1300
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Berlin dub techno - steady 909, the stab is the whole arrangement."
+  },
+  {
+    "file": "052-dub-halftime",
+    "title": "Dub Halftime",
+    "genre": "dub",
+    "tempo": 118,
+    "root": 10,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          8
+        ],
+        [],
+        [],
+        [
+          6,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        110,
+        84,
+        86,
+        64,
+        74
+      ],
+      "gate": [
+        60,
+        40,
+        40,
+        25,
+        85
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/MDA DX10",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        257,
+        17476,
+        1
+      ],
+      "register": [
+        265,
+        9974,
+        24222
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -2,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        110,
+        84,
+        70
+      ],
+      "gate": [
+        80,
+        60,
+        1500
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Half-time dub - two kicks a bar, the space between them is the point."
+  },
+  {
+    "file": "053-dub-rimshot",
+    "title": "Dub Rimshot",
+    "genre": "dub",
+    "tempo": 121,
+    "root": 2,
+    "scale": 5,
+    "drums": {
+      "kits": [
+        "Roland CR78",
+        "SCI Tom",
+        "SCI Tom",
+        "Roland CR78",
+        "SCI Tom"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          6,
+          14
+        ],
+        [
+          6
+        ]
+      ],
+      "velo": [
+        106,
+        86,
+        90,
+        66,
+        74
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        25,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/Calf Wavetable",
+        "JV/Mutated Instruments"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        39893,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        86,
+        70
+      ],
+      "gate": [
+        60,
+        55,
+        1400
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "CR-78 and SCI toms - rimshot-led dub with a pentatonic stab."
+  },
+  {
+    "file": "054-dub-echo",
+    "title": "Dub Echo",
+    "genre": "dub",
+    "tempo": 123,
+    "root": 9,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR606",
+        "Korg DDM110",
+        "Korg DDM110",
+        "Roland TR606",
+        "Korg DDM110"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        84,
+        86,
+        64,
+        74
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        20,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        257
+      ],
+      "register": [
+        73,
+        24222,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        1
+      ],
+      "velo": [
+        104,
+        88,
+        70
+      ],
+      "gate": [
+        45,
+        50,
+        1300
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "DDM110 percussion dub - lighter kit, the echo doing the heavy lifting."
+  },
+  {
+    "file": "055-trance-classic",
+    "title": "Trance Classic",
+    "genre": "trance",
+    "tempo": 138,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        102,
+        76,
+        90
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Odin2",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        1
+      ],
+      "register": [
+        4354,
+        19947,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        96,
+        80
+      ],
+      "gate": [
+        30,
+        40,
+        900
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Classic trance - rolling 16ths, offbeat open hats, a melodic lead."
+  },
+  {
+    "file": "056-trance-uplift",
+    "title": "Trance Uplift",
+    "genre": "trance",
+    "tempo": 140,
+    "root": 7,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Alesis HR16",
+        "Roland TR909",
+        "Alesis HR16",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        118,
+        102,
+        104,
+        74,
+        92
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Nekobi",
+        "JV/Helm",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        257
+      ],
+      "register": [
+        4384,
+        49866,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        116,
+        98,
+        82
+      ],
+      "gate": [
+        28,
+        40,
+        900
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Uplifting trance at 140 - wide lead line over a driving bass."
+  },
+  {
+    "file": "057-trance-acid",
+    "title": "Trance Acid",
+    "genre": "trance",
+    "tempo": 137,
+    "root": 5,
+    "scale": 4,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Akai XE8",
+        "Akai XE8",
+        "Roland TR909",
+        "Akai XE8"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        102,
+        76,
+        90
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Noize Mak3r",
+        "JV/Odin2"
+      ],
+      "rhythm_reg": [
+        65535,
+        43690,
+        4369
+      ],
+      "register": [
+        4354,
+        14249,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        116,
+        94,
+        80
+      ],
+      "gate": [
+        30,
+        35,
+        700
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Acid trance in harmonic minor - the raised seventh does the tension."
+  },
+  {
+    "file": "058-trance-rolling",
+    "title": "Trance Rolling",
+    "genre": "trance",
+    "tempo": 139,
+    "root": 2,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "DrumTraks",
+        "Roland TR909",
+        "DrumTraks",
+        "Roland TR909",
+        "DrumTraks"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        102,
+        74,
+        90
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Surge XT",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        1
+      ],
+      "register": [
+        4360,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        96,
+        80
+      ],
+      "gate": [
+        28,
+        40,
+        900
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Rolling trance - Surge on the lead, DrumTraks giving it a harder edge."
+  },
+  {
+    "file": "059-trance-dark",
+    "title": "Trance Dark",
+    "genre": "trance",
+    "tempo": 136,
+    "root": 3,
+    "scale": 3,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR909",
+        "Roland TR909",
+        "Simmons",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        118,
+        100,
+        102,
+        74,
+        90
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        50
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/Obxd",
+        "JV/Mutated Instruments"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        4369
+      ],
+      "register": [
+        4354,
+        4276,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        116,
+        94,
+        78
+      ],
+      "gate": [
+        30,
+        35,
+        700
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "Dark phrygian trance - heavy kick, brooding lead, no relief."
+  },
+  {
+    "file": "060-trance-euphoric",
+    "title": "Trance Euphoric",
+    "genre": "trance",
+    "tempo": 140,
+    "root": 9,
+    "scale": 1,
+    "drums": {
+      "kits": [
+        "Yamaha RX11",
+        "Roland TR909",
+        "Yamaha RX11",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        104,
+        74,
+        92
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/Surge XT",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        1
+      ],
+      "register": [
+        4384,
+        19947,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        98,
+        82
+      ],
+      "gate": [
+        28,
+        45,
+        1100
+      ]
+    },
+    "fx": [
+      "JV/TAP Stereo Echo",
+      "JV/TAP Reverberator"
+    ],
+    "notes": "The only major-key preset in the set - euphoric trance, deliberately bright."
+  },
+  {
+    "file": "061-fx-tape-chorus",
+    "title": "FX Tape Chorus",
+    "genre": "house",
+    "tempo": 124,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "SP1200 1",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "velo": [
+        112,
+        96,
+        100,
+        82,
+        88
+      ],
+      "gate": [
+        40,
+        40,
+        40,
+        25,
+        65
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        17476,
+        1
+      ],
+      "register": [
+        4354,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        110,
+        94,
+        78
+      ],
+      "gate": [
+        35,
+        45,
+        800
+      ]
+    },
+    "fx": [
+      "JV/Calf Vinyl",
+      "JV/YK Chorus"
+    ],
+    "notes": "Tape saturation into chorus - no reverb at all, width comes from the modulation."
+  },
+  {
+    "file": "062-fx-vinyl-room",
+    "title": "FX Vinyl Room",
+    "genre": "house",
+    "tempo": 123,
+    "root": 7,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "SP 12",
+        "SP 12",
+        "SP1200 2",
+        "SP1200 2",
+        "SP 12"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        92,
+        98,
+        78,
+        84
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        25,
+        65
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/MDA JX10",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        1
+      ],
+      "register": [
+        73,
+        24222,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        90,
+        74
+      ],
+      "gate": [
+        40,
+        50,
+        900
+      ]
+    },
+    "fx": [
+      "JV/Calf Vinyl",
+      "JV/Dragonfly Room Reverb"
+    ],
+    "notes": "Vinyl crackle and wear into a small room - lo-fi house with dirt in front of the reverb."
+  },
+  {
+    "file": "063-fx-regrader-chorus",
+    "title": "FX Regrade",
+    "genre": "house",
+    "tempo": 126,
+    "root": 2,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "LINN9000 1",
+        "LINN9000 1",
+        "LINN9000 2",
+        "LINN9000 2",
+        "LINN9000 1"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "velo": [
+        110,
+        96,
+        100,
+        82,
+        86
+      ],
+      "gate": [
+        40,
+        40,
+        40,
+        25,
+        65
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/Helm",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        4369
+      ],
+      "register": [
+        4360,
+        14249,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        108,
+        92,
+        80
+      ],
+      "gate": [
+        35,
+        40,
+        600
+      ]
+    },
+    "fx": [
+      "JV/Regrader",
+      "JV/Multivoice Chorus"
+    ],
+    "notes": "Degrading delay into a thick chorus - the repeats fall apart as they widen."
+  },
+  {
+    "file": "064-fx-eq-aether",
+    "title": "FX EQ Aether",
+    "genre": "house",
+    "tempo": 125,
+    "root": 9,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Akai XR10",
+        "Alesis HR16",
+        "Alesis HR16",
+        "Akai XR10",
+        "Akai XR10"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          2,
+          3,
+          6,
+          8,
+          10,
+          11,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        112,
+        98,
+        102,
+        80,
+        88
+      ],
+      "gate": [
+        40,
+        35,
+        40,
+        20,
+        60
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Obxd",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        17476,
+        257
+      ],
+      "register": [
+        4276,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        110,
+        94,
+        78
+      ],
+      "gate": [
+        30,
+        45,
+        750
+      ]
+    },
+    "fx": [
+      "JV/ZamEQ2",
+      "JV/Dragonfly Hall Reverb"
+    ],
+    "notes": "Shaped with EQ before a large algorithmic reverb - the cleanest of the effect set."
+  },
+  {
+    "file": "065-fx-tape-hall",
+    "title": "FX Tape Hall",
+    "genre": "deep-house",
+    "tempo": 120,
+    "root": 7,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        90,
+        92,
+        72,
+        78
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        30,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/MDA JX10",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        104,
+        86,
+        72
+      ],
+      "gate": [
+        45,
+        60,
+        1000
+      ]
+    },
+    "fx": [
+      "JV/Calf Tape Simulator",
+      "JV/Dragonfly Hall Reverb"
+    ],
+    "notes": "Tape warmth into a full hall - deep house with everything softened."
+  },
+  {
+    "file": "066-fx-phaser-roomy",
+    "title": "FX Phase Room",
+    "genre": "deep-house",
+    "tempo": 119,
+    "root": 5,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Korg DDD1",
+        "Korg DDD1",
+        "Roland TR808",
+        "Roland CR78",
+        "Korg DDD1"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        102,
+        88,
+        90,
+        70,
+        76
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        30,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/Calf Wavetable",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        73,
+        39893,
+        49866
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        102,
+        84,
+        70
+      ],
+      "gate": [
+        60,
+        60,
+        1200
+      ]
+    },
+    "fx": [
+      "JV/YK Chorus",
+      "JV/Roomy"
+    ],
+    "notes": "Slow stereo phasing into a small room - motion without any delay."
+  },
+  {
+    "file": "067-fx-echo-shiro",
+    "title": "Echo Room",
+    "genre": "deep-house",
+    "tempo": 121,
+    "root": 0,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "LINN9000 1",
+        "Roland TR808",
+        "Roland TR808",
+        "LINN9000 2",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          4,
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          2,
+          10
+        ]
+      ],
+      "velo": [
+        106,
+        90,
+        94,
+        74,
+        80
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        30,
+        75
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/MDA ePiano",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        21845,
+        257
+      ],
+      "register": [
+        4354,
+        14249,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        106,
+        88,
+        74
+      ],
+      "gate": [
+        40,
+        55,
+        900
+      ]
+    },
+    "fx": [
+      "JV/GxEcho-Stereo",
+      "JV/Roomy"
+    ],
+    "notes": "GxEcho-Stereo into Roomy - a tighter room than the plate it started as; the pair it had was already taken by 075."
+  },
+  {
+    "file": "068-fx-eq-talreverb",
+    "title": "FX EQ Plate",
+    "genre": "deep-house",
+    "tempo": 120,
+    "root": 10,
+    "scale": 2,
+    "drums": {
+      "kits": [
+        "Kawai R50",
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        102,
+        88,
+        90,
+        68,
+        74
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        30,
+        85
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/MDA DX10",
+        "JV/Mutated Instruments"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        49866,
+        24222
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        102,
+        82,
+        70
+      ],
+      "gate": [
+        60,
+        65,
+        1200
+      ]
+    },
+    "fx": [
+      "JV/3 Band EQ",
+      "JV/Tal-Reverb-III"
+    ],
+    "notes": "Three-band shaping into a classic plate - restrained and controllable."
+  },
+  {
+    "file": "069-fx-ringmod-delay",
+    "title": "FX Ringmod",
+    "genre": "minimal",
+    "tempo": 129,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR606",
+        "Roland TR606",
+        "Roland TR606",
+        "Roland TR606",
+        "Roland TR606"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          10
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        106,
+        86,
+        88,
+        70,
+        74
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        50
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Nekobi",
+        "JV/Triceratops",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        32896,
+        1
+      ],
+      "register": [
+        73,
+        14249,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        1
+      ],
+      "velo": [
+        104,
+        80,
+        66
+      ],
+      "gate": [
+        25,
+        30,
+        600
+      ]
+    },
+    "fx": [
+      "JV/MDA RingMod",
+      "JV/Modulay"
+    ],
+    "notes": "Ring modulation into a modulated delay - metallic and deliberately unmusical."
+  },
+  {
+    "file": "070-fx-autopan-early",
+    "title": "FX Autopan",
+    "genre": "minimal",
+    "tempo": 128,
+    "root": 7,
+    "scale": 3,
+    "drums": {
+      "kits": [
+        "Roland TR606",
+        "Boss DR55",
+        "Boss DR55",
+        "Roland TR606",
+        "Boss DR55"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          3,
+          7,
+          11,
+          15
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        104,
+        84,
+        86,
+        68,
+        72
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        50
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/MDA DX10",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        4369,
+        16448,
+        0
+      ],
+      "register": [
+        265,
+        24222,
+        1
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        1,
+        1
+      ],
+      "velo": [
+        104,
+        78,
+        64
+      ],
+      "gate": [
+        40,
+        35,
+        600
+      ]
+    },
+    "fx": [
+      "JV/TAP AutoPanner",
+      "JV/Dragonfly Early Reflections"
+    ],
+    "notes": "Auto-panning into early reflections only - movement across the stereo field, no tail."
+  },
+  {
+    "file": "071-fx-pingpong-roomy",
+    "title": "FX Pingpong",
+    "genre": "minimal",
+    "tempo": 130,
+    "root": 2,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Mattel Synsonic",
+        "Boss DR220",
+        "Boss DR220",
+        "Mattel Synsonic",
+        "Boss DR220"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          1,
+          5,
+          9,
+          13
+        ],
+        []
+      ],
+      "velo": [
+        104,
+        84,
+        88,
+        66,
+        70
+      ],
+      "gate": [
+        30,
+        30,
+        30,
+        12,
+        45
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Kars",
+        "JV/Triceratops",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        32896,
+        0
+      ],
+      "register": [
+        145,
+        14249,
+        1
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        0
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        102,
+        76,
+        64
+      ],
+      "gate": [
+        30,
+        30,
+        500
+      ]
+    },
+    "fx": [
+      "JV/Ping Pong Pan",
+      "JV/Roomy"
+    ],
+    "notes": "Hard ping-pong panning into a small room - the clicks bounce across the field."
+  },
+  {
+    "file": "072-fx-comp-digital",
+    "title": "FX Comp Delay",
+    "genre": "minimal",
+    "tempo": 127,
+    "root": 5,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Fricke MSB512",
+        "Fricke MSB512",
+        "Fricke MSB512",
+        "Retrobox",
+        "Fricke MSB512"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6
+        ]
+      ],
+      "velo": [
+        106,
+        86,
+        88,
+        68,
+        72
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        15,
+        45
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/MDA JX10",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        43690,
+        17476,
+        257
+      ],
+      "register": [
+        4360,
+        9974,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        104,
+        80,
+        66
+      ],
+      "gate": [
+        25,
+        35,
+        700
+      ]
+    },
+    "fx": [
+      "JV/ZamCompX2",
+      "JV/Gxdigital_delay_st"
+    ],
+    "notes": "Compressed hard, then a clean digital delay - tight and forward."
+  },
+  {
+    "file": "073-fx-taldub-aether",
+    "title": "FX Taldub",
+    "genre": "dub",
+    "tempo": 122,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          6,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        86,
+        88,
+        66,
+        76
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        25,
+        80
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        145,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        88,
+        72
+      ],
+      "gate": [
+        60,
+        55,
+        1400
+      ]
+    },
+    "fx": [
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-II"
+    ],
+    "notes": "The dub delay proper into a huge reverb - the deepest tail in the set."
+  },
+  {
+    "file": "074-fx-taldub-hall",
+    "title": "FX Dub Hall",
+    "genre": "dub",
+    "tempo": 120,
+    "root": 7,
+    "scale": 5,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          6,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        106,
+        84,
+        86,
+        64,
+        74
+      ],
+      "gate": [
+        50,
+        40,
+        40,
+        25,
+        85
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/MiMi-d",
+        "JV/MDA JX10",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        4369,
+        17476,
+        1
+      ],
+      "register": [
+        265,
+        9974,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -2,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        108,
+        86,
+        70
+      ],
+      "gate": [
+        70,
+        60,
+        1500
+      ]
+    },
+    "fx": [
+      "JV/Tal-Dub-3",
+      "JV/Dragonfly Hall Reverb"
+    ],
+    "notes": "Dub delay into a concert hall - pentatonic and very slow to decay."
+  },
+  {
+    "file": "075-fx-echo-shiro-dub",
+    "title": "FX Dub Shimmer",
+    "genre": "dub",
+    "tempo": 124,
+    "root": 5,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR606",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [],
+        [],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        108,
+        86,
+        88,
+        66,
+        76
+      ],
+      "gate": [
+        45,
+        40,
+        40,
+        20,
+        75
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        21845,
+        17476,
+        257
+      ],
+      "register": [
+        4354,
+        24222,
+        59839
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        106,
+        88,
+        72
+      ],
+      "gate": [
+        40,
+        50,
+        1300
+      ]
+    },
+    "fx": [
+      "JV/GxEcho-Stereo",
+      "JV/Shiroverb"
+    ],
+    "notes": "Tape echo into a shimmer reverb - the Berlin stab sent somewhere brighter."
+  },
+  {
+    "file": "076-fx-modulay-plate",
+    "title": "FX Modulay",
+    "genre": "dub",
+    "tempo": 121,
+    "root": 10,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR808",
+        "Roland CR78",
+        "Roland CR78",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          8
+        ],
+        [],
+        [],
+        [
+          6,
+          14
+        ],
+        [
+          14
+        ]
+      ],
+      "velo": [
+        110,
+        84,
+        86,
+        64,
+        74
+      ],
+      "gate": [
+        60,
+        40,
+        40,
+        25,
+        85
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Monique",
+        "JV/MDA DX10",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        257,
+        17476,
+        1
+      ],
+      "register": [
+        265,
+        9974,
+        24222
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -2,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        1,
+        2
+      ],
+      "velo": [
+        110,
+        84,
+        70
+      ],
+      "gate": [
+        80,
+        60,
+        1500
+      ]
+    },
+    "fx": [
+      "JV/Modulay",
+      "JV/Tal-Reverb-III"
+    ],
+    "notes": "Modulated delay into a plate - half-time dub with the repeats drifting in pitch."
+  },
+  {
+    "file": "077-fx-phaser-hall",
+    "title": "FX Phase Hall",
+    "genre": "trance",
+    "tempo": 138,
+    "root": 0,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        102,
+        76,
+        90
+      ],
+      "gate": [
+        35,
+        35,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/JC303",
+        "JV/Odin2",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        1
+      ],
+      "register": [
+        4354,
+        19947,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        96,
+        80
+      ],
+      "gate": [
+        30,
+        40,
+        900
+      ]
+    },
+    "fx": [
+      "JV/YK Chorus",
+      "JV/Dragonfly Hall Reverb"
+    ],
+    "notes": "Phaser sweep into a hall - classic trance width without a delay."
+  },
+  {
+    "file": "078-fx-chorus-aether",
+    "title": "FX Chorus Aether",
+    "genre": "trance",
+    "tempo": 140,
+    "root": 7,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "Alesis HR16",
+        "Roland TR909",
+        "Alesis HR16",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        118,
+        102,
+        104,
+        74,
+        92
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Nekobi",
+        "JV/Helm",
+        "JV/synthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        257
+      ],
+      "register": [
+        4384,
+        49866,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        116,
+        98,
+        82
+      ],
+      "gate": [
+        28,
+        40,
+        900
+      ]
+    },
+    "fx": [
+      "JV/Multivoice Chorus",
+      "JV/Dragonfly Hall Reverb"
+    ],
+    "notes": "Multivoice chorus into the largest reverb available - maximum lift."
+  },
+  {
+    "file": "079-fx-regrader-room",
+    "title": "FX Regrade Room",
+    "genre": "trance",
+    "tempo": 139,
+    "root": 2,
+    "scale": 0,
+    "drums": {
+      "kits": [
+        "DrumTraks",
+        "Roland TR909",
+        "DrumTraks",
+        "Roland TR909",
+        "DrumTraks"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        102,
+        74,
+        90
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Calf Monosynth",
+        "JV/Surge XT",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        1
+      ],
+      "register": [
+        4360,
+        24222,
+        9974
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        96,
+        80
+      ],
+      "gate": [
+        28,
+        40,
+        900
+      ]
+    },
+    "fx": [
+      "JV/Regrader",
+      "JV/Dragonfly Room Reverb"
+    ],
+    "notes": "Degrading repeats in a tight room - trance with the polish taken off."
+  },
+  {
+    "file": "080-fx-chorus-plate",
+    "title": "FX Chorus Plate",
+    "genre": "trance",
+    "tempo": 140,
+    "root": 9,
+    "scale": 1,
+    "drums": {
+      "kits": [
+        "Yamaha RX11",
+        "Roland TR909",
+        "Yamaha RX11",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ]
+      ],
+      "velo": [
+        116,
+        100,
+        104,
+        74,
+        92
+      ],
+      "gate": [
+        35,
+        30,
+        35,
+        12,
+        55
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/amsynth",
+        "JV/Surge XT",
+        "JV/String machine"
+      ],
+      "rhythm_reg": [
+        65535,
+        21845,
+        1
+      ],
+      "register": [
+        4384,
+        19947,
+        39893
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        2
+      ],
+      "velo": [
+        114,
+        98,
+        82
+      ],
+      "gate": [
+        28,
+        45,
+        1100
+      ]
+    },
+    "fx": [
+      "JV/YK Chorus",
+      "JV/Tal-Reverb-III"
+    ],
+    "notes": "Chorus into a plate - the major-key euphoric preset, drier and more direct."
+  },
+  {
+    "file": "101-dub-mutated",
+    "title": "Dub Mutated",
+    "genre": "dub",
+    "tempo": 120,
+    "root": 10,
+    "scale": 5,
+    "drums": {
+      "kits": [
+        "Roland TR808",
+        "Roland TR808",
+        "Roland TR808",
+        "Roland TR808",
+        "Roland TR808"
+      ],
+      "steps": [
+        [
+          0,
+          4,
+          8,
+          12
+        ],
+        [
+          4,
+          12
+        ],
+        [
+          12
+        ],
+        [
+          2,
+          6,
+          10,
+          14
+        ],
+        [
+          6,
+          14
+        ]
+      ],
+      "velo": [
+        112,
+        88,
+        76,
+        68,
+        84
+      ],
+      "gate": [
+        40,
+        35,
+        30,
+        20,
+        60
+      ]
+    },
+    "voices": {
+      "engines": [
+        "JV/Mutated Instruments",
+        "JV/Mutated Instruments",
+        "JV/Mutated Instruments"
+      ],
+      "rhythm_reg": [
+        16705,
+        17476,
+        1
+      ],
+      "register": [
+        39321,
+        27030,
+        13107
+      ],
+      "length": [
+        16,
+        16,
+        16
+      ],
+      "octave": [
+        -1,
+        0,
+        1
+      ],
+      "range": [
+        1,
+        2,
+        1
+      ],
+      "velo": [
+        110,
+        96,
+        78
+      ],
+      "gate": [
+        35,
+        45,
+        800
+      ]
+    },
+    "fx": [
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
+    ],
+    "notes": "Three Mutated Instruments voices at an exact 120 BPM - sub on the one and the and, the stab strictly offbeat, one sustained pad per bar feeding the dub delay. Tal-Dub-3 into Tal-Reverb-III."
+  }
 ]
