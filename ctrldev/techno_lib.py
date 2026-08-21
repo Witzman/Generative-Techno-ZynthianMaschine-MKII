@@ -1028,7 +1028,7 @@ class techno_lib:
 
         The entry describes all four rungs inside the FINAL bar instead. The
         clock can serve that - phrase_pos returns a fraction and a quarter-bar
-        at 124 BPM is 484 ms against a ~33 ms tick - but PendingQueue is
+        at 125 BPM is 480 ms against a ~33 ms tick - but PendingQueue is
         bar-granular and no other payload in three packages wants sub-bar
         timing. Build it once, when a second one does.
 
@@ -1120,8 +1120,8 @@ class techno_lib:
     # do.
     #
     # THE PERIODS ARE A LEGIBILITY MAP, NOT A MEASUREMENT, and the difference
-    # matters enough to say twice. MOD_RATES spans 250:1 - at 124 BPM one bar is
-    # 1.94 s, so the twelve rates run from 31 s per cycle down to 0.12 s. The
+    # matters enough to say twice. MOD_RATES spans 250:1 - at 125 BPM one bar is
+    # 1.92 s, so the twelve rates run from 31 s per cycle down to 0.12 s. The
     # slowest four are indistinguishable from a static LED, and the fastest is
     # 8.3 Hz against a 30 Hz repaint: 3.6 samples per cycle, which aliases into
     # jitter rather than reading as speed. So the fades run on a compressed band

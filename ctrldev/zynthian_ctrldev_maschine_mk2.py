@@ -5412,7 +5412,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """Advance the phrase clock and fire anything the bar has reached.
 
         Runs at 30 Hz, so a boundary is caught within ~33 ms - about 1.7% of a
-        bar at 124 BPM. Adequate for mutes and levels. NOTHING that needs step
+        bar at 125 BPM. Adequate for mutes and levels. NOTHING that needs step
         accuracy may ride this clock.
 
         Deliberately NOT in _wrap_channel: a wrap is per channel, and eight

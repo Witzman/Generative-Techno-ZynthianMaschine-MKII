@@ -33,7 +33,19 @@ Snapshots **Name:** field renames the selected *bank* instead of saving.
 
 ## What it contains
 
-Read directly out of the file, not from intent. 124 BPM, sixteen steps at `1/16`
+**125 BPM is a deliberate choice, not a round number.** zynseq truncates the
+length of one sequencer clock to a whole audio frame with no accumulator, so at
+48 kHz the tempo error is the fractional part of `30000 / tempo` — **zero only
+when the tempo divides 30000.** The factory snapshot shipped at 124 until
+2026-08-21, which is 3,882 ppm fast: a bar clear of nominal every 8.3 minutes,
+and a MIDI clock out to match. 125 is one BPM away and exact. Changed with
+`tools/set-snapshot-tempo.py`, which writes **both** places a `.zss` holds the
+tempo — the riff's `vers` block and the driver's own `ctrldev_state/globals/bpm`
+— and refuses if a round trip does not reproduce the original byte for byte.
+The genre pack's own tempi are unchanged and mostly inexact; that is a separate
+open question, since their values are genre identity rather than defaults.
+
+Read directly out of the file, not from intent. 125 BPM, sixteen steps at `1/16`
 unless stated.
 
 | Ch | Name | Engine | Generator state |
@@ -47,7 +59,7 @@ unless stated.
 | G | LEAD | Obxd | random **100**, gate 40, range 2, register 179 |
 | H | PADS | padthv1 | random **0** (`LOCK`), gate **800** (8 steps), density **12** (one step sounds), 8-bit register 179 |
 
-Globals: BPM 124, scale index 0 (natural minor), root index 7, master 80,
+Globals: BPM 125, scale index 0 (natural minor), root index 7, master 80,
 revsize 25, revtype 3, dlytime index 1 (`1/8`), dlyfbk 35.
 
 Ownership: all eight channels are `gen` — the generator owns every pattern, so
