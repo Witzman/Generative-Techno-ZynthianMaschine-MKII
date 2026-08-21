@@ -1517,6 +1517,61 @@ class techno_lib:
 
     # Buttons whose release is also an event: the driver tracks them across
     # press and release, so they are dispatched before the press-only filter.
+    # ------------------------------------------------------------------
+    # CC PROVENANCE. Working rule 7 in data rather than in prose.
+    #
+    # The rule these sets exist to enforce: a CC is MEASURED only if a capture
+    # log or a probe round records it. Everything else is UNKNOWN - not free.
+    # TEMPO taught this the hard way: it is CC 35, it appears NOWHERE in the G4
+    # capture because nobody pressed it that day, and for months an unlisted CC
+    # read as available surface simply because no list said otherwise.
+    #
+    # Sources are named per set. Do not add a number here from a daemon token
+    # name; the daemon's names have been attached to the wrong physical buttons
+    # twice.
+
+    # notes/findings/2026-08-11-g4-capture.log - the raw aseqdump log. Exactly
+    # 24 distinct controller numbers, extracted mechanically from the log.
+    CCS_MEASURED_G4 = frozenset({
+        4, 5, 6, 11, 12, 13, 14, 15, 25, 26, 27, 29,
+        30, 31, 32, 33, 34, 37, 38, 47, 48, 49, 50, 51,
+    })
+
+    # notes/findings/2026-08-12-g5-capture.log - REC and the eight encoders.
+    CCS_MEASURED_G5 = frozenset({3}) | frozenset(range(16, 24))
+
+    # Single-button captures after the two gates.
+    #   10 NOTE REPEAT, 2026-08-15 - NO LOG FILE WAS KEPT. Weakest record in
+    #      the bound set; treat it as measured but know why it is the weakest.
+    #   35 TEMPO, 2026-08-16 -
+    #      notes/findings/2026-08-16-tempo-cc-and-encoder-sensitivity.md
+    CCS_MEASURED_SINGLE = frozenset({10, 35})
+
+    CCS_MEASURED = CCS_MEASURED_G4 | CCS_MEASURED_G5 | CCS_MEASURED_SINGLE
+
+    # No capture log exists for these, and that is NOT a hazard: a button that
+    # visibly does its job every session is verified by use, which is stronger
+    # evidence than a log. Listed separately so "it is in a capture log" is
+    # never confused with "it is verified".
+    #   1 PLAY - 2 ERASE - 7 RESTART - 39..46 F1..F8 - 80..87 Groups A..H
+    CCS_VERIFIED_BY_USE = (frozenset({1, 2, 7})
+                           | frozenset(range(39, 47))
+                           | frozenset(range(80, 88)))
+
+    # Anything a binding may legitimately sit on.
+    CCS_KNOWN = CCS_MEASURED | CCS_VERIFIED_BY_USE
+
+    # Measured, and nothing claims them - the only numbers a new feature may
+    # take without a fresh capture. 27, 30, 33 and 34 were on this list and are
+    # spent: FREEZE, ARM, the mute grid and the NAVIGATE phrase page.
+    #
+    # CC 6 (STEP >) came off on 2026-08-21, and how it came off is the point.
+    # notes/findings/2026-08-20-cc-and-led-audit.md still calls it
+    # MEASURED-AND-FREE in its own table, three lines above a note saying beat
+    # repeat took it. That contradiction sat in the definitive audit for a day
+    # and was caught the moment the list became a test instead of prose.
+    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 12, 29})
+
     BUTTONS_STATEFUL = {
         2: "erase",
         # SCENE and PATTERN, both measured free in the G4 capture and both

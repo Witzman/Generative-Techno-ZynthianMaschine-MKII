@@ -216,9 +216,16 @@ CC_DR = 48
 CC_ML = 13
 CC_MR = 14
 CC_BIG_TURN = 15         # big encoder turn: the page ring, owner 2026-08-19
-CC_BIG_PRESS = 12        # measured, deliberately still unbound and free
-CC_TL = 5                # unbound, free
-CC_TR = 6                # unbound, free
+# "Free" means MEASURED AND UNCLAIMED, and the two halves are not the same
+# claim. A CC nobody has captured is UNKNOWN, not free - TEMPO sat outside the
+# G4 capture for months because nobody pressed it that day. The authority is
+# lib.CCS_MEASURED / lib.CCS_KNOWN / lib.CCS_MEASURED_AND_UNCLAIMED, which a
+# test checks against every binding; do not maintain a second list here.
+CC_BIG_PRESS = 12        # measured at G4, unclaimed
+CC_TL = 5                # measured at G4, unclaimed
+CC_TR = 6                # measured at G4 and BOUND since 2026-08-20 - beat
+                         # repeat. Was still called "free" here and in the
+                         # audit until 2026-08-21.
 
 # Mode buttons, all measured at G4 alongside the arrows. Unlike the arrows,
 # every one of these matched what the daemon's source said.
@@ -253,8 +260,10 @@ CC_MODE_STEP = 32
 CC_MODE_ALL = 38
 CC_MODE_MIXER = 51       # VOLUME - the pass-two daemon patch, measured live
 CC_MODE_FILTER = 37      # AUTO
-# Measured at G4 and not bound to anything yet - recorded so the next feature
-# does not have to re-run the audit:
+# Measured at G4. This block is HISTORY, not the current free list - GRID,
+# SCENE, PATTERN, PAD MODE, NAVIGATE and MUTE have all been spent since it was
+# written. The live answer is lib.CCS_MEASURED_AND_UNCLAIMED, which is 5, 12
+# and 29 and is enforced by a test:
 #   GRID 4 · SCENE 25 · PATTERN 26 · PAD MODE 27 · NAVIGATE 34 · MUTE 33
 #   big encoder: turn CC 15 (8 units per detent, wraps 120 -> 0), press CC 12
 # TEMPO is CC 35, measured 2026-08-16 and NOT part of G4 - it was never

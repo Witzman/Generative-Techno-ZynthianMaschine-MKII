@@ -1261,35 +1261,62 @@ class TestButtonTables(unittest.TestCase):
             self.assertNotIn(cc, range(39, 47), f"CC {cc} is an F button")
             self.assertNotIn(cc, range(80, 88), f"CC {cc} is a Group button")
 
-    def test_the_free_ccs_stay_free(self):
-        # Measured free at G4 and re-verified 2026-08-14. SWING 50 is claimed
-        # by MOD, and NOTE REPEAT 10 by the register undo, so neither is here.
-        # DUPLICATE 29 joined the list 2026-08-15 when the register undo moved
-        # off it onto NOTE REPEAT.
+    def test_every_bound_cc_has_a_provenance(self):
+        # WORKING RULE 7, mechanically. Every CC this instrument binds must be
+        # one somebody actually measured, or one verified by daily use. A CC
+        # that is in neither set is UNKNOWN, and binding it is the mistake this
+        # test exists to make impossible.
         #
-        # SCENE 25 and PATTERN 26 LEFT this list 2026-08-19: SP10 step 3 gave
-        # them the two reroll buttons. They were free and are now spent, which
-        # is what the list is for - it tracks what is UNCLAIMED, not what is
-        # unclaimable. CC 15 (big encoder turn) left it the same day.
-        #
-        # SELECT 30 LEFT it 2026-08-20: ARM took it. Its CC was measured at G4
-        # and its LED index 22 measured 2026-08-15, so both halves of working
-        # rule 7 were satisfied before it was spent.
-        #
-        # NAVIGATE 34 LEFT it the same day, for the phrase page. Its LED index
-        # 20 turned out to have been measured on 2026-08-16 all along - it was
-        # carried as "inferred" by a stale summary block, which is the only
-        # thing that had blocked it.
-        #
-        # MUTE 33 LEFT it 2026-08-20 for the mute grid - the only feature in
-        # four packages with no blocking measurement at all, since CC 33 and
-        # LED index 24 were both already measured.
-        #
-        # STEP > 6 LEFT it 2026-08-20 for beat repeat. Measured CC, measured
-        # LED index 51, and the daemon acts on it nowhere.
-        for cc in (5, 12, 29):
-            self.assertNotIn(cc, tl.BUTTONS_STATEFUL)
-            self.assertNotIn(cc, tl.BUTTONS_PRESS)
+        # This replaced test_the_free_ccs_stay_free on 2026-08-21. That test
+        # asserted three numbers were unbound and called itself a statement
+        # about the surface; it was a list of buttons somebody happened to
+        # press. TEMPO is the proof: CC 35, absent from the entire G4 capture
+        # because nobody pressed TEMPO that day, so it was UNKNOWN rather than
+        # free - and nothing in the tests or the driver said so.
+        bound = set(tl.BUTTONS_STATEFUL) | set(tl.BUTTONS_PRESS)
+        unknown = sorted(bound - tl.CCS_KNOWN)
+        self.assertEqual(
+            unknown, [],
+            f"CC(s) {unknown} are bound but appear in no capture log and are "
+            f"not verified by use. An unlisted CC is UNKNOWN, not free - "
+            f"capture it before binding it.")
+
+    def test_the_measured_sets_match_the_capture_logs(self):
+        # The G4 capture contains exactly 24 distinct controller numbers. If
+        # this count ever moves, somebody edited the set by hand rather than
+        # from the log, which is how a guess becomes a fact in this project.
+        self.assertEqual(len(tl.CCS_MEASURED_G4), 24)
+        # G5 is REC plus the eight encoders.
+        self.assertEqual(sorted(tl.CCS_MEASURED_G5), [3] + list(range(16, 24)))
+        # The two later single-button captures.
+        self.assertEqual(sorted(tl.CCS_MEASURED_SINGLE), [10, 35])
+        # TEMPO is the whole reason this file has provenance sets: measured,
+        # but NOT by G4.
+        self.assertIn(35, tl.CCS_MEASURED)
+        self.assertNotIn(35, tl.CCS_MEASURED_G4)
+        # The three sets must not overlap, or a number's provenance is ambiguous.
+        self.assertEqual(tl.CCS_MEASURED_G4 & tl.CCS_MEASURED_G5, frozenset())
+        self.assertEqual(tl.CCS_MEASURED_G4 & tl.CCS_MEASURED_SINGLE, frozenset())
+        self.assertEqual(tl.CCS_MEASURED_G5 & tl.CCS_MEASURED_SINGLE, frozenset())
+        # Verified-by-use is a DIFFERENT kind of evidence and must stay separate,
+        # so that "it is in a capture log" is never confused with "it is verified".
+        self.assertEqual(tl.CCS_MEASURED & tl.CCS_VERIFIED_BY_USE, frozenset())
+
+    def test_the_unclaimed_ccs_are_measured_and_really_unclaimed(self):
+        # The only numbers a new feature may take without a fresh capture.
+        for cc in tl.CCS_MEASURED_AND_UNCLAIMED:
+            self.assertIn(cc, tl.CCS_MEASURED,
+                          f"CC {cc} is offered as available but was never measured")
+            self.assertNotIn(cc, tl.BUTTONS_STATEFUL,
+                             f"CC {cc} is offered as available but is bound")
+            self.assertNotIn(cc, tl.BUTTONS_PRESS,
+                             f"CC {cc} is offered as available but is bound")
+        # 27, 30, 33 and 34 were unclaimed and are now spent - FREEZE, ARM, the
+        # mute grid and the NAVIGATE phrase page. They must not drift back onto
+        # the offer list.
+        for cc in (27, 30, 33, 34):
+            self.assertNotIn(cc, tl.CCS_MEASURED_AND_UNCLAIMED,
+                             f"CC {cc} is spent and must not be offered again")
 
     def test_the_reroll_buttons_are_bound_and_stateful(self):
         # Stateful, not press-only: hold-to-fire needs the release.
