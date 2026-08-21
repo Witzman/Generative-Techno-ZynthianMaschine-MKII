@@ -68,6 +68,18 @@ from zyngine.zynthian_signal_manager import zynsigman
 
 OSC_ADDR = ("127.0.0.1", 42434)
 
+# The play-session event log. A file, NOT the journal: roughly six log lines a
+# second through journald was enough to make the daemon's reader run late and
+# wedge the controller off the USB bus on 2026-08-20 - debugging load is load.
+# A line appended to tmpfs is a fraction of that, and every call site is EVENT
+# driven, so a busy bar costs a handful of lines and a quiet one costs none.
+#
+# OFF ON MAIN, and one constant away from on. It earned its place on
+# 2026-08-21 - a session nobody could diagnose became four measured checks -
+# but a log that writes by default is a cost every player pays for a problem
+# they do not have. Set it to a path to turn it on.
+SESSION_LOG_PATH = None
+
 GROUP_CC_FIRST = 80                 # Group A..H = CC 80..87
 GROUP_NOTE_BASE = (24, 36, 48, 60, 72, 84, 96, 108)
 
@@ -617,6 +629,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the whole event. The same law that keeps a preset load off the MIDI
         # thread.
         self._record_due = False
+        # The play-session event log's file handle, or None. Opened once and
+        # line buffered: an event must be on disk before the thing it
+        # describes can wedge the rig, or the last line - the interesting one
+        # - is the one that is lost.
+        self._slog_fh = None
+        # Last master-filter line's timestamp. An encoder sweep is the one
+        # gesture that arrives at a rate; everything else in this log is an
+        # event and needs no throttle.
+        self._slog_fx_at = 0.0
+        if SESSION_LOG_PATH:
+            try:
+                self._slog_fh = open(SESSION_LOG_PATH, "a", buffering=1)
+            except OSError as e:
+                logging.warning("Maschine: no session log: %s", e)
         # FREEZE. Two stages on one button, law L1: `frozen` is the LATCH a
         # tap toggles, `freeze_deep` is the MOMENTARY hold that parks the LFOs
         # as well.
@@ -1098,12 +1124,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         proc = self.fx_handle(0, which)
         if proc is None:
+            # Logged unthrottled: these are the three ways a knob on a
+            # generated page is DEAD rather than slow, they happen once per
+            # gesture at most, and each one looks identical from the surface.
+            self._slog("fx", which=which, symbol=symbol, wrote=False,
+                       why="no processor")
             return
         zctrl = proc.controllers_dict.get(symbol)
         if zctrl is None:
+            self._slog("fx", which=which, symbol=symbol, wrote=False,
+                       why="no port")
             return
         span = zctrl.value_max - zctrl.value_min
         if span <= 0:
+            self._slog("fx", which=which, symbol=symbol, wrote=False,
+                       why="zero span")
             return
         # An enumerated or toggled port moves between its OWN ticks, which
         # are not necessarily one unit apart: stepping in whole units lands
@@ -1149,6 +1184,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # per-chain insert pair sits on eight chains, so an effect there
             # costs eight times what it looks like.
             zctrl.set_value(target, True)
+        if which == tlib.FX_MAIN:
+            # THROTTLED, and only the master insert. An encoder sweep is the
+            # one gesture in this instrument that arrives at a rate rather
+            # than as an event, and the log's whole premise is that it never
+            # writes at a rate - two animations had to be cut to get the
+            # controller's write budget back.
+            #
+            # The master filter is the one control that can silence all eight
+            # channels at once - MDA RezFilter goes silent below about a third
+            # of its range - so its VALUE is what a "the rig went quiet"
+            # report needs to be read against.
+            now = time.monotonic()
+            if now - self._slog_fx_at >= 0.5:
+                self._slog_fx_at = now
+                self._slog("fx", which=which, symbol=symbol, wrote=True,
+                           value=round(float(target), 3),
+                           lo=zctrl.value_min, hi=zctrl.value_max)
         with self.lock:
             self._render_display()
 
@@ -2023,6 +2075,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # --- lifecycle -----------------------------------------------------
 
     def init(self):
+        self._slog("session", event="init", path=SESSION_LOG_PATH)
         super().init()
         zynsigman.register_queued(
             zynsigman.S_STEPSEQ, self.zynseq.SS_SEQ_PROGRESS, self._on_progress)
@@ -2184,6 +2237,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         restores a machine that plays different music. Persisted from day one
         deliberately: adding it later leaves every existing snapshot missing
         it, with no way to tell."""
+        # Instrumented for the persistence check: what the driver hands the
+        # snapshot on the way out, against what it is handed on the way back
+        # in. A value that is right here and wrong in set_state is a LOAD
+        # bug, and from the surface the two are the same symptom.
+        self._slog("snapshot", dir="save")
 
         # Once, outside the comprehension below: it takes the lock for a
         # tempo read, and asking eight modulators for it eight times would
@@ -2295,6 +2353,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         }
 
     def set_state(self, state):
+        self._slog("snapshot", dir="load",
+                   keys=sorted(state) if isinstance(state, dict) else None)
         if not isinstance(state, dict):
             return
         globals_in = state.get("globals") or {}
@@ -2523,6 +2583,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if evtype in (0x8, 0x9):                 # NoteOff and NoteOn
             step = ev[1] - GROUP_NOTE_BASE[self.group]
             if not 0 <= step < 16:
+                # A pad that decodes out of range is the Group-rebase desync:
+                # the daemon re-bases the pads on every Group press and the
+                # driver's idea of the base drifts, so presses vanish with no
+                # sound and no log. Never gated - it is rare and it is the
+                # single most misleading failure this surface has.
+                self._slog("pad", result="out of range", note=ev[1],
+                           group=self.group, base=GROUP_NOTE_BASE[self.group])
                 return False
             if evtype == 0x8 or ev[2] == 0:
                 # A release. In STEP mode nothing is ever held, so the pop
@@ -2588,6 +2655,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # been inert rather than broken.
                 self._big_encoder(cc_val)
                 return True
+            self._slog("cc", num=cc_num, val=cc_val,
+                       name=tlib.BUTTONS_STATEFUL.get(cc_num),
+                       owner=self._pad_owner(),
+                       frozen=self._frozen("macro"))
             down = cc_val == 127
             # Buttons that carry state across press and release come first:
             # the press-only filter below throws releases away, and for a
@@ -2728,9 +2799,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         picker. Reading it must not also change it, so every pad is inert."""
 
         if self._pending_macros.pending() or self._armed_while_stopped:
+            self._slog("arm", result="inert", step=step,
+                       pending=self._pending_macros.pending(),
+                       stopped=list(self._armed_while_stopped))
             return
         if step < len(tlib.ARM_MACROS):
             self._arm_picked = tlib.ARM_MACROS[step]
+            self._slog("arm", result="picked", step=step,
+                       macro=self._arm_picked)
         elif step >= 8:
             if self._arm_picked is None:
                 # A length with nothing to arm. Deliberately silent rather
@@ -2747,6 +2823,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             else:
                 self._pending_macros.arm(self._arm_picked, bars,
                                          self._phrase_bar or 0)
+            self._slog("arm", result="armed", macro=self._arm_picked,
+                       bars=bars, at_bar=self._phrase_bar,
+                       anchored=self._phrase_anchor is not None,
+                       survivors=self._drop_survivors,
+                       frozen=self._frozen("macro"))
             # The queue stores only the LANDING BAR, which is all it needs to
             # fire. The ruler needs the length as well, or it cannot know how
             # many pads to extinguish - so the length is kept here rather than
@@ -3007,6 +3088,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if down:
             self._down_at["freeze"] = (time.monotonic(), False)
             self.freeze_deep = True
+            self._slog("freeze", edge="down", latch=self.frozen, deep=True,
+                       pending=self._pending_macros.pending())
             with self.lock:
                 self._render_freeze()
                 self._render_display()
@@ -3016,9 +3099,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if went_down is not None and \
                 (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
             self.frozen = not self.frozen
+        self._slog("freeze", edge="up", latch=self.frozen, deep=False,
+                   blocks_macro=self._frozen("macro"),
+                   pending=self._pending_macros.pending())
         with self.lock:
             self._render_freeze()
             self._render_display()
+
+    def _slog(self, tag, **fields):
+        """One event into the play-session log. Never raises, never blocks.
+
+        A log that can kill the instrument is worse than no log: this is
+        wrapped because it runs on the MIDI thread, the poll thread and the
+        signal thread, and a full tmpfs must cost a dropped line rather than a
+        dead driver."""
+
+        if self._slog_fh is None:
+            return
+        try:
+            self._slog_fh.write(tlib.session_line(time.time(), tag, fields))
+        except (OSError, ValueError):
+            pass
 
     def _frozen(self, what):
         """Is `what` held still right now? One predicate, five call sites."""
@@ -3075,6 +3176,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._recording = False
             else:
                 self._recording = bool(recorder.start_recording())
+            self._slog("capture", recording=self._recording)
         except Exception as e:
             self._log_poll_error("audio capture", e)
             return
@@ -3096,8 +3198,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Deliberately does not set rec_down, so releasing SHIFT+REC
             # cannot end an overdub the player never started.
             self._record_due = True
+            self._slog("rec", meaning="capture", shift=True)
             return
         self.rec_down = down
+        self._slog("rec", meaning="overdub", down=down, shift=self.shift_down)
         self._render_display()
 
     def _act_shift(self, down):
@@ -4713,12 +4817,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.libseq.playNote(note, max(1, min(127, velocity)), midi_chan, 0)
         self.held[pad] = (note, midi_chan, channel, self._play_clock(channel),
                           velocity)
+        if self.rec_down:
+            self._slog("pad", result="down", pad=pad, note=note,
+                       channel=channel, vel=velocity,
+                       clock=self._play_clock(channel))
 
     def _pad_up(self, pad):
         """Release. Ends the note; the capture hangs off the same edge."""
 
         entry = self.held.pop(pad, None)
         if entry is None:
+            if self.rec_down:
+                # Released with nothing held: the press went somewhere else -
+                # STEP mode's step toggle, or an overlay owner - and no note
+                # can ever be captured from it.
+                self._slog("pad", result="up with nothing held", pad=pad,
+                           owner=self._pad_owner(), mode=self.mode)
             return
         note, midi_chan, channel, start, velocity = entry
         # A NoteOn at velocity 0 is a note-off.
@@ -4739,9 +4853,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Reached from _pad_up inside _midi_event, which already holds the lock."""
 
         if start is None:
+            self._slog("capture_note", channel=channel, note=note,
+                       written=False, why="no start")
             return
         cps = self.cps[channel]
         if cps <= 0:
+            self._slog("capture_note", channel=channel, note=note,
+                       written=False, why="cps", cps=cps)
             return
         self._select_pattern(channel)
         steps = self.libseq.getSteps()
@@ -4758,6 +4876,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.libseq.removeNote(step, note)
         vel = max(1, min(127, velocity))
         self.libseq.addNote(step, note, vel, duration, 0.0)
+        self._slog("capture_note", channel=channel, note=note, written=True,
+                   step=step, vel=vel, dur=duration)
         self.libseq.updateSequenceInfo()
         self.notes[channel][step] = (note, vel, duration)
         self._claim(channel)
@@ -4888,6 +5008,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._release_all()
             self._phrase_anchor = None
             self._phrase_bar = None
+        self._slog("transport",
+                   state="start" if target == zynseq_lib.SEQ_STARTING
+                   else "stop",
+                   anchor=self._phrase_anchor, bar=self._phrase_bar,
+                   pending=self._pending_macros.pending())
         for group in range(8):
             self.libseq.setPlayState(self.zynseq.bank, group, target)
         self._render_pads()
@@ -5221,6 +5346,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if bar == self._phrase_bar:
             return
         self._phrase_bar = bar
+        if self._pending_macros.pending() or self._frozen("macro"):
+            # GATED on purpose: a bar with nothing armed and nothing frozen
+            # writes no line at all, so an idle jam costs the log nothing and
+            # the write budget stays where the animations left it.
+            self._slog("bar", bar=bar, frozen=self._frozen("macro"),
+                       latch=self.frozen, deep=self.freeze_deep,
+                       pending=self._pending_macros.pending(),
+                       due={m: self._pending_macros.remaining(m, bar)
+                            for m in self._pending_macros.pending()})
         if self._frozen("macro"):
             # HELD, NOT DROPPED. The queue is not drained at all while frozen,
             # so everything armed keeps its place and lands on the first bar
@@ -5242,6 +5376,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             with self.lock:
                 self._render_display()
         for macro in self._pending_macros.due(bar):
+            self._slog("due", macro=macro, bar=bar)
             try:
                 self._fire_macro(macro, bar)
             except Exception as e:
@@ -5475,19 +5610,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # a macro that refused has no restore leg to clear it.
             self._timescale_note = ("DROP", 0, len(tlib.CHANNELS))
             self._note_expires = bar + self._arm_bars.get("drop", 4)
+            self._slog("drop", bar=bar, survivors=self._drop_survivors,
+                       fired=False, why="no survivors nominated")
             logging.info("Maschine: DROP refused - no survivors nominated")
             with self.lock:
                 self._render_display()
             return
         self._drop_restore = {}
         mixer = self.state_manager.zynmixer
+        muted = []
+        nochain = []
         for group in range(8):
             chan = self._mixer_chan(group)
             if chan is None:
+                # Every group landing here is a DROP that fires and is
+                # inaudible: the macro lands, the log says so, and not one
+                # strip moves. That is the shape the log exists to tell apart
+                # from "it never fired".
+                nochain.append(group)
                 continue
             self._drop_restore[group] = bool(mixer.get_mute(chan))
             if group not in self._drop_survivors:
                 mixer.set_mute(chan, True, update=True)
+                muted.append(group)
+        self._slog("drop", bar=bar, survivors=self._drop_survivors,
+                   muted=muted, nochain=nochain,
+                   captured=sorted(self._drop_restore))
         # Symmetric by design: the ARM length is BOTH when it fires and how
         # long it lasts. A second gesture for the duration was rejected - the
         # queue already carries a per-macro length, so adding one later is
@@ -5502,6 +5650,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _drop_restore_apply(self):
         """Put back exactly what _drop_fire captured, then forget it."""
 
+        self._slog("drop_end", restoring=sorted(self._drop_restore))
         mixer = self.state_manager.zynmixer
         for group, muted in self._drop_restore.items():
             chan = self._mixer_chan(group)
@@ -5522,6 +5671,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         the 2026-08-18 failure."""
 
         logging.debug(f"Maschine: macro {macro} landed on bar {bar}")
+        self._slog("fire", macro=macro, bar=bar)
         if macro == "drop":
             self._drop_fire(bar)
         elif macro == "drop_end":

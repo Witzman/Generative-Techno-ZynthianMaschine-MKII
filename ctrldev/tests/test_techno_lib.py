@@ -4098,3 +4098,44 @@ class TestPendingColumnsFrozen(unittest.TestCase):
     def test_an_empty_page_still_says_none_when_frozen(self):
         col = tl.pending_columns([], frozen=True)[0]
         self.assertEqual(col["name"], "NONE")
+class TestSessionLine(unittest.TestCase):
+    """The play-session log's grammar. The driver owns the file; this owns
+    the line, so it can be read on WSL where the driver cannot be imported."""
+
+    STAMP = 1755770000.123
+
+    def _line(self, tag, **fields):
+        return tl.session_line(self.STAMP, tag, fields)
+
+    def test_the_stamp_carries_milliseconds(self):
+        # Ordering is the question this log answers - did the freeze latch
+        # before or after the tick that should have fired the macro - and a
+        # one-second stamp cannot answer it.
+        head = self._line("tick").split(" ")[0]
+        self.assertRegex(head, r"^\d\d:\d\d:\d\d\.\d\d\d$")
+
+    def test_fields_keep_the_order_they_were_given(self):
+        line = self._line("arm", macro="drop", bars=4)
+        self.assertTrue(line.endswith("arm macro=drop bars=4\n"))
+
+    def test_a_missing_value_prints_a_dash_and_keeps_its_column(self):
+        # A field that vanishes when it is None makes a log that cannot be
+        # counted by column.
+        self.assertIn("chan=-", self._line("mute", chan=None))
+
+    def test_booleans_print_as_one_and_zero(self):
+        self.assertIn("frozen=1", self._line("tick", frozen=True))
+        self.assertIn("frozen=0", self._line("tick", frozen=False))
+
+    def test_a_collection_prints_sorted_and_comma_joined(self):
+        self.assertIn("survivors=0,1", self._line("drop", survivors={1, 0}))
+
+    def test_an_empty_collection_is_a_dash_not_an_empty_column(self):
+        # DROP with no survivors mutes all eight - the exact state that took
+        # the rig silent. It must not read as a blank.
+        self.assertIn("survivors=-", self._line("drop", survivors=[]))
+
+    def test_every_line_ends_in_exactly_one_newline(self):
+        line = self._line("tick", bar=3)
+        self.assertTrue(line.endswith("\n"))
+        self.assertFalse(line.rstrip("\n").endswith("\n"))
