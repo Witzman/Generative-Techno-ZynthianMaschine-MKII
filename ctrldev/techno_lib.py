@@ -847,6 +847,30 @@ class techno_lib:
         return f"{label} ARM {name}"
 
     @staticmethod
+    def phase_error(pos, ref, length):
+        """Signed distance from `ref` to `pos` around a pattern of `length`
+        clocks, in [-length/2, +length/2). None if the length is unusable.
+
+        The phrase clock integrates getTempo() against the MONOTONIC clock
+        while the sequencer advances on the AUDIO clock. Measured 2026-08-21:
+        they slip 3,896 ppm - a whole bar every 8.3 minutes - linearly, which
+        is what makes a gentle correction possible at all.
+        `notes/findings/2026-08-21-phrase-clock-drift.md`.
+
+        SIGNED AND WRAPPED, because both halves matter. Unsigned would not say
+        which way to nudge, and unwrapped would read a two-clock error across
+        the loop point as `length - 2` and jerk the clock most of a bar in the
+        wrong direction - once per pattern, for ever."""
+
+        length = float(length or 0.0)
+        if length <= 0.0:
+            return None
+        delta = (float(pos) - float(ref)) % length
+        if delta >= length / 2.0:
+            delta -= length
+        return delta
+
+    @staticmethod
     def freeze_memo(memo, live, frozen):
         """Countdowns, held still for as long as the machine is.
 

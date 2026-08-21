@@ -4139,3 +4139,38 @@ class TestSessionLine(unittest.TestCase):
         line = self._line("tick", bar=3)
         self.assertTrue(line.endswith("\n"))
         self.assertFalse(line.rstrip("\n").endswith("\n"))
+
+
+class TestPhaseError(unittest.TestCase):
+    """The phrase clock's correction term. Measured drift is 3,896 ppm and
+    linear; this is the signed, wrapped distance it is corrected against."""
+
+    def test_no_error_when_the_position_is_the_reference(self):
+        self.assertEqual(tl.phase_error(96, 96, 384), 0.0)
+
+    def test_ahead_reads_positive(self):
+        self.assertEqual(tl.phase_error(100, 96, 384), 4.0)
+
+    def test_behind_reads_negative(self):
+        self.assertEqual(tl.phase_error(92, 96, 384), -4.0)
+
+    def test_a_small_error_across_the_loop_point_stays_small(self):
+        # The one that matters. Unwrapped this reads as 380 and jerks the
+        # clock most of a bar the wrong way, once per pattern, for ever.
+        self.assertEqual(tl.phase_error(2, 382, 384), 4.0)
+        self.assertEqual(tl.phase_error(382, 2, 384), -4.0)
+
+    def test_it_never_leaves_the_half_open_half_circle(self):
+        for pos in range(0, 384):
+            err = tl.phase_error(pos, 0, 384)
+            self.assertGreaterEqual(err, -192.0)
+            self.assertLess(err, 192.0)
+
+    def test_exactly_half_a_pattern_reads_negative_not_positive(self):
+        # Half is arbitrary but must be DECIDED, or the correction oscillates
+        # between two equally valid readings on adjacent bars.
+        self.assertEqual(tl.phase_error(192, 0, 384), -192.0)
+
+    def test_an_unusable_length_gives_no_correction_rather_than_a_wrong_one(self):
+        self.assertIsNone(tl.phase_error(10, 0, 0))
+        self.assertIsNone(tl.phase_error(10, 0, None))
