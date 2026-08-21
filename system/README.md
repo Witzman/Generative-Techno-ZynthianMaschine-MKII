@@ -18,7 +18,19 @@ table — 44 assertions, WSL only, no Pi and no hardware:
 
     bash system/tests/test-system-files.sh
 
-It parses the helpers, pins the udev rule and `maschine.json` field by field,
+`tests/test-dry-run.sh` is the other half — 63 assertions on what
+`install.sh --dry-run` and `tools/deploy-to-pi.sh --dry-run` **print**:
+
+    bash system/tests/test-dry-run.sh
+
+`ssh`, `scp`, `systemctl`, `udevadm`, `apt-get`, `cargo`, `install` and `rsync`
+are shadowed by stubs that exit 99 if called, so a dry run that actually
+executes something fails there rather than on a rig. It pins the daemon-first
+restart order in both scripts by line number, and that the deploy path never
+names `maschine.json`, a unit or the udev rule.
+
+`test-system-files.sh` parses the helpers, pins the udev rule and
+`maschine.json` field by field,
 checks the unit ordering, confirms `install.sh` still enables exactly these
 three units and that its path rewrites leave no `/root` path behind, and runs
 `systemd-analyze verify` on all three units inside a `mktemp -d` fake root with
