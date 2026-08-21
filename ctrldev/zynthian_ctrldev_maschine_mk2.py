@@ -78,7 +78,7 @@ OSC_ADDR = ("127.0.0.1", 42434)
 # 2026-08-21 - a session nobody could diagnose became four measured checks -
 # but a log that writes by default is a cost every player pays for a problem
 # they do not have. Set it to a path to turn it on.
-SESSION_LOG_PATH = None
+SESSION_LOG_PATH = "/tmp/mk2-drift.log"   # MEASUREMENT BRANCH ONLY
 
 GROUP_CC_FIRST = 80                 # Group A..H = CC 80..87
 GROUP_NOTE_BASE = (24, 36, 48, 60, 72, 84, 96, 108)
@@ -5346,6 +5346,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if bar == self._phrase_bar:
             return
         self._phrase_bar = bar
+        if self._slog_fh is not None:
+            # DRIFT PROBE. _elapsed_beats() integrates getTempo() against the
+            # MONOTONIC clock; the sequencer advances on the AUDIO clock. Same
+            # tempo number, two time bases, and the spec declined to correct a
+            # drift nobody had measured.
+            #
+            # Phase slip, not absolute counting: sample the sequencer's OWN
+            # play position at each phrase-bar tick. If the two clocks agree
+            # the number sits still, jittering by up to one poll tick. If they
+            # drift it WALKS, monotonically, and the rate is the answer. No
+            # wrap accumulation and no second counter to get wrong.
+            # ONE locked section for BOTH zynseq reads. libzynseq is not
+            # thread-safe and this runs on the poll thread; an unlocked reach
+            # into it once took the whole UI down with SIGSEGV mid-jam.
+            # _elapsed_beats takes the lock itself and self.lock is an RLock,
+            # so calling it in here is safe and keeps the tempo read and the
+            # position read on the same side of one acquire - which they must
+            # be, or the two numbers describe different instants and the drift
+            # they are measuring is the thing that separates them.
+            with self.lock:
+                bpm = self.libseq.getTempo()
+                pos = self._play_clock(self.group)
+                beats = self._elapsed_beats()
+            self._slog("drift", bar=bar, beats=round(beats, 4), pos=pos,
+                       group=self.group, bpm=bpm,
+                       mono=round(time.monotonic() - self._t0, 4))
         if self._pending_macros.pending() or self._frozen("macro"):
             # GATED on purpose: a bar with nothing armed and nothing frozen
             # writes no line at all, so an idle jam costs the log nothing and
