@@ -846,6 +846,32 @@ class techno_lib:
         return f"{label} ARM {name}"
 
     @staticmethod
+    def freeze_memo(memo, live, frozen):
+        """Countdowns, held still for as long as the machine is.
+
+        `live` is {macro: bars remaining} as the queue reports it. While frozen
+        each macro keeps the FIRST value seen; the moment the freeze lifts the
+        memo empties and the live numbers take over again.
+
+        The defect this exists for, measured 2026-08-21: the landing bar goes
+        by while the queue is held, `remaining()` floors at zero, and the
+        countdown then advertises *zero bars left* for as long as the player
+        holds FREEZE - nine bars of it in the log - while nothing lands. The
+        ruler and the number were saying the drop was about to happen. Only
+        `FRZ` said otherwise, and two true-looking readings that disagree are
+        worse than one.
+
+        A macro armed DURING a freeze is memoised on its first sighting, so it
+        is held from where it started rather than from zero.
+
+        PURE, and the memo is returned rather than mutated: the driver calls
+        this from the poll thread and reads it from the render path."""
+
+        if not frozen:
+            return {}
+        return {macro: memo.get(macro, rem) for macro, rem in live.items()}
+
+    @staticmethod
     def freeze_label(label, frozen, deep):
         """The page indicator says the machine is being held.
 
@@ -2466,12 +2492,18 @@ class techno_lib:
         return sorted(entries, key=lambda e: (int(e[1]), str(e[0])))
 
     @staticmethod
-    def pending_columns(entries):
+    def pending_columns(entries, frozen=False):
         """The eight columns of the PENDING page.
 
         `entries` is (macro, bars_left, armed_bars) per armed macro. Eight
         columns because the surface has eight; a ninth armed macro is not
         drawn, and nothing in this instrument can arm nine.
+
+        WHILE THE MACRO QUEUE IS FROZEN EVERY COLUMN SAYS `HELD` INSTEAD OF
+        A NUMBER. The number would be a countdown that is not counting, and
+        once the landing bar has passed it reads `0000` forever - which says
+        the drop is about to land at the exact moment it cannot. One word that
+        is true beats four digits that are not.
 
         WITH NOTHING ARMED THE PAGE SAYS `NONE`. Eight blank columns admit
         nothing, and law L4 is about controls that do nothing and do not say
@@ -2493,7 +2525,7 @@ class techno_lib:
             # draws past its own box. The countdown is a continuous quantity
             # anyway; seg is for a switch with named positions.
             out.append(techno_lib._col(
-                name, f"{int(left):04d}", "uni",
+                name, "HELD" if frozen else f"{int(left):04d}", "uni",
                 max(0.0, min(1.0, left / float(armed)))))
         if not out:
             out.append(techno_lib._col("NONE", "----", None, 0.0, grey=True))
@@ -2582,7 +2614,8 @@ class techno_lib:
 
         return techno_lib._freeze_grey(
             techno_lib._mod_grey(
-                techno_lib._columns_inner(desc, kind, state), desc, mod, owned),
+                techno_lib._columns_inner(desc, kind, state, frozen),
+                desc, mod, owned),
             desc, frozen)
 
     # The verbs a FREEZE makes inert. Only the two that DRIVE generation -
@@ -2644,7 +2677,7 @@ class techno_lib:
         return out
 
     @staticmethod
-    def _columns_inner(desc, kind, state):
+    def _columns_inner(desc, kind, state, frozen=False):
         """The 8 columns for a page. Reads state, never writes it. This is the
         single place where the greyed columns and the pending brackets are
         decided, so both are unit tested rather than eyeballed on hardware.
@@ -2655,7 +2688,10 @@ class techno_lib:
         if desc["shape"] == techno_lib.SHAPE_SPREAD:
             return techno_lib.spread_columns(desc, state)
         if desc["shape"] == techno_lib.SHAPE_PENDING:
-            return techno_lib.pending_columns(state)
+            # The one page whose NUMBERS are wrong while frozen rather than
+            # merely inert: a countdown that is not counting. Everything else
+            # on a frozen page is a value the player may still move.
+            return techno_lib.pending_columns(state, frozen)
         if desc.get("generated"):
             return techno_lib.generated_columns(desc, state)
 

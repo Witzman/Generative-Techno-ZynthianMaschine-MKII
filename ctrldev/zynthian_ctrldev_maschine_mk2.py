@@ -528,6 +528,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # held; empty means the drop takes everything, which is a real and
         # useful setting rather than an unconfigured one.
         self._drop_survivors = set()
+        # Countdowns held still while the macro queue is frozen. Empty
+        # whenever it is not - see tlib.freeze_memo, and the defect it exists
+        # for: a countdown that reads zero for as long as you hold FREEZE.
+        self._freeze_memo = {}
+        # The bar a transient note expires on. A macro that REFUSES has no
+        # restore leg to clear its note the way a macro that ran does, so the
+        # note is given the window the macro itself would have occupied.
+        self._note_expires = None
         # The mute picture as it was the instant the drop fired, restored
         # verbatim afterwards. Never "all on".
         self._drop_restore = {}
@@ -2786,12 +2794,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         pending = self._pending_macros.pending()
         if not pending:
+            self._freeze_memo = {}
             return (self._arm_picked, None, None)
 
         bar = self._phrase_bar or 0
+        # Held still while the queue is. Maintained HERE, at the one place the
+        # countdown is derived, so the ruler, the LED and the PENDING page
+        # cannot disagree about what bar it is - and so a macro armed during a
+        # freeze is memoised on its first sighting rather than from zero.
+        live = {macro: self._pending_macros.remaining(macro, bar)
+                for macro in pending
+                if self._pending_macros.remaining(macro, bar) is not None}
+        self._freeze_memo = tlib.freeze_memo(self._freeze_memo, live,
+                                             self._frozen("macro"))
         soonest, left = None, None
         for macro in pending:
-            rem = self._pending_macros.remaining(macro, bar)
+            rem = self._freeze_memo.get(
+                macro, self._pending_macros.remaining(macro, bar))
             if rem is None:
                 continue
             if left is None or rem < left:
@@ -5203,6 +5222,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._render_display()
                 self._render_transport()
             return
+        if self._note_expires is not None and bar >= self._note_expires:
+            # A refusal note lives exactly as long as the macro would have.
+            self._note_expires = None
+            self._timescale_note = None
+            with self.lock:
+                self._render_display()
         for macro in self._pending_macros.due(bar):
             try:
                 self._fire_macro(macro, bar)
@@ -5344,6 +5369,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self.state[channel]["pending"].add("length")
                 moved += 1
         self._timescale_note = (macro.upper(), moved, len(channels))
+        # A macro that RUNS must not inherit a refusal's expiry - its own
+        # restore leg owns the clearing.
+        self._note_expires = None
         bars = self._arm_bars.get(macro, 4)
         self._pending_macros.arm("timescale_end", bars, bar)
         self._arm_bars["timescale_end"] = bars
@@ -5402,6 +5430,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _drop_fire(self, bar):
         """Everything that is not a survivor falls silent for the drop.
 
+        WITH NOBODY NOMINATED IT REFUSES, and says so on the page indicator.
+        Owner decision, 2026-08-21 - see the comment on the guard below.
+
         The MIXER STRIP is muted, never the zynseq track. zynseq's file format
         has no mute field at all, so a zynseq mute is lost by every snapshot
         save; the mixer's is in the zs3 state and shows on the touchscreen
@@ -5414,6 +5445,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         would un-mute a channel the player had killed by hand, and they would
         blame the drop for it."""
 
+        if not self._drop_survivors:
+            # OWNER DECISION, 2026-08-21: a DROP with nobody nominated does
+            # NOT mute all eight. It used to, which is literally what
+            # nominating nobody means - and is how the rig went silent on
+            # 2026-08-20 while the owner held FREEZE.
+            #
+            # AND IT SAYS SO. A macro that lands and does nothing in silence
+            # is the unexplained-silence law wearing a different hat, so the
+            # refusal borrows the note HALF and DOUBLE already use for a
+            # partial result: `DROP 0/8` reads as "took none of eight", in a
+            # grammar the player has already met on this same indicator.
+            #
+            # The note is given the window the drop itself would have
+            # occupied. A macro that RAN clears its note on its restore leg;
+            # a macro that refused has no restore leg to clear it.
+            self._timescale_note = ("DROP", 0, len(tlib.CHANNELS))
+            self._note_expires = bar + self._arm_bars.get("drop", 4)
+            logging.info("Maschine: DROP refused - no survivors nominated")
+            with self.lock:
+                self._render_display()
+            return
         self._drop_restore = {}
         mixer = self.state_manager.zynmixer
         for group in range(8):
@@ -5480,6 +5532,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                          for ch in channels},
             }
             self._timescale_note = ("ROLL", len(channels), len(tlib.CHANNELS))
+            self._note_expires = None
         elif macro == "break_end":
             # The same restore DROP uses. BREAK is DROP's second entry point,
             # not a parallel implementation - one capture, one restore, and

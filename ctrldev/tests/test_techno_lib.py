@@ -4040,3 +4040,61 @@ class TestFreezeHoldsMacros(unittest.TestCase):
 
     def test_macros_are_in_the_generative_set(self):
         self.assertIn("macro", tl.FREEZE_GENERATIVE)
+
+
+class TestFreezeMemo(unittest.TestCase):
+    """A countdown must not keep counting while the machine is held.
+
+    Measured 2026-08-21: the landing bar went by under a FREEZE, remaining()
+    floored at zero, and the ruler advertised zero bars left for nine bars
+    while nothing landed."""
+
+    def test_unfrozen_the_memo_is_empty(self):
+        self.assertEqual(tl.freeze_memo({"drop": 2}, {"drop": 1}, False), {})
+
+    def test_frozen_it_takes_the_first_value_it_sees(self):
+        self.assertEqual(tl.freeze_memo({}, {"drop": 2}, True), {"drop": 2})
+
+    def test_frozen_it_does_not_follow_the_live_value_down(self):
+        # The whole point: the live number falls to zero and stays there.
+        self.assertEqual(tl.freeze_memo({"drop": 2}, {"drop": 0}, True),
+                         {"drop": 2})
+
+    def test_a_macro_armed_during_a_freeze_is_held_from_where_it_started(self):
+        memo = tl.freeze_memo({"drop": 2}, {"drop": 0, "break": 4}, True)
+        self.assertEqual(memo, {"drop": 2, "break": 4})
+
+    def test_a_macro_that_leaves_the_queue_leaves_the_memo(self):
+        # Keyed off `live`, so a cancelled macro cannot strand an entry that
+        # would then be reused by a later macro of the same name.
+        self.assertEqual(tl.freeze_memo({"drop": 2}, {"break": 1}, True),
+                         {"break": 1})
+
+    def test_thawing_clears_it_so_the_live_numbers_take_over(self):
+        held = tl.freeze_memo({}, {"drop": 3}, True)
+        self.assertEqual(tl.freeze_memo(held, {"drop": 0}, False), {})
+
+
+class TestPendingColumnsFrozen(unittest.TestCase):
+    """The PENDING page says HELD rather than a countdown that is not
+    counting."""
+
+    def test_frozen_a_column_says_held(self):
+        col = tl.pending_columns([("drop", 0, 4)], frozen=True)[0]
+        self.assertEqual(col["value"], "HELD")
+
+    def test_unfrozen_it_still_says_the_number(self):
+        col = tl.pending_columns([("drop", 2, 4)])[0]
+        self.assertEqual(col["value"], "0002")
+
+    def test_the_name_and_the_bar_are_untouched_by_the_freeze(self):
+        # Only the number is a lie while frozen; the macro's name and how far
+        # through it is are both still true.
+        live = tl.pending_columns([("drop", 2, 4)])[0]
+        held = tl.pending_columns([("drop", 2, 4)], frozen=True)[0]
+        self.assertEqual(live["name"], held["name"])
+        self.assertEqual(live["frac"], held["frac"])
+
+    def test_an_empty_page_still_says_none_when_frozen(self):
+        col = tl.pending_columns([], frozen=True)[0]
+        self.assertEqual(col["name"], "NONE")
