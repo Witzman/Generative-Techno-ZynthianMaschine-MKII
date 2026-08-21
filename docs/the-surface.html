@@ -103,9 +103,6 @@
 </figure>
 <hr>
 <h2 id="phrase">The phrase &mdash; one bar count for the whole instrument</h2>
-<div class="warn">
-<p><strong>New, and not yet played in.</strong> The phrase clock, ARM, DROP, the CHANCE ramp and RISE went onto the rig together. What follows describes what the instrument does; none of it has been through a session on the hardware yet.</p>
-</div>
 <p><strong>The page name on the display carries a bar number</strong> &mdash; <code>STEP 5/16</code> &mdash; counting one to sixteen and starting again.</p>
 <p><strong>It is one count for all eight channels, not one per channel.</strong> Each channel owns its own length, so eight channels can be on eight different bars; a count taken from any one of them would be a lie on the other seven. This one comes from the transport instead, so it stays true however far apart the lengths are &mdash; see <a href="generating-patterns.html#polymeter">lengths that do not agree</a>.</p>
 <p><strong>Bar 1 is the moment you press Play, and Restart re-zeros it</strong> along with the playheads &mdash; count and patterns are pulled back onto the one together. Stop and the number goes away rather than freezing, because a stuck number reads as a clock that has died. It is a live ruler, not a position: it is not saved, and it starts again from one on the next Play.</p>
@@ -122,7 +119,9 @@
 </tbody></table>
 <p><strong>Pick the macro first, then the length.</strong> The length is the commit: tapping it arms the macro. A length on its own does nothing at all, because guessing which macro you meant would fire something you never named.</p>
 <p><strong>The grid becomes a countdown the instant something is armed.</strong> One red pad per bar of the length you chose, going out from the top left as the bars pass, so the pads still lit are the bars still to come. While that is showing every pad is inert &mdash; reading the countdown must not also change it.</p>
-<p><strong>Let ARM go without touching a pad and everything pending is cancelled.</strong> That is the same window a reroll gives you, and it cancels all rather than one for the same reason: a half-cancelled gesture is harder to think about than none.</p>
+<p><strong>Tap ARM without touching a pad and everything pending is cancelled.</strong> That is the same window a reroll gives you, and it cancels all rather than one for the same reason: a half-cancelled gesture is harder to think about than none.</p>
+<p><strong>A tap, not a hold &mdash; so you can hold ARM and read the countdown safely.</strong> Any release used to cancel, however long you had held it, which meant the only way to look at the ruler destroyed what you were looking at. Hold it as long as you like; let go under a quarter of a second and it cancels.</p>
+<p><strong>Freeze the machine and the countdown holds with it.</strong> The pads stop going out, the number stops falling, and the <a href="#pending">PENDING</a> page swaps its digits for <code>HELD</code>. Nothing armed is lost &mdash; it lands on the first bar after you thaw. Without this the count ran to zero and sat there advertising a drop that could not land, which is the one reading a countdown must never give.</p>
 <p><strong>SELECT is the indicator once your hand has left it.</strong> Dark when nothing is armed, <strong>one flash per bar</strong> while a macro counts down, and steady through the bar it lands on. The flash is driven by the bar count rather than by a timer, so it cannot drift away from the thing it is counting.</p>
 <p><strong>Arming with the transport stopped keeps the length and waits.</strong> There is no bar to count from yet, so nothing can fire; press Play and the macro lands that many bars in. SELECT sits steady rather than flashing meanwhile, because nothing is counting down yet.</p>
 <p><strong>Arming a macro that is already pending replaces it</strong> instead of stacking a second one, so two drops can never land on different bars and fight over the same restore.</p>
