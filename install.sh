@@ -9,8 +9,14 @@ DRY=0
 [ "${1:-}" = "--dry-run" ] && DRY=1
 
 REPO="$(cd "$(dirname "$0")" && pwd)"
-CTRLDEV=/zynthian/zynthian-ui/zyngine/ctrldev
-AUTOCONNECT=/zynthian/zynthian-ui/zynautoconnect/zynthian_autoconnect.py
+# Everything Zynthian owns hangs off one prefix. It is /zynthian on a rig and
+# is only ever overridden by system/tests/test-dry-run.sh, which points it at a
+# fake root so --dry-run can be asserted off the Pi. The guard below still
+# demands a real build_info.txt inside the prefix, so this does not make the
+# installer runnable anywhere it was not runnable before.
+ZYNTHIAN_ROOT="${ZYNTHIAN_ROOT:-/zynthian}"
+CTRLDEV=$ZYNTHIAN_ROOT/zynthian-ui/zyngine/ctrldev
+AUTOCONNECT=$ZYNTHIAN_ROOT/zynthian-ui/zynautoconnect/zynthian_autoconnect.py
 
 say() { printf "\n== %s\n" "$1"; }
 run() {
@@ -23,12 +29,12 @@ backup() {
 }
 
 # --- refuse to run anywhere but a ZynthianOS Pi --------------------------------
-if [ ! -f /zynthian/build_info.txt ]; then
-    echo "This is not a ZynthianOS install (/zynthian/build_info.txt missing)." >&2
+if [ ! -f "$ZYNTHIAN_ROOT/build_info.txt" ]; then
+    echo "This is not a ZynthianOS install ($ZYNTHIAN_ROOT/build_info.txt missing)." >&2
     echo "Run this on the Pi, not on your laptop." >&2
     exit 1
 fi
-echo "ZynthianOS: $(head -1 /zynthian/build_info.txt)"
+echo "ZynthianOS: $(head -1 "$ZYNTHIAN_ROOT/build_info.txt")"
 echo "Repository: $REPO"
 [ "$DRY" = 1 ] && echo "DRY RUN - nothing will be changed."
 
