@@ -78,7 +78,7 @@ OSC_ADDR = ("127.0.0.1", 42434)
 # 2026-08-21 - a session nobody could diagnose became four measured checks -
 # but a log that writes by default is a cost every player pays for a problem
 # they do not have. Set it to a path to turn it on.
-SESSION_LOG_PATH = "/tmp/mk2-drift.log"   # MEASUREMENT BRANCH ONLY
+SESSION_LOG_PATH = None
 
 GROUP_CC_FIRST = 80                 # Group A..H = CC 80..87
 GROUP_NOTE_BASE = (24, 36, 48, 60, 72, 84, 96, 108)
