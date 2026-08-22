@@ -89,11 +89,14 @@ flowchart LR
 <hr>
 <h2 id="the-driver">The driver</h2>
 <p><strong>The generator owns the pattern.</strong> The driver does not synthesise notes at play time — it writes them into zynseq, which is why patterns survive in snapshots and why the touchscreen editor shows the same thing the pads do. Playing is Zynthian's job; the driver only decides what is written.</p>
-<p>Three facts hold the design together.</p>
+<p>Four facts hold the design together.</p>
 <p><strong>Everything testable lives outside the driver.</strong> The driver itself cannot be imported off the Pi — it needs <code>zynlibs.zynseq</code> — so the Turing register and its mutation, the undo ring, register-to-pitch quantisation, euclidean placement, the gate mask, and the whole page and column model were pushed into <code>techno_lib.py</code>, which has no Zynthian imports. That module carries its own test suite, including the invariant the instrument rests on: a generator at <code>LOCK</code> produces a byte-identical register over 500 iterations &mdash; which now has to hold for the rhythm register as well as the pitch one.</p>
 <p><strong>Every zynseq call holds one lock.</strong> <code>libzynseq</code> is not thread-safe and the driver reaches it from three threads — the MIDI handler, a queued signal handler and a 30 Hz playhead poll. Without the lock the entire Zynthian UI died with a segfault about 95 seconds into a jam.</p>
 <p><strong>Nothing slow runs on the MIDI thread.</strong> Loading a preset blocks on a socket for seconds while the MIDI handler holds the lock for the whole event, so preset and kit changes are deferred to the poll thread.</p>
 <p><strong>A silent channel must say why.</strong> Play chance 0 emits nothing and looked exactly like a hang, so a channel that cannot sound draws its tab dashed. It is the one mechanism the surface has for explaining silence.</p>
+<hr>
+<h2 id="the-write-budget">The write budget</h2>
+<p><strong>Every LED write is diffed, and the pads are the one surface that also needs a timer.</strong> The driver caches what it last sent, so a quiet poll puts nothing on the wire &mdash; a sustained full-grid repaint at the poll rate has flooded the controller off the USB bus, and only a physical replug brought it back. But a cached write the daemon never applied would then stay wrong forever, so pad entries expire after three seconds and the poll thread re-asserts the grid on the same period: about eleven writes a second, against the four hundred and eighty that did the damage.</p>
 <hr>
 <h2 id="the-factory-snapshot">The factory snapshot</h2>
 <h3 id="the-eight-chains">The eight chains</h3>

@@ -18,7 +18,7 @@ run each step yourself.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![271 tests](https://img.shields.io/badge/tests-271%20passing-b4b4bc)
+![761 tests](https://img.shields.io/badge/tests-761%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -39,10 +39,20 @@ The three voices are Turing machines: a shift register clocked once per pass and
 mutated one bit at a time, read as pitch. Set `RANDOM` to 0 and the loop you are
 hearing is frozen **bit-identically**, for as long as you leave it there.
 
-The factory snapshot arrives playing 124 BPM techno: four-on-the-floor across
+**A gesture can land on a bar rather than under your finger.** The instrument
+counts bars, so ARM composes a macro with a length — a drop, a thinning of the
+odds, half or double time, a break, a ratchet ramp — and it fires on the
+boundary and resolves by itself. MOD binds a bar-synced LFO to any knob, FREEZE
+parks everything that moves, a held MUTE turns the pads into a mute grid, and
+SHIFT + REC captures the master to a WAV on the Pi.
+
+The factory snapshot arrives playing 125 BPM techno: four-on-the-floor across
 A-D, a drum kit walked by a Turing register on E, a frozen bass line on F, a lead
 at full random on G, and one long sustained note per 8-step loop on H — three
-different kinds of authorship, one per voice.
+different kinds of authorship, one per voice. It is
+`018-generative-techno-main-insert`, which carries a filter on the Main chain, so
+one knob sweeps the whole mix; `017-generative-techno` ships beside it as the
+same instrument without that insert.
 
 ## What you need
 
@@ -51,7 +61,8 @@ different kinds of authorship, one per voice.
 - A screen for Zynthian's own UI — any HDMI monitor or TV with a USB mouse and
   keyboard will do. A touchscreen is what the instrument was built around, but it
   is not needed to install: the installer loads the factory snapshot itself.
-  Saving snapshots does need the screen
+  Saving a snapshot needs the UI — either that screen, or Zynthian's own VNC
+  server in a browser, which is the headless answer
 - **No audio interface required.** The Pi's built-in headphone output is what
   every measurement here was made on. An external interface Zynthian supports is
   optional and sounds better, but is untested against this build
@@ -83,7 +94,7 @@ The unit tests need no Pi and no hardware:
 
 ```bash
 cd ctrldev && python3 -m unittest discover -s tests -q
-# → Ran 271 tests ... OK
+# → Ran 761 tests ... OK
 ```
 
 ## Credits

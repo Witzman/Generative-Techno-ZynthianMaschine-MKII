@@ -19,8 +19,12 @@ table — 53 assertions (measured 2026-08-22), WSL only, no Pi and no hardware:
 
     bash system/tests/test-system-files.sh
 
-`tests/test-dry-run.sh` is the other half — 66 assertions (measured 2026-08-22) on what
-`install.sh --dry-run` and `tools/deploy-to-pi.sh --dry-run` **print**:
+`tests/test-dry-run.sh` is the other half — 76 assertions (measured 2026-08-22)
+on what `install.sh --dry-run`, `bootstrap.sh --dry-run` and
+`tools/deploy-to-pi.sh --dry-run` **print**. Ten of them are `bootstrap.sh`'s,
+added 2026-08-22 when `018` became the factory snapshot: that `018` goes into
+bank `000` **and** over `default.zss`, that `017` goes into the bank and
+**never** over it, and that no genre snapshot is ever the default:
 
     bash system/tests/test-dry-run.sh
 

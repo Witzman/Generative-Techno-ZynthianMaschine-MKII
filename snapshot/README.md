@@ -142,7 +142,10 @@ hand.
 ## `018-generative-techno-main-insert` — THE FACTORY SNAPSHOT since 2026-08-22
 
 **File:** [`018-generative-techno-main-insert.zss`](018-generative-techno-main-insert.zss)
-· 55,109 bytes · md5 `df1c6ebb86910b670d3190911dfbf7da` (measured 2026-08-22)
+· 55,121 bytes · md5 `89020924f3700bdae09ba47e308e9bd0` (measured 2026-08-22,
+after the identity fix; the file grew twelve bytes when it stopped claiming to
+be `017`, so the pre-fix `df1c6ebb…` is stale rather than wrong about a
+different file)
 
 `017` with one thing added: **`JV/MDA RezFilter` in slot 1 of the Main chain**.
 Nothing else differs — the two files' only unequal top-level keys are `chains`

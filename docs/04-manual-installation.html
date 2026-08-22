@@ -194,7 +194,7 @@ dpkg -s obxd-lv2 padthv1-lv2 tap-lv2 | grep ^Status</code></pre>
         /zynthian/zynthian-my-data/snapshots/default.zss
 systemctl restart zynthian</code></pre>
 <h3 id="step-17--or-load-it-by-hand">Step 17 — Or load it by hand</h3>
-<p><strong>What.</strong> Opens Snapshots, goes <strong>into</strong> bank <code>000</code>, taps <code>018-generative-techno-main-insert</code>. <strong>Why.</strong> Needed only if this Pi already had a session, whose <code>last_state.zss</code> takes priority over the default. Loading takes about fifteen seconds: eight engines start, sixteen plugin hosts come up, and the driver re-reads its parameters out of the sequencer. <strong>How to confirm.</strong> Eight mixer strips plus main, both tab rows drawn.</p>
+<p><strong>What.</strong> Opens Snapshots, goes <strong>into</strong> bank <code>000</code>, taps <code>018-generative-techno-main-insert</code>. <strong>Why.</strong> Needed only if this Pi already had a session, whose <code>last_state.zss</code> takes priority over the default. Loading takes about fifteen seconds: eight engines start, seventeen plugin hosts come up, and the driver re-reads its parameters out of the sequencer. <strong>How to confirm.</strong> Eight mixer strips plus main, both tab rows drawn.</p>
 <blockquote><p><strong>Never save from webconf's Snapshots page.</strong> Its <strong>Name:</strong> field plus the checkmark <strong>renames the selected bank</strong> — it has destroyed bank <code>000</code> here once. Loading from webconf is safe; saving from it is not.</p></blockquote>
 <h3 id="step-18--the-genre-pack">Step 18 — The genre pack</h3>
 <p><strong>What.</strong> Places fifty-one more snapshots — <code>031</code>–<code>080</code> and <code>101</code> — in the same bank. <strong>Why.</strong> They are fixed arrangements to start from — ten each of house, deep house, minimal, dub and trance — and unlike the factory snapshot they are <em>optional</em>: the instrument is complete without them. They are <strong>not</strong> copied over <code>default.zss</code>, because the factory snapshot is what a fresh Pi should boot into. <strong>How to confirm.</strong> Fifty-one files listed under <code>000/</code>.</p>
@@ -233,7 +233,7 @@ INFO:zynthian_ctrldev_manager.load_driver: Loaded ctrldev driver
 <h2 id="verify">Verify</h2>
 <pre><code class="language-bash">bash tools/check-prereqs.sh; echo "exit=$?"     # → exit=0 once loaded
 jack_lsp | grep -c TAP                          # → 64
-cd ctrldev &amp;&amp; python3 -m unittest discover -s tests -q   # → Ran 752 tests … OK</code></pre>
+cd ctrldev &amp;&amp; python3 -m unittest discover -s tests -q   # → Ran 761 tests … OK</code></pre>
 <p>The unit tests run anywhere — no Pi, no Maschine. They are the only automated proof this project has: the driver cannot be imported off the Pi, so everything generative and presentational lives in <code>techno_lib.py</code>, which has no Zynthian imports and is tested.</p>
 <hr>
 <h2 id="when-it-does-not-work">When it does not work</h2>
