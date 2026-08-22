@@ -67,8 +67,8 @@
 <main>
 <article>
 <h1 id="whats-next">What could come next</h1>
-<p>Thirty-eight ideas for this instrument, ranked. <strong>None of them is built, and none of them is promised.</strong></p>
-<p><strong>Ten entries left this page on 2026-08-20</strong>, which is what the gaps in the numbering are: FREEZE, half and double time, BREAK, the ratchet ramp, phrase-locked modulation, audio capture, the pending page, the mute grid, the master-bus insert and beat repeat are all in the guide proper now.</p>
+<p>Thirty-seven ideas for this instrument, ranked. <strong>None of them is built, and none of them is promised.</strong></p>
+<p><strong>Eleven entries have left this page</strong>, which is what the gaps in the numbering are: FREEZE, half and double time, BREAK, the ratchet ramp, phrase-locked modulation, audio capture, the pending page, the mute grid, the master-bus insert, beat repeat and the one-knob modulation depth on the big encoder are all in the guide proper now. The last of those left on 2026-08-22, later than the other ten &mdash; it shipped with them and this page kept listing it.</p>
 <hr>
 
 <h2 id="what-this-is">What this page is</h2>
@@ -88,7 +88,6 @@
 <p>Small work, and in several cases the machinery is already running and has simply never been asked for this.</p>
 <table>
 <tr><th>#</th><th>Idea</th><th>What it does</th><th>Cost</th><th>Impact</th></tr>
-<tr><td>9</td><td>One knob for how much everything moves</td><td>The big encoder scales the depth of every live modulator at once, from still to churning.</td><td>S</td><td>4</td></tr>
 <tr><td>10</td><td>Tempo ramp</td><td>Six BPM over eight bars into the drop, then hold or snap back.</td><td>S</td><td>4</td></tr>
 <tr><td>12</td><td>Auto-pilot</td><td>Arm a build and drop to repeat on a sixteen or thirty-two bar cycle, and the instrument plays its own arrangement while you work on a sound.</td><td>S</td><td>4</td></tr>
 <tr><td>15</td><td>One-shot fills</td><td>A second pattern per channel, fired by a pad, played once, returning to the loop by itself.</td><td>S</td><td>4</td></tr>
@@ -109,11 +108,11 @@
 <tr><td>29</td><td>BRAKE</td><td>Hold a button and the tempo bends down; release and it returns at the next bar. A tape-stop that resolves.</td><td>M</td><td>4</td></tr>
 <tr><td>30</td><td>Punch-in</td><td>A take that starts on the next bar and stops itself after N bars, so both hands stay on the pads.</td><td>M</td><td>4</td></tr>
 <tr><td>31</td><td>Timed transpose</td><td>Up a fifth for eight bars, and back, with the return already paid for.</td><td>M</td><td>4</td></tr>
-<tr><td>32</td><td>Risers and impacts</td><td>A sample scheduled backwards from the boundary so its tail lands on the drop. The player for it is already running and idle.</td><td>M</td><td>4</td></tr>
+<tr><td>32</td><td>Sampled risers and impacts</td><td>A sample scheduled backwards from the boundary so its tail lands on the drop. The player for it is already running and idle. Not the shipped riser, which is a one-shot modulator sweep and carries no audio.</td><td>M</td><td>4</td></tr>
 <tr><td>33</td><td>Mixer scenes</td><td>A whole mixer picture &mdash; levels, pans, mutes &mdash; recalled at the next bar. Two or three make verse, chorus and drop.</td><td>M</td><td>4</td></tr>
 <tr><td>34</td><td>Banks as scenes</td><td>The sequencer has sixty-four banks and the instrument uses one. Each is a complete eight-channel pattern set, and they are all already in the snapshot.</td><td>M</td><td>4</td></tr>
-<tr><td>35</td><td>An undo ring</td><td>Reroll, randomise and length each destroy a bar with no way back. This keeps the last few and lets you step back through them.</td><td>M</td><td>4</td></tr>
-<tr><td>36</td><td>Note repeat</td><td>Hold a pad and it retriggers at a chosen rate. The Maschine gesture this instrument does not have.</td><td>M</td><td>4</td></tr>
+<tr><td>35</td><td>An undo ring for the rest</td><td>Reroll has a one-deep undo and a voice&rsquo;s register has a four-deep one; LENGTH and the pattern knobs have none. This would give them the same ring.</td><td>M</td><td>3</td></tr>
+<tr><td>36</td><td>Note repeat</td><td>Hold a pad and it retriggers at a chosen rate. The Maschine gesture this instrument does not have &mdash; and the NOTE REPEAT button is already spent on the register undo, so it needs a home as well as a mechanism.</td><td>M</td><td>4</td></tr>
 <tr><td>37</td><td>A chord walker</td><td>The three voices share a root and a scale, and a slow walker moves the root every few bars, so three unrelated lines become a progression.</td><td>M</td><td>4</td></tr>
 <tr><td>38</td><td>A drum rhythm register</td><td>The soft randomiser: drums get the same evolving generator the voices already have.</td><td>M</td><td>4</td></tr>
 </table>
@@ -127,11 +126,11 @@
 <tr><td>41</td><td>A phrase, not a bar</td><td>A channel plays four bars where the fourth differs &mdash; a real fill in the timeline rather than a swap.</td><td>L</td><td>5</td></tr>
 <tr><td>42</td><td>An automation lane</td><td>Per-step automation stored inside the pattern itself: saved with the snapshot, played by the audio engine, immune to any stutter in the driver.</td><td>L</td><td>5</td></tr>
 <tr><td>43</td><td>Retrograde</td><td>The bar plays backwards for N bars and then unmirrors.</td><td>M</td><td>3</td></tr>
-<tr><td>44</td><td>Choke groups</td><td>Closed hat kills open hat. <em>May be impossible on the drum sampler</em>, whose one-shots play to the end regardless &mdash; that has to be measured before it is designed.</td><td>M</td><td>3</td></tr>
+<tr><td>44</td><td>Choke groups</td><td>Closed hat kills open hat. <strong>Measured, and the sampler will not do it</strong>: a one-shot plays its sample to the end whether or not a note-off arrives. Any version of this has to cut the sound somewhere else.</td><td>L</td><td>2</td></tr>
 <tr><td>45</td><td>Duplicate a channel</td><td>Copy a channel onto another group, pattern and settings and modulation, then let it diverge.</td><td>M</td><td>3</td></tr>
 <tr><td>46</td><td>Accent and micro-timing</td><td>A velocity accent mask and a small timing nudge per channel: the weight that swing alone does not give.</td><td>M</td><td>3</td></tr>
 <tr><td>47</td><td>Sidechain pump</td><td>The bar-synced gain movement that glues a techno mix. The cheap version is a pump; a true per-kick duck is a different and more expensive feature.</td><td>M</td><td>3</td></tr>
-<tr><td>48</td><td>A different lead synth</td><td>Surge XT in place of the current lead engine, with its own parameter tables.</td><td>M</td><td>3</td></tr>
+<tr><td>48</td><td>A different lead synth</td><td>Surge XT on the factory snapshot&rsquo;s LEAD chain, with its own parameter tables. It already ships on other chains in both snapshot packs; this is about the factory default.</td><td>M</td><td>3</td></tr>
 <tr><td>49</td><td>The screens draw the curve</td><td>The pads say how fast a modulator moves; the screens should say what shape it is.</td><td>M</td><td>3</td></tr>
 <tr><td>50</td><td>A character insert</td><td>A second effect slot per channel, for drive and colour rather than space.</td><td>M</td><td>3</td></tr>
 <tr><td>51</td><td>Spare chains</td><td>A channel becomes a real synth rather than borrowing one, with somewhere to put it.</td><td>L</td><td>4</td></tr>

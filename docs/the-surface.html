@@ -79,13 +79,13 @@
 <tr><td>AUTO</td><td>FILTER</td><td>one filter control across all eight channels</td></tr>
 </tbody></table>
 <p>A mode can carry more than one page. <strong>The arrows beside the display</strong> step through that mode's ring and wrap; the page name sits in the middle of the display. Each mode remembers its own page separately for drum and voice channels, so changing channel does not throw you onto a page you were not on.</p>
-<p><strong>The big encoder does the same thing, and it is the faster way.</strong> Turn it and you walk the pages of whatever mode you are in &mdash; one page per click, either direction, no modifier and no press. It does this everywhere and it does nothing else, so it is the one control you never have to think about: whatever you are looking at, turning it shows you the next of it. Spin it quickly and it moves several pages rather than losing the ones it passed.</p>
+<p><strong>The big encoder does the same thing, and it is the faster way.</strong> Turn it and you walk the pages of whatever mode you are in &mdash; one page per click, either direction, no modifier and no press. It does this everywhere except under one modifier, so it is very nearly the one control you never have to think about: whatever you are looking at, turning it shows you the next of it. <strong>The exception is MOD.</strong> While MOD is latched the big encoder is not the page ring &mdash; it scales the depth of every live modulator at once, and MOD’s own label on the page indicator is what tells you which of the two you are holding. See <a href="modulation.html#depth">Modulation</a>. Spin it quickly and it moves several pages rather than losing the ones it passed.</p>
 <p><strong>Pressing the mode you are already in returns you to page 1</strong> of that mode. It does not switch you anywhere — every mode button means the same thing twice over: <em>this mode, from the top</em>.</p>
 <p><strong>Group A&ndash;H</strong> selects the channel. Pads, tabs and all eight encoders follow immediately, and the inverted tab on the display — never a Group LED — is the authority on which channel is selected.</p>
 <hr>
 <h2 id="reading-the-displays">Reading the displays</h2>
 <p>Both displays carry a tab row across the top — A&ndash;D on the left, E&ndash;H on the right — with four encoder columns under each.</p>
-<p><strong>On a generated CONTROL page the tab row carries parameter names instead</strong> — that page is one channel's own plugin, and the names need the room. See <a href="deep-parameters.html">Deep parameter control</a>. Everywhere else the tab row is the channels:</p>
+<p><strong>On a generated page the tab row carries parameter names instead</strong> — the names need the room. On CONTROL that page is the selected channel’s own plugin; on ALL it is the reverb, the delay or the master insert, one page ring each, reaching every remaining port of an effect that is ganged across all eight chains. See <a href="deep-parameters.html">Deep parameter control</a>. Everywhere else the tab row is the channels:</p>
 <p><strong>The inverted tab is the selected channel. A dashed tab means that channel is not sounding</strong>, whether it is muted at the mixer or silenced by its own generator. It is the one mechanism this instrument has for explaining silence, so read the tab row before assuming a fault.</p>
 <figure class="lcdfig">
   <div class="lcd">
@@ -95,11 +95,11 @@
     <div class="cols">
       <div class="col"><div class="lab">KIT</div><div class="val">SP12</div><div class="meter"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
       <div class="col"><div class="lab">SAMPLE</div><div class="val">0003</div><div class="meter"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="unit"></div></div>
-      <div class="col dead"><div class="lab">cutoff</div><div class="val">----</div><div class="unit"></div></div>
-      <div class="col dead"><div class="lab">reso</div><div class="val">----</div><div class="unit"></div></div>
+      <div class="col dead"><div class="lab">tune</div><div class="val">----</div><div class="unit"></div></div>
+      <div class="col dead"><div class="lab">decay</div><div class="val">----</div><div class="unit"></div></div>
     </div>
   </div>
-  <figcaption>A drum channel on CONTROL. CUTOFF and RESO draw dead in lower case with <code>----</code>: a sampler has no filter to reach, and the encoder does nothing rather than pretending.</figcaption>
+  <figcaption>A drum channel on CONTROL. TUNE, DECAY and FILTR draw dead in lower case with <code>----</code> &mdash; the third is on the right-hand display: a sampler publishes no controller for any of them, and the encoder does nothing rather than pretending.</figcaption>
 </figure>
 <hr>
 <h2 id="phrase">The phrase &mdash; one bar count for the whole instrument</h2>
@@ -120,6 +120,7 @@
 <tr><td>7 and 8</td><td>dark, and they do nothing. This is where later macros go</td></tr>
 <tr><td>9&ndash;16</td><td>the length in bars &mdash; 1, 2, 3, 4, 6, 8, 12, 16. Green</td></tr>
 </tbody></table>
+<p><strong>The page indicator says what you have picked.</strong> While ARM is held it reads <code>ARM?</code> until you touch a macro pad, then <code>ARM DROP</code>, <code>ARM THIN</code>, <code>ARM HALF</code>, <code>ARM DOUBLE</code>, <code>ARM BREAK</code> or <code>ARM ROLL</code>. Six amber pads look alike in a dark room; the label is how you know which one your thumb found. It goes away the moment you release ARM, because from then on the countdown, the SELECT light and the <a href="#pending">PENDING</a> page carry it.</p>
 <p><strong>Pick the macro first, then the length.</strong> The length is the commit: tapping it arms the macro. A length on its own does nothing at all, because guessing which macro you meant would fire something you never named.</p>
 <p><strong>The grid becomes a countdown the instant something is armed.</strong> One red pad per bar of the length you chose, going out from the top left as the bars pass, so the pads still lit are the bars still to come. While that is showing every pad is inert &mdash; reading the countdown must not also change it.</p>
 <p><strong>Tap ARM without touching a pad and everything pending is cancelled.</strong> That is the same window a reroll gives you, and it cancels all rather than one for the same reason: a half-cancelled gesture is harder to think about than none.</p>
@@ -137,6 +138,7 @@
 <p><strong>Go to ALL and turn the big encoder.</strong> The ALL ring has a second page now: one column per armed macro, soonest first, with the bars remaining and a bar counting down. With nothing armed it says <code>NONE</code> rather than drawing eight blank columns.</p>
 <p><strong>Hold ERASE and turn the encoder under a column to cancel that one.</strong> Letting ARM go still cancels everything &mdash; that is the panic gesture and stays a single press. This is the surgical version.</p>
 <p>The columns are sorted by how soon each lands and only move when something really overtakes something else, so the page stays readable while it counts.</p>
+<p><strong>Every macro shows up twice &mdash; once going out, once coming back.</strong> The names are short enough for a column head, so learn the ten of them: <code>DROP</code> and <code>UNDROP</code>, <code>BREAK</code> and <code>UNBREAK</code>, <code>HALF</code> or <code>DOUBLE</code> and their <code>RETURN</code>, <code>ROLL</code> and <code>UNROLL</code> for the ratchet ramp, and <code>THIN</code> for the CHANCE ramp. <code>THIN</code> is the one that does not match its name elsewhere in this guide: the ramp is called CHANCE where you arm it and <code>THIN</code> where it counts down, because it is thinning the bar out.</p>
 <hr>
 <h2 id="freeze">FREEZE &mdash; stop the machine evolving</h2>
 <p><strong>PAD MODE is FREEZE, and it has two depths.</strong></p>
@@ -145,7 +147,7 @@
 <tr><td><strong>Hold</strong> &mdash; momentary</td><td>all of that <em>plus</em> the LFOs. Everything parks until you let go</td></tr>
 </tbody></table>
 <p>That is the surface&rsquo;s standing rule &mdash; a tap latches, a hold is momentary &mdash; so there is nothing new to learn. Tap again to thaw.</p>
-<p><strong>A frozen instrument says so three times over</strong>, because one that did not would read as a broken one: PAD MODE lights, the page indicator gains <code>FRZ</code> (or <code>FRZ!</code> for the total hold), and the RANDOM and RHYTHM columns lose their bars in the same grey MOD already uses for &ldquo;this control cannot act right now&rdquo;. The values stay &mdash; they are what resumes.</p>
+<p><strong>A frozen instrument says so three times over</strong>, because one that did not would read as a broken one: PAD MODE lights, the page indicator gains <code>FRZ</code> (or <code>FRZ!</code> for the total hold), and the MELODY and RHYTHM columns lose their bars in the same grey MOD already uses for &ldquo;this control cannot act right now&rdquo;. The values stay &mdash; they are what resumes.</p>
 <p><strong>A pending reroll is held, not thrown away.</strong> Its tab stays dashed and it fires on the next wrap after you thaw.</p>
 <p><strong>Do not hold SHIFT and press PAD MODE.</strong> That combination never reaches the instrument at all: the USB daemon eats it for a mode of its own, where the pads program its internal sequence. It is a pre-existing trapdoor rather than anything FREEZE added, and the way out is to press PAD MODE without SHIFT until the pads behave again.</p>
 <hr>
@@ -170,7 +172,10 @@
 <tr><td>Mode buttons</td><td>exactly one lit, always — it cannot disagree with the display</td></tr>
 <tr><td>F1&ndash;F8</td><td>lit while that channel is muted — <strong>in CONTROL, lit while that column's switch is off its first position</strong>, and dark where there is no switch</td></tr>
 <tr><td>PLAY</td><td>lit while anything is running</td></tr>
-<tr><td>REC</td><td><strong>lit only when a take is actually possible</strong> — dark in STEP mode and while MOD is active</td></tr>
+<tr><td>SOLO</td><td>lit only while <strong>solo mode is latched</strong> — that is, while F1&ndash;F8 are solos rather than mutes</td></tr>
+<tr><td>PAD MODE</td><td>lit while the machine is <strong>frozen</strong>, either depth</td></tr>
+<tr><td>SCENE, PATTERN</td><td>lit on the <strong>engine family you are standing in</strong> — PATTERN on a sampler channel, SCENE on a synth</td></tr>
+<tr><td>REC</td><td><strong>lit when a take is possible</strong> — dark in STEP mode and while MOD is active. <strong>Red whenever an audio capture is being written</strong>, on any page: a file filling the disk always outranks whether an overdub is possible here</td></tr>
 <tr><td>GRID</td><td>lit always, and <strong>blinking</strong> while the selected channel is on an overridden kind</td></tr>
 <tr><td>NOTE REPEAT</td><td>lit only while the selected channel behaves as a voice</td></tr>
 <tr><td>SWING</td><td>lit while MOD is held or latched</td></tr>
@@ -192,7 +197,8 @@
 <p><strong>F1&ndash;F8 mute channels A&ndash;H</strong>, regardless of which channel is selected — F3 always mutes CLAP. Tap and it latches; hold past a quarter of a second and it is momentary, back on release. Same button, both gestures: momentary is how you play a gesture, latched is how you make a decision.</p>
 <p>The mute is on <strong>the mixer strip rather than the sequencer track</strong>, which is why it survives a snapshot, shows on the touchscreen mixer, and takes the channel's reverb and delay tail with it.</p>
 <p><strong>CONTROL is the one exception: there the F row carries the page's switches</strong> — a plugin's filter type, waveform or section on/off, one button per column, directly above the knob it belongs to. See <a href="deep-parameters.html">Deep parameter control</a>. <strong>Hold SHIFT and F1&ndash;F8 mute again inside CONTROL</strong>, and SOLO + F still solos there as everywhere else.</p>
-<p><strong>SOLO</strong> works the same two ways. <strong>ERASE + a Group button</strong> silences that channel — or, on a channel you have recorded onto, hands the pattern back to the generator.</p>
+<p><strong>SOLO works the same two ways, and the latched one changes what the F row is.</strong> Hold SOLO and tap an F button and that channel is soloed for as long as you hold — additive, so several at once. <strong>Tap SOLO and it latches:</strong> the whole F row stops being mutes and becomes solos until you tap it again. <strong>SOLO is lit only while that latch is on</strong>, which is the one thing on the panel telling you what the eight buttons under your hand currently mean, and while the row means solo it lights the soloed channels rather than the muted ones.</p>
+<p><strong>ERASE + a Group button</strong> silences that channel — or, on a channel you have recorded onto, hands the pattern back to the generator.</p>
 <hr>
 <h2 id="transport">Transport</h2>
 <p><strong>Play</strong> starts or stops all eight channels together. The decision is taken once and applied to all eight, so they cannot drift into opposite states. <strong>Restart</strong> jumps every playhead to step 0 without stopping — for pulling channels back onto the one after a length change has phased them apart.</p>
@@ -214,7 +220,7 @@
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="generating-patterns.html">Generating patterns</a> — what HITS, CHANCE, MELODY and RHYTHM actually do</li>
-<li><a href="playing-and-recording.html">Playing and recording</a> — the pad colours in full</li>
+<li><a href="playing-and-recording.html#pad-colours">Playing and recording</a> — the pad colours in full</li>
 <li><a href="modulation.html">Modulation</a> — what the <code>~</code> and the dashed bar mean</li>
 </ul>
 </article>

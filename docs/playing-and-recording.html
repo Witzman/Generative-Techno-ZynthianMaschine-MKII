@@ -72,6 +72,7 @@
 <h2 id="what-it-is">What it is</h2>
 <p>In <strong>CONTROL, ALL, MIXER and FILTER</strong> the sixteen pads play the selected channel. On a voice they are notes. On a drum every pad triggers that channel's own sound, because a drum channel <em>is</em> one sound — hearing CLAP while playing KICK would be the silent-channel confusion in a new costume.</p>
 <p>In <strong>STEP</strong> the pads are the step editor instead. A tap toggles that step, and the velocity of the tap becomes the step's velocity, so accents are played in rather than dialled. Step 0 is the top-left pad; the grid reads left to right, top to bottom.</p>
+<p><strong>Hold ERASE and a pad deletes that step</strong> rather than toggling it. On a step that is already empty it does nothing at all &mdash; the difference matters when you are clearing a run of pads by feel and do not want the empty ones switching on behind your hand.</p>
 <hr>
 <h2 id="try-it">Try it</h2>
 <ol>
@@ -105,15 +106,26 @@
 <p>It cannot collide with overdub, which is <em>bare REC held</em>. That is also why it is a chord rather than a long press: a long press of REC already <em>is</em> the overdub hold.</p>
 <p><strong>REC&rsquo;s light tells you which one you are in.</strong> Dim when a take is possible, full while you hold it for an overdub, and <strong>red while a recording is being written</strong> &mdash; including when you have moved to a page where overdub is not possible, so a running capture can never be invisible.</p>
 <hr>
+<h2 id="pad-colours">The pad colours, in full</h2>
+<p>Nothing on the pads is decorative. Without a modifier held they are the pattern of the selected channel, in that channel&rsquo;s own colour &mdash; warm for the drums, cool for the voices, the same colour as its Group button.</p>
+<table><thead><tr><th>What you see</th><th>What it is</th></tr></thead><tbody>
+<tr><td>the channel&rsquo;s colour, full</td><td>a step that fires</td></tr>
+<tr><td>the channel&rsquo;s colour, barely lit</td><td>a step that is empty</td></tr>
+<tr><td>dark</td><td>past the end of the pattern &mdash; this is how you read LENGTH off the grid</td></tr>
+<tr><td>white, moving</td><td>the playhead</td></tr>
+<tr><td><strong>amber</strong></td><td>a step you played in yourself</td></tr>
+</tbody></table>
+<p>Every modifier that claims the pads replaces this picture for as long as it is held, and hands it straight back: SHIFT shows each step&rsquo;s odds, MOD the rates and shapes, ARM the macros and the countdown, MUTE the eight channels, NAVIGATE the phrase. Each is written up where that gesture is.</p>
+<hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
 <p><strong>You cannot record in STEP mode</strong> — there the pads belong to the step editor — <strong>and you cannot record while MOD is active</strong>, where they pick a modulator's rate and shape.</p>
-<p>In both cases <strong>the REC button is unlit</strong>. A lit REC would be promising a take it cannot make, so it goes dark rather than letting you play a phrase into nothing and wonder why it vanished.</p>
+<p>In both cases <strong>the REC button is unlit</strong> &mdash; unless an audio capture is running, which outranks everything and keeps it red. A lit REC would otherwise be promising a take it cannot make, so it goes dark rather than letting you play a phrase into nothing and wonder why it vanished.</p>
 <hr>
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="generating-patterns.html">Generating patterns</a> — what you are playing over</li>
 <li><a href="modulation.html">Modulation</a> — why nothing MOD does can touch a recorded take</li>
-<li><a href="the-surface.html">The surface</a> — the pad colours in full, and what to check when it goes quiet</li>
+<li><a href="the-surface.html">The surface</a> — every button and light, and what to check when it goes quiet</li>
 </ul>
 </article>
 </main>

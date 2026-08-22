@@ -121,6 +121,14 @@ install -m 0644 system/maschine-clock.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now maschine-mk2 maschine-web maschine-clock</code></pre>
 <blockquote><p><strong>If you cloned anywhere other than <code>/root/Generative-Techno-ZynthianMaschine-MKII</code>,</strong> edit <code>ExecStart</code> and <code>WorkingDirectory</code> in <code>maschine-mk2.service</code>, and <code>--directory</code> in <code>maschine-web.service</code>. <code>install.sh</code> rewrites these for you; by hand it is on you.</p></blockquote>
+<h3 id="step-5b--order-the-ui-after-the-daemon">Step 5b — Order the UI after the daemon</h3>
+<p><strong>What.</strong> Drops one file into <code>zynthian.service.d/</code> so Zynthian's UI always starts after the Maschine daemon. <strong>Why.</strong> Start the daemon alone once the UI is already up and its MIDI port re-registers on a <em>new</em> router slot while the driver stays bound to the dead one — the rig goes silent with no error in any log, which is the worst failure this instrument has. This makes the boot order structural instead of something you have to remember. It is a drop-in rather than an edit to <code>zynthian.service</code>, so a ZynthianOS update leaves it alone and there is nothing to re-run afterwards. <strong>How to confirm.</strong> <code>After=</code> lists the daemon.</p>
+<pre><code class="language-bash">install -m 0644 -D system/zynthian-maschine-order.conf \
+        /etc/systemd/system/zynthian.service.d/10-maschine-order.conf
+systemctl daemon-reload
+systemctl show -p After zynthian.service | tr ' ' '\n' | grep maschine
+# → maschine-mk2.service</code></pre>
+<p>It uses <code>Wants=</code> and not <code>Requires=</code> on purpose: unplugging the MK2 stops the daemon, and <code>Requires=</code> would take the whole instrument down with it. <strong>It does not cover a hand restart</strong> — restarting the daemon on its own, after boot, still means restarting the UI after it, in that order.</p>
 <h3 id="step-6--let-a2jmidid-export-software-clients">Step 6 — Let <code>a2jmidid</code> export software clients</h3>
 <p><strong>What.</strong> Makes the daemon's ALSA sequencer port visible in JACK. <strong>Why.</strong> Without a JACK port, step 4's script has nothing to connect or alias. <strong>How to confirm.</strong> The port appears.</p>
 <pre><code class="language-bash">jack_lsp | grep "Pads MIDI"
@@ -188,12 +196,21 @@ systemctl restart zynthian</code></pre>
 <p><strong>What.</strong> Opens Snapshots, goes <strong>into</strong> bank <code>000</code>, taps <code>017-generative-techno</code>. <strong>Why.</strong> Needed only if this Pi already had a session, whose <code>last_state.zss</code> takes priority over the default. Loading takes about fifteen seconds: eight engines start, sixteen plugin hosts come up, and the driver re-reads its parameters out of the sequencer. <strong>How to confirm.</strong> Eight mixer strips plus main, both tab rows drawn.</p>
 <blockquote><p><strong>Never save from webconf's Snapshots page.</strong> Its <strong>Name:</strong> field plus the checkmark <strong>renames the selected bank</strong> — it has destroyed bank <code>000</code> here once. Loading from webconf is safe; saving from it is not.</p></blockquote>
 <h3 id="step-18--the-genre-pack">Step 18 — The genre pack</h3>
-<p><strong>What.</strong> Places fifty more snapshots, <code>031</code>–<code>080</code>, in the same bank. <strong>Why.</strong> They are fixed arrangements to start from — ten each of house, deep house, minimal, dub and trance — and unlike the factory snapshot they are <em>optional</em>: the instrument is complete without them. They are <strong>not</strong> copied over <code>default.zss</code>, because the factory snapshot is what a fresh Pi should boot into. <strong>How to confirm.</strong> Fifty files listed under <code>000/</code>.</p>
+<p><strong>What.</strong> Places fifty-one more snapshots — <code>031</code>–<code>080</code> and <code>101</code> — in the same bank. <strong>Why.</strong> They are fixed arrangements to start from — ten each of house, deep house, minimal, dub and trance — and unlike the factory snapshot they are <em>optional</em>: the instrument is complete without them. They are <strong>not</strong> copied over <code>default.zss</code>, because the factory snapshot is what a fresh Pi should boot into. <strong>How to confirm.</strong> Fifty-one files listed under <code>000/</code>.</p>
 <pre><code class="language-bash">install -m 0644 snapshot/genre-pack/*.zss \
         /zynthian/zynthian-my-data/snapshots/000/
-find /zynthian/zynthian-my-data/snapshots/000 -name '0[3-8][0-9]-*.zss' | wc -l
-# → 50</code></pre>
+find /zynthian/zynthian-my-data/snapshots/000 -name '0[3-7][0-9]-*.zss' \
+     -o -name '080-*.zss' -o -name '101-*.zss' | wc -l
+# → 51</code></pre>
 <p><code>bootstrap.sh</code> does this for you; this step is for a hand install. Every voice in the pack arrives at <code>LOCK</code> with no modulation, so a preset plays the same bar until you turn something.</p>
+<h3 id="step-19--the-drone-and-ambient-pack">Step 19 — The drone and ambient pack</h3>
+<p><strong>What.</strong> Places twenty more snapshots, <code>081</code>–<code>100</code>, in the same bank. <strong>Why.</strong> They are the opposite instrument — almost no rhythm, twelve slow modulators each — and like the genre pack they are optional. <strong>How to confirm.</strong> Twenty files listed under <code>000/</code>.</p>
+<pre><code class="language-bash">install -m 0644 snapshot/drone-ambient/*.zss \
+        /zynthian/zynthian-my-data/snapshots/000/
+find /zynthian/zynthian-my-data/snapshots/000 -name '08[1-9]-*.zss' \
+     -o -name '09[0-9]-*.zss' -o -name '100-*.zss' | wc -l
+# → 20</code></pre>
+<p><code>bootstrap.sh</code> does this too. Several of these carry a saved kind override, so a channel that is normally a drum plays as a voice: expect <strong>GRID blinking</strong> and <code>VOX</code> on the page indicator. That is the state, not a fault.</p>
 <hr>
 <h2 id="notes">Notes</h2>
 <h3 id="you-do-not-need-a-touchscreen">You do not need a touchscreen</h3>
@@ -215,7 +232,7 @@ INFO:zynthian_ctrldev_manager.load_driver: Loaded ctrldev driver
 <h2 id="verify">Verify</h2>
 <pre><code class="language-bash">bash tools/check-prereqs.sh; echo "exit=$?"     # → exit=0 once loaded
 jack_lsp | grep -c TAP                          # → 64
-cd ctrldev &amp;&amp; python3 -m unittest discover -s tests -q   # → Ran 271 tests … OK</code></pre>
+cd ctrldev &amp;&amp; python3 -m unittest discover -s tests -q   # → Ran 752 tests … OK</code></pre>
 <p>The unit tests run anywhere — no Pi, no Maschine. They are the only automated proof this project has: the driver cannot be imported off the Pi, so everything generative and presentational lives in <code>techno_lib.py</code>, which has no Zynthian imports and is tested.</p>
 <hr>
 <h2 id="when-it-does-not-work">When it does not work</h2>

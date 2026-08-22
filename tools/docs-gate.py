@@ -64,7 +64,13 @@ BASELINE = {
     # +35, 2026-08-20: the index entry for The surface names the phrase clock
     # and ARM. The page is the map of what the instrument does, and a whole new
     # gesture family that is invisible from it is a capability nobody finds.
-    "02-features.html":            (478,  "2026-08-20"),
+    # +138, 2026-08-22: the documentation audit. This page still said the
+    # instrument had no audio recording, months after SHIFT + REC shipped,
+    # and it named none of the whole-machine gestures. It gains the audio
+    # line and a second section, Performing it, for ARM and FREEZE - a
+    # second section rather than two more entries, because What it does was
+    # then over the 300-word unit cap.
+    "02-features.html":            (616,  "2026-08-22"),
     # Section 3 was written 2026-08-14; this is its first measurement.
     # +617: MOD published, as three sections - binding one, steering and
     # clearing, and what it refuses. Split rather than waiving the unit cap.
@@ -87,7 +93,13 @@ BASELINE = {
     # so it silently assumed a Pi already running ZynthianOS and never said
     # where that came from. A pointer, not a copy of section 1's download
     # block - the image name and its checksum live in one place or they drift.
-    "04-manual-installation.html": (2245, "2026-08-16"),
+    # +380, 2026-08-22: the documentation audit. A hand install had no boot
+    # ordering at all - the zynthian.service.d drop-in was installed only by
+    # install.sh and appeared on no page - and the drone/ambient pack had no
+    # step, so a hand installer never got the twenty snapshots the guide
+    # describes. Also the published test count (271) and the genre-pack
+    # count and its verification glob, which counted 50 of 51 files.
+    "04-manual-installation.html": (2625, "2026-08-22"),
     "05-internals.html":           (1011, "2026-08-13"),
     # New 2026-08-16: the Modulation tutorial, first of eight. Its content
     # moves from Features and Playing, which keep their copies until they are
@@ -167,7 +179,10 @@ BASELINE = {
     # means now that it carries two facts. The red-while-recording rule is
     # here so a capture running on a page where overdub is impossible is
     # still visible.
-    "playing-and-recording.html":  (950, "2026-08-20"),
+    # +219, 2026-08-22: the documentation audit. The pad colour legend, which
+    # this page and The surface each said the other one carried, plus ERASE +
+    # pad in the step editor and the REC light while a capture runs.
+    "playing-and-recording.html":  (1169, "2026-08-22"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the
     # "known defect" published here was withdrawn - the buttons always
@@ -223,7 +238,14 @@ BASELINE = {
     # and it is genuinely silent rather than merely dark below about a third
     # of its range. A reader who meets that without warning will conclude the
     # instrument is broken.
-    "mixing-and-effects.html":     (1272, "2026-08-20"),
+    # +307, 2026-08-22: the documentation audit. Two false claims and one
+    # missing page ring. The master-insert section described a filter the
+    # SHIPPED factory snapshot does not contain - 017 leaves the Main chain
+    # empty, so MAIN is not built at all and the reader was sent to a page
+    # that does not exist. "Every page is one or the other" was false of
+    # STEP, which carries both shapes. And ALL's generated REV/DLY pages
+    # were undocumented.
+    "mixing-and-effects.html":     (1579, "2026-08-22"),
     # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
     # the button list. Same reason as above - it was 24 words under.
     # +163, 2026-08-19: the F row means switches in CONTROL. One row of the
@@ -247,7 +269,16 @@ BASELINE = {
     # those is a button. The SHIFT + PAD MODE trapdoor is here too: it is not
     # ours, it never reaches the instrument, and a player who trips it has no
     # other way to find out what happened.
-    "the-surface.html":            (2462, "2026-08-20"),
+    # +724, 2026-08-22: the documentation audit, and the biggest single move
+    # this file has taken. Five published statements were false against the
+    # code - the big encoder "does nothing else" (MOD makes it the depth
+    # knob, which modulation.html already said), the REC light while a
+    # capture runs, the drum CONTROL mock's dead columns (tune/decay/filtr,
+    # never cutoff/reso), FREEZE greying "RANDOM" (the column is MELODY),
+    # and the generated tab row being CONTROL-only. Four things were
+    # missing: the ARM picker's label, the ten PENDING tokens, latched solo
+    # mode with its LED, and three rows of the light table.
+    "the-surface.html":            (3186, "2026-08-22"),
     # +69, 2026-08-20: what the new gestures do NOT survive - the phrase count,
     # anything armed, and a modulator's one-shot flag - plus the one that cuts
     # the other way, that a set saved mid-drop saves those mutes because mixer

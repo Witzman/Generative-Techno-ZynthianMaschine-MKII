@@ -84,7 +84,7 @@
 </ol>
 <hr>
 <h2 id="how-it-works">How it works</h2>
-<p><strong>A spread page is one verb across eight channels.</strong> MIXER and FILTER are both spreads; CONTROL and STEP are the other shape, eight verbs on one channel. That is the whole grammar of the surface, and every page is one or the other.</p>
+<p><strong>A spread page is one verb across eight channels.</strong> MIXER and FILTER are spreads throughout; CONTROL is the other shape, eight verbs on one channel. That is the whole grammar of the surface, and every page is one or the other &mdash; <strong>STEP is the mode that holds both</strong>: its first page is eight verbs on the selected channel, and the pages after it are spreads. Page on with the arrows or the big encoder and you get <strong>SWING</strong> and <strong>CHANCE</strong> across all eight channels, and on a voice <strong>RHYTHM</strong> as well. That is where a voice&rsquo;s play chance lives, because its own STEP page has no room for it.</p>
 <p><strong>ROOT and SCALE wait for the bar</strong>, like everything else that changes what the pattern is. The rest of the globals land instantly.</p>
 <p><strong>Group button brightness tracks each channel's level</strong>, so the row shows the balance without reading anything — and the peak meters on the display run live.</p>
 <hr>
@@ -103,10 +103,12 @@
 <p><strong>Only one of DROP and BREAK can be armed at a time.</strong> They share one snapshot of the mutes, so arming either drops the other.</p>
 <hr>
 <h2 id="master-insert">The master insert &mdash; one filter across the whole mix</h2>
-<p><strong>The Main chain carries a filter, and ALL &rarr; MAIN reaches it.</strong> It sits between the mixer and the card, so it hears everything: all eight channels, their reverb and delay, the drop, the ramp, everything.</p>
-<p>It loads <strong>wide open and inaudible</strong>. That is deliberate rather than incidental &mdash; at the plugin&rsquo;s own factory settings the cutoff sits below the point where it stops passing audio at all, so the snapshot writes every one of its controls explicitly instead of trusting a default.</p>
+<p><strong>Put a filter on the Main chain and ALL &rarr; MAIN reaches it.</strong> It sits between the mixer and the card, so it hears everything: all eight channels, their reverb and delay, the drop, the ramp, everything.</p>
+<p><strong>The factory snapshot ships without it, deliberately.</strong> <code>017-generative-techno</code> leaves the Main chain empty, and with nothing there the MAIN page is not built at all &mdash; ALL&rsquo;s ring simply has one page fewer, rather than a page of dead columns. The repo also carries <code>018-generative-techno-main-insert</code>, which is the same snapshot with an MDA RezFilter in the Main chain; load that one, or add the plugin to the Main chain yourself from the touchscreen, and the page appears.</p>
+<p>In <code>018</code> it loads <strong>wide open and inaudible</strong>. That is deliberate rather than incidental &mdash; at the plugin&rsquo;s own factory settings the cutoff sits below the point where it stops passing audio at all, so the snapshot writes every one of its controls explicitly instead of trusting a default. A plugin you add by hand does not get that treatment, so check its cutoff before you decide the rig is broken.</p>
 <p><strong>If the instrument ever goes completely silent with every channel looking healthy, look here first</strong> and open the cutoff. It is the one control on the rig that can silence all eight channels at once, and below roughly a third of its range it is genuinely silent rather than just dark.</p>
 <p>One instance, not eight &mdash; which is why it is affordable at all. The per-channel reverb and delay sit on every chain, so an effect there costs eight times what it looks like.</p>
+<p><strong>The reverb and the delay have pages of their own on ALL, and they are built the same way.</strong> Beyond the four globals above, ALL&rsquo;s ring carries a generated page per shared effect &mdash; <code>REV</code> for the reverb, <code>DLY</code> for the delay, <code>MAIN</code> for the master insert when there is one &mdash; reaching every remaining port the plugin publishes, with the tab row carrying parameter names instead of channels. One turn moves that port on <strong>all eight chains at once</strong>, which is the only way a ganged effect can be steered from eight knobs.</p>
 <hr>
 <h2 id="effects-proven">The effects this is proven on</h2>
 <p><strong>The same insert pair sits on all eight chains, so an effect costs eight times what it looks like.</strong> That is where this Pi runs out of headroom &mdash; not on the synths. Every plugin below is in a shipped snapshot and has been measured running.</p>
