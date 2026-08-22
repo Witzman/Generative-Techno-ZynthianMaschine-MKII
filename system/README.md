@@ -11,14 +11,15 @@ Deployed configuration, taken off a working rig and verified by checksum.
 | `maschine-jack-connect.sh` | `/usr/local/bin/` | Waits for the daemon's `a2j` port and sets the alias `virtual:maschine.rs/Maschine MK2 Pads` on it. **It deliberately does not connect the port** — patched `zynautoconnect` whitelists it and assigns its own zmip slot, and a second connection from here was the cause of the duplicate-route fault that made every pad tap fire twice. |
 | `maschine-clock-bridge.py` | `/usr/local/bin/` | The clock bridge itself. |
 | `maschine-clock-connect.sh` | `/usr/local/bin/` | Wires the bridge's ports. |
+| `zynthian-maschine-order.conf` | `/etc/systemd/system/zynthian.service.d/10-maschine-order.conf` | Makes the boot order **structural**: `After=` plus `Wants=maschine-mk2.service` on Zynthian's own unit, as a drop-in rather than an edit, so a ZynthianOS update leaves it alone and nothing has to be re-run. `Wants=`, never `Requires=` — the udev rule stops the daemon on unplug, and `Requires=` would take the UI down with it. `PartOf=` was rejected from both ends for the same reason. **It does not cover a hand restart**: `systemctl restart maschine-mk2` on its own still needs the UI restarted after it, which is why the prose below and `tools/deploy-to-pi.sh` still matter. |
 | `maschine.json` | the daemon's working directory | Pad note offsets and encoder CC numbers, and **`"external_pad_leds": true`** — without it the daemon repaints pads on press and release in its own colour, and the first touch destroys the per-channel picture. |
 
 `tests/test-system-files.sh` is the automated check for everything in this
-table — 44 assertions, WSL only, no Pi and no hardware:
+table — 53 assertions (measured 2026-08-22), WSL only, no Pi and no hardware:
 
     bash system/tests/test-system-files.sh
 
-`tests/test-dry-run.sh` is the other half — 63 assertions on what
+`tests/test-dry-run.sh` is the other half — 66 assertions (measured 2026-08-22) on what
 `install.sh --dry-run` and `tools/deploy-to-pi.sh --dry-run` **print**:
 
     bash system/tests/test-dry-run.sh
@@ -32,7 +33,7 @@ names `maschine.json`, a unit or the udev rule.
 `test-system-files.sh` parses the helpers, pins the udev rule and
 `maschine.json` field by field,
 checks the unit ordering, confirms `install.sh` still enables exactly these
-three units and that its path rewrites leave no `/root` path behind, and runs
+three units, that it installs the ordering drop-in, and that its path rewrites leave no `/root` path behind, and runs
 `systemd-analyze verify` on all three units inside a `mktemp -d` fake root with
 every `Exec*=` binary stubbed. Where `systemd-analyze` is absent that group
 **skips** rather than passing.

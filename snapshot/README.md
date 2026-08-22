@@ -1,7 +1,8 @@
 # Snapshots
 
 Three things live here: the **factory snapshot**, which is the instrument's own
-configuration; the **genre pack**, fifty fixed arrangements built from it; and
+configuration — plus `018`, the same snapshot with a master filter on the Main
+chain; the **genre pack**, fifty-one fixed arrangements built from it; and
 the **drone and ambient pack**, twenty slow pieces that are the opposite
 instrument — almost no pattern, and everything moving.
 
@@ -10,7 +11,9 @@ instrument — almost no pattern, and everything moving.
 # The factory snapshot
 
 **File:** [`017-generative-techno.zss`](017-generative-techno.zss) · 27,015 bytes ·
-md5 `0becfb52db2c195143956a6389b9f4dd`
+md5 `d10545344a988b8e9b0700ce4dc7f5be` (measured 2026-08-22; the byte count did
+not change when the tempo moved to 125, so the old md5 `0becfb52…` looked
+plausible beside it for a day)
 
 This one file *is* the instrument's configuration: eight chains on MIDI channels
 1-8, sixteen post-fader insert plugins with their dry and wet levels, the
@@ -32,34 +35,6 @@ Snapshots **Name:** field renames the selected *bank* instead of saving.
 ---
 
 ## What it contains
-
-## `101-dub-mutated` — added 2026-08-21
-
-The one preset in the pack whose three voices are **all the same engine**:
-`JV/Mutated Instruments` on chains 6, 7 and 8. Everything else in the pack
-mixes three different synths; this one leans on one engine's own character and
-separates the voices by register, octave and gate instead.
-
-| | |
-|---|---|
-| Tempo | **120 BPM — chosen because it is EXACT** (see the tempo note below). Of the dub entries only this one and `050` sit on a zero-error tempo |
-| Key | root 10, scale 5 — B♭ pentatonic, the only dub entry in that pair |
-| Drums | TR808 across all five, sparse: kick four-on-floor, snare on 4 and 12, one clap on 12, offbeat hats |
-| Voices | sub on the one and the and (`rhythm_reg` 16705), the stab strictly offbeat (17476), one sustained pad per bar (1, gate 800) |
-| Effects | **`JV/Tal-Dub-3` → `JV/Tal-Reverb-III`** — the dub delay proper into a plate. A pair used nowhere else: `073` is Tal-Dub-3 into Tal-Reverb-II, `076` is Modulay into Tal-Reverb-III |
-
-**Why those effects.** The insert pair sits on **all eight chains**, so an
-effect costs eight times what it looks like — Tal-Reverb-III is the reverb this
-project moved to when Roboverb was measured unusable at eight instances, and
-Tal-Dub-3 is already proven at eight in `073` and `074`. Neither is on the
-banned list.
-
-**Measured on the rig, 2026-08-21**: loads with 8 × Tal-Dub-3 and
-8 × Tal-Reverb-III instantiated, **JACK DSP mean 23.9%, p95 24.1%, zero
-xruns** over 60 s with the transport running — level with the factory
-snapshot's own 23.5-25.4% baseline. `JV/Mutated Instruments` is the zynMI
-engine and does **not** appear as a `jalv` process, so do not look for it
-there; `053-dub-rimshot` behaves the same way.
 
 **125 BPM is a deliberate choice, not a round number.** zynseq truncates the
 length of one sequencer clock to a whole audio frame with no accumulator, so at
@@ -131,11 +106,35 @@ channel's insert pair onto the other seven so sixteen instances are not placed b
 hand.
 
 
+
+## `018-generative-techno-main-insert` — the same snapshot with a master filter
+
+**File:** [`018-generative-techno-main-insert.zss`](018-generative-techno-main-insert.zss)
+· 55,109 bytes · md5 `df1c6ebb86910b670d3190911dfbf7da` (measured 2026-08-22)
+
+`017` with one thing added: **`JV/MDA RezFilter` in slot 1 of the Main chain**.
+Nothing else differs — the two files' only unequal top-level keys are `chains`
+and `zs3`, and both differences are that plugin and its saved controls.
+
+**Why it is a separate file rather than the factory snapshot.** The insert sits
+between the mixer and the card, so it hears all eight channels at once and can
+silence the whole instrument from one knob. It loads wide open here because the
+snapshot writes every one of its controls explicitly; at the plugin's own
+defaults the cutoff sits below the point where it passes audio at all. Shipping
+that as the default a fresh Pi boots into means one bad control write is a dead
+rig with a healthy-looking surface.
+
+**No installer places it.** `bootstrap.sh` places `017` as the bank-`000` entry
+and as `default.zss`; this one is loaded by hand from the touchscreen when you
+want the master filter. **Without it the driver builds no MAIN page** — `ALL`'s
+ring is one page shorter rather than showing dead columns — which is what the
+guide's mixing page now says.
+
 ---
 
 # The genre pack
 
-**Fifty snapshots**, `031`–`080`, in [`genre-pack/`](genre-pack/), built from the
+**Fifty-one snapshots**, `031`–`080` and `101`, in [`genre-pack/`](genre-pack/), built from the
 factory snapshot by `tools/build-genre-snapshots.py` out of
 [`genre-pack-manifest.json`](genre-pack-manifest.json). Regenerating them is one
 command, so the manifest — not the `.zss` files — is the thing to edit:
@@ -160,8 +159,8 @@ about evolution, and these are the starting places.
 | `061`–`080` | twenty more | a different effect pair on every one, no pair repeated |
 
 Ten each of **house**, **deep house**, **minimal**, **dub** and **trance**, 118
-to 140 BPM. 21 distinct synth engines, 24 distinct drum kits, 20 distinct effect
-pairs.
+to 140 BPM, plus `101` as an eleventh dub. 21 distinct synth engines, 24
+distinct drum kits, 21 distinct effect pairs.
 
 **The five drum channels keep their roles.** A is always the kick, E always the
 open hat; what changes is the kit — TR909 for house, TR808 and CR78 for dub,
@@ -191,8 +190,9 @@ in `drum-kit-notes.json` under `borrowed`.
 
 ## Installing them
 
-`install.sh` and `bootstrap.sh` place the whole pack in bank `000` beside the
-factory snapshot. By hand:
+`bootstrap.sh` places the whole pack in bank `000` beside the factory snapshot.
+`install.sh` places **no snapshots at all** — it installs the driver, the daemon
+and the system files and nothing else. By hand:
 
 ```bash
 scp snapshot/genre-pack/*.zss \
@@ -201,7 +201,7 @@ scp snapshot/genre-pack/*.zss \
 
 ## How the pack was verified
 
-**Every one of the fifty was checked structurally** — the RIFF re-parses with no
+**Every one of the fifty-one was checked structurally** — the RIFF re-parses with no
 trailing bytes, all eight patterns present, every drum step list matching the
 manifest, every drum note matching that kit's scanned map, every voice's steps
 matching its `rhythm_reg`, evolution off, `mods` and `stash` empty, the engines
@@ -227,10 +227,39 @@ is running gets the copy overwritten by the outgoing state — the rig then come
 back on the OLD state and every check passes against the wrong file. Two of
 these three initially "passed" that way and proved nothing.
 
-**What that does not prove:** that all fifty sound good. Structure is verified,
+**What that does not prove:** that all fifty-one sound good. Structure is verified,
 taste is not. The same caveat as the factory snapshot applies, for the same
 reason — loading without error is not playing the right notes.
 
+
+## `101-dub-mutated` — added 2026-08-21
+
+The one preset in the pack whose three voices are **all the same engine**:
+`JV/Mutated Instruments` on chains 6, 7 and 8. Everything else in the pack
+mixes three different synths; this one leans on one engine's own character and
+separates the voices by register, octave and gate instead.
+
+| | |
+|---|---|
+| Tempo | **120 BPM — chosen because it is EXACT** (see the tempo note in the factory
+snapshot section above). Of the dub entries only this one and `050` sit on a zero-error tempo |
+| Key | root 10, scale 5 — B♭ pentatonic, the only dub entry in that pair |
+| Drums | TR808 across all five, sparse: kick four-on-floor, snare on 4 and 12, one clap on 12, offbeat hats |
+| Voices | sub on the one and the and (`rhythm_reg` 16705), the stab strictly offbeat (17476), one sustained pad per bar (1, gate 800) |
+| Effects | **`JV/Tal-Dub-3` → `JV/Tal-Reverb-III`** — the dub delay proper into a plate. A pair used nowhere else: `073` is Tal-Dub-3 into Tal-Reverb-II, `076` is Modulay into Tal-Reverb-III |
+
+**Why those effects.** The insert pair sits on **all eight chains**, so an
+effect costs eight times what it looks like — Tal-Reverb-III is the reverb this
+project moved to when Roboverb was measured unusable at eight instances, and
+Tal-Dub-3 is already proven at eight in `073` and `074`. Neither is on the
+banned list.
+
+**Measured on the rig, 2026-08-21**: loads with 8 × Tal-Dub-3 and
+8 × Tal-Reverb-III instantiated, **JACK DSP mean 23.9%, p95 24.1%, zero
+xruns** over 60 s with the transport running — level with the factory
+snapshot's own 23.5-25.4% baseline. `JV/Mutated Instruments` is the zynMI
+engine and does **not** appear as a `jalv` process, so do not look for it
+there; `053-dub-rimshot` behaves the same way.
 
 ---
 
