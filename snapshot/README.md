@@ -9,6 +9,30 @@ instrument — almost no pattern, and everything moving.
 
 ---
 
+## Every snapshot names itself — check it after any build
+
+`last_snapshot_fpath` inside a `.zss` is what Zynthian shows and what it stamps
+into audio-capture filenames **when the snapshot is restored as
+`last_state.zss`** — the boot path. Loading from the touchscreen uses the real
+path instead, which is why a wrong value here hides for months.
+
+Every snapshot built from another one inherits it. On 2026-08-22 that meant
+**72 of the 73 files here claimed to be `017-generative-techno`**, including the
+factory snapshot `018` and all of `101`, the genre pack and the drone pack. The
+rig booted playing one snapshot and naming another, and captures were filed
+under the wrong name.
+
+```bash
+tools/fix-snapshot-identity.py --check snapshot/*.zss snapshot/*/*.zss
+```
+
+**Must print `73 of 73 name themselves`.** Both generators stamp it now
+(`build-genre-snapshots.py`, `add-main-insert.py`), so this is a guard against
+the next path that copies a snapshot, not a chore.
+`notes/findings/2026-08-22-every-snapshot-claimed-to-be-017.md`
+
+---
+
 # The factory snapshot
 
 **File:** [`017-generative-techno.zss`](017-generative-techno.zss) · 27,015 bytes ·

@@ -34,6 +34,7 @@ Usage:
 """
 
 import json
+import os
 import sys
 
 ENGINE = "JV/MDA RezFilter"
@@ -142,6 +143,13 @@ def main(argv):
         raise SystemExit(__doc__)
     snapshot = json.load(open(argv[1]))
     snapshot, pid = add_main_insert(snapshot)
+    # The output is a DIFFERENT snapshot from the input, so it must not keep
+    # the input's identity. 018 shipped for two days claiming to be 017, which
+    # Zynthian believes on every boot-from-last_state and writes into every
+    # audio capture filename. See tools/fix-snapshot-identity.py.
+    snapshot["last_snapshot_fpath"] = (
+        "/zynthian/zynthian-my-data/snapshots/000/"
+        + os.path.basename(argv[2]))
     with open(argv[2], "w") as handle:
         json.dump(snapshot, handle, indent=2)
     print(f"wrote {argv[2]}: {ENGINE} on chain 0 as processor {pid}")

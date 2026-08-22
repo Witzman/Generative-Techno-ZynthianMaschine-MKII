@@ -3,7 +3,7 @@
     "file": "031-house-classic",
     "title": "House Classic",
     "genre": "house",
-    "tempo": 124,
+    "tempo": 125,
     "root": 0,
     "scale": 0,
     "drums": {
@@ -107,7 +107,7 @@
     "file": "032-house-jackin",
     "title": "House Jackin",
     "genre": "house",
-    "tempo": 126,
+    "tempo": 125,
     "root": 7,
     "scale": 0,
     "drums": {
@@ -851,7 +851,7 @@
     "file": "039-deep-rhodes",
     "title": "Deep Rhodes",
     "genre": "deep-house",
-    "tempo": 121,
+    "tempo": 120,
     "root": 0,
     "scale": 2,
     "drums": {
@@ -952,7 +952,7 @@
     "file": "040-deep-sub",
     "title": "Deep Sub",
     "genre": "deep-house",
-    "tempo": 119,
+    "tempo": 120,
     "root": 3,
     "scale": 0,
     "drums": {
@@ -1545,7 +1545,7 @@
     "file": "046-minimal-dry",
     "title": "Minimal Dry",
     "genre": "minimal",
-    "tempo": 126,
+    "tempo": 125,
     "root": 5,
     "scale": 0,
     "drums": {
@@ -2036,7 +2036,7 @@
     "file": "051-dub-basicchannel",
     "title": "Dub Basic",
     "genre": "dub",
-    "tempo": 124,
+    "tempo": 125,
     "root": 5,
     "scale": 0,
     "drums": {
@@ -2227,7 +2227,7 @@
     "file": "053-dub-rimshot",
     "title": "Dub Rimshot",
     "genre": "dub",
-    "tempo": 121,
+    "tempo": 120,
     "root": 2,
     "scale": 5,
     "drums": {
@@ -3130,7 +3130,7 @@
     "file": "061-fx-tape-chorus",
     "title": "FX Tape Chorus",
     "genre": "house",
-    "tempo": 124,
+    "tempo": 125,
     "root": 0,
     "scale": 0,
     "drums": {
@@ -3337,7 +3337,7 @@
     "file": "063-fx-regrader-chorus",
     "title": "FX Regrade",
     "genre": "house",
-    "tempo": 126,
+    "tempo": 125,
     "root": 2,
     "scale": 2,
     "drums": {
@@ -3650,7 +3650,7 @@
     "file": "066-fx-phaser-roomy",
     "title": "FX Phase Room",
     "genre": "deep-house",
-    "tempo": 119,
+    "tempo": 120,
     "root": 5,
     "scale": 2,
     "drums": {
@@ -3750,7 +3750,7 @@
     "file": "067-fx-echo-shiro",
     "title": "Echo Room",
     "genre": "deep-house",
-    "tempo": 121,
+    "tempo": 120,
     "root": 0,
     "scale": 2,
     "drums": {
@@ -4531,7 +4531,7 @@
     "file": "075-fx-echo-shiro-dub",
     "title": "FX Dub Shimmer",
     "genre": "dub",
-    "tempo": 124,
+    "tempo": 125,
     "root": 5,
     "scale": 0,
     "drums": {
@@ -4629,7 +4629,7 @@
     "file": "076-fx-modulay-plate",
     "title": "FX Modulay",
     "genre": "dub",
-    "tempo": 121,
+    "tempo": 120,
     "root": 10,
     "scale": 0,
     "drums": {

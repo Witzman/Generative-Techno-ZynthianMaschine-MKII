@@ -300,6 +300,15 @@ def main():
     for entry in manifest:
         d = build_one(base, entry, kit_notes)
         path = os.path.join(args.out, entry["file"] + ".zss")
+        # A snapshot must say it is ITSELF. Every field here is inherited from
+        # the base, and `last_snapshot_fpath` inherited unchanged is how 72 of
+        # 73 shipped snapshots came to claim they were 017: Zynthian reads that
+        # field - not the filename - when it restores last_state.zss, which is
+        # the boot path, so the rig came up playing one snapshot and naming
+        # another. It also lands in every audio capture's filename.
+        # See tools/fix-snapshot-identity.py, which repaired the shipped files.
+        d["last_snapshot_fpath"] = (
+            "/zynthian/zynthian-my-data/snapshots/000/" + entry["file"] + ".zss")
         with open(path, "w") as fh:
             json.dump(d, fh, indent=2)
         written += 1

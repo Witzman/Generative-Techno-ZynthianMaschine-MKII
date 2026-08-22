@@ -1816,7 +1816,7 @@
   "file": "088-drone-palesun",
   "title": "Pale Sun",
   "genre": "drone",
-  "tempo": 76,
+  "tempo": 75,
   "root": 9,
   "scale": 5,
   "drums": {
@@ -3042,7 +3042,7 @@
   "file": "093-ambient-tidal",
   "title": "Tidal",
   "genre": "ambient",
-  "tempo": 76,
+  "tempo": 75,
   "root": 5,
   "scale": 2,
   "drums": {
