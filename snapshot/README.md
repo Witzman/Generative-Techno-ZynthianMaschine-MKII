@@ -45,8 +45,15 @@ and a MIDI clock out to match. 125 is one BPM away and exact. Changed with
 `tools/set-snapshot-tempo.py`, which writes **both** places a `.zss` holds the
 tempo — the riff's `vers` block and the driver's own `ctrldev_state/globals/bpm`
 — and refuses if a round trip does not reproduce the original byte for byte.
-The genre pack's own tempi are unchanged and mostly inexact; that is a separate
-open question, since their values are genre identity rather than defaults.
+**The pack took the middle path on 2026-08-22.** Fifteen snapshots whose
+nearest exact tempo was within **one BPM** were moved there — four 124s and
+three 126s to 125, four 121s and two 119s to 120, and two 76s to 75. One BPM
+does not change what any of them is: a 124 house track and a 125 house track are
+the same track. Everything further away was left alone on purpose, because at
+that distance the tempo IS the identity — `057-trance-acid` stays at 137 and
+4,487 ppm, the worst in the pack, since its exact neighbours are 125 and 150 and
+neither is acid trance. Exact snapshots went from 13 to 28 of 73; the remaining
+45 are inexact by design and the reason is written here rather than rediscovered.
 
 Read directly out of the file, not from intent. 125 BPM, sixteen steps at `1/16`
 unless stated.
