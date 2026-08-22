@@ -171,6 +171,59 @@ class TestLedCache(unittest.TestCase):
         self.assertTrue(cache.changed("pad3", (0xFF0000, 1.0)))
 
 
+class TestLedCacheTtl(unittest.TestCase):
+    """A suppressed write must eventually be retried.
+
+    The cache is what stops the driver flooding the daemon, and until
+    2026-08-22 it was also what made a LOST write permanent: the pad LED went
+    one way, the cache believed it had already said so, and nothing ever sent
+    it again. Measured on the rig - a pad read dark for minutes while the
+    driver's own picture said lit. A TTL on the key turns that from permanent
+    into at most one refresh period."""
+
+    def setUp(self):
+        self.clock = [100.0]
+        self.cache = lib.led_cache(now=lambda: self.clock[0])
+
+    def test_no_ttl_still_suppresses_forever(self):
+        # Every existing caller passes no TTL and must be unaffected.
+        self.cache.changed("disp0", "x")
+        self.clock[0] += 3600.0
+        self.assertFalse(self.cache.changed("disp0", "x"))
+
+    def test_inside_the_ttl_it_suppresses(self):
+        self.cache.changed("pad3", (1, 1.0), ttl=3.0)
+        self.clock[0] += 2.9
+        self.assertFalse(self.cache.changed("pad3", (1, 1.0), ttl=3.0))
+
+    def test_past_the_ttl_it_resends_the_same_value(self):
+        self.cache.changed("pad3", (1, 1.0), ttl=3.0)
+        self.clock[0] += 3.1
+        self.assertTrue(self.cache.changed("pad3", (1, 1.0), ttl=3.0))
+
+    def test_a_resend_restarts_the_clock(self):
+        self.cache.changed("pad3", (1, 1.0), ttl=3.0)
+        self.clock[0] += 3.1
+        self.cache.changed("pad3", (1, 1.0), ttl=3.0)
+        self.clock[0] += 1.0
+        self.assertFalse(self.cache.changed("pad3", (1, 1.0), ttl=3.0))
+
+    def test_a_real_change_restarts_the_clock_too(self):
+        self.cache.changed("pad3", (1, 1.0), ttl=3.0)
+        self.clock[0] += 2.0
+        self.assertTrue(self.cache.changed("pad3", (1, 0.1), ttl=3.0))
+        self.clock[0] += 2.0
+        self.assertFalse(self.cache.changed("pad3", (1, 0.1), ttl=3.0))
+
+    def test_keys_expire_independently(self):
+        self.cache.changed("pad3", (1, 1.0), ttl=3.0)
+        self.clock[0] += 2.0
+        self.cache.changed("pad4", (1, 1.0), ttl=3.0)
+        self.clock[0] += 1.5
+        self.assertTrue(self.cache.changed("pad3", (1, 1.0), ttl=3.0))
+        self.assertFalse(self.cache.changed("pad4", (1, 1.0), ttl=3.0))
+
+
 class TestBuildPatternSteps(unittest.TestCase):
     """Pattern length is independent of division, so an explicit step count
     has to work for lengths a division would never produce."""

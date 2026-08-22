@@ -369,6 +369,20 @@ PLAYHEAD_POLL_S = 0.033        # ~30 Hz, 4x oversampled at 120 BPM
 # second. See the poll loop: this is the backstop for a base the driver never
 # learned it had lost.
 NOTE_BASE_HEARTBEAT_TICKS = 30
+# A pad LED write that the daemon never applied used to stay wrong forever:
+# the cache had recorded it as sent, so nothing resent it. Measured on the rig
+# 2026-08-22 - a pad reading dark for minutes while the driver's own picture
+# said lit. Two halves fix it: the cache lets a pad's value go out again once
+# this many seconds have passed, and the poll thread repaints the grid on the
+# tick count below so there is something to carry it.
+#
+# Worst case is sixteen writes in one tick every three seconds - about five a
+# second averaged, and the same size burst an ordinary pad tap already causes
+# through _render_pads. That is three orders below the ~480/s that wedged the
+# controller off the USB bus on 2026-08-20; what killed it was a SUSTAINED
+# 30 Hz full-grid repaint, not a burst.
+PAD_LED_REFRESH_S = 3.0
+PAD_RESYNC_TICKS = 90
 
 # The same thread re-reads the group volumes every Nth tick, because nothing
 # signals a zctrl change: zynthian_controller emits no zynsigman signal, so a
@@ -6083,6 +6097,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # the next such overlay inherits it: moving a playhead
                     # across pads that no longer stand for steps would paint
                     # white over whatever they DO stand for, once per tick.
+                    if tick % PAD_RESYNC_TICKS == 0:
+                        # The pads are the one surface with no periodic
+                        # writer - deliberately, because a full repaint at the
+                        # poll rate is what wedged the controller. This is the
+                        # same repaint at 1/90th of that rate, and it exists
+                        # so PAD_LED_REFRESH_S has something to ride on: a
+                        # single lost write heals within three seconds instead
+                        # of never. It goes through _render_pads rather than a
+                        # pad loop of its own so that whatever owns the pads -
+                        # the step grid, MUTE, MOD, ARM, NAVIGATE - is redrawn
+                        # as itself and not painted over.
+                        self._render_pads()
                     if tick % VOLUME_POLL_TICKS == 0:
                         self._render_groups()
                         # GRID blinks while the selected channel is on an
@@ -6155,7 +6181,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # See PAD_OFFSETS above: the pad that displays a step is not the
         # step's own index, it's PAD_OFFSETS[step].
         pad = PAD_OFFSETS[step]
-        if self.leds.changed(f"pad{pad}", state):
+        if self.leds.changed(f"pad{pad}", state, ttl=PAD_LED_REFRESH_S):
             self._send_osc(lib.pad_osc(pad, state[0], state[1]))
 
     # --- LEDs ----------------------------------------------------------

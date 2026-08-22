@@ -9,6 +9,7 @@
 # getattr(module, module_name). dev_ids is empty so no device ever matches it.
 
 import struct
+import time
 
 
 class maschine_mk2_lib:
@@ -545,21 +546,42 @@ class maschine_mk2_lib:
 class led_cache:
     """Remembers the last value written per LED so only changes go on the wire.
     The daemon has already been flooded off the USB bus once by unthrottled
-    writes (commit ffc8f2b), so diffing is required, not an optimisation."""
+    writes (commit ffc8f2b), so diffing is required, not an optimisation.
 
-    def __init__(self):
+    A caller may pass a TTL, and then an unchanged value is resent once the
+    period is up. That exists because diffing alone made a LOST write
+    PERMANENT: the write went out, the daemon never applied it, and the cache
+    believed the LED already said the right thing - so nothing ever sent it
+    again. Measured on the rig 2026-08-22, a pad reading dark for minutes
+    while the driver's own picture said lit. `now` is injectable so the
+    behaviour can be tested without sleeping."""
+
+    def __init__(self, now=None):
         self._last = {}
+        self._at = {}
+        self._now = now or time.monotonic
 
-    def changed(self, key, value):
-        """True if value differs from the last one stored under key"""
+    def changed(self, key, value, ttl=None):
+        """True if value differs from the last one stored under key - or, when
+        `ttl` is given, if that many seconds have passed since this key last
+        went on the wire. Without a ttl the old behaviour is exact: every
+        existing caller keeps suppressing forever."""
 
         if self._last.get(key) == value:
-            return False
+            if ttl is None:
+                return False
+            now = self._now()
+            if now - self._at.get(key, 0.0) < ttl:
+                return False
+            self._at[key] = now
+            return True
         self._last[key] = value
+        self._at[key] = self._now()
         return True
 
     def clear(self):
         self._last = {}
+        self._at = {}
 
 
 maschine_mk2_lib.led_cache = led_cache
