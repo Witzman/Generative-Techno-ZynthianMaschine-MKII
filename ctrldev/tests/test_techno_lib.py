@@ -3999,6 +3999,27 @@ class TestNoteBaseOsc(unittest.TestCase):
         self.assertEqual(bases, [24, 36, 48, 60, 72, 84, 96, 108])
 
 
+class TestClaimClears(unittest.TestCase):
+    """Does the first captured note wipe what the generator wrote?
+
+    Measured on the rig 2026-08-22: it did not, so a REC take on a voice
+    landed ON TOP of the Turing line instead of replacing it, and the player
+    heard both at once. On a DRUM it must still stack - a drum overdub is how
+    a euclidean pattern gets a hand-placed accent, and clearing there would
+    silence the whole channel on the first tap."""
+
+    def test_a_voice_take_replaces_the_line(self):
+        self.assertTrue(tl.claim_clears("voice"))
+
+    def test_a_drum_take_stacks(self):
+        self.assertFalse(tl.claim_clears("drum"))
+
+    def test_an_unknown_kind_stacks(self):
+        # The safe side: stacking loses nothing, clearing loses a pattern.
+        self.assertFalse(tl.claim_clears(None))
+        self.assertFalse(tl.claim_clears("mystery"))
+
+
 class TestArmLabel(unittest.TestCase):
     """The picker has to say what it is about to arm."""
 

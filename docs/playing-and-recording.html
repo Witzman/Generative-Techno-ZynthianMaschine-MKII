@@ -79,7 +79,7 @@
 <li><strong>Press Play</strong>, select <strong>Group F</strong> (BASS) and press <strong>CONTROL</strong>. Play the pads — that is the instrument.</li>
 <li><strong>Hold REC</strong> and play a short phrase. Keep holding REC.</li>
 <li><strong>Let go of the last pad while REC is still held</strong>, then release REC. Your phrase is in the pattern.</li>
-<li><strong>Press STEP</strong> and look at the pads. The steps you played light <strong>amber</strong>; the generated notes are still there underneath, dim or bright.</li>
+<li><strong>Press STEP</strong> and look at the pads. The steps you played light <strong>amber</strong>. On a <em>voice</em> they are the only steps lit &mdash; your take replaced the generated line. On a <em>drum</em> the generated hits are still there underneath, dim or bright.</li>
 <li><strong>Look at the page indicator.</strong> It reads <code>PLAY</code> — you own this pattern now, and the generator has stopped rewriting it.</li>
 <li><strong>To give it back:</strong> hold <strong>ERASE</strong> and press <strong>Group F</strong>. Your take is gone and the generator resumes. That is deliberate and it is destructive.</li>
 </ol>
@@ -87,7 +87,8 @@
 <h2 id="how-it-works">How it works</h2>
 <p><strong>Capture happens on release, not on press.</strong> A note's length is how long you held the pad, and that is not known until you let go. This has a consequence worth committing to memory: <strong>you must still be holding REC when you release the pad.</strong> Let go of REC first and the note sounds but is never captured. That is the same rule that lets you release REC without cutting off notes still ringing, so it is a trade rather than an oversight.</p>
 <p><strong>Strikes quantise to the nearest step</strong>, wrapping at the end of the bar — nearest rather than next, so a strike landing a hair early is not pushed a step late. A note's length is clamped to what is left of the pattern.</p>
-<p><strong>Recording adds; it does not overwrite.</strong> The generated line freezes where it is and your note goes on top, so a recorded step can hold two notes. An amber pad means your note is there <em>and</em> the generated one still is. A step that sounds but stays dark would be the defect.</p>
+<p><strong>On a voice, your take replaces the line. On a drum, it goes on top.</strong> The first captured note on a voice clears what the Turing generator had written, so what you hear afterwards is your phrase and nothing else &mdash; which is what makes a recorded voice sound like a part rather than two parts at once. Nothing is lost that cannot come back: hold <strong>ERASE</strong> and press that channel's Group button and the generator rebuilds its line from the same register it always had.</p>
+<p>A drum keeps both. Its hits are euclidean and a recorded strike on top of them is an accent, so the generated pattern freezes where it is and your note joins it &mdash; a recorded step there can hold two notes, and an amber pad means your note is present <em>and</em> the generated one still is. A step that sounds but stays dark would be the defect.</p>
 <p><strong>The page indicator reads <code>REC</code> while you are capturing</strong>, and <code>REC-STOP</code> if the transport is stopped — nothing is being captured then, and the surface says so rather than letting you play into nothing.</p>
 <hr>
 <h2 id="who-owns-it">Who owns the pattern</h2>
@@ -113,7 +114,7 @@
 <tr><td>the channel&rsquo;s colour, barely lit</td><td>a step that is empty</td></tr>
 <tr><td>dark</td><td>past the end of the pattern &mdash; this is how you read LENGTH off the grid</td></tr>
 <tr><td>white, moving</td><td>the playhead</td></tr>
-<tr><td><strong>amber</strong></td><td>a step you played in yourself</td></tr>
+<tr><td><strong>amber</strong></td><td>a step you played in yourself &mdash; on a voice, after a take, every lit step is one of yours</td></tr>
 </tbody></table>
 <p>Every modifier that claims the pads replaces this picture for as long as it is held, and hands it straight back: SHIFT shows each step&rsquo;s odds, MOD the rates and shapes, ARM the macros and the countdown, MUTE the eight channels, NAVIGATE the phrase. Each is written up where that gesture is.</p>
 <hr>

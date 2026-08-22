@@ -141,6 +141,24 @@ class techno_lib:
         return rhythm_reg ^ (1 << step)
 
     @staticmethod
+    def claim_clears(kind):
+        """Does the FIRST captured note wipe what the generator wrote?
+
+        On a VOICE, yes. Measured on the rig 2026-08-22: a REC take landed on
+        top of the Turing line and the player heard both at once, so the take
+        never sounded like a replacement even though the channel had changed
+        hands. The generator's line is reproducible from the register at any
+        time - ERASE + Group brings it straight back - so clearing it costs
+        nothing that cannot be undone.
+
+        On a DRUM, no. A drum overdub is how a euclidean pattern gets a
+        hand-placed accent on top of its own hits, and clearing there would
+        silence the whole channel on the first tap. Anything unrecognised
+        stacks too: stacking loses nothing, clearing loses a pattern."""
+
+        return kind == "voice"
+
+    @staticmethod
     def rhythm_seed(register, length, steps, density):
         """The rhythm register a pre-2026-08-16 snapshot should load with.
 

@@ -365,6 +365,10 @@ DEFAULT_DIV = 1        # index into lib.DIVISIONS: 1/16, 16 steps
 # touchscreen editor stays smooth because it polls on the GUI refresh loop.
 # This thread polls fast enough to catch every step instead.
 PLAYHEAD_POLL_S = 0.033        # ~30 Hz, 4x oversampled at 120 BPM
+# How many poll ticks between two unprompted note-base assertions - about a
+# second. See the poll loop: this is the backstop for a base the driver never
+# learned it had lost.
+NOTE_BASE_HEARTBEAT_TICKS = 30
 
 # The same thread re-reads the group volumes every Nth tick, because nothing
 # signals a zctrl change: zynthian_controller emits no zynsigman signal, so a
@@ -2401,6 +2405,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         selected = state.get("selected", self.group)
         if isinstance(selected, int) and 0 <= selected < 8:
             self.group = selected
+            # Same trap as _select_group, and this is the route that actually
+            # bit: a snapshot restoring group H while the daemon sat at the
+            # base it booted with. The poll thread sends it - set_state runs
+            # on the manager's thread and must not touch the socket.
+            self._note_base_due = True
 
         for key, who in (state.get("owners") or {}).items():
             try:
@@ -3471,6 +3480,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _select_group(self, group):
         self._release_all()          # the pads are about to mean another sound
         self.group = group
+        # The daemon re-bases the pads on a Group PRESS it sees itself, and on
+        # nothing else. Every other route into this method - a snapshot load,
+        # a chain change, any future binding - leaves its base pointing at the
+        # group we just left, and then EVERY pad press decodes out of range
+        # and is dropped without a sound or a log. Measured on the rig
+        # 2026-08-22: driver on group H at base 108, daemon still sending
+        # base 48, the whole step grid dead.
+        self._note_base_due = True
         self._kit_retry_at = 0.0          # a new chain deserves an immediate look
         self._derive_params(group)
         self._recentre_encoders()
@@ -4905,6 +4922,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Modulo handles a hold that crossed the loop point, where end < start.
         held = ((end - start) % length) if (end is not None and length) else cps
         duration = tlib.record_duration(held or cps, cps, step, steps)
+        # Claimed BEFORE the note is written, not after. _claim wipes the
+        # generator's line on a voice, so claiming afterwards would wipe the
+        # very note that did the claiming - and claiming after the write is
+        # what let a take sound ON TOP of the Turing line until 2026-08-22.
+        self._claim(channel)
         # Overdub replaces rather than stacks: a second strike on the same step
         # and note updates its velocity and length.
         if self.libseq.getNoteVelocity(step, note):
@@ -4915,7 +4937,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                    step=step, vel=vel, dur=duration)
         self.libseq.updateSequenceInfo()
         self.notes[channel][step] = (note, vel, duration)
-        self._claim(channel)
         self._render_pads()
 
     def _claim(self, channel):
@@ -4927,7 +4948,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.owner[channel] == "player":
             return
         self.owner[channel] = "player"
-        if self.channel_kind(channel) == "voice":
+        kind = self.channel_kind(channel)
+        if tlib.claim_clears(kind):
+            # The take REPLACES the generated line rather than landing on top
+            # of it. Owner, 2026-08-22, after hearing both at once on the rig.
+            # Safe to lose: the line is reproducible from the register, and
+            # ERASE + Group brings it straight back.
+            #
+            # After owner is set, never before - clearing first and claiming
+            # second leaves a window in which the poll thread's wrap sees an
+            # unowned empty pattern and refills it.
+            self._select_pattern(channel)
+            self.libseq.clear()
+            self.libseq.updateSequenceInfo()
+        if kind == "voice":
             self.apply(channel, "random", 0)
 
     def _handback(self, channel):
@@ -5988,6 +6022,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # One more after the modifier is released, to land after
                     # the daemon's own release-edge write.
                     self._note_base_due = False
+                    self._send_osc(lib.note_base_osc(
+                        GROUP_NOTE_BASE[self.group]))
+                elif tick % NOTE_BASE_HEARTBEAT_TICKS == 0:
+                    # Once a second, unconditionally. The driver decides what
+                    # a pad MEANS, so it is the authority on the base, and the
+                    # failure it prevents is the worst one this surface has:
+                    # every press dropped, no sound, no log. One small UDP
+                    # packet a second is nothing next to the LED traffic on
+                    # the same tick - and unlike the pad grid, it is not a
+                    # rate that can starve the daemon's reader.
                     self._send_osc(lib.note_base_osc(
                         GROUP_NOTE_BASE[self.group]))
                 if self._repeat_due is not None:
