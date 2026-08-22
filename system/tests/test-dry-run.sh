@@ -155,6 +155,37 @@ has "patches zynautoconnect"       "$I" "\[dry-run\] python3 '.*/tools/patch-aut
 # One-time .bak baseline before the first overwrite, and never a second time.
 has "takes a .bak of zynautoconnect" "$I" "\[dry-run\] cp '$FAKE/zynthian-ui/zynautoconnect/zynthian_autoconnect\.py' '.*\.bak'"
 
+head_ "bootstrap.sh --dry-run: the factory snapshot is 018, with 017 beside it"
+################################################################################
+# The fresh-install path is the one nobody can rehearse: it runs once, on a Pi
+# nobody has yet. So the snapshot it places is asserted here rather than
+# discovered by a reader whose MAIN page is missing.
+BFAKE=$(mktemp -d)
+mkdir -p "$BFAKE/zynthian"
+echo "Oram-2601-1 fake" > "$BFAKE/zynthian/build_info.txt"
+
+B=$(PATH="$BIN:$PATH" ZYNTHIAN_ROOT="$BFAKE/zynthian" REPO_DIR="$REPO"     bash "$REPO/bootstrap.sh" --dry-run 2>&1)
+rc=$?
+if [ $rc -eq 0 ]; then ok "exits 0"; else bad "exits 0" "rc=$rc
+$B"; fi
+has "reports the ZynthianOS build"  "$B" '^== ZynthianOS: Oram-2601-1 fake$'
+has "says it is a dry run"          "$B" 'DRY RUN - nothing will be changed\.'
+
+# 018 is the factory snapshot: in the bank AND over default.zss.
+has "puts 018 in bank 000"          "$B"     '\[dry-run\] install -m 0644 .*/snapshot/018-generative-techno-main-insert\.zss .*/snapshots/000/$'
+has "makes 018 the default"         "$B"     '\[dry-run\] install -m 0644 .*/snapshot/018-generative-techno-main-insert\.zss .*/snapshots/default\.zss$'
+# 017 is the way back from a master filter that ate the mix - present, never
+# the default. Both halves matter, so both are asserted.
+has "puts 017 in bank 000 too"      "$B"     '\[dry-run\] install -m 0644 .*/snapshot/017-generative-techno\.zss .*/snapshots/000/$'
+hasnt "never makes 017 the default" "$B"     'install -m 0644 .*/snapshot/017-generative-techno\.zss .*default\.zss'
+# A genre snapshot over default.zss would boot a fresh Pi into a fixed
+# arrangement instead of the instrument.
+hasnt "no genre snapshot as default" "$B"     'install .*/snapshot/(genre-pack|drone-ambient)/.*default\.zss'
+has "names 018 in the closing help" "$B"     'bank 000 > 018-generative-techno-main-insert'
+has "points at 017 as the way back" "$B" '017-generative-techno, in the same bank'
+rm -rf "$BFAKE"
+
+################################################################################
 head_ "install.sh restart order — daemon FIRST, UI second"
 has    "restarts the daemon"               "$I" '\[dry-run\] systemctl restart maschine-mk2'
 has    "restarts the UI"                   "$I" '\[dry-run\] systemctl restart zynthian'

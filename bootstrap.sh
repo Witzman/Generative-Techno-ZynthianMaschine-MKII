@@ -9,10 +9,26 @@
 set -eu
 
 REPO_URL=https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
-REPO_DIR=/root/Generative-Techno-ZynthianMaschine-MKII
-SNAP_ROOT=/zynthian/zynthian-my-data/snapshots
+# Overridable ONLY so the dry run can be tested against a fake root on a
+# laptop, exactly as install.sh already allows. Unset - which is every real
+# install - these are the same literals they have always been, so the
+# fresh-Pi path is byte-for-byte what it was.
+: "${ZYNTHIAN_ROOT:=/zynthian}"
+: "${REPO_DIR:=/root/Generative-Techno-ZynthianMaschine-MKII}"
+SNAP_ROOT="$ZYNTHIAN_ROOT/zynthian-my-data/snapshots"
 SNAP_DIR="$SNAP_ROOT/000"
-SNAP=017-generative-techno.zss
+# THE FACTORY SNAPSHOT CARRIES THE MASTER INSERT since 2026-08-22, by the
+# owner's decision. 017 has an empty Main chain, so the MAIN page is not built
+# at all and the master filter does not exist; 018 is the same instrument with
+# an MDA RezFilter on the Main chain, written wide open and inaudible.
+#
+# The risk that kept it out until now is real and has not gone away: that one
+# insert can silence all eight channels from a single knob. So 017 is STILL
+# placed in bank 000 beside it - the insert-free instrument is one snapshot
+# load away, which is what makes shipping the insert an acceptable default
+# rather than a trap.
+SNAP=018-generative-techno-main-insert.zss
+SNAP_FALLBACK=017-generative-techno.zss
 PACK_DIR="$REPO_DIR/snapshot/genre-pack"   # the fifty genre snapshots, 031-080
 DRONE_DIR="$REPO_DIR/snapshot/drone-ambient"   # the twenty drone/ambient ones, 081-100
 
@@ -21,14 +37,16 @@ main() {
     [ "${1:-}" = "--dry-run" ] && DRY=1
 
     # --- refuse to run anywhere but a ZynthianOS Pi ---------------------------
-    if [ ! -f /zynthian/build_info.txt ]; then
-        echo "This is not a ZynthianOS install (/zynthian/build_info.txt missing)." >&2
+    if [ ! -f "$ZYNTHIAN_ROOT/build_info.txt" ]; then
+        echo "This is not a ZynthianOS install ($ZYNTHIAN_ROOT/build_info.txt missing)." >&2
         echo "Run this on the Pi, not on your laptop." >&2
         exit 1
     fi
-    [ "$(id -u)" = "0" ] || { echo "Run as root." >&2; exit 1; }
+    # A dry run changes nothing, so it does not need root - and requiring it
+    # would put the one testable path behind sudo.
+    [ "$DRY" = 1 ] || [ "$(id -u)" = "0" ] || { echo "Run as root." >&2; exit 1; }
 
-    echo "== ZynthianOS: $(head -1 /zynthian/build_info.txt)"
+    echo "== ZynthianOS: $(head -1 "$ZYNTHIAN_ROOT/build_info.txt")"
     [ "$DRY" = 1 ] && echo "DRY RUN - nothing will be changed."
 
     # --- 1. the repository ---------------------------------------------------
@@ -83,10 +101,14 @@ main() {
     if [ "$DRY" = 1 ]; then
         echo "  [dry-run] mkdir -p $SNAP_DIR"
         echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP $SNAP_DIR/"
+        echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP_FALLBACK $SNAP_DIR/"
         echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP $SNAP_ROOT/default.zss"
     else
         mkdir -p "$SNAP_DIR"
         install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_DIR/"
+        # The insert-free instrument, beside it and never as the default: the
+        # way back from a master filter that has swallowed the mix.
+        install -m 0644 "$REPO_DIR/snapshot/$SNAP_FALLBACK" "$SNAP_DIR/"
         install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_ROOT/default.zss"
     fi
 
@@ -180,7 +202,12 @@ displays drawing their tab rows, the Group buttons lit in channel colours.
 
 If instead you get an empty Zynthian, this Pi had a previous session, which
 takes priority over the factory snapshot. Load it by hand from the screen:
-  Snapshots > into bank 000 > 017-generative-techno
+  Snapshots > into bank 000 > 018-generative-techno-main-insert
+
+That is the factory snapshot and it carries the master filter on the Main
+chain. If the whole mix ever goes quiet from one knob, that filter is the first
+thing to suspect - and 017-generative-techno, in the same bank, is the same
+instrument without it.
 
 If something is wrong, section 4 of the guide gives every step its own check:
 https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html

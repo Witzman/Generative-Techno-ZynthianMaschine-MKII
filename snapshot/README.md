@@ -1,8 +1,9 @@
 # Snapshots
 
-Three things live here: the **factory snapshot**, which is the instrument's own
-configuration — plus `018`, the same snapshot with a master filter on the Main
-chain; the **genre pack**, fifty-one fixed arrangements built from it; and
+Three things live here: the **factory snapshot** — `018`, the instrument's own
+configuration with a master filter on the Main chain, with `017` beside it as
+the same instrument without one; the **genre pack**, fifty-one fixed
+arrangements built from it; and
 the **drone and ambient pack**, twenty slow pieces that are the opposite
 instrument — almost no pattern, and everything moving.
 
@@ -114,7 +115,7 @@ hand.
 
 
 
-## `018-generative-techno-main-insert` — the same snapshot with a master filter
+## `018-generative-techno-main-insert` — THE FACTORY SNAPSHOT since 2026-08-22
 
 **File:** [`018-generative-techno-main-insert.zss`](018-generative-techno-main-insert.zss)
 · 55,109 bytes · md5 `df1c6ebb86910b670d3190911dfbf7da` (measured 2026-08-22)
@@ -123,19 +124,27 @@ hand.
 Nothing else differs — the two files' only unequal top-level keys are `chains`
 and `zs3`, and both differences are that plugin and its saved controls.
 
-**Why it is a separate file rather than the factory snapshot.** The insert sits
-between the mixer and the card, so it hears all eight channels at once and can
-silence the whole instrument from one knob. It loads wide open here because the
-snapshot writes every one of its controls explicitly; at the plugin's own
-defaults the cutoff sits below the point where it passes audio at all. Shipping
-that as the default a fresh Pi boots into means one bad control write is a dead
-rig with a healthy-looking surface.
+**Owner decision, 2026-08-22: this became the factory snapshot.** `bootstrap.sh`
+now places `018` as the bank-`000` entry **and** as `default.zss`, so a fresh Pi
+boots into the instrument with its MAIN page already there.
 
-**No installer places it.** `bootstrap.sh` places `017` as the bank-`000` entry
-and as `default.zss`; this one is loaded by hand from the touchscreen when you
-want the master filter. **Without it the driver builds no MAIN page** — `ALL`'s
-ring is one page shorter rather than showing dead columns — which is what the
-guide's mixing page now says.
+**The argument that had kept it out for two days is still true, and is answered
+rather than dismissed.** The insert sits between the mixer and the card, so it
+hears all eight channels at once and can silence the whole instrument from one
+knob. It loads wide open here because the snapshot writes every one of its
+controls explicitly; at the plugin's own defaults the cutoff sits below the
+point where it passes audio at all. The risk of shipping it was that one bad
+control write leaves a dead rig with a healthy-looking surface.
+
+**What makes it acceptable is the way back.** `bootstrap.sh` also places `017`
+in bank `000` — never as `default.zss` — so the insert-free instrument is one
+snapshot load away rather than a rebuild. Both halves are asserted in
+`system/tests/test-dry-run.sh`: `018` in the bank and over `default.zss`, `017`
+in the bank and never over it, and no genre snapshot as the default. The
+assertions were proved able to fail by pointing the installer back at `017`.
+
+**Loading `017` builds no MAIN page at all** — `ALL`'s ring is one page shorter
+rather than showing dead columns — which is what the guide's mixing page says.
 
 ---
 
