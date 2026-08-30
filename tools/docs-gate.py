@@ -100,7 +100,15 @@ BASELINE = {
     # describes. Also the published test count (271) and the genre-pack
     # count and its verification glob, which counted 50 of 51 files.
     "04-manual-installation.html": (2625, "2026-08-22"),
-    "05-internals.html":           (1011, "2026-08-13"),
+    # +174, 2026-08-30: a PUBLISHED HARDWARE CLAIM WAS FALSE. The page said
+    # "Encoders are relative". The MK2's own HID report descriptor - fetched
+    # and vendored that day - declares eight 16-bit fields with a maximum of
+    # 999, so the encoders are ABSOLUTE and "relative" is what our driver
+    # makes of them. The big encoder is not one of the eight either: it is a
+    # 4-bit counter sharing one byte with a second counter. Corrected rather
+    # than trimmed, because a reader forking this project would have written
+    # the wrong decoder.
+    "05-internals.html":           (1185, "2026-08-30"),
     # New 2026-08-16: the Modulation tutorial, first of eight. Its content
     # moves from Features and Playing, which keep their copies until they are
     # cut down last - so the site stays correct at every commit between.
@@ -299,7 +307,15 @@ BASELINE = {
     # the framing had to stop saying the instrument does not know what bar it
     # is on, and because a reader now needs telling that the numbers do not
     # shuffle up - a gap is an idea that has left for the guide.
-    "whats-next.html":             (750,  "2026-08-20"),
+    # +195, 2026-08-30: thirteen new entries from surveying 31 other
+    # open-source Maschine MK2 projects, published as the reader-facing subset
+    # of the internal list the same day - the two move together or the
+    # published one lies. The round's own headline is a NEGATIVE worth a
+    # reader's time: there is no generative technique anywhere in that corpus,
+    # so the pattern ideas are this project's own and what the survey supplied
+    # was hardware knowledge plus two directions nobody here had considered
+    # (control voltage out, and importing Maschine's own kits).
+    "whats-next.html":             (945,  "2026-08-30"),
 }
 SKIP_BUDGET = {"index.html"}
 

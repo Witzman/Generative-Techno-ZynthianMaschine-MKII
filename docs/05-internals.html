@@ -79,7 +79,7 @@ flowchart LR
   C --> S["zynseq<br/>Zynthian's sequencer"]
 </div>
 <p>The daemon owns the hardware: it reads HID reports, drives both 255×64 displays and the LEDs, and exposes an ALSA sequencer port. <code>a2jmidid</code> lifts that port into JACK. Zynthian then has to be persuaded to treat it as a <strong>hardware MIDI source</strong> so it is given a zmip slot — and that is the patch below.</p>
-<p><strong>Encoders are relative.</strong> The daemon holds each encoder's value as device state and moves it by the hardware delta. Real movement is 0-4 units per report and a counter wrap reads as −38 to −40, so the wrap guard is 8. The big encoder sends 8 units per detent and wraps 120 → 0, sitting exactly on that threshold, so it needs its own delta path.</p>
+<p><strong>The encoders are absolute in hardware; &ldquo;relative&rdquo; is what the driver makes of them.</strong> The MK2&rsquo;s report descriptor declares eight 16-bit fields with a maximum of 999, so each encoder reports a position, not a movement. The daemon holds its own value as device state and moves it by the difference between one report and the next. Real movement is 0-4 units per report and a counter wrap reads as &minus;38 to &minus;40, so the wrap guard is 8. The big encoder is not one of those eight: it is a 4-bit counter sharing a byte with a second one, it sends 8 units per detent and wraps 120 &rarr; 0, sitting exactly on that threshold, so it needs its own delta path.</p>
 <hr>
 <h2 id="why-zynautoconnect-has-to-be-patched">Why <code>zynautoconnect</code> has to be patched</h2>
 <p>It is the only Zynthian core file this project changes, and it ships as an idempotent patcher rather than a copy, so it edits your version instead of overwriting it.</p>

@@ -67,7 +67,7 @@
 <main>
 <article>
 <h1 id="whats-next">What could come next</h1>
-<p>Thirty-seven ideas for this instrument, ranked. <strong>None of them is built, and none of them is promised.</strong></p>
+<p>Fifty ideas for this instrument, ranked. <strong>None of them is built, and none of them is promised.</strong></p>
 <p><strong>Eleven entries have left this page</strong>, which is what the gaps in the numbering are: FREEZE, half and double time, BREAK, the ratchet ramp, phrase-locked modulation, audio capture, the pending page, the mute grid, the master-bus insert, beat repeat and the one-knob modulation depth on the big encoder are all in the guide proper now. The last of those left on 2026-08-22, later than the other ten &mdash; it shipped with them and this page kept listing it.</p>
 <hr>
 
@@ -137,6 +137,26 @@
 <tr><td>52</td><td>A different drum engine</td><td>Replacing the sampler with one that has a filter per drum &mdash; the only route to per-channel drum timbre that measurement has left open.</td><td>L</td><td>4</td></tr>
 <tr><td>53</td><td>Layout presets</td><td>Rearranging which knob sits where, saved per player.</td><td>M</td><td>2</td></tr>
 <tr><td>54</td><td>Three focuses collapsed into one</td><td>A simplification of how the instrument decides what a knob is pointed at. The only entry on the list that would cost relearning.</td><td>M</td><td>2</td></tr>
+</table>
+
+<h2 id="the-2026-08-30-round">A later round &mdash; what other people&rsquo;s work suggested</h2>
+<p>Thirteen more, added after reading thirty-one other open-source Maschine MK2 projects: drivers, protocol reverse-engineering, hardware modifications and file-format tools, plus the controller&rsquo;s own report descriptor &mdash; the document in which the hardware describes itself.</p>
+<p><strong>The most useful thing that survey found was a negative.</strong> There is not one generative or algorithmic technique in the whole of it: no probability tables, no Markov chains, no random walks, no humanisation. The nearest project&rsquo;s only algorithm is euclid, on three channels against this instrument&rsquo;s eight. So the pattern ideas below are this project&rsquo;s own; what the survey actually supplied was hardware knowledge, and two whole directions nobody here had considered.</p>
+<table>
+<tr><th>#</th><th>Idea</th><th>What it does</th><th>Cost</th><th>Impact</th></tr>
+<tr><td>45</td><td>Per-step odds</td><td>Chance already applies to a whole channel. This gives it to one step, so a hat can be a maybe while the rest of the bar is certain.</td><td>M</td><td>4</td></tr>
+<tr><td>46</td><td>Bar conditions</td><td>A step that plays only on the third bar of four, or the last of eight. The instrument already counts bars, so the pattern stops repeating without anything moving.</td><td>S</td><td>4</td></tr>
+<tr><td>47</td><td>A part derived from two others</td><td>A hat that is defined as &ldquo;wherever the kick and the clap disagree&rdquo;. It cannot collide with either, because it is made of them.</td><td>M</td><td>3</td></tr>
+<tr><td>48</td><td>A seed you can see and save</td><td>The voices are random, and today that randomness is gone forever once it moves. Show the seed and store it, and a pattern you liked comes back tomorrow.</td><td>S</td><td>3</td></tr>
+<tr><td>49</td><td>Set a step&rsquo;s pitch with two taps</td><td>Hold SHIFT, tap the step, tap the pad whose note you want. One grid, two meanings, no menu.</td><td>S</td><td>3</td></tr>
+<tr><td>50</td><td>Voices that listen to each other</td><td>Three melodic voices evolve independently today. Let one feed another and they drift together instead of apart.</td><td>M</td><td>3</td></tr>
+<tr><td>51</td><td>A wandering voice</td><td>A fourth way for a channel to behave: a bounded random walk rather than a shift register. It sounds nothing like the three that exist.</td><td>M</td><td>3</td></tr>
+<tr><td>52</td><td>Euclid inside euclid</td><td>Split a hat pattern with a second euclidean figure, so the closed and open hats divide a line neither could make alone.</td><td>M</td><td>3</td></tr>
+<tr><td>53</td><td>Control voltage out</td><td>Pitch and gates to a modular rig. <strong>Zynthian already has this</strong> &mdash; the page, the controls and the wiring support all exist &mdash; so it is about fifteen euros of parts and a setting, not a build. A precise analogue <em>clock</em> is a different and much harder thing; MIDI clock out of the Maschine&rsquo;s own DIN socket is the answer there.</td><td>M</td><td>4</td></tr>
+<tr><td>54</td><td>Import Maschine kits</td><td>Turn kits from Maschine&rsquo;s own library into drum kits this instrument can load. The format gives up little more than a list of samples &mdash; which turns out to be all this rig needs, because it takes everything else from the channel. <strong>The converter could be shared; the sounds could not.</strong></td><td>M</td><td>4</td></tr>
+<tr><td>55</td><td>Genre tags for the snapshot packs</td><td>Someone has already published a curated table of which expansion belongs to which style, under a licence that permits reuse.</td><td>S</td><td>2</td></tr>
+<tr><td>56</td><td>Screen brightness and contrast</td><td>The displays accept both, on a channel that costs the busy part of the connection nothing. Nobody has ever set them.</td><td>S</td><td>2</td></tr>
+<tr><td>57</td><td>Curves and waveforms on the screens</td><td>The screens draw text and bars. They are capable of lines, shapes and per-pixel drawing &mdash; an envelope you can see, a wave that moves. <strong>Blocked on one measurement</strong>: whether the panel will accept a small rectangle instead of a full-width strip. If it will, drawing becomes cheap; if it will not, this stays too expensive to run while playing.</td><td>L</td><td>3</td></tr>
 </table>
 
 <h2 id="what-the-list-says">What the list says</h2>
