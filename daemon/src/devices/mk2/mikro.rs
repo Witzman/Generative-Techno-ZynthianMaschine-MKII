@@ -15,6 +15,7 @@
 //  License along with this program.  If not, see
 //  <http://www.gnu.org/licenses/>.
 
+use crate::hid_stats::{self, WriteStats};
 use std::fs::File;
 use std::mem::transmute;
 use std::os::unix::io;
@@ -309,6 +310,12 @@ pub struct Mikro {
     disp_raw: bool,
     lights_dirty: bool,
 
+    /// Every HID write is counted here. Until 2026-08-30 all five write sites
+    /// were `let _ = unistd::write(...)`, so a failing or truncated write was
+    /// invisible and no investigation of the wedge could tell whether writes
+    /// were even landing.
+    wstats: WriteStats,
+
     pads: [MaschinePad; 16],
     buttons: [u8; 27],
 
@@ -354,9 +361,27 @@ impl Mikro {
         ]
     }
 
+    /// One HID write, counted and classified.
+    ///
+    /// A free-standing helper taking the fd and the stats as separate field
+    /// borrows, deliberately: a `&mut self` method could not be called with
+    /// `&self.light_buf` as its argument, and copying a 265-byte report to get
+    /// around that would put an allocation on the hot path.
+    fn hid_write(fd: io::RawFd, stats: &mut WriteStats, buf: &[u8], what: &str) {
+        let written = unistd::write(fd, buf).ok();
+        let outcome = hid_stats::classify(written, buf.len());
+        if stats.record(outcome) {
+            println!(
+                "HID WRITE {:?}: {} ({} bytes) - ok={} short={} failed={}",
+                outcome, what, buf.len(), stats.ok, stats.short, stats.failed
+            );
+        }
+    }
+
     pub fn new(dev: io::RawFd) -> Self {
         let mut _self = Mikro {
             dev: dev,
+            wstats: WriteStats::default(),
             light_buf: [0u8; 49],
             light_buf2: [0u8; 32],
             light_buf3: [0u8; 57],
@@ -507,7 +532,7 @@ impl Mikro {
                 let byte = bits[src + i];
                 buf[9 + i] = if self.disp_reverse { byte.reverse_bits() } else { byte };
             }
-            let _ = unistd::write(self.dev, &buf);
+            Self::hid_write(self.dev, &mut self.wstats, &buf, "display/chunk");
         }
     }
 }
@@ -555,9 +580,9 @@ impl Maschine for Mikro {
         if !self.lights_dirty {
             return;
         }
-        let _ = unistd::write(self.dev, &self.light_buf);
-        let _ = unistd::write(self.dev, &self.light_buf2);
-        let _ = unistd::write(self.dev, &self.light_buf3);
+        Self::hid_write(self.dev, &mut self.wstats, &self.light_buf, "leds/pads");
+        Self::hid_write(self.dev, &mut self.wstats, &self.light_buf2, "leds/groups");
+        Self::hid_write(self.dev, &mut self.wstats, &self.light_buf3, "leds/buttons");
         self.lights_dirty = false;
     }
 
@@ -1053,7 +1078,7 @@ impl Maschine for Mikro {
                 }
             }
             //println!("{}", bits[a]);
-            let _ = unistd::write(self.dev, &screen_buf);
+            Self::hid_write(self.dev, &mut self.wstats, &screen_buf, "screen/legacy");
             screen_writer += 1;
         }
         println!("RUNNING!");
