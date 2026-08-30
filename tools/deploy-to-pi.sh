@@ -7,6 +7,7 @@
 #
 #   ./tools/deploy-to-pi.sh                 driver, then restart daemon and UI
 #   ./tools/deploy-to-pi.sh --with-system   also the helper scripts in /usr/local/bin
+#   ./tools/deploy-to-pi.sh --with-daemon   also the Rust daemon: send src, build ON the Pi
 #   ./tools/deploy-to-pi.sh --no-restart    copy only, restart yourself
 #   ./tools/deploy-to-pi.sh --dry-run       print every command, change nothing
 #
@@ -25,6 +26,7 @@ CTRLDEV=/zynthian/zynthian-ui/zyngine/ctrldev
 DRY=0
 RESTART=1
 SYSTEM=0
+DAEMON=0
 TESTS=1
 
 for arg in "$@"; do
@@ -32,6 +34,7 @@ for arg in "$@"; do
         --dry-run)     DRY=1 ;;
         --no-restart)  RESTART=0 ;;
         --with-system) SYSTEM=1 ;;
+        --with-daemon) DAEMON=1 ;;
         --skip-tests)  TESTS=0 ;;
         -h|--help)     sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *@*)           PI="$arg" ;;
@@ -56,6 +59,10 @@ if [ "$TESTS" = 1 ]; then
     ( cd "$REPO/ctrldev" && python3 -m unittest discover -s tests -q )
     ( cd "$REPO/ctrldev" && python3 -m py_compile zynthian_ctrldev_maschine_mk2.py \
                                                   techno_lib.py maschine_mk2_lib.py )
+    if [ "$DAEMON" = 1 ]; then
+        # Same rule for the Rust half: the Pi is not where you find out.
+        ( cd "$REPO/daemon" && cargo test --offline -q )
+    fi
     echo "  ok"
 fi
 
@@ -89,6 +96,59 @@ if [ "$SYSTEM" = 1 ]; then
         echo "  sent $f"
     done
     echo "  NOT sent: maschine.json, systemd units, udev rule - those are install.sh's job"
+fi
+
+# --- 4b. the Rust daemon, on request ------------------------------------------
+# There is no cross-compile in this project: the daemon is built ON the Pi, by
+# install.sh on a fresh one. But install.sh SKIPS the build when a binary
+# already exists, so it will not refresh a daemon change - which is why this
+# section exists, and why it verifies the binary actually moved. A failed build
+# leaves the old binary in place and every check after a restart would then be
+# testing the PREVIOUS daemon while looking like a pass.
+if [ "$DAEMON" = 1 ]; then
+    say "Daemon source -> the Pi, then build THERE"
+    if [ "$DRY" = 1 ]; then
+        echo "  [dry-run] ssh '$PI' systemctl show -p ExecStart --value maschine-mk2"
+        echo "  [dry-run] scp '$REPO/daemon/src/'*.rs '$PI:<daemon>/src/'"
+        echo "  [dry-run] scp Cargo.toml Cargo.lock '$PI:<daemon>/'"
+        echo "  [dry-run] ssh '$PI' 'cd <daemon> && cargo build --release'   (minutes)"
+        echo "  [dry-run] verify the binary's mtime moved, abort if it did not"
+    else
+        # Ask the unit where the binary is rather than guessing the repo path.
+        # The path is rewritten by install.sh per machine, so it is the only
+        # thing on the Pi that actually knows.
+        EXEC=$(ssh "$PI" 'systemctl show -p ExecStart --value maschine-mk2' \
+               | grep -o 'path=[^ ;]*' | head -1 | cut -d= -f2)
+        [ -n "$EXEC" ] || { echo "cannot find the daemon's ExecStart on $PI" >&2; exit 1; }
+        PIDAEMON="${EXEC%/target/release/maschine}"
+        [ "$PIDAEMON" != "$EXEC" ] \
+            || { echo "unexpected ExecStart path: $EXEC" >&2; exit 1; }
+        echo "  daemon on the Pi: $PIDAEMON"
+
+        BEFORE=$(ssh "$PI" "stat -c %Y '$EXEC' 2>/dev/null || echo 0")
+
+        ssh "$PI" "mkdir -p '$PIDAEMON/src/base' '$PIDAEMON/src/devices/mk2'"
+        scp -q "$REPO/daemon/src/"*.rs            "$PI:$PIDAEMON/src/"
+        scp -q "$REPO/daemon/src/base/"*.rs       "$PI:$PIDAEMON/src/base/"
+        scp -q "$REPO/daemon/src/devices/"*.rs    "$PI:$PIDAEMON/src/devices/"
+        scp -q "$REPO/daemon/src/devices/mk2/"*.rs "$PI:$PIDAEMON/src/devices/mk2/"
+        scp -q "$REPO/daemon/Cargo.toml" "$REPO/daemon/Cargo.lock" "$PI:$PIDAEMON/"
+        echo "  sent daemon sources"
+
+        echo "  building on the Pi - this takes minutes, do not interrupt"
+        ssh "$PI" "cd '$PIDAEMON' && cargo build --release" \
+            || { echo "BUILD FAILED on the Pi. The OLD binary is still in place and" >&2
+                 echo "nothing was restarted. Fix it before deploying again." >&2; exit 1; }
+
+        AFTER=$(ssh "$PI" "stat -c %Y '$EXEC' 2>/dev/null || echo 0")
+        if [ "$BEFORE" = "$AFTER" ]; then
+            echo "the binary's mtime did not change - the build produced nothing new." >&2
+            echo "Refusing to restart into a daemon you have not actually deployed." >&2
+            exit 1
+        fi
+        echo "  binary refreshed"
+    fi
+    echo "  NOT sent: maschine.json - it carries external_pad_leds and send_aftertouch"
 fi
 
 # --- 5. restart, daemon FIRST -------------------------------------------------

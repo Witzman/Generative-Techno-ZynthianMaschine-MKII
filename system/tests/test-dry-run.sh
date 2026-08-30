@@ -103,6 +103,26 @@ hasnt "--no-restart issues no restart" "$R" '\[dry-run\] ssh .*systemctl restart
 has   "--no-restart hands the order back to the reader" "$R" \
       'restart maschine-mk2.*sleep 8.*restart zynthian'
 
+# --with-daemon exists because install.sh SKIPS the cargo build when a binary
+# is already there, so nothing in the project refreshed a daemon change. The
+# properties worth pinning are that it changes nothing on a dry run (cargo is a
+# poison stub, so a real build here fails the run), that it finds the daemon's
+# path by ASKING the unit rather than guessing, and that it still withholds
+# maschine.json.
+W=$(PATH="$BIN:$PATH" bash "$REPO/tools/deploy-to-pi.sh" --dry-run --skip-tests --with-daemon 2>&1)
+has   "--with-daemon has a daemon section"          "$W" 'Daemon source -> the Pi'
+has   "--with-daemon asks the UNIT where the daemon lives" "$W" \
+      "\[dry-run\] ssh .*systemctl show -p ExecStart --value maschine-mk2"
+has   "--with-daemon sends the Rust sources"        "$W" "\[dry-run\] scp .*/daemon/src/.*\.rs"
+has   "--with-daemon sends the lockfile too"        "$W" "\[dry-run\].*Cargo\.lock"
+has   "--with-daemon builds ON the Pi"              "$W" "\[dry-run\] ssh .*cargo build --release"
+has   "--with-daemon verifies the binary moved"     "$W" "mtime moved, abort if it did not"
+hasnt "--with-daemon still never sends maschine.json" "$W" 'scp.*maschine\.json'
+has   "--with-daemon says why maschine.json is withheld" "$W" \
+      'NOT sent: maschine\.json.*(external_pad_leds|send_aftertouch)'
+before "--with-daemon builds BEFORE any restart"    "$W" 'cargo build --release' 'systemctl restart maschine-mk2'
+hasnt "a plain deploy has no daemon section"        "$D" 'Daemon source -> the Pi'
+
 PATH="$BIN:$PATH" bash "$REPO/tools/deploy-to-pi.sh" --dry-run --wat >/dev/null 2>&1
 rc=$?
 if [ $rc -eq 2 ]; then ok "an unknown flag exits 2"; else bad "an unknown flag exits 2" "rc=$rc"; fi
