@@ -426,6 +426,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.beats = [lib.DIVISIONS[DEFAULT_DIV][2]] * 8   # pattern length
         self.keymap_cache = [None] * 8       # per-group [(note, name)], lazy
         self.kit_index = [0] * 8             # which kit each group uses
+        # PAD PRESSURE. `_press_raw` is the last aftertouch value the MIDI
+        # thread saw, `_press_off` the offset the poll thread is applying, and
+        # `_press_base` the value the knob was on when the squeeze started -
+        # None when nothing is owed. The base is held HERE and never read back
+        # from the engine: that is the same law the LFO obeys, and reading it
+        # back mid-squeeze would write the swept value into the snapshot.
+        self._press_raw = [0] * 8
+        self._press_off = [0.0] * 8
+        self._press_base = [None] * 8
         self.kit_cache = {}                  # sfz path -> [(note, name)]
         self.kits = None                     # [(display name, sfz path)], lazy
         self.kit_pending = None              # (group, index, due) waiting to load,
@@ -2642,6 +2651,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _midi_event(self, ev):
         evtype = (ev[0] >> 4) & 0x0F
 
+        if evtype == 0xA:                        # PolyphonicPressure
+            # STORE AND RETURN. Nothing else may happen here: this is the MIDI
+            # thread, midi_event holds the lock for the whole event, and the
+            # daemon can deliver one of these per held pad every 25 ms. The
+            # poll thread does the writing, exactly as it does for the LFO.
+            return self._pad_pressure(ev[2])
+
         if evtype in (0x8, 0x9):                 # NoteOff and NoteOn
             step = ev[1] - GROUP_NOTE_BASE[self.group]
             if not 0 <= step < 16:
@@ -3966,6 +3982,83 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return self._elapsed_beats()
         return self._elapsed_beats() - self._phrase_anchor
 
+    def _pad_pressure(self, value):
+        """Record pad pressure for the selected channel. MIDI thread.
+
+        The value lands on the SELECTED channel rather than on the pad's own,
+        because a pad is a STEP of the selected channel on this instrument
+        (`_midi_event` decodes it against GROUP_NOTE_BASE), not a channel of its
+        own. Two pads held at once therefore share one offset and the later
+        report wins - which is what a filter under one hand should do anyway.
+
+        Drum channels are ignored: their one-shots run to the end regardless
+        and the drum filter is shelved, so there is no verb to move."""
+        if self.channel_kind(self.group) != "voice":
+            return True
+        self._press_raw[self.group] = int(value)
+        return True
+
+    def _press_release(self, channel):
+        """Put the knob back and forget the squeeze."""
+        base = self._press_base[channel]
+        if base is not None:
+            self.apply(channel, tlib.PRESSURE_VERB, base)
+        self._press_raw[channel] = 0
+        self._press_off[channel] = 0.0
+        self._press_base[channel] = None
+
+    def _pressure_write(self):
+        """Apply pad pressure as an offset over the knob. Poll thread.
+
+        Deliberately NOT folded into _mod_write: that returns early when no
+        modulator exists, and pressure has to work on a channel nobody has
+        bound MOD to. It IS called from the same ~200 ms tick, and it is not
+        gated by FREEZE - parking the LFOs is a decision about the machine
+        evolving on its own, and a hand on a pad is not that."""
+        if self._snapshot_busy():
+            return
+        verb = tlib.PRESSURE_VERB
+        for channel in range(8):
+            if (self._press_raw[channel] <= 0
+                    and self._press_off[channel] <= 0.0
+                    and self._press_base[channel] is None):
+                continue
+            if self.channel_kind(channel) != "voice":
+                # SP4 lets a channel change kind under a live squeeze.
+                self._press_release(channel)
+                continue
+            span = self._mod_range(channel, verb)
+            if span is None:
+                continue
+            target = tlib.pressure_offset(self._press_raw[channel],
+                                          span[0], span[1])
+            # Instant up, decayed down. A squeeze has to feel immediate, and a
+            # release has to sound like a filter closing rather than a fault.
+            off = self._press_off[channel]
+            off = target if target >= off else tlib.pressure_decay(off)
+            self._press_off[channel] = off
+            if (channel, verb) in self.mod:
+                # A modulator already owns this verb, and TWO writers on one
+                # parameter is the base/offset bug in a new costume. _mod_write
+                # folds our offset into its swept value; we own nothing here,
+                # so any base we were holding is not ours to restore.
+                self._press_base[channel] = None
+                continue
+            if off <= 0.0:
+                base = self._press_base[channel]
+                if base is not None:
+                    # The restore write. pressure_value returns the base
+                    # EXACTLY at a zero offset, so the knob lands where the
+                    # player left it and not half a unit away.
+                    self.apply(channel, verb, base)
+                    self._press_base[channel] = None
+                continue
+            if self._press_base[channel] is None:
+                self._press_base[channel] = self.state[channel].get(verb, 64)
+            self.apply(channel, verb,
+                       tlib.pressure_value(self._press_base[channel], off,
+                                           span[0], span[1]))
+
     def _mod_write(self):
         """Advance every modulator and write base+offset.
 
@@ -4032,6 +4125,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                                    tlib.mod_depth_scale(entry["depth"],
                                                         self.mod_depth_mult),
                                    span[0], span[1])
+            if verb == tlib.PRESSURE_VERB and self._press_off[channel] > 0.0:
+                # ONE writer per parameter. When MOD and a squeezed pad both
+                # want cutoff they SUM here and clamp - the LFO wobbles and the
+                # hand pushes the whole thing up - rather than taking turns and
+                # fighting every tick.
+                value = tlib.pressure_value(value, self._press_off[channel],
+                                            span[0], span[1])
             # set_value() already returns early on an unchanged value and
             # integer controls dedupe for free, so a slow or parked modulator
             # costs a function call and nothing else.
@@ -6130,6 +6230,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # reaching engine.send_controller_value(). Raise this only
                     # for a target that proves it needs more.
                     self._mod_write()
+                    # After _mod_write, so a channel whose verb a modulator
+                    # owns has already had this tick's swept value folded in.
+                    self._pressure_write()
                 with self.lock:
                     # Before anything else this tick: if the controller has
                     # been replugged, everything below would be written into

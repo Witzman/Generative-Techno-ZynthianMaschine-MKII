@@ -2200,6 +2200,78 @@ class techno_lib:
         out = float(base) + float(wave) * (float(depth) / 100.0) * half
         return max(float(lo), min(float(hi), out))
 
+    # PAD PRESSURE. The MK2's pads stream 12-bit continuous pressure per pad,
+    # and the daemon has always been able to emit it as polyphonic aftertouch -
+    # `send_aftertouch` was hardcoded false from its first commit until
+    # 2026-08-30, so nothing here is new hardware, only a switch nobody found.
+    #
+    # WHY IT IS SHAPED LIKE A MODULATOR. Pressure displaces a verb over the
+    # value the player set, and the base/offset law applies unchanged: the
+    # driver owns the base and writes base + offset, and the swept value is
+    # never written back as the base. Squeeze a pad, let go, and the knob is
+    # where you left it.
+    #
+    # WHY CUTOFF. It inherits the modulation law - a modulator may only drive a
+    # verb that does NOT rewrite the pattern - so the target must be in
+    # MOD_TIMBRE, and there is a test below that says so. GATE and VELO are the
+    # cautionary tale: they read as timbre and are written by regenerating the
+    # pattern, and an LFO on VELO destroyed a recorded take every 200 ms.
+    #
+    # VOICES ONLY, and that is a scope decision rather than a limitation: the
+    # five drum channels play LinuxSampler one-shots that run to the end
+    # regardless, and the drum filter (SP3) is shelved, so on a drum channel
+    # there is no verb for pressure to move.
+    PRESSURE_VERB = "cutoff"
+
+    # Full pressure reaches the top of the verb's span. Less than 1.0 would
+    # make the end stop unreachable by hand, which reads as a broken gesture
+    # rather than as a gentle one.
+    PRESSURE_DEPTH = 1.0
+
+    # Release decay, as the fraction of the REMAINING offset shed per poll
+    # tick (~200 ms). 0.35 lands a full squeeze back on the base in about
+    # 1.5 s. A snap to base sounds like a fault; a slow glide sounds like a
+    # filter closing, which is the point.
+    PRESSURE_DECAY = 0.35
+
+    # Below this the offset snaps to zero. It MUST snap: an asymptote leaves a
+    # fraction of a surface unit sitting on the channel forever, the restore
+    # write never happens, and the knob never gets its value back.
+    PRESSURE_FLOOR = 0.5
+
+    @staticmethod
+    def pressure_offset(value, lo, hi, depth=None):
+        """Surface-unit offset for an aftertouch value 0-127.
+
+        Scaled onto the VERB's span, not onto 0-127: a verb whose range is
+        0-100 must not be pushed to 127 because the wire happens to carry
+        seven bits."""
+        if depth is None:
+            depth = techno_lib.PRESSURE_DEPTH
+        frac = max(0.0, min(1.0, float(value) / 127.0))
+        return frac * max(0.0, float(depth)) * (float(hi) - float(lo))
+
+    @staticmethod
+    def pressure_value(base, offset, lo, hi):
+        """`base` displaced by `offset`, clamped to the verb's range.
+
+        Separate from mod_value() on purpose: this one takes an offset already
+        in surface units, so a zero offset returns the base EXACTLY. That is
+        the restore write, and a rounding error there leaves the knob somewhere
+        the player never put it."""
+        out = float(base) + float(offset)
+        return max(float(lo), min(float(hi), out))
+
+    @staticmethod
+    def pressure_decay(offset, factor=None):
+        """One poll tick of release decay. Snaps to zero under PRESSURE_FLOOR."""
+        if factor is None:
+            factor = techno_lib.PRESSURE_DECAY
+        out = float(offset) * (1.0 - max(0.0, min(1.0, float(factor))))
+        if out < techno_lib.PRESSURE_FLOOR:
+            return 0.0
+        return out
+
     @staticmethod
     def mod_depth_scale(depth, mult):
         """`depth` scaled by the global multiplier, sign preserved.

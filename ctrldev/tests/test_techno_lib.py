@@ -4266,3 +4266,92 @@ class TestDeviceReconnected(unittest.TestCase):
             tl.device_reconnected(seen[i - 1], seen[i])
             for i in range(1, len(seen)))
         self.assertEqual(repaints, 1)
+
+
+class TestPadPressure(unittest.TestCase):
+    """Pad aftertouch -> a positive offset over the knob.
+
+    The MK2's pads stream 12-bit pressure and the daemon shipped it disabled
+    from its first commit until 2026-08-30. These are the pure parts: the
+    driver does the plumbing, and this is everything that can be tested off
+    the rig."""
+
+    def test_zero_pressure_is_no_offset(self):
+        self.assertEqual(tl.pressure_offset(0, 0, 127), 0.0)
+
+    def test_full_pressure_reaches_the_top_of_the_span(self):
+        # A hand mashing a pad must be able to reach the end stop, or the
+        # gesture reads as broken.
+        self.assertAlmostEqual(tl.pressure_offset(127, 0, 127), 127.0)
+
+    def test_offset_is_monotonic_in_pressure(self):
+        last = -1.0
+        for v in range(0, 128):
+            off = tl.pressure_offset(v, 0, 127)
+            self.assertGreaterEqual(off, last)
+            last = off
+
+    def test_offset_scales_with_the_span_not_the_midi_range(self):
+        # A verb with a 0-100 span must not be pushed to 127.
+        self.assertAlmostEqual(tl.pressure_offset(127, 0, 100), 100.0)
+
+    def test_offset_never_exceeds_the_span_width(self):
+        for lo, hi in ((0, 127), (0, 100), (20, 80)):
+            self.assertLessEqual(tl.pressure_offset(127, lo, hi), hi - lo)
+
+    def test_depth_scales_the_offset(self):
+        self.assertAlmostEqual(tl.pressure_offset(127, 0, 127, depth=0.5), 63.5)
+
+    def test_zero_depth_disables_it_without_a_branch(self):
+        self.assertEqual(tl.pressure_offset(127, 0, 127, depth=0.0), 0.0)
+
+    def test_value_is_base_plus_offset(self):
+        self.assertAlmostEqual(tl.pressure_value(40, 20, 0, 127), 60.0)
+
+    def test_value_clamps_to_the_top_of_the_span(self):
+        # Base near the ceiling plus a full squeeze must not wrap or overshoot.
+        self.assertAlmostEqual(tl.pressure_value(120, 60, 0, 127), 127.0)
+
+    def test_value_clamps_to_the_bottom_of_the_span(self):
+        self.assertAlmostEqual(tl.pressure_value(10, -40, 20, 80), 20.0)
+
+    def test_value_with_no_offset_is_the_base_exactly(self):
+        # The restore write. If this drifts, letting go of a pad leaves the
+        # knob somewhere the player never put it.
+        self.assertEqual(tl.pressure_value(64, 0, 0, 127), 64.0)
+
+    def test_decay_sheds_part_of_the_offset(self):
+        self.assertLess(tl.pressure_decay(100.0), 100.0)
+        self.assertGreater(tl.pressure_decay(100.0), 0.0)
+
+    def test_decay_reaches_exactly_zero(self):
+        # It must SNAP, not asymptote: a residual 0.4 of cutoff would sit on
+        # the channel forever and nothing would ever restore the base.
+        off = 127.0
+        for _ in range(100):
+            off = tl.pressure_decay(off)
+        self.assertEqual(off, 0.0)
+
+    def test_decay_of_zero_stays_zero(self):
+        self.assertEqual(tl.pressure_decay(0.0), 0.0)
+
+    def test_decay_is_monotonic_down(self):
+        off, seen = 127.0, []
+        for _ in range(20):
+            off = tl.pressure_decay(off)
+            seen.append(off)
+        self.assertEqual(seen, sorted(seen, reverse=True))
+
+    def test_decay_never_goes_negative(self):
+        for start in (0.0, 0.1, 0.6, 1.0, 5.0, 127.0):
+            self.assertGreaterEqual(tl.pressure_decay(start), 0.0)
+
+    def test_the_target_verb_is_a_timbre_verb(self):
+        # The modulation law: a modulator may only drive a verb that does NOT
+        # rewrite the pattern. Pressure is a modulator by another name, so it
+        # inherits the law - and GATE and VELO were removed from that set for
+        # destroying a recorded take.
+        self.assertIn(tl.PRESSURE_VERB, tl.MOD_TIMBRE)
+
+    def test_the_target_verb_is_not_a_drift_verb(self):
+        self.assertFalse(tl.is_drift(tl.PRESSURE_VERB))
