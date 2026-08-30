@@ -18,7 +18,7 @@ run each step yourself.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![761 tests](https://img.shields.io/badge/tests-761%20passing-b4b4bc)
+![1047 tests](https://img.shields.io/badge/tests-1047%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -90,12 +90,21 @@ a driver that never binds and says so nowhere, a daemon restarted in the wrong
 order, a missing config flag that destroys the pad LEDs on first touch. The guide
 is authoritative; `install.sh` is only a wrapper over it.
 
-The unit tests need no Pi and no hardware:
+Every test in this repository runs without a Pi and without the controller:
 
 ```bash
-cd ctrldev && python3 -m unittest discover -s tests -q
-# → Ran 761 tests ... OK
+cd ctrldev && python3 -m unittest discover -s tests -q   # → 786   the driver
+cd daemon  && cargo test                                 # → 122   the HID daemon
+bash system/tests/test-system-files.sh                   # →  53   units, udev, helpers
+bash system/tests/test-dry-run.sh                        # →  86   what each installer PRINTS
 ```
+
+That is what the badge counts. The driver itself cannot be imported off a Pi —
+`zynlibs.zynseq` exists only there — so behaviour is pushed down into
+`techno_lib.py` where it can be tested, and the driver keeps a compile check.
+The dry-run suite shadows `ssh`, `scp` and `systemctl` with stubs that fail if
+called, so a dry run that actually executes something breaks the build rather
+than someone's rig.
 
 ## Credits
 
