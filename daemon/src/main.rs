@@ -21,7 +21,7 @@ use std::path::Path;
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};
 
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 extern crate nix;
 use nix::fcntl::{O_NONBLOCK, O_RDWR};
@@ -50,6 +50,8 @@ mod ws_types;
 mod ws_server;
 mod midi_parse;
 mod config;
+mod hid_stats;
+mod watchdog;
 mod sequencer;
 mod clock;
 use clock::ClockSource;
@@ -77,6 +79,14 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     let mut check = 0;
     let mut last_report = SystemTime::now();
     let mut reopens: u64 = 0;
+    // Storm state for the input watchdog. `consecutive` counts reopens since
+    // input last flowed healthily; it is what the backoff is computed from, and
+    // it is NOT the same as `reopens`, which stays a lifetime total because
+    // `journalctl | grep -c reopened` is this project's primary diagnostic.
+    let mut consecutive: u64 = 0;
+    let mut last_reopen = Instant::now();
+    let mut backoff_until = Instant::now();
+    let mut announced_backoff = Duration::from_millis(0);
     let input_timeout = Duration::from_millis(50);
     let mut active = false;
     loop {
@@ -85,6 +95,17 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         if fds[0].revents().unwrap().contains(POLLIN) {
             dev.readable(mhandler);
             last_report = SystemTime::now();
+            // Input is flowing. If it has been flowing long enough, the storm
+            // is over and the next isolated stall gets an immediate retry
+            // again - which is the common, recovering case and must stay fast.
+            if consecutive > 0 && watchdog::storm_is_over(last_reopen.elapsed()) {
+                println!(
+                    "watchdog: input recovered after {} consecutive reopens",
+                    consecutive
+                );
+                consecutive = 0;
+                announced_backoff = Duration::from_millis(0);
+            }
         }
 
         // Input watchdog. The device streams ~750 reports/s unconditionally, so
@@ -92,7 +113,9 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         // delivering to our fd (verified with usbmon: the URBs keep completing
         // with data while read() returns EAGAIN forever). A fresh open() is the
         // only known recovery.
-        if last_report.elapsed().unwrap() >= input_timeout {
+        if last_report.elapsed().unwrap() >= input_timeout
+            && Instant::now() >= backoff_until
+        {
             // Close BEFORE reopening: usbhid only tears down and resubmits the
             // interrupt URB when the device user count drops to zero, and that
             // teardown is what actually revives the stream. Opening first left
@@ -112,6 +135,26 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                 }
                 Err(err) => {
                     println!("watchdog: reopen of {} failed: {}", dev_path, err);
+                }
+            }
+            // Counted on failure too: a reopen that cannot even open the node
+            // is the strongest possible reason to stop hammering it.
+            consecutive += 1;
+            last_reopen = Instant::now();
+            let delay = watchdog::reopen_delay(consecutive);
+            backoff_until = last_reopen + delay;
+            // Announced only when the step CHANGES. Every reopen still prints
+            // its own line above, so `grep -c reopened` keeps counting exactly
+            // what it always counted; this line explains the spacing between
+            // them rather than replacing them.
+            if delay != announced_backoff {
+                announced_backoff = delay;
+                if delay > Duration::from_millis(0) {
+                    println!(
+                        "watchdog: backing off {}ms after {} consecutive reopens",
+                        delay.as_millis(),
+                        consecutive
+                    );
                 }
             }
             last_report = SystemTime::now();
@@ -184,6 +227,7 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                             pad_notes: mhandler.pad_notes,
                             encoder_ccs: mhandler.encoder_ccs,
                             external_pad_leds: mhandler.external_pad_leds,
+                            send_aftertouch: mhandler.send_aftertouch_cfg,
                         }.save();
                     }
                 }
@@ -194,6 +238,7 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                             pad_notes: mhandler.pad_notes,
                             encoder_ccs: mhandler.encoder_ccs,
                             external_pad_leds: mhandler.external_pad_leds,
+                            send_aftertouch: mhandler.send_aftertouch_cfg,
                         }.save();
                     }
                 }
@@ -211,8 +256,11 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             now = SystemTime::now();
         }
         if now_display.elapsed().unwrap() >= display_interval {
-            // Normal rendering stays off - it issued ~180 writes/s of 521-byte
-            // reports. Calibration redraws are rate-limited to this timer.
+            // Normal rendering stays off - it issued ~180 writes/s. Each
+            // report is 9 header bytes plus a 256-byte payload = 265, and a
+            // both-screen rebuild is 16 of them (this comment said 521 bytes
+            // until 2026-08-30; the write COUNT was always the half that
+            // mattered). Calibration redraws are rate-limited to this timer.
             dev.calib_flush();
             // Screen framebuffers written over OSC land here too, for the same
             // reason: pushing them from the OSC handler would interleave HID
@@ -283,7 +331,24 @@ fn usage(prog_name: &String) {
     println!("usage: {} <hidraw device>", prog_name);
 }
 
+/// Where the big encoder's counter and reported value live.
+///
+/// roller_status and roller_value are both [i32; 9] for eight encoders. The
+/// ninth slot was always spare; the big encoder now uses it, so it shares the
+/// jump-rejection and accumulation the other eight have had all along.
+const BIG_ENC_SLOT: usize = 8;
+
 const PAD_RELEASED_BRIGHTNESS: f32 = 0.015;
+
+/// Minimum gap between two aftertouch sends for the SAME pad.
+///
+/// The device streams pressure at ~750 reports/s (endpoint ceiling is 8,000/s:
+/// high speed, bInterval 1, measured on the rig 2026-08-30). Every send is a
+/// MIDI message into ZynMidiRouter, and the driver's `midi_event` holds its
+/// lock for the whole event — so the raw rate is a hazard, not a resolution.
+/// 25 ms caps one held pad at ~40 msg/s, a 19x reduction, which is still four
+/// times the driver's own ~10 Hz consumption of it.
+const AFTERTOUCH_MIN_INTERVAL: Duration = Duration::from_millis(25);
 
 #[allow(dead_code)]
 enum PressureShape {
@@ -312,6 +377,13 @@ struct MHandler<'a> {
     pad_notes: [u8; 16],
     encoder_ccs: [u16; 8],
     external_pad_leds: bool,
+    send_aftertouch_cfg: bool,
+
+    /// Last aftertouch value sent per pad, and when. Both are needed: the
+    /// change gate alone still lets a slowly-moving finger send at the report
+    /// rate, and the time gate alone re-sends a value nobody changed.
+    at_last_val: [u8; 16],
+    at_last_sent: [Option<Instant>; 16],
 }
 
 fn osc_button_to_btn_map(osc_button: &str) -> Option<MaschineButton> {
@@ -909,9 +981,30 @@ impl<'a> MHandler<'a> {
             };
         };
         if button.contains("A8") {
-            let msg = Message::RPN7(Ch1, controlbase, status as u8 * 8);
-            self.seq_port.send_message(&msg).unwrap();
-            self.seq_handle.drain_output();
+            // THE BIG ENCODER, and it is the only one that does not go through
+            // send_encoder_cc. It used to send `status * 8` as an ABSOLUTE
+            // value on every detent, so the counter rolling over snapped the
+            // target from 120 to 0 once per revolution - MOD depth rides this
+            // knob, so that was audible.
+            //
+            // Slot 8 of roller_status/roller_value has been sitting free since
+            // both arrays were declared [_; 9] for eight encoders. This is
+            // what it was for.
+            let counter = status as i32;
+            let prev = maschine.get_roller_status(BIG_ENC_SLOT);
+            // Resync the baseline whether or not the report is used, exactly
+            // as send_encoder_cc does: leaving a stale baseline makes every
+            // later delta carry the wrap too, and the knob goes dead until the
+            // counter comes back round.
+            maschine.set_roller_status(counter, BIG_ENC_SLOT);
+            if let Some(value) = cc_math::big_encoder_value(
+                prev, counter, maschine.get_roller_value(BIG_ENC_SLOT))
+            {
+                maschine.set_roller_value(value as i32, BIG_ENC_SLOT);
+                let msg = Message::RPN7(Ch1, controlbase, value);
+                self.seq_port.send_message(&msg).unwrap();
+                self.seq_handle.drain_output();
+            }
         }
 
         if status <= 250 {
@@ -1397,8 +1490,24 @@ impl<'a> MaschineHandler for MHandler<'a> {
             return;
         }
 
+        // Two gates, and the LED glow sits behind them too. Without that the
+        // pressure glow would mark the LED buffer dirty on every report, so a
+        // single held pad would pin the 16 ms flush at its 187 writes/s
+        // ceiling for as long as it was held.
+        let value = self.pressure_to_vel(pressure);
+        if value == self.at_last_val[pad_idx] {
+            return;
+        }
+        if let Some(sent) = self.at_last_sent[pad_idx] {
+            if sent.elapsed() < AFTERTOUCH_MIN_INTERVAL {
+                return;
+            }
+        }
+        self.at_last_val[pad_idx] = value;
+        self.at_last_sent[pad_idx] = Some(Instant::now());
+
         let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
-        let msg = Message::PolyphonicPressure(Ch1, midi_note, self.pressure_to_vel(pressure));
+        let msg = Message::PolyphonicPressure(Ch1, midi_note, value);
 
         self.seq_port.send_message(&msg).unwrap();
         self.seq_handle.drain_output();
@@ -1409,6 +1518,12 @@ impl<'a> MaschineHandler for MHandler<'a> {
     }
 
     fn pad_released(&mut self, maschine: &mut dyn Maschine, pad_idx: usize) {
+        // Re-arm the aftertouch gates, or the next press of this pad is held
+        // off by up to 25 ms and its first value can be swallowed as
+        // unchanged.
+        self.at_last_val[pad_idx] = 0;
+        self.at_last_sent[pad_idx] = None;
+
         if maschine.get_padmode() != 2 {
             let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
             let msg = Message::NoteOff(Ch1, midi_note, 0);
@@ -1544,7 +1659,7 @@ fn main() {
         seq_handle: &seq_handle,
 
         pressure_shape: PressureShape::Exponential(0.4),
-        send_aftertouch: false,
+        send_aftertouch: cfg.send_aftertouch,
 
         osc_socket: &osc_socket,
         osc_outgoing_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 42435)),
@@ -1557,6 +1672,10 @@ fn main() {
         pad_notes: cfg.pad_notes,
         encoder_ccs: cfg.encoder_ccs,
         external_pad_leds: cfg.external_pad_leds,
+        send_aftertouch_cfg: cfg.send_aftertouch,
+
+        at_last_val: [0; 16],
+        at_last_sent: [None; 16],
     };
 
     // Display disabled, see write_display() above.
