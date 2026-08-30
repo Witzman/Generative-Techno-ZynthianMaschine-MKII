@@ -55,6 +55,7 @@
 
 import ctypes
 import logging
+import os
 import socket
 import time
 from collections import deque
@@ -384,6 +385,14 @@ NOTE_BASE_HEARTBEAT_TICKS = 30
 PAD_LED_REFRESH_S = 3.0
 PAD_RESYNC_TICKS = 90
 
+# The node udev recreates on every plug. It is the only thing the driver can
+# see that moves when the controller is replaced: the udev rule restarts the
+# DAEMON on plug and deliberately leaves the UI alone, so nothing signals the
+# driver that the surface it painted has been wiped. Stat'ed on the same
+# once-a-second tick as the note-base heartbeat - see _check_device().
+DEVICE_NODE = "/dev/maschine"
+DEVICE_POLL_TICKS = 30
+
 # The same thread re-reads the group volumes every Nth tick, because nothing
 # signals a zctrl change: zynthian_controller emits no zynsigman signal, so a
 # volume moved on the touchscreen is invisible until something asks. Only the
@@ -441,6 +450,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.step_on = [False] * 16          # selected group's steps, for repaint
         self.head_shown = None               # step the white pad is currently on
         self.leds = lib.led_cache()
+        # Identity of the device node, so a replug can be noticed. Seeded here
+        # rather than left None: the surface is painted at startup anyway, and
+        # an unseeded token makes the first poll tick claim a reconnect and
+        # repaint it a second time for nothing.
+        self.device_token = self._device_token()
         # Per encoder: the last position the daemon reported, and movement
         # not yet worth a whole parameter step. See _enc_steps.
         self.enc_last = {}
@@ -6004,6 +6018,52 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         logging.error("Maschine %s failed, %d since last report: %s",
                       key, suppressed, message, exc_info=fresh)
 
+    def _device_token(self):
+        """Identity of the controller's device node, or None when it is not
+        there. udev recreates /dev/maschine on every plug, so the symlink
+        target and the inode behind it move exactly when the hardware has
+        been through a power cycle and lost every LED."""
+
+        try:
+            st = os.stat(DEVICE_NODE)
+        except OSError:
+            return None
+        try:
+            target = os.readlink(DEVICE_NODE)
+        except OSError:
+            # Not a symlink on this install. The stat alone still moves.
+            target = None
+        return (target, st.st_ino, st.st_rdev)
+
+    def _check_device(self):
+        """Repaint the whole surface once, if the controller has been
+        replaced since the last look.
+
+        The LED cache suppresses a write whose value has not changed, which
+        after a replug is a correct statement about the driver and a false one
+        about the hardware: the device came back blank and every write is then
+        judged redundant. Only the pads healed on their own, because the pads
+        are the one cache site with a ttl - buttons, the static LEDs and both
+        screens stayed dark until something happened to change their state,
+        and the static LEDs never do. Measured on the rig 2026-08-30, after a
+        wedge that needed a physical replug to clear.
+
+        This is the same cure _on_snapshot already applies for the same
+        reason, and it costs nothing while the device stays put: one stat a
+        second, and no writes at all unless the token moved.
+
+        Called with the lock held - _render_all() reaches the pattern."""
+
+        token = self._device_token()
+        reconnected = tlib.device_reconnected(self.device_token, token)
+        self.device_token = token
+        if not reconnected:
+            return
+        logging.info("Maschine: device node is new, repainting the surface")
+        self.leds.clear()
+        self.head_shown = None
+        self._render_all()
+
     def _playhead_loop(self):
         """Repaint just the two pads the playhead moves between. A full
         _render_pads() at this rate would mean 16 getNoteVelocity() calls
@@ -6071,6 +6131,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # for a target that proves it needs more.
                     self._mod_write()
                 with self.lock:
+                    # Before anything else this tick: if the controller has
+                    # been replugged, everything below would be written into
+                    # a cache that describes a surface which no longer exists.
+                    if tick % DEVICE_POLL_TICKS == 0:
+                        self._check_device()
                     owner = self._pad_owner()
                     # THE MOD LEGEND IS NO LONGER ANIMATED FROM HERE, and
                     # it is not a throttling question any more. Repainting

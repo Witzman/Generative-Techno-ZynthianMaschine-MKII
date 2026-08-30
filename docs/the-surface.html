@@ -218,6 +218,11 @@
 </tbody></table>
 <p>A voice that is <strong>locked is not silent</strong> — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">Manual installation</a> for the checks that catch a stale MIDI route.</p>
 <hr>
+<h2 id="when-the-surface-goes-dead">When the surface goes dead</h2>
+<p>Different fault, opposite symptom: <strong>the music keeps playing and the controller stops answering.</strong> Pads do nothing, no light changes, the screens are frozen or blank. Nothing is wrong with the instrument &mdash; the patterns are still running and still being written; it is the USB connection to the controller that has stopped carrying anything.</p>
+<p><strong>Unplug the Maschine and plug it back in.</strong> That is the fix, and it is the only one that reliably works &mdash; the controller comes back within a couple of seconds and <strong>the whole surface repaints itself</strong>: pads, button lights, the two screens, all of it, back to exactly what it was showing. You do not have to touch a knob to wake it up, and you do not have to restart anything. Your patterns never stopped.</p>
+<p>Do not go looking for the cause on the touchscreen or in a menu first. If the sound is still there, it is the cable.</p>
+<hr>
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="generating-patterns.html">Generating patterns</a> — what HITS, CHANCE, MELODY and RHYTHM actually do</li>

@@ -1251,6 +1251,35 @@ class techno_lib:
         return True, suppressed, False
 
     @staticmethod
+    def device_reconnected(previous, current):
+        """Has the controller been replaced since the last look?
+
+        `previous` and `current` are identity tokens for the device node -
+        None when it is not there. True means the surface the driver painted
+        is gone and the one in front of the player is blank.
+
+        This exists because the LED cache suppresses a write whose value has
+        not changed, and after a replug that judgement is right about the
+        driver and wrong about the hardware. On 2026-08-30 a wedged controller
+        was cleared with a physical replug and came back with dark buttons,
+        dark statics and dark screens; only the pads healed, because the pads
+        are the one cache site with a ttl. The cure is the one _on_snapshot
+        already uses for the same reason - empty the cache and repaint once -
+        and this is the trigger it was missing.
+
+        The udev rule restarts the daemon on plug and deliberately leaves the
+        UI alone (PartOf= was rejected on measurement), so nothing else tells
+        the driver. The node does: udev recreates /dev/maschine on every plug.
+
+        A vanished device is NOT a reconnect - there is nothing to repaint
+        while it is unplugged, and the debt is paid when it returns. That
+        matters because the poll tick sees several ticks of absence, and a
+        repaint per tick is a full surface rewrite once a second - the kind of
+        traffic that wedges the controller in the first place.
+        """
+        return current is not None and current != previous
+
+    @staticmethod
     def upgrade_state(kind, saved, steps):
         """A state dict out of an older snapshot, brought up to the current
         key set.

@@ -4222,3 +4222,47 @@ class TestPhaseError(unittest.TestCase):
     def test_an_unusable_length_gives_no_correction_rather_than_a_wrong_one(self):
         self.assertIsNone(tl.phase_error(10, 0, 0))
         self.assertIsNone(tl.phase_error(10, 0, None))
+
+
+class TestDeviceReconnected(unittest.TestCase):
+    """The decision behind the full repaint after a replug.
+
+    The udev rule restarts the daemon when the MK2 is plugged in and
+    deliberately leaves the UI alone, so the driver keeps a cache describing a
+    surface that no longer exists and correctly judges every write redundant.
+    The device node is the evidence: udev recreates /dev/maschine on every
+    plug, so a token built from it moves exactly when the surface has been
+    wiped."""
+
+    def test_an_unchanged_token_is_not_a_reconnect(self):
+        self.assertFalse(tl.device_reconnected(("hidraw1", 42), ("hidraw1", 42)))
+
+    def test_a_new_node_is_a_reconnect(self):
+        self.assertTrue(tl.device_reconnected(("hidraw1", 42), ("hidraw2", 43)))
+
+    def test_the_same_name_with_a_new_inode_is_a_reconnect(self):
+        # A replug can land on the same hidraw number. The inode is what
+        # distinguishes "still the device I painted" from "a fresh one".
+        self.assertTrue(tl.device_reconnected(("hidraw1", 42), ("hidraw1", 43)))
+
+    def test_a_vanished_device_is_not_a_reconnect(self):
+        # Unplugged. There is nothing to repaint and nothing to be wrong
+        # about - the repaint is owed when it comes BACK.
+        self.assertFalse(tl.device_reconnected(("hidraw1", 42), None))
+
+    def test_coming_back_after_a_vanish_is_a_reconnect(self):
+        self.assertTrue(tl.device_reconnected(None, ("hidraw1", 43)))
+
+    def test_still_absent_is_not_a_reconnect(self):
+        self.assertFalse(tl.device_reconnected(None, None))
+
+    def test_an_unplugged_replug_cycle_owes_exactly_one_repaint(self):
+        # The poll tick runs at 1 Hz, so a replug is seen as several ticks of
+        # absence and then presence. Only the first present tick may repaint;
+        # anything else is a full surface rewrite once a second, which is the
+        # traffic that wedges the controller.
+        seen = [("hidraw1", 42)] + [None] * 4 + [("hidraw1", 77)] * 5
+        repaints = sum(
+            tl.device_reconnected(seen[i - 1], seen[i])
+            for i in range(1, len(seen)))
+        self.assertEqual(repaints, 1)
