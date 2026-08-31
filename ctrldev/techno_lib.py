@@ -958,13 +958,58 @@ class techno_lib:
         pos = min(1.0, abs(bar - half) / half)
         return int(round(floor + (base - floor) * pos))
 
+    # GATE COLLAPSE. The floor is a FRACTION of each note's own length, not an
+    # absolute duration: a pattern of long pads and a pattern of stabs must
+    # both end up "tight and dry", and a fixed target length would leave one
+    # untouched and silence the other.
+    GATE_COLLAPSE_FLOOR = 0.15
+
+    # zynseq clamps a note duration at 0.1 and changeDurationAll returns out of
+    # its whole loop the moment any event would reach <= 0. Both were measured.
+    # Writing below this means the value read back is not the value written,
+    # and a restore rebuilt from that reading would be rebuilding from a lie.
+    NOTE_DURATION_MIN = 0.1
+
+    @staticmethod
+    def gate_ramp(bar, bars):
+        """How much of its length a note keeps, `bar` bars into a collapse.
+
+        Monotone DOWN and then a snap back, where chance_ramp is a V. The two
+        are different gestures on purpose: the CHANCE ramp thins and refills
+        to make a breakdown, this one tightens all the way into the landing and
+        releases on it, which is what makes it read as a build rather than a
+        dip.
+
+        At and past the end it returns 1.0 - the pattern restored - rather than
+        continuing past the floor. A missed poll cannot strand a channel
+        collapsed forever, the same reasoning as chance_ramp's clamp and
+        PendingQueue.due() using >= rather than ==."""
+
+        if bars <= 0 or bar >= bars:
+            return 1.0
+        if bars == 1:
+            return techno_lib.GATE_COLLAPSE_FLOOR
+        pos = max(0, bar) / float(bars - 1)
+        return 1.0 - (1.0 - techno_lib.GATE_COLLAPSE_FLOOR) * pos
+
+    @staticmethod
+    def collapse_duration(duration, factor):
+        """One note's duration under the ramp, never below what zynseq will
+        actually store.
+
+        Clamped rather than allowed to reach zero: a note of zero length is not
+        a short note, it is a note the sequencer drops - and the pattern is
+        rebuilt from a capture, so a dropped note would not come back."""
+
+        return max(techno_lib.NOTE_DURATION_MIN, float(duration) * float(factor))
+
     # The macros ARM can compose, one per pad from 0. The remaining pads stay
     # dark and unbound, because a lit pad that does nothing is the fault this
     # surface must never commit. APPEND-ONLY - a snapshot may store the name,
     # so an existing entry never moves index. drop and chance shipped with
     # package 1; half and double joined them with package 3.
     ARM_MACROS = ("drop", "chance", "half", "double", "break",
-                  "ratchet")
+                  "ratchet", "gate")
 
     # Pads 8-15, the length ring, in bars. Eight lengths for eight pads, and
     # the odd ones (3, 6, 12) are there because a build does not have to be a
@@ -2383,6 +2428,33 @@ class techno_lib:
         return float(phase0) + float(elapsed_beats) / span
 
     @staticmethod
+    def phase_reset(elapsed_beats, rate_bars, beats_per_bar=4):
+        """The phase0 that puts a modulator at the START of its cycle at
+        `elapsed_beats`.
+
+        THIS IS THE SIDECHAIN PUMP, and the shape was never the missing part.
+        A bar-rate gain LFO already ships: `level` is in MOD_TIMBRE, 1.0 bars
+        is the default rate a new bind takes, depth is signed, and a
+        negative-depth `ramp` is an instant rise on the downbeat falling
+        linearly to the bar line. Bind that across the MIXER page's eight
+        LEVEL columns and every strip pumps.
+
+        In eight different phases. phase0 is captured at BIND time, on
+        purpose - _mod_encoder says so in as many words, because scattered
+        LFOs are what you want when eight of them are colouring eight
+        different timbres. A pump is the one case where they must agree, and
+        agreeing is what this function is for.
+
+        Same expression the bind path already computes inline; extracted so
+        the re-phase gesture and the bind cannot drift apart, and so it can be
+        tested at all - the driver cannot be imported off a Pi."""
+
+        if float(rate_bars) <= 0.0:
+            return 0.0
+        return (-techno_lib.mod_pos(0.0, elapsed_beats, rate_bars,
+                                    beats_per_bar)) % 1.0
+
+    @staticmethod
     def phrase_pos(elapsed_beats, anchor_beats, beats_per_bar=4):
         """Bars since the anchor as (bar_index, fraction through that bar).
 
@@ -2958,6 +3030,8 @@ class techno_lib:
         "timescale_end": "RETURN",
         "ratchet": "ROLL",
         "ratchet_end": "UNROLL",
+        "gate": "TIGHT",
+        "gate_end": "UNTIGHT",
     }
 
     @staticmethod

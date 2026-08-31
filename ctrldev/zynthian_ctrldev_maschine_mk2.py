@@ -651,6 +651,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # ramp, and for the same reason - one truth about whether a ramp is
         # running rather than three attributes that can disagree.
         self._ratchet_ramp = None
+        # A running GATE collapse, or None. Same dict shape as the two ramps
+        # above, with one field they do not have: `notes`, the captured events
+        # every rewrite is rebuilt FROM. There is no setNoteDuration in the
+        # installed API, so a restore is remove-and-re-add and it starts from
+        # nothing - the capture is what makes the macro reversible at all.
+        self._gate_ramp = None
         self.mute_down = False
         # Queued mute changes: channel -> the mute state to take at that
         # channel's next wrap. DELIBERATELY NOT state[ch]["pending"] - that
@@ -1388,7 +1394,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.writer_token[channel] = "turing"
         try:
             steps = lib.step_count(self.div[channel])
-            notes = self._voice_notes(channel, steps)
+            notes, mask = self._voice_line(channel, steps)
             # Which steps sound. A masked step skips addNote entirely, so the
             # write burst - the largest risk in this design - gets smaller at
             # every step masked off, never larger.
@@ -1400,14 +1406,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # whose handler catches Exception and RETURNS - one KeyError
             # from a state dict built by an older path would kill the
             # playhead loop for the rest of the session.
-            mask = tlib.rhythm_mask(st.get("rhythm_reg", 0xFFFF), steps)
-            # ROTATE on a voice moves the rendered LINE - notes and rests
-            # together, in ONE call, because rotating them apart gives a melody
-            # that slides while its rhythm stands still, which is a different
-            # melody rather than the same one moved. Owner's decision,
-            # 2026-08-31; the rejected reading clocked the pitch register.
-            notes, mask = tlib.rotate_line(notes, mask,
-                                           int(st.get("rotate", 0)))
             velocity = max(1, min(127, int(st["velo"])))
             played = []
             with self.lock:
@@ -3664,6 +3662,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._duplicate()
 
     def _act_restart(self):
+        if self.mod_down:
+            # MOD + RESTART: every modulator back to the start of its cycle,
+            # together. THE SIDECHAIN PUMP IS THIS GESTURE, not a new LFO - a
+            # negative-depth ramp on LEVEL across the MIXER page already pumps
+            # each strip, and the only thing wrong with it is that eight binds
+            # made one after another run in eight phases.
+            #
+            # BARE RESTART DELIBERATELY DOES NOT DO THIS, although the case for
+            # it is real: this method already re-zeros the phrase clock with
+            # the playheads, and its own comment says the count must not keep
+            # running while every pattern jumps to its start. An LFO is the one
+            # thing it leaves running. It stays that way because a sixteen-bar
+            # filter sweep would SNAP mid-move, and a player reaching for
+            # RESTART is asking about the pattern, not about a sweep they set
+            # up four bars ago. Under MOD they are asking about modulation, and
+            # that is exactly when the answer changes.
+            self._rephase_all()
+            return
         for group in range(8):
             # Installed signature: setPlayPosition(bank, sequence, clock)
             self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
@@ -3673,6 +3689,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self._phrase_anchor is not None:
             self._phrase_anchor = self._elapsed_beats()
             self._phrase_bar = 0
+
+    def _rephase_all(self):
+        """Put every modulator at the start of its cycle, now, together.
+
+        Same-rate modulators end up in lockstep, which is what turns eight
+        scattered per-strip pumps into one mix pump. Different rates start
+        together and diverge as their rates say they should - that is the
+        honest behaviour, not a special case: two-bar and one-bar modulators
+        agreeing forever would mean one of them is not running at its rate.
+
+        The BASE is untouched. Re-phasing moves where in its cycle a modulator
+        is, never the value the player dialled in - the base/offset law, which
+        every other modulation path here already obeys."""
+
+        if not self.mod:
+            return
+        elapsed = self._elapsed_beats()
+        for entry in self.mod.values():
+            entry["phase0"] = tlib.phase_reset(
+                elapsed, tlib.MOD_RATES[entry["rate"]])
+        self._slog("rephase", count=len(self.mod), beats=round(elapsed, 3))
+        with self.lock:
+            self._render_display()
 
     def _act_page_prev(self):
         self._step_page(-1)
@@ -3922,8 +3961,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 "depth": 0,
                 "rate": rate_idx,
                 "shape": "tri",
-                "phase0": (-tlib.mod_pos(0.0, elapsed,
-                                         tlib.MOD_RATES[rate_idx])) % 1.0,
+                "phase0": tlib.phase_reset(elapsed,
+                                           tlib.MOD_RATES[rate_idx]),
                 # The base is captured ONCE, at bind, from the value the
                 # player has dialled in. Re-reading it later would read the
                 # LFO's own output back and the parameter would walk away.
@@ -5636,6 +5675,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                          self.globals["root"], self.globals["scale"],
                          st["octave"], st["range"])
 
+    def _voice_line(self, channel, steps):
+        """(notes, mask) for a voice: what each step plays and whether it
+        sounds, ROTATED. The single place ROTATE is applied.
+
+        It has to be single. _step_notes and _step_note derive the pitch a
+        step carries so the pads can query it, and _write_voice_pattern writes
+        it - and _step_note's own docstring says that if the two disagree the
+        pads query a note that is not there and every step reads as empty.
+        Rotation applied in the writer alone did exactly that: the pattern
+        moved and the renderer kept asking about the unrotated line.
+
+        Notes and mask go through rotate_line together, in one call, because
+        rotating them apart gives a melody that slides while its rhythm stands
+        still."""
+
+        st = self.state[channel]
+        notes = self._voice_notes(channel, steps)
+        mask = tlib.rhythm_mask(st.get("rhythm_reg", 0xFFFF), steps)
+        return tlib.rotate_line(notes, mask, int(st.get("rotate", 0)))
+
     def _step_notes(self, channel, steps):
         """The note each step carries, as a list. Computed once per repaint:
         deriving it per pad meant recomputing the whole line sixteen times,
@@ -5643,7 +5702,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         if self.channel_kind(channel) != "voice":
             return [self._group_note(channel)] * steps
-        notes = self._voice_notes(channel, max(1, steps))
+        notes, _mask = self._voice_line(channel, max(1, steps))
         return [notes[i % len(notes)] for i in range(steps)] if notes \
             else [self._group_note(channel)] * steps
 
@@ -5660,7 +5719,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         steps = lib.step_count(self.div[channel])
         if steps <= 0:
             return self._group_note(channel)
-        notes = self._voice_notes(channel, steps)
+        notes, _mask = self._voice_line(channel, steps)
         return notes[step % len(notes)] if notes else self._group_note(channel)
 
     def _note_duration(self, step, note):
@@ -5959,6 +6018,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._log_poll_error(f"macro {macro}", e)
         self._chance_tick(bar)
         self._ratchet_tick(bar)
+        self._gate_tick(bar)
         self._walk_tick(bar)
         with self.lock:
             self._render_display()
@@ -6149,6 +6209,130 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if step >= ramp["bars"]:
             self._chance_ramp = None
 
+    def _gate_fire(self, bar):
+        """Arm a gate collapse: capture every note that will be shortened.
+
+        VOICES ONLY, and that is a measurement rather than a scope decision.
+        The five drum channels play LinuxSampler one-shots, which run to the
+        end of the sample whether or not the note is shortened - the same
+        measurement that killed choke groups. Collapsing a drum channel would
+        change the pattern, cost eight rewrites and produce no sound anybody
+        could hear, so it is refused and the note says how many channels took
+        it. A macro that appears to fire on eight channels and is audible on
+        three is worse than one that says three.
+
+        THE CAPTURE IS THE FEATURE. There is no setNoteDuration in the
+        installed API, so a restore is remove-and-re-add - which drops the
+        note's ratchet and stutter unless they were captured too. And the
+        obvious shortcut, changeDurationAll, was measured and is asymmetric: it
+        returns out of its whole loop the moment any event would reach <= 0, so
+        a decrement leaves the pattern half changed, and it clamps at 0.1, so
+        the inverse does not restore what was there. Nothing here computes an
+        inverse; it rebuilds from what was read."""
+
+        channels = [ch for ch in tlib.generated_channels(self.owner,
+                                                         len(tlib.CHANNELS))
+                    if self.channel_kind(ch) == "voice"]
+        captured = {}
+        with self.lock:
+            for channel in channels:
+                captured[channel] = self._capture_notes(channel)
+        if not captured:
+            self._timescale_note = ("TIGHT", 0, len(tlib.CHANNELS))
+            self._note_expires = None
+            return
+        self._gate_ramp = {
+            "bars": self._arm_bars.get("gate", 4),
+            "start": bar,
+            "notes": captured,
+        }
+        self._timescale_note = ("TIGHT", len(captured), len(tlib.CHANNELS))
+        self._note_expires = None
+
+    def _capture_notes(self, channel):
+        """Every note in a channel's pattern, with everything a rewrite needs.
+
+        Duration, velocity AND the stutter pair, because remove-and-re-add is
+        the only way back and it starts from nothing. Called under the lock;
+        selectPattern exactly once, like every other burst here."""
+
+        self._select_pattern(channel)
+        steps = self.libseq.getSteps()
+        # ASK THE ONE SOURCE which note a step carries rather than scanning all
+        # 128. A blind scan is 2048 getNoteVelocity calls per channel under the
+        # lock, and libzynseq is not thread-safe - the poll thread, the MIDI
+        # handler and the queued handler all reach it, and a burst that size on
+        # a macro landing is the shape of the SIGSEGV this driver survived once.
+        line = self._step_notes(channel, steps)
+        out = []
+        for step in range(steps):
+            for note in {line[step]}:
+                velocity = self.libseq.getNoteVelocity(step, note)
+                if not velocity:
+                    continue
+                duration = float(self.libseq.getNoteDuration(step, note))
+                stutter = (0, 0)
+                if self.has_stutter:
+                    try:
+                        stutter = (int(self.libseq.getStutterCount(step, note)),
+                                   int(self.libseq.getStutterDur(step, note)))
+                    except Exception:
+                        pass
+                out.append((step, note, int(velocity), duration, stutter))
+        return out
+
+    def _gate_tick(self, bar):
+        """Walk a running gate collapse one bar. ONCE PER BAR.
+
+        Rewrites the pattern, so it obeys the same law drift does - and unlike
+        the CHANCE ramp, which costs no pattern write at all and is therefore
+        safe anywhere, this one has to re-ask ownership EVERY BAR. A player can
+        start recording onto a channel four bars into a build, and the capture
+        taken at fire time cannot see that coming.
+
+        A channel that leaves the set keeps its captured notes: dropping them
+        would mean the restore had nothing to put back, and the channel would
+        stay collapsed for as long as the pattern lived."""
+
+        if not self._gate_ramp:
+            return
+        ramp = self._gate_ramp
+        step = bar - ramp["start"]
+        factor = tlib.gate_ramp(step, ramp["bars"])
+        for channel, events in ramp["notes"].items():
+            if not tlib.generator_may_write("macro", self.frozen,
+                                            self.freeze_deep,
+                                            self.owner.get(channel)):
+                continue
+            self._write_captured(channel, events, factor)
+        if step >= ramp["bars"]:
+            # Landed: the last write above already restored full length,
+            # because gate_ramp returns 1.0 at and past the end.
+            self._gate_ramp = None
+
+    def _write_captured(self, channel, events, factor):
+        """Rewrite one channel's notes at `factor` of their captured length.
+
+        Always from the CAPTURE, never from what is currently in the pattern:
+        scaling what is already scaled compounds, and the floor would make it
+        irreversible after two bars."""
+
+        with self.lock:
+            self._select_pattern(channel)
+            for step, note, velocity, duration, (count, dur) in events:
+                self.libseq.removeNote(step, note)
+                self.libseq.addNote(step, note, velocity,
+                                    tlib.collapse_duration(duration, factor),
+                                    0.0)
+                if count and self.has_stutter:
+                    # Re-applied because remove-and-re-add starts from nothing.
+                    # Without this a build would quietly strip the ratchet off
+                    # every note it touched, and the ROLL macro would come back
+                    # to a pattern that had lost it.
+                    self.libseq.setStutterCount(step, note, count)
+                    self.libseq.setStutterDur(step, note, dur)
+            self.libseq.updateSequenceInfo()
+
     def _walk_tick(self, bar):
         """The chord walker: move the shared root every N bars.
 
@@ -6320,6 +6504,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._timescale_fire(macro, bar)
         elif macro == "timescale_end":
             self._timescale_restore_apply()
+        elif macro == "gate":
+            self._gate_fire(bar)
         elif macro == "chance":
             # Capture every channel's OWN value at fire time. The ramp walks
             # away from it and lands back on it; nothing here assumes 100.

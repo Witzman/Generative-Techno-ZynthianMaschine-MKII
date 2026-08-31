@@ -3867,6 +3867,12 @@ class TestArmMacroTable(unittest.TestCase):
         self.assertEqual(tl.ARM_MACROS[:2], ("drop", "chance"))
         self.assertEqual(tl.ARM_MACROS[2:6],
                          ("half", "double", "break", "ratchet"))
+        # Gate collapse took pad 6 on 2026-08-31 - the FIRST of the two free
+        # macro slots, and the only one of the owner's twelve that is
+        # armed-macro-shaped: it lands on a bar and returns. Pad 7 stays free
+        # for TURN, retrograde, velocity swell or punch-in, all of which are
+        # the same shape and already on the list.
+        self.assertEqual(tl.ARM_MACROS[6], "gate")
 
     def test_it_still_fits_the_top_half_of_the_grid(self):
         # Pads 0-7 are the macros and 8-15 the length ring. A seventh entry is
@@ -4964,3 +4970,112 @@ class TestPageVerbsNameRealStateKeys(unittest.TestCase):
                     self.assertIn(verb, state,
                                   f"{mode}/{kind} page {desc['title']}: "
                                   f"verb {verb!r} names no state key")
+
+
+class TestModPhaseReset(unittest.TestCase):
+    """Re-phasing: put a modulator at the start of its cycle at a chosen
+    moment, so several of them run in lockstep instead of scattered.
+
+    This is the whole of the sidechain pump. A bar-rate gain LFO already ships
+    - `level` is in MOD_TIMBRE, 1.0 bars is the DEFAULT rate a bind takes, and
+    a negative-depth ramp is an instant rise falling to the bar line. What was
+    missing is that phase0 is captured at BIND time, deliberately, so eight
+    strips bound one after another pump in eight different phases: smear, not
+    glue."""
+
+    def test_a_reset_puts_the_modulator_at_the_start_of_its_cycle(self):
+        phase0 = tl.phase_reset(37.5, 1.0)
+        self.assertAlmostEqual(tl.mod_pos(phase0, 37.5, 1.0) % 1.0, 0.0)
+
+    def test_it_works_at_every_shipped_rate(self):
+        for rate in tl.MOD_RATES:
+            phase0 = tl.phase_reset(13.25, rate)
+            self.assertAlmostEqual(tl.mod_pos(phase0, 13.25, rate) % 1.0, 0.0,
+                                   msg=f"rate {rate}")
+
+    def test_two_modulators_reset_together_stay_together(self):
+        # The point of the feature: same rate, same moment, same phase from
+        # then on. Scattered phases are what a spread-page bind gives today.
+        a = tl.phase_reset(9.0, 1.0)
+        b = tl.phase_reset(9.0, 1.0)
+        for elapsed in (9.0, 10.5, 21.25, 100.0):
+            self.assertAlmostEqual(tl.mod_pos(a, elapsed, 1.0),
+                                   tl.mod_pos(b, elapsed, 1.0))
+
+    def test_modulators_bound_apart_are_NOT_together_without_it(self):
+        # The defect being fixed, asserted so it cannot quietly stop being
+        # true: binding at two moments is what scatters them.
+        a = tl.phase_reset(9.0, 1.0)
+        b = tl.phase_reset(9.7, 1.0)
+        self.assertNotAlmostEqual(tl.mod_pos(a, 20.0, 1.0) % 1.0,
+                                  tl.mod_pos(b, 20.0, 1.0) % 1.0)
+
+    def test_the_phase_is_a_fraction_of_one_cycle(self):
+        for elapsed in (0.0, 3.3, 77.9):
+            self.assertGreaterEqual(tl.phase_reset(elapsed, 2.0), 0.0)
+            self.assertLess(tl.phase_reset(elapsed, 2.0), 1.0)
+
+    def test_a_zero_rate_does_not_divide_by_zero(self):
+        self.assertEqual(tl.phase_reset(5.0, 0.0), 0.0)
+
+
+class TestGateCollapse(unittest.TestCase):
+    """Every note shortens across the armed bars, then returns.
+
+    NOT built on changeDurationAll, which was measured and is asymmetric: it
+    returns out of the whole loop the moment any event would go to <= 0, so a
+    decrement can leave the pattern half changed, and it clamps at 0.1, so the
+    inverse does not restore the original. Capture and rebuild instead."""
+
+    def test_it_starts_at_full_length(self):
+        self.assertEqual(tl.gate_ramp(0, 4), 1.0)
+
+    def test_it_shortens_every_bar(self):
+        values = [tl.gate_ramp(bar, 8) for bar in range(8)]
+        for a, b in zip(values, values[1:]):
+            self.assertGreater(a, b)
+
+    def test_the_last_bar_reaches_the_floor(self):
+        self.assertAlmostEqual(tl.gate_ramp(7, 8), tl.GATE_COLLAPSE_FLOOR)
+
+    def test_the_landing_restores_full_length(self):
+        # The macro RESOLVES. A build that left the pattern collapsed would be
+        # a gesture with no way back except by hand.
+        self.assertEqual(tl.gate_ramp(8, 8), 1.0)
+
+    def test_a_missed_poll_cannot_strand_it_collapsed(self):
+        # Past the end returns full rather than continuing past it - the same
+        # reasoning as chance_ramp's and PendingQueue.due()'s >= over ==.
+        self.assertEqual(tl.gate_ramp(99, 8), 1.0)
+
+    def test_a_zero_length_ramp_does_nothing(self):
+        self.assertEqual(tl.gate_ramp(0, 0), 1.0)
+
+    def test_the_factor_is_never_zero_and_never_over_one(self):
+        for bars in (1, 2, 3, 4, 8, 16):
+            for bar in range(bars + 2):
+                factor = tl.gate_ramp(bar, bars)
+                self.assertGreater(factor, 0.0)
+                self.assertLessEqual(factor, 1.0)
+
+
+class TestCollapseDuration(unittest.TestCase):
+    """One note's duration under the ramp."""
+
+    def test_a_full_factor_is_the_identity(self):
+        self.assertEqual(tl.collapse_duration(2.5, 1.0), 2.5)
+
+    def test_it_scales_the_duration(self):
+        self.assertAlmostEqual(tl.collapse_duration(2.0, 0.5), 1.0)
+
+    def test_it_never_goes_below_the_libseq_floor(self):
+        # zynseq clamps a duration at 0.1 and returns out of its own loop at
+        # <= 0. Writing anything under the floor means the value that comes
+        # back is not the value written, and the restore would then be
+        # rebuilding from a lie.
+        self.assertGreaterEqual(tl.collapse_duration(0.2, 0.01),
+                                tl.NOTE_DURATION_MIN)
+
+    def test_a_note_already_at_the_floor_survives_a_full_collapse(self):
+        self.assertEqual(tl.collapse_duration(tl.NOTE_DURATION_MIN, 0.1),
+                         tl.NOTE_DURATION_MIN)
