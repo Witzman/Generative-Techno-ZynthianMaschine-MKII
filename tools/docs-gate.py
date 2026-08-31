@@ -320,7 +320,12 @@ BASELINE = {
     # entries moved to a "written, not yet on the instrument" section, and the
     # ideas were regrouped by what they would change into six themes, each
     # needing a lead paragraph. The tables grew far more than the prose did.
-    "whats-next.html":             (1039, "2026-08-31"),
+    # +147, 2026-08-31 (second edit the same day): a new section, "Ideas this
+    # instrument already has" — sixteen ideas that other generative and DJ
+    # tools suggest and this one already ships, each pointed at the guide page
+    # that covers it. Owner-requested: an idea list that does not say what is
+    # answered reads as though none of it is.
+    "whats-next.html":             (1186, "2026-08-31"),
 }
 SKIP_BUDGET = {"index.html"}
 

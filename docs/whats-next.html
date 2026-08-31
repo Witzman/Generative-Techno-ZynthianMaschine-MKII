@@ -73,7 +73,7 @@
 
 <h2 id="what-this-is">What this page is</h2>
 <p>Everything else in this guide describes an instrument you can play today. This page is the opposite: it is the idea list, kept in the open so that anyone forking the project can see what has been considered and how expensive it looked.</p>
-<p>The list was assembled by reading the code rather than by wishing &mdash; every entry has a known mechanism behind it, and several were rejected as impossible before they reached this page. Ideas that turned out to be already built have been removed rather than quietly left in.</p>
+<p>The list was assembled by reading the code rather than by wishing &mdash; every entry has a known mechanism behind it, and several were rejected as impossible before they reached this page. Ideas that turned out to be already built have been removed rather than quietly left in, and the common ones are named in <a href="#already-here">Ideas this instrument already has</a> so that nobody has to guess whether something is a gap or a feature.</p>
 <p><strong>Cost</strong> is S, M or L. S means a day or less and nothing new underneath. M means new state or a new part of the surface, still inside the shape the instrument already has. L means a new mechanism, a new page of the surface, or a question that cannot be answered without measuring the hardware first.</p>
 <p><strong>Impact</strong> is 1 to 5, and it means musical consequence &mdash; how much the thing you hear changes &mdash; not how clever the idea is.</p>
 <p>Within each section the strongest ratio of impact to cost comes first. That ratio is where an argument starts, not where it ends: it knows nothing about what depends on what. The countdown ruler ranked twenty-second while nine of the entries above it could not exist without it, which is why it was the first thing built.</p>
@@ -91,6 +91,30 @@
 </ul>
 <p>Two of them change the panel, and the guide will say so when they land: the drum step page&rsquo;s seventh encoder becomes RHYTHM rather than SWING, and the RHYTHM spread page reaches drums.</p>
 <p>Before those, eleven more ideas left this page by shipping and are in the guide proper: FREEZE, half and double time, BREAK, the ratchet ramp, phrase-locked modulation, audio capture, the pending page, the mute grid, the master-bus insert, beat repeat, and one-knob modulation depth on the big encoder.</p>
+
+
+<h2 id="already-here">Ideas this instrument already has</h2>
+<p>Most lists of generative and DJ tools suggest the same things, and a good part of that list is already built here. This section exists so that a reader arriving with an idea can find out in one place whether it is a gap or a feature &mdash; and so that the list above is read as what is genuinely <em>missing</em> rather than as everything anyone has ever wanted.</p>
+<table>
+<tr><th>The idea</th><th>What it is here</th><th>Where</th></tr>
+<tr><td>Euclidean rhythm generators</td><td>Five drum channels, always alive. You set hits, rotation and randomness; the generator writes the notes.</td><td><a href="generating-patterns.html#what-it-is">Generating patterns</a></td></tr>
+<tr><td>A pattern rebuilt every cycle rather than stored</td><td>The generator owns the pattern and writes it at the wrap. You do not draw a beat.</td><td><a href="generating-patterns.html#how-it-works">How it works</a></td></tr>
+<tr><td>Polyrhythm &mdash; lengths that do not agree</td><td>LENGTH reaches three, five and seven beats against a four-to-the-floor kick.</td><td><a href="generating-patterns.html#polymeter">Polymeter</a></td></tr>
+<tr><td>Re-roll &mdash; a new pattern from the same settings</td><td>REROLL, with a one-deep undo so a good bar is not lost to a curious press.</td><td><a href="generating-patterns.html#reroll">Reroll</a></td></tr>
+<tr><td>Probability &mdash; a step that might not play</td><td>CHANCE per channel, read live while the pattern plays.</td><td><a href="generating-patterns.html#probability">Probability</a></td></tr>
+<tr><td>Ratchets and retriggers</td><td>RATCHET, and a ramp that climbs it into a landing.</td><td><a href="generating-patterns.html#ratchet">Ratchet</a></td></tr>
+<tr><td>Notes constrained to a key and a scale</td><td>ROOT and SCALE, shared by all three voices and landing on the bar, so they cannot drift out of key from each other.</td><td><a href="generating-patterns.html">Generating patterns</a></td></tr>
+<tr><td>A shift-register melody generator</td><td>Three Turing voices, each evolving its own register.</td><td><a href="generating-patterns.html">Generating patterns</a></td></tr>
+<tr><td>Freeze &mdash; hold the machine still</td><td>Two stages on one button: latch the generators, or hold the modulators as well.</td><td><a href="the-surface.html#freeze">The surface</a></td></tr>
+<tr><td>Slow automatic variation</td><td>DRIFT moves the pattern at the wrap, and refuses on any channel you have taken over.</td><td><a href="modulation.html#drift">Modulation</a></td></tr>
+<tr><td>Music that goes on without repeating</td><td>Polymeter and drift together: the bar is regenerated rather than looped, so it does not come back around.</td><td><a href="generating-patterns.html#polymeter">Polymeter</a></td></tr>
+<tr><td>Exporting what you made as audio</td><td>Audio capture, recorded on the instrument.</td><td><a href="playing-and-recording.html#audio-capture">Playing and recording</a></td></tr>
+<tr><td>Scenes &mdash; save and recall a whole state</td><td>Snapshots, plus seventy-three of them in the genre and ambient packs.</td><td><a href="saving.html">Saving your work</a></td></tr>
+<tr><td>Arranging by taking parts away</td><td>The mute grid: one pad per channel, muted on the mixer strip so it survives a save.</td><td><a href="the-surface.html#mute-grid">The surface</a></td></tr>
+<tr><td>Builds and drops that land on a boundary</td><td>The phrase clock and ARM, with DROP, RISE and the CHANCE ramp firing into it.</td><td><a href="the-surface.html#phrase">The surface</a></td></tr>
+<tr><td>Rule-based generation, with no machine learning</td><td>This is a description of the whole instrument. Every generator here is hand-designed and runs on the Pi with nothing trained and nothing phoning home.</td><td><a href="02-features.html">Features</a></td></tr>
+</table>
+<p>Two more are written and waiting for the instrument rather than missing: a <strong>bounded random walk</strong> as an alternative to the shift register, and <strong>voices that feed each other</strong>. Both are in the section above about work that is built but not yet on the rig.</p>
 
 <h2 id="plays-itself">The instrument plays itself</h2>
 <p>The instrument can invent a bar and it can schedule a gesture. Between those two there is nothing that decides what the next eight bars should be. This is the section that would fill that gap &mdash; and the safety it needs, because a machine that arranges by itself must also be able to say when it has stopped.</p>
