@@ -45,6 +45,49 @@ class techno_lib:
         return reg
 
     @staticmethod
+    def mutate_coupled(register, length, chance, source, source_length,
+                       amount, rng=random.random):
+        """mutate(), but the fed-back bit may come from ANOTHER voice.
+
+        WHAT COUPLING MEANS HERE, and two rejected readings. The source's
+        outgoing bit is fed into the target's incoming bit, with probability
+        `amount`. Rejected: reciprocal XOR, which makes two voices IDENTICAL
+        inside a single tick - that is collapse, not drift-together; and making
+        the target's mutate chance depend on the source's bit, which is
+        statistically indistinguishable from a slightly different MELODY
+        setting, so the player cannot hear it and it is not a feature.
+
+        AMOUNT 0 IS BIT-IDENTICAL TO mutate(), AND CONSUMES THE SAME RANDOM
+        STREAM. The `amount > 0` short-circuit is what guarantees the second
+        half: an unconditional rng() call here would draw one extra number per
+        bit and change how every evolving voice on the instrument sounds, the
+        day this shipped, with nothing to point at.
+
+        AMOUNT 1 AT LOCK COPIES THE SOURCE - the target becomes it, one bar
+        behind. That is the degenerate end of a continuous control and it is
+        reachable on purpose; it is named here so it is not reported as a bug.
+
+        THE SOURCE IS A VALUE, NOT A CHANNEL, and it is never written. A feeds
+        B feeds A is a musically real request, and passing both registers as
+        they were at the START of the tick is what stops the pair running away
+        inside one wrap.
+
+        Lengths need not agree. The feed is ONE BIT, so a five-bit source can
+        drive a sixteen-bit target; the source is read modulo its own length."""
+
+        mask = (1 << length) - 1
+        reg = register & mask
+        src_len = max(1, source_length)
+        for i in range(length):
+            bit = (reg >> (length - 1)) & 1
+            if amount > 0 and rng() < amount:
+                bit = (source >> ((length - 1 - i) % src_len)) & 1
+            if rng() < chance:
+                bit ^= 1
+            reg = ((reg << 1) | bit) & mask
+        return reg
+
+    @staticmethod
     def rotations(register, length, steps):
         """The `steps` values the pattern is built from, read without advancing
         the persistent register."""
@@ -65,6 +108,39 @@ class techno_lib:
         for _ in range(count % length):
             reg = ((reg << 1) | ((reg >> (length - 1)) & 1)) & mask
         return reg
+
+    @staticmethod
+    def rotate_line(notes, mask, count):
+        """A voice's rendered line rotated forward in time, notes and rests
+        together. Returns (notes, mask).
+
+        ROTATE ON A VOICE - owner's decision, 2026-08-31. Two readings were on
+        the table and they are indistinguishable from outside the code, so the
+        rejected one is named here rather than left to be re-derived: clocking
+        the PITCH REGISTER walks to a related but different melody, the way the
+        hardware Turing Machine's rotation does. That was rejected because a
+        voice's neighbourhood is already reachable through REROLL, so it would
+        have bought a second route to something that exists while leaving the
+        requested gesture - the one drums have - still missing.
+
+        SO THE VERB MEANS ONE THING ON BOTH KINDS OF CHANNEL, and the direction
+        is deliberately maschine_mk2_lib.rotate's: forward in time, wrapping at
+        the end. A test asserts the two agree, because if they ever drift the
+        same word moves a drum and a voice opposite ways and nothing on the
+        surface would say so.
+
+        Notes and mask rotate in ONE call because the failure worth preventing
+        is rotating them apart: a melody that slides while its rhythm stands
+        still is not the same melody moved, it is a different one."""
+
+        n = len(notes)
+        if n == 0:
+            return [], ()
+        count %= n
+        if not count:
+            return list(notes), tuple(mask)
+        return (list(notes[-count:]) + list(notes[:-count]),
+                tuple(mask[-count:]) + tuple(mask[:-count]))
 
     @staticmethod
     def gate_values(register, length, steps):
@@ -126,6 +202,25 @@ class techno_lib:
         cannot pick up bits 12-15 left behind by a 16-step one."""
 
         return tuple(bool(rhythm_reg >> i & 1) for i in range(steps))
+
+    @staticmethod
+    def drum_steps(pattern, rhythm_reg):
+        """A euclidean drum pattern thinned by the drum rhythm register.
+
+        SUBTRACTIVE, and that is the whole design decision. On a voice the
+        rhythm register decides which steps sound outright, because nothing
+        else has an opinion. On a drum, HITS and ROTATE have already drawn the
+        line - so the register may take a hit away and may never invent one. A
+        register that could add steps would leave the HITS encoder reporting a
+        number that is not the number of hits, with nothing on the surface to
+        say so.
+
+        Only the pattern's own bits are read, exactly as rhythm_mask does, so a
+        12-step triplet division cannot pick up bits 12-15 left behind by a
+        16-step one."""
+
+        return tuple(bool(step) and bool(rhythm_reg >> i & 1)
+                     for i, step in enumerate(pattern))
 
     @staticmethod
     def rhythm_toggle(rhythm_reg, step):
@@ -240,6 +335,58 @@ class techno_lib:
 
     NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
+    # ---------------------------------------------------------- chord walker
+    #
+    # THE GLOBAL-SCALE HALF OF THIS FEATURE ALREADY SHIPPED. `new_features.md`
+    # said "the three voices pick pitch independently today" and that was
+    # false: ROOT and SCALE have been global verbs driving all three voices for
+    # months, and a key change already lands on the bar through the driver's
+    # key-dirty set - deliberately, so a LOCKED voice still changes key while
+    # keeping its shape. Only the walker was ever missing, which is why this is
+    # three small functions and not a feature.
+
+    @staticmethod
+    def walk_due(bar, every):
+        """Is the walker due to move on this bar? 0 is LOCK.
+
+        Zero reads as LOCK because that is already this instrument's grammar -
+        MELODY and RHYTHM at zero hold their registers still - and a fourth
+        control that spelled "off" a fourth way would be one more thing to
+        remember for nothing."""
+
+        return every > 0 and bar % every == 0
+
+    @staticmethod
+    def walk_next(degree, span, rng=random.random):
+        """One step of the bounded walk, in scale degrees. Span 0 holds still.
+
+        REFLECTS AT THE EDGE, never clamps. A clamp parks the key against the
+        end of its span and sits there - a walker that has stopped walking,
+        which reads as a broken feature rather than a bounded one."""
+
+        if span <= 0:
+            return 0
+        step = 1 if rng() < 0.5 else -1
+        nxt = degree + step
+        if nxt > span or nxt < -span:
+            nxt = degree - step
+        return nxt
+
+    @staticmethod
+    def walk_root(base_root, degree, scale_idx):
+        """The walked root, in semitones, `degree` scale steps from the base.
+
+        ALONG THE SCALE, NOT BY SEMITONES. The three voices are sharing this
+        scale; stepping the root chromatically would walk out of the key they
+        are sharing, which is the opposite of the request - three unrelated
+        lines were supposed to become a progression. Degree 0 is exactly the
+        root the player dialled in, so a walk that returns to zero returns to
+        the hand-set key rather than near it."""
+
+        intervals = techno_lib.SCALES[scale_idx][1]
+        octaves, idx = divmod(degree, len(intervals))
+        return base_root + intervals[idx] + 12 * octaves
+
     @staticmethod
     def pitch(value, length, root, scale_idx, octave, range_octaves):
         """Scale the register value across `range_octaves`, quantise it to the
@@ -257,6 +404,21 @@ class techno_lib:
     def line(register, length, steps, root, scale_idx, octave, range_octaves):
         return [techno_lib.pitch(v, length, root, scale_idx, octave, range_octaves)
                 for v in techno_lib.rotations(register, length, steps)]
+
+    @staticmethod
+    def walk_line(start, length, steps, root, scale_idx, octave,
+                  range_octaves, span, stride, rng=random.random):
+        """line()'s counterpart for a voice on MODEL_WALK.
+
+        Deliberately the same shape and the same downstream call, so the writer
+        asks one function whichever model a voice is on and the scale, root,
+        octave and range mean exactly what they mean everywhere else. The walk
+        replaces where the VALUES come from and nothing else."""
+
+        return [techno_lib.pitch(v, length, root, scale_idx, octave,
+                                 range_octaves)
+                for v in techno_lib.walk_values(start, length, steps, span,
+                                                stride, rng)]
 
     @staticmethod
     def kit_line(register, length, steps, kit_notes, kit_range=4, centre=None):
@@ -380,6 +542,47 @@ class techno_lib:
 
     KINDS = ("drum", "voice")
 
+    # How a voice picks its pitches. A MODEL, not a KIND - see the `model` key
+    # in default_channel_state for why that distinction is the whole cost of
+    # this feature.
+    MODEL_REGISTER = "reg"       # the Turing shift register, as it always was
+    MODEL_WALK = "walk"          # a bounded random walk
+    MODELS = (MODEL_REGISTER, MODEL_WALK)
+
+    @staticmethod
+    def walk_values(start, length, steps, span, stride, rng=random.random):
+        """`steps` values from a bounded random walk, in the REGISTER's own
+        domain, so everything downstream of it is untouched.
+
+        That domain matters: pitch() shifts the value right by `length`, so a
+        value outside 0..2^length-1 quantises to a scale degree that does not
+        exist. The walk is bounded twice - by `span` around its start and by
+        the register domain - and the tighter of the two wins.
+
+        REFLECTS AT BOTH BOUNDS, never clamps, for the same reason the chord
+        walker does: a walk parked against its own edge has stopped walking,
+        and that reads as broken rather than bounded.
+
+        A span or a stride of zero yields one note held for the whole pattern.
+        Deliberate, and audible: a silent channel must say why, and this one
+        has nothing to explain because it is sounding."""
+
+        top = (1 << length) - 1
+        start = max(0, min(top, int(start)))
+        lo = max(0, start - span)
+        hi = min(top, start + span)
+        out, value = [], start
+        for _ in range(steps):
+            out.append(value)
+            if stride <= 0 or hi <= lo:
+                continue
+            step = stride if rng() < 0.5 else -stride
+            nxt = value + step
+            if nxt > hi or nxt < lo:
+                nxt = value - step
+            value = max(lo, min(hi, nxt))
+        return out
+
     @staticmethod
     def default_channel_state(kind):
         """A complete starting state set for one kind.
@@ -401,7 +604,21 @@ class techno_lib:
             # existing drum channel to half its kit the day this shipped.
             state.update(kit="----", sample="----", range=4, kit_range=1,
                          # 1 = off. A step fires once, as it always has.
-                         ratchet=1)
+                         ratchet=1,
+                         # The drum rhythm register. `rhythm` is its evolve
+                         # knob, 0 = LOCK, exactly as it is on a voice.
+                         #
+                         # 0xFFFF IS LOAD-BEARING AND IT IS THE MIGRATION.
+                         # The register is subtractive on a drum - euclid has
+                         # already decided which steps sound - so an all-ones
+                         # register removes nothing and a drum channel is bit
+                         # for bit what it was before this existed. Default it
+                         # to anything else and every drum channel in every
+                         # existing snapshot comes back partly silent, which is
+                         # the 2026-08-18 class of bug: upgrade_state builds
+                         # from here, so this literal is what an old snapshot
+                         # inherits.
+                         rhythm=0, rhythm_reg=0xFFFF)
         else:
             state.update(
                 preset="----", cutoff=64, reso=32, env=64, decay=40,
@@ -428,7 +645,27 @@ class techno_lib:
                 # DEFAULT 1 = ONE NOTE. A drum sampler played by the Turing
                 # register should give rhythm variation on its own drum, not a
                 # walk across the kit - owner, 2026-08-19.
-                kit_range=1)
+                kit_range=1,
+                # WHICH GENERATOR PICKS THE PITCHES. A per-voice switch, NOT a
+                # third channel KIND: there are 42 binary kind tests, and six
+                # driver sites written `!= "voice"` would have routed a third
+                # kind down the DRUM path silently, with no error and no log.
+                # The channel stays a voice, so every one of those tests keeps
+                # the answer it has today and none of them needs auditing.
+                #
+                # MODEL_REGISTER is the default, so an existing voice - and
+                # every voice in every saved snapshot - behaves exactly as it
+                # did before the walk existed.
+                model=techno_lib.MODEL_REGISTER,
+                walk_span=32, walk_stride=4,
+                # ROTATE on a voice - the LINE, not the register (owner,
+                # 2026-08-31). 0 is unrotated, which is every existing voice.
+                rotate=0,
+                # Cross-coupling. `feed` is the channel whose register feeds
+                # this one, or None; `amount` is how often its bit is taken,
+                # 0-100. None and 0 are today's behaviour exactly, and
+                # mutate_coupled does not even draw a random number at 0.
+                feed=None, amount=0)
         return state
 
     # ------------------------------------------------------- pad overlays
@@ -593,11 +830,53 @@ class techno_lib:
     # promises that nothing changes under you, and a macro landing is the
     # largest change this instrument can make - it is the one thing a player
     # freezes the machine to prevent.
+    #
+    # "walk" JOINED THE SET 2026-08-31 with the chord walker, on the same
+    # argument that put "macro" here: a key change is one of the largest things
+    # that can happen under a player who has asked for nothing to change.
+    #
+    # "rhythm" HAD NO CALLER until the same day - it sat in this set being
+    # correct only by accident of an early return elsewhere, which is the
+    # NAVIGATE-overlay shape: a library entry with no code behind it reads as
+    # covered and is not. The drum rhythm register asks it through
+    # generator_may_write, so it means something now.
     FREEZE_GENERATIVE = frozenset(("melody", "rhythm", "drift", "reroll",
-                                   "macro"))
+                                   "macro", "walk"))
 
     # Ice blue, and nothing else on the panel uses it.
     COLOR_FREEZE = 0x60D0FF
+
+    OWNER_PLAYER = "player"
+
+    @staticmethod
+    def generator_may_write(what, frozen, deep, owner):
+        """May a pattern-rewriting generator write this channel right now?
+
+        ONE PREDICATE FOR EVERY GENERATOR THAT REWRITES THE PATTERN, and that
+        is the whole point of it existing. Rewriting a pattern with no hands on
+        the panel is how the velo defect destroyed a recorded take, unattended,
+        every 200 ms. _drift_channel solved it and shipped; leaving each new
+        generator to re-derive the same two gates is how the fourth one gets it
+        subtly wrong with no runtime symptom.
+
+        Two gates, and they are independent:
+
+            FREEZE   - freeze_blocks decides, so a generator freeze does not
+                       name is not held by it. The player froze the machine to
+                       stop exactly this.
+            OWNER    - a player-owned channel is never rewritten. RE-ASKED
+                       EVERY WRAP by the callers, never cached at bind time: a
+                       player can record onto a channel that is already
+                       generating, and a bind-time answer cannot see that
+                       coming.
+
+        The caller does NOT delete the generator's entry on a refusal - handing
+        the channel back with ERASE + Group must restore what the player set
+        up, which is drift's rule and now everybody's."""
+
+        if techno_lib.freeze_blocks(what, frozen, deep):
+            return False
+        return owner != techno_lib.OWNER_PLAYER
 
     @staticmethod
     def freeze_blocks(what, frozen, deep):
@@ -2898,6 +3177,24 @@ class techno_lib:
         p = state.get("pending", set())
         n, c, dead = techno_lib._num, techno_lib._col, techno_lib._dead
 
+        if desc["shape"] == techno_lib.SHAPE_GLOBAL and page == "WALK":
+            walk = state.get("walk", 0)
+            return [
+                c("ROOT", techno_lib.NOTE_NAMES[state["root"]], "seg",
+                  (state["root"], 12), pending="root" in p),
+                c("SCALE", techno_lib.SCALES[state["scale"]][0], "seg",
+                  (state["scale"], len(techno_lib.SCALES)),
+                  pending="scale" in p),
+                # LOCK rather than 0000, the same word MELODY and RHYTHM use
+                # at zero. A number here invites turning it down looking for
+                # off, and there is nothing below zero.
+                c("WALK", "LOCK" if walk <= 0 else "%dbar" % walk, "seg",
+                  (walk, 17)),
+                c("SPAN", n(state.get("wspan", 2)), "uni",
+                  state.get("wspan", 2) / 7.0),
+                dead("walk5"), dead("walk6"), dead("walk7"), dead("walk8"),
+            ]
+
         if desc["shape"] == techno_lib.SHAPE_GLOBAL:
             return [
                 c("ROOT", techno_lib.NOTE_NAMES[state["root"]], "seg",
@@ -2956,7 +3253,11 @@ class techno_lib:
                   pending="length" in p),
                 c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
                 c("CHANCE", n(state["chance"]), "uni", state["chance"] / 100.0),
-                c("SWING", n(state["swing"]), "uni", (state["swing"] - 50) / 25.0),
+                # The drum rhythm register's evolve knob, 0 = LOCK, exactly
+                # as it reads on a voice. SWING moved to the spread page in
+                # the same round - see the verbs tuple for why.
+                c("RHYTHM", n(state.get("rhythm", 0)), "uni",
+                  state.get("rhythm", 0) / 100.0),
                 # SP10 step 3: the page's dead eighth column, filled. OFF at 1
                 # rather than "1", because one hit is not a ratchet and reading
                 # "1" invites turning it down looking for off.
@@ -2964,6 +3265,36 @@ class techno_lib:
                   else "x%d" % state["ratchet"], "seg",
                   (max(0, state.get("ratchet", 1) - 1), 4)),
             ]
+        if page == "GEN":
+            # ORDER MUST MATCH the GEN page's verbs tuple position for
+            # position, exactly as the STEP page's list does below.
+            model = state.get("model", techno_lib.MODEL_REGISTER)
+            walking = model == techno_lib.MODEL_WALK
+            feed = state.get("feed")
+            length = max(1, state.get("length", 8))
+            return [
+                c("ROTATE", n(state.get("rotate", 0)), "seg",
+                  (state.get("rotate", 0), 16)),
+                c("MODEL", "WALK" if walking else "REG", "seg",
+                  (1 if walking else 0, len(techno_lib.MODELS))),
+                # SPAN and STRIDE belong to the walk and mean nothing to the
+                # register - drawn dead on the register model rather than
+                # showing a number the knob cannot make audible. Law L4.
+                c("SPAN", n(state.get("walk_span", 32)), "uni",
+                  state.get("walk_span", 32) / 128.0) if walking
+                else dead("span"),
+                c("STRIDE", n(state.get("walk_stride", 4)), "uni",
+                  state.get("walk_stride", 4) / 32.0) if walking
+                else dead("stride"),
+                # OFF, not a channel letter, when nothing is feeding this
+                # voice. A coupling that is not coupled has to say so.
+                c("FEED", "OFF" if feed is None else "ABCDEFGH"[feed % 8],
+                  "seg", (0 if feed is None else feed + 1, 9)),
+                c("AMT", n(state.get("amount", 0)), "uni",
+                  state.get("amount", 0) / 100.0),
+                dead("gen7"), dead("gen8"),
+            ]
+
         # THIS LIST'S ORDER MUST MATCH PAGE_RINGS[("STEP", "voice")][0]["verbs"]
         # position for position - the verbs tuple decides which encoder writes
         # what, this decides what each encoder DRAWS, and nothing checks that
@@ -3103,9 +3434,15 @@ techno_lib.PAGE_RINGS = {
                   "level", "reverb", "delay")),
     ),
     ("STEP", "drum"): (
+        # Encoder 7 carries RHYTHM rather than SWING, 2026-08-31 - the same
+        # trade the owner made on the voice page in 2026-08-16 and for the
+        # identical reason, written there as "it is the only slot on a full
+        # page whose verb has a second home, and swing is on the spread page
+        # below for every channel at once, which is where it is wanted in a
+        # jam". The drum page simply never got the same treatment.
         _d(techno_lib.SHAPE_CHANNEL, "STEP",
            verbs=("hits", "rotate", "div", "length", "velo", "chance",
-                  "swing", "ratchet")),
+                  "rhythm", "ratchet")),
         _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
         _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
     ),
@@ -3119,6 +3456,19 @@ techno_lib.PAGE_RINGS = {
         _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
         _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
         _d(techno_lib.SHAPE_SPREAD, "RHYTHM", verb="rhythm"),
+        # P1, 2026-08-31. Three features on one new page, which is the whole
+        # reason they were built together: a new page in an existing ring
+        # costs no button, no measurement and no pad overlay, and the free
+        # button budget for the whole instrument is three CCs.
+        _d(techno_lib.SHAPE_CHANNEL, "GEN",
+           # THE VERB NAMES ARE THE STATE KEYS. `walk_span`, not `wspan`:
+           # _verb looks the verb up in VERB_RANGES and param_get reads it
+           # straight out of the state dict, so a page verb that does not
+           # name a real key is a knob that silently does nothing. The
+           # GLOBAL walk page's `wspan` is a different value in a different
+           # table - the walker's span, not this voice's.
+           verbs=("rotate", "model", "walk_span", "walk_stride", "feed",
+                  "amount", None, None)),
     ),
     ("ALL", None): (
         _d(techno_lib.SHAPE_GLOBAL, "GLOBAL",
@@ -3129,6 +3479,12 @@ techno_lib.PAGE_RINGS = {
         # this mode. PENDING is its second stop and the encoder's first job
         # here.
         _d(techno_lib.SHAPE_PENDING, "PENDING"),
+        # The chord walker. ROOT and SCALE are repeated from the GLOBAL page
+        # deliberately - the walker moves the root, and a page that hid the
+        # thing it moves would make the player page back and forth to see the
+        # effect of the knob under their hand.
+        _d(techno_lib.SHAPE_GLOBAL, "WALK",
+           verbs=("root", "scale", "walk", "wspan", None, None, None, None)),
     ),
     ("MIXER", None): (
         _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),

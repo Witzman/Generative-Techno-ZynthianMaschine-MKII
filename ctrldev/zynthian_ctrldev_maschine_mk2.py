@@ -513,7 +513,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # depends on the plugin and nothing else, so this needs no
         # invalidation - a different engine is a different key.
         self.sym_cache = {}
-        self.globals = dict(root=9, scale=0, bpm=132, master=80,
+        # THE CHORD WALKER'S OWN STATE. `walk` is bars between moves, 0 =
+        # LOCK; `wspan` is how far it may stray from the hand-set root, in
+        # SCALE DEGREES. `walk_degree` is where it currently is and `walk_base`
+        # is the root the player dialled in - kept apart because the base is
+        # the player's and the degree is the machine's, which is the same
+        # base/offset law MOD already obeys everywhere else.
+        self.walk_degree = 0
+        self.walk_base = None
+        self.globals = dict(root=9, scale=0, bpm=132, master=80, walk=0,
+                            wspan=2,
                             revsize=25, revtype=3, dlytime=1, dlyfbk=35,
                             pending=set())
         self.state = {}
@@ -527,7 +536,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.GENERATOR_PARAMS = {"hits", "rotate", "div", "length", "chance",
                                  "velo", "swing", "random", "gate", "octave",
                                  "range", "kit_range", "register", "rhythm",
-                                 "rhythm_reg", "ratchet"}
+                                 "rhythm_reg", "ratchet",
+                                 # P1, 2026-08-31. Membership here is what
+                                 # makes apply() the write path for them: a
+                                 # verb missing from this set is stored and
+                                 # displayed and never reaches the pattern -
+                                 # which is exactly the apply() hole that hid
+                                 # HITS and ROTATE for months.
+                                 "model", "walk_span", "walk_stride",
+                                 "feed", "amount"}
         self.MIX_PARAMS = {"level", "reverb", "delay"}
         # Built now, while the Turing mutation is the only writer, so a morph
         # can take it later. Two writers to one pattern is the SIGSEGV by a
@@ -1091,6 +1108,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     GLOBAL_RANGES = {
         "root": (0, 11, ENC_UNITS_DISCRETE),
         "scale": (0, len(tlib.SCALES) - 1, ENC_UNITS_DISCRETE),
+        # The chord walker. 0 is LOCK; 16 bars is the longest phrase this
+        # instrument counts, so a walk slower than that would never be seen to
+        # move. SPAN is in SCALE DEGREES, and 7 is a full octave of any scale
+        # here except PENT, which reaches its own octave sooner.
+        "walk": (0, 16, ENC_UNITS_DISCRETE),
+        "wspan": (0, 7, ENC_UNITS_DISCRETE),
         "bpm": (60, 200, None),
         "master": (0, 100, None),
         "revsize": (0, 100, None),
@@ -1106,6 +1129,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.globals.get(param) == value:
             return
         self.globals[param] = value
+
+        if param == "root":
+            # A HAND TURN SETS THE WALKER'S BASE AND DOES NOT CANCEL IT.
+            # `new_features.md` claimed a standing precedent that a hand turn
+            # cancels the machine's claim; there is NO CODE behind that
+            # sentence anywhere in this driver - mod_steer leaves its modulator
+            # running, and four bar-rate macros overwrite every channel with no
+            # such check. So the rule had to be chosen rather than inherited,
+            # and this is MOD's base/offset law: the player owns the base, the
+            # machine owns the offset, and moving the base moves the whole walk
+            # rather than ending it.
+            self.walk_base = value
+            self.walk_degree = 0
 
         if param in ("root", "scale"):
             # Structure, so it lands on the bar (law L2). Every voice picks it
@@ -1129,6 +1165,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._set_ganged("reverb", param.upper(), value)
         elif param == "dlyfbk":
             self._set_ganged("delay", "DLYFBK", value)
+        elif param == "walk":
+            # Nothing to push: the walker is read by the phrase tick. Turning
+            # it back to LOCK leaves the root exactly where the walk left it,
+            # which is deliberate - snapping home would make LOCK a transport
+            # control rather than an off switch.
+            pass
+        elif param == "wspan":
+            # Narrowing the span must pull the walk inside it now, not at some
+            # later bar when it happens to step: a degree outside its own span
+            # is a number the page would be drawing as legal.
+            self.walk_degree = max(-value, min(value, self.walk_degree))
         elif param == "dlytime":
             self._push_delay_time(force=True)
 
@@ -1354,6 +1401,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # from a state dict built by an older path would kill the
             # playhead loop for the rest of the session.
             mask = tlib.rhythm_mask(st.get("rhythm_reg", 0xFFFF), steps)
+            # ROTATE on a voice moves the rendered LINE - notes and rests
+            # together, in ONE call, because rotating them apart gives a melody
+            # that slides while its rhythm stands still, which is a different
+            # melody rather than the same one moved. Owner's decision,
+            # 2026-08-31; the rejected reading clocked the pitch register.
+            notes, mask = tlib.rotate_line(notes, mask,
+                                           int(st.get("rotate", 0)))
             velocity = max(1, min(127, int(st["velo"])))
             played = []
             with self.lock:
@@ -1440,6 +1494,39 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             with self.lock:
                 self._render_pads()
 
+    def _rewrite_drum(self, channel):
+        """Called at a playhead wrap: evolve a DRUM's rhythm register.
+
+        The voice generator applied to drums - reading (b) of the owner's soft
+        randomiser. Reading (a), per-step probability, shipped 2026-08-19 and
+        is a different control on a different gesture.
+
+        RHYTHM at 0 skips everything, which is why a channel that has never
+        been turned up is bit for bit what it was before this existed. The
+        register is SUBTRACTIVE against euclid - see _write_pattern - so what
+        the knob does is thin the line the euclid encoders drew, never add to
+        it.
+
+        Guarded by the SAME predicate as every other pattern-rewriting
+        generator. This one needs it most: it rewrites at every wrap, which is
+        the path that destroyed a recorded take through the velo defect, and
+        it is the reason this feature sat blocked on the list for months."""
+
+        if self.channel_kind(channel) != "drum":
+            return
+        st = self.state[channel]
+        rhythm = int(st.get("rhythm", 0))
+        if rhythm <= 0:
+            return
+        if not tlib.generator_may_write("rhythm", self.frozen, self.freeze_deep,
+                                        self.owner.get(channel)):
+            return
+        steps = self._steps(channel)
+        st["rhythm_reg"] = tlib.mutate(int(st.get("rhythm_reg", 0xFFFF)),
+                                       steps, rhythm / 100.0)
+        with self.lock:
+            self._write_pattern(channel)
+
     def _rewrite_voice(self, channel):
         """Called at a playhead wrap.
 
@@ -1447,10 +1534,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         line being heard is the line kept, bit for bit, for as long as the
         knob stays down. Law L6 is not an approximation here - nothing
         rewrites the pattern, so nothing can change it."""
-        if self._frozen("melody"):
-            # FREEZE holds the line still: the register stops walking and the
-            # notes being heard are the notes kept, exactly as RANDOM at 0
-            # does - the same guarantee reached from a different control.
+        # ONE GUARD FOR EVERY PATTERN-REWRITING GENERATOR, 2026-08-31. It was
+        # `if self._frozen("melody"): return` and nothing else - the ownership
+        # half was enforced further down, inside _write_voice_pattern, which
+        # meant the register still walked under a player-owned channel and only
+        # the WRITE was refused. Asking here refuses the mutation too, so a
+        # recorded take comes back to the line it was recorded over.
+        if not tlib.generator_may_write("melody", self.frozen, self.freeze_deep,
+                                        self.owner.get(channel)):
             return
 
         st = self.state[channel]
@@ -1462,8 +1553,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # melody while keeping a rhythm that moved at the same wrap.
         tlib.ring_push(st["ring"], (st["register"], st["rhythm_reg"]))
         if melody > 0:
-            st["register"] = tlib.mutate(st["register"], st["length"],
-                                         melody / 100.0)
+            feed, amount = st.get("feed"), st.get("amount", 0)
+            if feed is None or amount <= 0 or feed == channel:
+                st["register"] = tlib.mutate(st["register"], st["length"],
+                                             melody / 100.0)
+            else:
+                # CROSS-COUPLING. The source register is read as it stands at
+                # the START of this tick and is never written, which is what
+                # bounds a cycle: A feeds B feeds A is a real request, and both
+                # sides see the pre-tick values, so the pair cannot run away
+                # inside one wrap.
+                #
+                # A channel feeding itself is refused above rather than
+                # allowed to be a slow no-op - a control that appears to do
+                # nothing is worse than one that refuses.
+                src = self.state[feed]
+                st["register"] = tlib.mutate_coupled(
+                    st["register"], st["length"], melody / 100.0,
+                    src.get("register", 0), src.get("length", 8),
+                    amount / 100.0)
         if rhythm > 0:
             # Positions survive a full rotation, so this reads as steps
             # appearing and disappearing - never as the pattern sliding
@@ -1553,6 +1661,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         elif param == "velo" and self.channel_kind(channel) == "drum":
             # Velocity is written into the notes, so it only becomes audible
             # once the pattern is rewritten.
+            with self.lock:
+                self._write_pattern(channel)
+        elif param in ("rotate", "model", "walk_span", "walk_stride", "feed",
+                       "amount") and self.channel_kind(channel) == "voice":
+            # THE KIND CHECK IS LOAD-BEARING AND IT IS WHY THIS ARM SITS ABOVE
+            # THE hits/rotate ONE. `rotate` is a verb on BOTH kinds, and the
+            # arm below regenerates from euclid - the DRUM generator. Reaching
+            # it with a voice would overwrite the Turing melody with a drum
+            # pattern, which is exactly the latent RATCHET defect documented a
+            # few lines up, heard by the owner on 2026-08-20 as "some melody
+            # changed after the roll".
+            #
+            # None of the six touches the register: rotation moves the rendered
+            # line, the model chooses which generator renders it, and the
+            # coupling pair only takes effect at the next wrap. So a rewrite
+            # from the UNCHANGED register is all that is needed, and the line
+            # being heard keeps its shape.
+            self._write_voice_pattern(channel)
+        elif param == "rhythm" and self.channel_kind(channel) == "drum":
+            # The drum rhythm register's evolve RATE. Like its voice twin,
+            # setting the rate writes nothing by itself - the register is
+            # untouched - but the pattern is rewritten so a move off LOCK is
+            # audible on this wrap rather than the next.
             with self.lock:
                 self._write_pattern(channel)
         elif param in ("hits", "rotate"):
@@ -2408,6 +2539,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "velo": self._saved_param(i, "velo", self.state[i]["velo"]),
                     "rhythm": self.state[i]["rhythm"],
                     "rhythm_reg": self.state[i]["rhythm_reg"],
+                    # P1, 2026-08-31. .get with a default on every one, for
+                    # the reason the kit window already gives above: a channel
+                    # whose state predates these must SAVE the compatible
+                    # value rather than raise on the save path.
+                    "model": self.state[i].get("model",
+                                               tlib.MODEL_REGISTER),
+                    "walk_span": self.state[i].get("walk_span", 32),
+                    "walk_stride": self.state[i].get("walk_stride", 4),
+                    "rotate": self.state[i].get("rotate", 0),
+                    "feed": self.state[i].get("feed"),
+                    "amount": self.state[i].get("amount", 0),
                 }
                 # SP4: keyed on how the channel BEHAVES, not on the table. A
                 # drum chain switched to voice holds register, gate and octave
@@ -2415,6 +2557,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # on save and the take would come back as a drum.
                 for i, ch in enumerate(tlib.CHANNELS)
                 if self.channel_kind(i) == "voice" and "register" in self.state[i]
+            },
+            # THE DRUM RHYTHM REGISTER HAS TO BE SAVED, and nothing like this
+            # block existed before - "voices" is voice-only by design. Without
+            # it an evolved drum comes back at 0xFFFF, which is the FULL euclid
+            # line: the pattern in the snapshot is the thinned one, so the
+            # channel would come back thicker than it was saved, and the
+            # surface would read RHYTHM at whatever the knob said. That is the
+            # CHANCE/SWING law exactly - a mirrored property defaulted instead
+            # of read back, and a channel that sounds different from the one
+            # that was saved with nothing to explain it.
+            "drums": {
+                str(i): {
+                    "rhythm": self.state[i].get("rhythm", 0),
+                    "rhythm_reg": self.state[i].get("rhythm_reg", 0xFFFF),
+                    # HITS TRAVELS WITH THE REGISTER. Once the register thins
+                    # the line, _recount_hits refuses to read HITS back out of
+                    # the pattern - so the snapshot has to carry the number the
+                    # euclid generator was actually given, or a load would
+                    # resume from whatever the driver happened to hold.
+                    "hits": self.hits[i],
+                }
+                for i, ch in enumerate(tlib.CHANNELS)
+                if self.channel_kind(i) == "drum"
             },
         }
 
@@ -2601,7 +2766,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             st = self.state[channel]
             for field in ("register", "length", "random", "gate", "octave",
-                          "range", "kit_range", "velo", "rhythm", "rhythm_reg"):
+                          "range", "kit_range", "velo", "rhythm", "rhythm_reg",
+                          "model", "walk_span", "walk_stride", "rotate",
+                          "feed", "amount"):
                 if field in saved:
                     st[field] = saved[field]
             if "rhythm_reg" not in saved:
@@ -2620,6 +2787,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     lib.step_count(self.div[channel]),
                     saved.get("density", 100))
             st["ring"] = deque(saved.get("ring", []), maxlen=4)
+
+        for key, saved in (state.get("drums") or {}).items():
+            try:
+                channel = int(key)
+            except (TypeError, ValueError):
+                continue
+            if channel not in self.state:
+                continue
+            # ABSENT IS NOT ZERO. A snapshot from before the drum rhythm
+            # register carries no "drums" block at all, and the default it
+            # falls back to is 0xFFFF - every step of the euclid line
+            # sounding, which is what that snapshot was written with. Reading
+            # a missing key as 0 would silence every drum channel in every
+            # existing snapshot on load.
+            self.state[channel]["rhythm"] = saved.get("rhythm", 0)
+            self.state[channel]["rhythm_reg"] = saved.get("rhythm_reg", 0xFFFF)
+            if "hits" in saved:
+                self.hits[channel] = int(saved["hits"])
 
         # Take each voice's division from what the snapshot actually restored,
         # BEFORE rewriting its pattern. _write_voice_pattern writes
@@ -3585,8 +3770,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     logging.debug("Maschine: no readable stutter on this libzynseq")
         note = self._group_note(group)
         steps = self.libseq.getSteps()
-        self.hits[group] = sum(
-            1 for step in range(steps) if self.libseq.getNoteVelocity(step, note))
+        self._recount_hits(group, note, steps)
 
     def _recentre_encoders(self):
         """Park every encoder mid-range in the daemon, so none of them starts
@@ -4173,6 +4357,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "range": (1, 4, ENC_UNITS_DISCRETE),
         # 1 is OFF; 2-4 are the ratchet counts.
         "ratchet": (1, 4, ENC_UNITS_DISCRETE),
+        # THE GEN PAGE, 2026-08-31. `rotate` is deliberately absent: it is a
+        # verb on BOTH kinds and _verb dispatches it by kind before ever
+        # reaching this table - see the branch there.
+        "walk_span": (1, 128, None),
+        "walk_stride": (1, 32, None),
+        "amount": (0, 100, None),
     }
 
     def _mod_steer(self, key, cc_num, cc_val):
@@ -4267,6 +4457,56 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     self._write_voice_pattern(channel)
                     with self.lock:
                         self._render_pads()
+            return
+
+        if verb == "rotate" and voice:
+            # THE SAME TRAP AS `length` AND `div` ABOVE, and it is the third
+            # time this shape has appeared: `rotate` is a verb on BOTH kinds,
+            # and the arm below runs the DRUM euclid path, which would rewrite
+            # a Turing melody as a drum pattern. ROTATE on a voice moves the
+            # rendered LINE instead - owner's decision, 2026-08-31.
+            delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
+            if delta:
+                steps = max(1, self._steps(channel))
+                st = self.state[channel]
+                self.apply(channel, "rotate",
+                           (int(st.get("rotate", 0)) + delta) % steps)
+                with self.lock:
+                    self._render_display()
+            return
+
+        if verb == "model" and voice:
+            # A two-way switch, so any movement flips it. Discrete units, or a
+            # nudge of the knob would toggle the generator under the player's
+            # hand mid-bar.
+            delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
+            if delta:
+                st = self.state[channel]
+                now = st.get("model", tlib.MODEL_REGISTER)
+                self.apply(channel, "model",
+                           tlib.MODEL_WALK if now == tlib.MODEL_REGISTER
+                           else tlib.MODEL_REGISTER)
+                with self.lock:
+                    self._render_display()
+            return
+
+        if verb == "feed" and voice:
+            # -1 is OFF and it is stored as None, because "no source" is not a
+            # channel index and a sentinel integer in the state dict would be
+            # one more thing every reader has to know. The wheel walks
+            # -1..7 and skips this channel itself: a voice feeding itself is a
+            # no-op, and a control that appears to do nothing is worse than one
+            # that refuses.
+            delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
+            if delta:
+                st = self.state[channel]
+                now = -1 if st.get("feed") is None else int(st["feed"])
+                nxt = min(7, max(-1, now + delta))
+                if nxt == channel:
+                    nxt = min(7, max(-1, nxt + (1 if delta > 0 else -1)))
+                self.apply(channel, "feed", None if nxt < 0 else nxt)
+                with self.lock:
+                    self._render_display()
             return
 
         if verb in ("hits", "rotate", "div", "length"):
@@ -4415,12 +4655,38 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.libseq.updateSequenceInfo()
         note = self._group_note(group)
         steps = self.libseq.getSteps()
-        self.hits[group] = sum(
-            1 for step in range(steps) if self.libseq.getNoteVelocity(step, note))
+        self._recount_hits(group, note, steps)
         self.rot[group] = min(max(0, steps - 1), self.rot[group])
         logging.debug(f"Maschine group {group}: length beats={beats} steps={steps} "
                       f"hits={self.hits[group]}")
         self._render_pads()
+
+    def _recount_hits(self, group, note, steps):
+        """Re-read HITS from the notes actually in the pattern - but ONLY when
+        the drum rhythm register is not thinning it.
+
+        ONE PREDICATE, EVERY CALLER, because getting it wrong is a silent and
+        COMPOUNDING fault rather than a visible one. The register is
+        subtractive: the notes present are the euclid line minus whatever it
+        masked off, so counting them sets HITS to the thinned total, and the
+        next _write_pattern generates euclid at that lower number and masks it
+        AGAIN. A channel would thin itself a little more at every wrap while
+        encoder 1 read the shrinking number back as though a hand had turned
+        it.
+
+        Skipped exactly when it would lie, leaving HITS where the driver last
+        put it - the same treatment ROTATION already gets, and for the same
+        reason: _derive_params' own docstring says rotation is not recoverable
+        from a pattern. Now neither is HITS, once the register is in play."""
+
+        if steps <= 0:
+            return
+        full = (1 << steps) - 1
+        mask = int(self.state.get(group, {}).get("rhythm_reg", 0xFFFF))
+        if mask & full != full:
+            return
+        self.hits[group] = sum(
+            1 for step in range(steps) if self.libseq.getNoteVelocity(step, note))
 
     def _steps(self, group):
         return lib.DIVISIONS[self.div[group]][1] * self.beats[group]
@@ -4479,8 +4745,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         ratchet = int(self.state[group].get("ratchet", 1))
         stutter, stut_dur = tlib.ratchet_stutter(
             ratchet, self.libseq.getClocksPerStep())
-        for step, on in enumerate(
-                lib.build_pattern_steps(steps, self.hits[group], self.rot[group])):
+        # THE DRUM RHYTHM REGISTER, and it is SUBTRACTIVE. Euclid has already
+        # drawn the line; the register may take a hit away and may never invent
+        # one, which is what keeps HITS meaning the number of hits. 0xFFFF -
+        # every existing channel and every existing snapshot - removes nothing,
+        # so a pattern written before this existed is written the same way now.
+        pattern = tlib.drum_steps(
+            lib.build_pattern_steps(steps, self.hits[group], self.rot[group]),
+            int(self.state[group].get("rhythm_reg", 0xFFFF)))
+        for step, on in enumerate(pattern):
             if on:
                 self.libseq.addNote(step, note, velocity, 1.0, 0.0)
                 if stutter and self.has_stutter:
@@ -5347,6 +5620,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # An unreadable or empty kit degrades to the channel's own drum,
             # never to silence.
             return notes or [self._group_note(channel)] * steps
+        if st.get("model") == tlib.MODEL_WALK:
+            # A bounded random walk instead of the shift register. Same root,
+            # same scale, same octave and range - only where the VALUES come
+            # from changes, which is why this is a model and not a kind.
+            #
+            # The register is the walk's starting point, so switching models
+            # back and forth does not teleport the line somewhere unrelated.
+            return tlib.walk_line(st["register"], st["length"], steps,
+                                  self.globals["root"], self.globals["scale"],
+                                  st["octave"], st["range"],
+                                  st.get("walk_span", 32),
+                                  st.get("walk_stride", 4))
         return tlib.line(st["register"], st["length"], steps,
                          self.globals["root"], self.globals["scale"],
                          st["octave"], st["range"])
@@ -5674,6 +5959,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._log_poll_error(f"macro {macro}", e)
         self._chance_tick(bar)
         self._ratchet_tick(bar)
+        self._walk_tick(bar)
         with self.lock:
             self._render_display()
             self._render_transport()
@@ -5862,6 +6148,46 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                        tlib.chance_ramp(base, floor, step, ramp["bars"]))
         if step >= ramp["bars"]:
             self._chance_ramp = None
+
+    def _walk_tick(self, bar):
+        """The chord walker: move the shared root every N bars.
+
+        THE GLOBAL-SCALE HALF OF THIS ALREADY SHIPPED and the internal list
+        said otherwise for months - ROOT and SCALE have been global verbs
+        driving all three voices, landing on the bar through _key_dirty, since
+        long before this. Only the walk was missing, which is why this is one
+        short method rather than a feature.
+
+        Held by FREEZE like every other bar-rate machine: a key change is one
+        of the largest things that can happen under a player who has asked for
+        nothing to change. It goes through apply_global(), the single write
+        path, so the display, the pending brackets and the voices cannot
+        disagree about what key the instrument is in."""
+
+        every = int(self.globals.get("walk", 0))
+        if not tlib.walk_due(bar, every):
+            return
+        if self._frozen("walk"):
+            return
+        if self.walk_base is None:
+            # First move of the session: the root the player left on the knob
+            # is the base, and every degree is measured from it.
+            self.walk_base = self.globals["root"]
+        span = int(self.globals.get("wspan", 2))
+        base = self.walk_base
+        degree = tlib.walk_next(self.walk_degree, span)
+        root = tlib.walk_root(base, degree, self.globals["scale"]) % 12
+        self.apply_global("root", root)
+        # BOTH HALVES GO BACK, and the degree is the one that matters.
+        # apply_global re-bases the walker on every hand turn of ROOT and
+        # cannot tell a hand from this method, so it has just set base = root
+        # and degree = 0. Restoring only the base would leave the walk starting
+        # from home at every step - it would oscillate one degree either side
+        # of the root forever and never use its span, which looks like a walk
+        # and is not one.
+        self.walk_base = base
+        self.walk_degree = degree
+        self._slog("walk", bar=bar, degree=degree, root=root)
 
     def _drop_fire(self, bar):
         """Everything that is not a survivor falls silent for the drop.
@@ -6085,6 +6411,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # not the line. Outside the lock, like _rewrite_voice below: apply()
             # reaches _write_pattern, which takes the lock itself.
             self._drift_channel(channel)
+            self._rewrite_drum(channel)
 
         if not voice:
             return

@@ -200,10 +200,14 @@ class TestColumnModel(unittest.TestCase):
             cols = tl.columns(_desc("CONTROL", kind), kind, st)
             self.assertEqual([c["name"] for c in cols[5:]], ["LEVEL", "REVERB", "DELAY"])
 
-    def test_swing_is_column_seven_on_the_drum_step_page(self):
+    def test_rhythm_is_column_seven_on_the_drum_step_page(self):
+        # The DRUM traded its SWING column for RHYTHM on 2026-08-31, exactly as
+        # the voice traded its own for the second generator in 2026-08-16.
+        # Swing did not go away on either: it is the STEP ring's spread page,
+        # all eight channels at once, which is where it is wanted in a jam.
         st = self.drum_state()
         self.assertEqual(tl.columns(_desc("STEP", "drum"), "drum", st)[6]["name"],
-                         "SWING")
+                         "RHYTHM")
 
     def test_rhythm_is_column_four_on_the_voice_step_page(self):
         # The voice traded its SWING column for DENSITY. Swing did not go
@@ -327,7 +331,7 @@ class TestPageRings(unittest.TestCase):
     def test_step_channel_page_verbs_match_the_shipped_layout(self):
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "drum")][0]["verbs"],
-            ("hits", "rotate", "div", "length", "velo", "chance", "swing",
+            ("hits", "rotate", "div", "length", "velo", "chance", "rhythm",
              "ratchet"))
         # Reordered by the owner at the rig, 2026-08-16: pattern time first,
         # then the two generators SIDE BY SIDE, then pitch, then velocity.
@@ -380,8 +384,8 @@ class TestPageIndexArithmetic(unittest.TestCase):
 
 def _drum_view(**over):
     view = dict(hits=4, rotate=0, div=1, length=16, velo=110, chance=100,
-                swing=50, level=19, reverb=0, delay=0, kit="909", sample="BD",
-                pending=set())
+                swing=50, rhythm=0, level=19, reverb=0, delay=0, kit="909",
+                sample="BD", pending=set())
     view.update(over)
     return view
 
@@ -402,7 +406,7 @@ class TestColumnsByShape(unittest.TestCase):
         cols = tl.columns(desc, "drum", _drum_view())
         self.assertEqual([c["name"] for c in cols],
                          ["HITS", "ROTATE", "DIVIDE", "LENGTH", "VELO",
-                          "CHANCE", "SWING", "RATCH"])
+                          "CHANCE", "RHYTHM", "RATCH"])
         # No longer greyed: SP10 step 3 gave the slot a verb, 2026-08-19.
         self.assertFalse(cols[7]["grey"])
 
@@ -675,13 +679,21 @@ class TestRhythmPage(unittest.TestCase):
     encoder, same spread page, a generator instead of a count."""
 
     def test_the_voice_step_ring_gains_a_rhythm_page(self):
+        # [1:4], not [1:] - the ring gained a GEN page on 2026-08-31 and a
+        # channel-shaped page carries no single `verb`.
         ring = tl.PAGE_RINGS[("STEP", "voice")]
-        self.assertEqual([d["verb"] for d in ring[1:]],
+        self.assertEqual([d["verb"] for d in ring[1:4]],
                          ["swing", "chance", "rhythm"])
 
-    def test_the_drum_step_ring_is_unchanged(self):
-        # A drum's rhythm is HITS and ROTATE, already exact. Euclidean
-        # channels get no second generator.
+    def test_the_drum_step_ring_keeps_its_two_spread_pages(self):
+        # REVERSED BY THE OWNER, 2026-08-31. This test used to read "a drum's
+        # rhythm is HITS and ROTATE, already exact - euclidean channels get no
+        # second generator", and the drum rhythm register is exactly that
+        # second generator. The RING is still swing and chance; what changed is
+        # the CHANNEL page, where encoder 7 traded SWING for RHYTHM - the same
+        # trade the owner already made on the voice page, and for the same
+        # reason: swing is on the spread page below, reachable for all eight
+        # channels at once, which is where it is wanted in a jam.
         ring = tl.PAGE_RINGS[("STEP", "drum")]
         self.assertEqual([d["verb"] for d in ring[1:]], ["swing", "chance"])
 
@@ -696,13 +708,18 @@ class TestRhythmPage(unittest.TestCase):
         self.assertEqual(to_frac(0), 0.0)
         self.assertEqual(to_frac(100), 1.0)
 
-    def test_the_rhythm_spread_page_greys_a_drum(self):
+    def test_the_rhythm_spread_page_now_reaches_a_drum_too(self):
+        # It used to grey a drum, because a drum view carried no `rhythm` key
+        # and spread_columns draws dead where the source does not exist. The
+        # drum rhythm register puts the key on the drum state, so this page
+        # lights up for all eight channels with NO change to the page itself -
+        # the grey was never a rule, it was the absence of a value.
         desc = tl.PAGE_RINGS[("STEP", "voice")][3]
         views = [("A", "KICK", _drum_view()), ("F", "BASS", _voice_view())]
         views += [("X", "----", _drum_view())] * 6
         cols = tl.columns(desc, None, views)
-        self.assertTrue(cols[0]["grey"])
-        self.assertEqual(cols[0]["value"], "----")
+        self.assertFalse(cols[0]["grey"])
+        self.assertEqual(cols[0]["value"], "0000")
         self.assertFalse(cols[1]["grey"])
         # 0 is LOCK: a voice starts with its rhythm frozen, where DENSITY
         # started at 100. The steps it sounds come from the register, which
@@ -1971,7 +1988,7 @@ class TestGeneratorSurface(unittest.TestCase):
 
     def test_the_density_spread_page_became_a_rhythm_page(self):
         verbs = [d.get("verb") for d in tl.PAGE_RINGS[("STEP", "voice")][1:]]
-        self.assertEqual(verbs, ["swing", "chance", "rhythm"])
+        self.assertEqual(verbs[:3], ["swing", "chance", "rhythm"])
         self.assertIn("rhythm", tl.SPREAD_SPECS)
         self.assertNotIn("density", tl.SPREAD_SPECS)
 
@@ -3499,9 +3516,11 @@ class TestFreeze(unittest.TestCase):
     def test_the_frozen_subjects_are_the_documented_set(self):
         # "macro" joined 2026-08-20: an armed DROP fired while frozen and
         # muted every channel.
+        # "walk" joined 2026-08-31 with the chord walker, on the same argument
+        # that put "macro" here in 2026-08-20.
         self.assertEqual(tl.FREEZE_GENERATIVE,
                          frozenset(("melody", "rhythm", "drift", "reroll",
-                                    "macro")))
+                                    "macro", "walk")))
 
 
 class TestFreezeLabel(unittest.TestCase):
@@ -4355,3 +4374,593 @@ class TestPadPressure(unittest.TestCase):
 
     def test_the_target_verb_is_not_a_drift_verb(self):
         self.assertFalse(tl.is_drift(tl.PRESSURE_VERB))
+
+
+class TestGeneratorMayWrite(unittest.TestCase):
+    """The one guard every pattern-rewriting generator asks.
+
+    Three of P1's five features rewrite the pattern at the wrap - the path that
+    destroyed a recorded take through the velo defect. _drift_channel already
+    solved it and shipped; this is that solution as one predicate, so a fourth
+    generator cannot get it subtly wrong."""
+
+    def test_an_idle_generator_on_a_generated_channel_may_write(self):
+        self.assertTrue(tl.generator_may_write("drift", False, False, None))
+
+    def test_a_player_owned_channel_is_refused(self):
+        self.assertFalse(tl.generator_may_write("drift", False, False,
+                                                "player"))
+
+    def test_freeze_refuses_a_generated_channel(self):
+        self.assertFalse(tl.generator_may_write("drift", True, False, None))
+
+    def test_a_deep_freeze_refuses_it_too(self):
+        self.assertFalse(tl.generator_may_write("drift", False, True, None))
+
+    def test_ownership_is_refused_even_while_thawed(self):
+        self.assertFalse(tl.generator_may_write("melody", False, False,
+                                                "player"))
+
+    def test_a_generator_freeze_does_not_name_is_still_owner_gated(self):
+        # "lfo" is not in FREEZE_GENERATIVE, so a latched freeze does not hold
+        # it - but ownership still does. The two gates are independent.
+        self.assertTrue(tl.generator_may_write("lfo", True, False, None))
+        self.assertFalse(tl.generator_may_write("lfo", True, False, "player"))
+
+    def test_a_generator_owned_channel_is_not_a_player_owned_one(self):
+        self.assertTrue(tl.generator_may_write("drift", False, False,
+                                               "generator"))
+
+
+class TestRotateLine(unittest.TestCase):
+    """ROTATE on a voice - owner's decision, 2026-08-31: rotate the LINE.
+
+    The same melody, starting somewhere else in the bar. NOT clocking the pitch
+    register, which walks to a different melody; that reading was rejected
+    because a voice's neighbourhood is already reachable through REROLL."""
+
+    NOTES = [60, 62, 64, 65]
+    MASK = (True, False, True, True)
+
+    def test_no_rotation_is_the_identity(self):
+        notes, mask = tl.rotate_line(self.NOTES, self.MASK, 0)
+        self.assertEqual(notes, list(self.NOTES))
+        self.assertEqual(mask, tuple(self.MASK))
+
+    def test_one_step_moves_the_line_forward(self):
+        notes, mask = tl.rotate_line(self.NOTES, self.MASK, 1)
+        self.assertEqual(notes, [65, 60, 62, 64])
+        self.assertEqual(mask, (True, True, False, True))
+
+    def test_notes_and_rests_rotate_together(self):
+        # The failure this function exists to prevent: a melody that slides
+        # while its rhythm stands still is not the same melody moved.
+        for count in range(1, 8):
+            notes, mask = tl.rotate_line(self.NOTES, self.MASK, count)
+            for i, sounding in enumerate(mask):
+                origin = (i - count) % len(self.NOTES)
+                self.assertEqual(sounding, self.MASK[origin])
+                self.assertEqual(notes[i], self.NOTES[origin])
+
+    def test_a_full_rotation_returns_the_original(self):
+        notes, mask = tl.rotate_line(self.NOTES, self.MASK, len(self.NOTES))
+        self.assertEqual(notes, list(self.NOTES))
+        self.assertEqual(mask, tuple(self.MASK))
+
+    def test_rotation_wraps_past_the_pattern_length(self):
+        self.assertEqual(tl.rotate_line(self.NOTES, self.MASK, 5),
+                         tl.rotate_line(self.NOTES, self.MASK, 1))
+
+    def test_it_rotates_the_same_way_the_drum_verb_does(self):
+        # ROTATE must mean ONE thing on this instrument. If these two ever
+        # disagree, the same word moves two kinds of channel in opposite
+        # directions and nothing in the surface would say so.
+        import maschine_mk2_lib as _m
+        drum = _m.maschine_mk2_lib.rotate(list(self.MASK), 1)
+        _, mask = tl.rotate_line(self.NOTES, self.MASK, 1)
+        self.assertEqual(list(mask), drum)
+
+    def test_an_empty_line_rotates_to_nothing(self):
+        self.assertEqual(tl.rotate_line([], (), 3), ([], ()))
+
+    def test_a_negative_rotation_moves_the_line_backward(self):
+        notes, mask = tl.rotate_line(self.NOTES, self.MASK, -1)
+        self.assertEqual(notes, [62, 64, 65, 60])
+
+
+class TestChordWalker(unittest.TestCase):
+    """The walker that moves the shared root every N bars.
+
+    The global-scale half of this feature shipped long ago - ROOT and SCALE are
+    already global verbs, already drive all three voices, and a key change
+    already lands on the bar. Only the walker was ever missing."""
+
+    def test_walk_at_zero_never_comes_due(self):
+        # 0 is LOCK, the same grammar as MELODY and RHYTHM at zero.
+        for bar in range(64):
+            self.assertFalse(tl.walk_due(bar, 0))
+
+    def test_a_negative_rate_is_locked_too(self):
+        self.assertFalse(tl.walk_due(4, -1))
+
+    def test_every_fourth_bar_comes_due_four_bars_apart(self):
+        due = [bar for bar in range(16) if tl.walk_due(bar, 4)]
+        self.assertEqual(due, [0, 4, 8, 12])
+
+    def test_a_span_of_zero_holds_the_root_still(self):
+        rng = random.Random(1).random
+        self.assertEqual(tl.walk_next(0, 0, rng), 0)
+
+    def test_the_walk_stays_inside_its_span(self):
+        rng = random.Random(3).random
+        degree = 0
+        for _ in range(500):
+            degree = tl.walk_next(degree, 2, rng)
+            self.assertGreaterEqual(degree, -2)
+            self.assertLessEqual(degree, 2)
+
+    def test_the_walk_moves_one_degree_at_a_time(self):
+        rng = random.Random(5).random
+        degree = 0
+        for _ in range(200):
+            nxt = tl.walk_next(degree, 3, rng)
+            self.assertEqual(abs(nxt - degree), 1)
+            degree = nxt
+
+    def test_the_walk_reaches_both_sides_of_its_base(self):
+        rng = random.Random(11).random
+        seen, degree = set(), 0
+        for _ in range(400):
+            degree = tl.walk_next(degree, 2, rng)
+            seen.add(degree)
+        self.assertIn(-2, seen)
+        self.assertIn(2, seen)
+
+    def test_an_edge_reflects_rather_than_sticking(self):
+        # At the top of its span the walk must come back, not sit there. A
+        # clamp would park the key at the edge and read as a broken walker.
+        rng = random.Random(2).random
+        self.assertEqual(tl.walk_next(2, 2, rng), 1)
+
+    def test_degree_zero_is_the_root_the_player_set(self):
+        self.assertEqual(tl.walk_root(5, 0, 0), 5)
+
+    def test_the_walker_moves_along_the_scale_not_by_semitones(self):
+        # A progression stays in key: the root steps by the scale's own
+        # intervals. Stepping by semitones would transpose out of the scale
+        # the three voices are sharing, which is the opposite of the request.
+        intervals = tl.SCALES[0][1]
+        self.assertEqual(tl.walk_root(0, 1, 0), intervals[1])
+        self.assertEqual(tl.walk_root(0, 2, 0), intervals[2])
+
+    def test_walking_below_the_root_stays_in_key(self):
+        intervals = tl.SCALES[0][1]
+        self.assertEqual(tl.walk_root(0, -1, 0), intervals[-1] - 12)
+
+
+class TestDrumRhythmRegister(unittest.TestCase):
+    """Reading (b) of the soft randomiser: drums get the evolving generator the
+    voices already have. Reading (a), per-step probability, shipped 2026-08-19.
+
+    On a voice the rhythm register decides which steps sound outright. On a
+    drum, euclid already decided - so the register is SUBTRACTIVE, and that is
+    what keeps HITS meaning the number of hits."""
+
+    def test_a_new_drum_channel_is_locked_and_full(self):
+        st = tl.default_channel_state("drum")
+        self.assertEqual(st["rhythm"], 0)
+        self.assertEqual(st["rhythm_reg"], 0xFFFF)
+
+    def test_an_old_snapshot_gains_the_defaults(self):
+        # The class of bug that took the instrument silent for three hours on
+        # 2026-08-18: a dict short a key is a KeyError on the repaint path.
+        old = {"kit": "808", "sample": "BD", "level": 19, "range": 4}
+        st = tl.upgrade_state("drum", old, 16)
+        self.assertEqual(st["rhythm"], 0)
+        self.assertEqual(st["rhythm_reg"], 0xFFFF)
+        self.assertEqual(st["kit"], "808")
+
+    def test_the_default_register_changes_no_existing_pattern(self):
+        pattern = [True, False, False, True, False, False, True, False]
+        self.assertEqual(tl.drum_steps(pattern, 0xFFFF), tuple(pattern))
+
+    def test_a_cleared_bit_silences_that_step(self):
+        pattern = [True, True, True, True]
+        self.assertEqual(tl.drum_steps(pattern, 0b1101),
+                         (True, False, True, True))
+
+    def test_the_register_can_never_add_a_hit(self):
+        # If it could, HITS would stop meaning the number of hits and the
+        # euclid encoder would be lying about its own pattern.
+        pattern = [False, False, False, False]
+        self.assertEqual(tl.drum_steps(pattern, 0xFFFF),
+                         (False, False, False, False))
+
+    def test_only_the_pattern_s_own_bits_are_read(self):
+        # A 12-step triplet division must not pick up bits 12-15 left behind
+        # by a 16-step one - the same rule rhythm_mask already obeys.
+        pattern = [True] * 12
+        self.assertEqual(len(tl.drum_steps(pattern, 0xFFFF)), 12)
+
+    def test_an_evolving_register_only_ever_thins_the_line(self):
+        rng = random.Random(9).random
+        pattern = [True, False, True, True, False, True, False, False]
+        reg = 0xFFFF
+        for _ in range(50):
+            reg = tl.mutate(reg, len(pattern), 0.2, rng)
+            out = tl.drum_steps(pattern, reg)
+            for i, step in enumerate(out):
+                if step:
+                    self.assertTrue(pattern[i])
+
+
+class TestWanderingVoice(unittest.TestCase):
+    """A fourth way for a channel to behave: a bounded random walk instead of a
+    shift register.
+
+    Shipped as a per-voice MODEL switch, NOT a third channel kind - 42 binary
+    kind tests and six driver sites written `!= "voice"` would have routed a
+    third kind down the DRUM path with no error and no log. The walk produces
+    values in the register's own domain, so pitch, scale, octave and range are
+    untouched downstream."""
+
+    def test_it_yields_one_value_per_step(self):
+        rng = random.Random(1).random
+        self.assertEqual(len(tl.walk_values(64, 8, 12, 20, 3, rng)), 12)
+
+    def test_a_span_of_zero_holds_one_note(self):
+        # Audible and honest: a walk with nowhere to go is a held note, not a
+        # silent channel. A silent channel must say why; this one has nothing
+        # to explain because it is sounding.
+        rng = random.Random(1).random
+        self.assertEqual(tl.walk_values(100, 8, 8, 0, 4, rng), [100] * 8)
+
+    def test_a_stride_of_zero_holds_one_note_too(self):
+        rng = random.Random(1).random
+        self.assertEqual(tl.walk_values(100, 8, 8, 30, 0, rng), [100] * 8)
+
+    def test_it_starts_where_it_was_told_to(self):
+        rng = random.Random(1).random
+        self.assertEqual(tl.walk_values(77, 8, 6, 20, 3, rng)[0], 77)
+
+    def test_the_walk_stays_inside_its_span(self):
+        rng = random.Random(4).random
+        for value in tl.walk_values(128, 8, 400, 10, 3, rng):
+            self.assertGreaterEqual(value, 118)
+            self.assertLessEqual(value, 138)
+
+    def test_the_walk_stays_inside_the_register_domain(self):
+        # pitch() shifts by `length`, so a value outside 0..2^length-1 would
+        # quantise to a degree that does not exist.
+        rng = random.Random(6).random
+        for value in tl.walk_values(2, 8, 500, 200, 7, rng):
+            self.assertGreaterEqual(value, 0)
+            self.assertLessEqual(value, 255)
+
+    def test_a_span_wider_than_the_register_is_bounded_by_the_register(self):
+        rng = random.Random(8).random
+        for value in tl.walk_values(4, 4, 300, 999, 2, rng):
+            self.assertGreaterEqual(value, 0)
+            self.assertLessEqual(value, 15)
+
+    def test_it_actually_wanders(self):
+        rng = random.Random(12).random
+        values = tl.walk_values(64, 8, 64, 40, 5, rng)
+        self.assertGreater(len(set(values)), 1)
+
+    def test_the_same_seed_walks_the_same_way(self):
+        # A walk you cannot reproduce is a walk you cannot save.
+        a = tl.walk_values(64, 8, 32, 20, 3, random.Random(21).random)
+        b = tl.walk_values(64, 8, 32, 20, 3, random.Random(21).random)
+        self.assertEqual(a, b)
+
+    def test_a_new_voice_uses_the_register_and_not_the_walk(self):
+        # Zero must be bit-identical to today, exactly as the rhythm generator
+        # shipped without changing any existing voice.
+        st = tl.default_channel_state("voice")
+        self.assertEqual(st["model"], tl.MODEL_REGISTER)
+
+    def test_an_old_snapshot_comes_back_on_the_register(self):
+        st = tl.upgrade_state("voice", {"register": 0b1011, "length": 4,
+                                        "rhythm_reg": 0xFFFF}, 16)
+        self.assertEqual(st["model"], tl.MODEL_REGISTER)
+
+
+class TestVoiceCrossCoupling(unittest.TestCase):
+    """One voice's register feeds another's, so three voices that evolve apart
+    can be made to drift together.
+
+    Two other couplings were considered and rejected: reciprocal XOR, which
+    makes two voices IDENTICAL inside one tick, and making the target's mutate
+    chance depend on the source's bit, which is statistically indistinguishable
+    from a slightly different MELODY setting - the player cannot hear it, so it
+    is not a feature."""
+
+    REG = 0b10110011
+    SRC = 0b11001010
+
+    def test_no_coupling_is_exactly_todays_behaviour(self):
+        # Zero must be bit-identical to today, and that includes not disturbing
+        # the random stream - an extra rng() call per bit would change every
+        # evolving voice on the instrument the day this shipped.
+        a = tl.mutate(self.REG, 8, 0.3, random.Random(17).random)
+        b = tl.mutate_coupled(self.REG, 8, 0.3, self.SRC, 8, 0.0,
+                              random.Random(17).random)
+        self.assertEqual(a, b)
+
+    def test_no_coupling_is_the_identity_at_lock(self):
+        self.assertEqual(
+            tl.mutate_coupled(self.REG, 8, 0.0, self.SRC, 8, 0.0), self.REG)
+
+    def test_full_coupling_at_lock_copies_the_source(self):
+        # The degenerate end of the range, and it is reachable on purpose: at
+        # full amount the target IS the source, one bar behind. Naming it here
+        # so nobody reports it as a bug.
+        self.assertEqual(
+            tl.mutate_coupled(self.REG, 8, 0.0, self.SRC, 8, 1.0), self.SRC)
+
+    def test_coupling_never_changes_the_source(self):
+        source = self.SRC
+        tl.mutate_coupled(self.REG, 8, 0.5, source, 8, 0.5,
+                          random.Random(1).random)
+        self.assertEqual(source, self.SRC)
+
+    def test_the_result_stays_inside_the_target_s_length(self):
+        rng = random.Random(2).random
+        reg = 0xFFFF
+        for _ in range(50):
+            reg = tl.mutate_coupled(reg, 5, 0.4, 0xFFFF, 16, 0.6, rng)
+            self.assertLess(reg, 1 << 5)
+
+    def test_a_shorter_source_still_feeds_a_longer_target(self):
+        # Lengths need not agree: the feed is ONE BIT, not a register copy.
+        reg = tl.mutate_coupled(0b10110011, 8, 0.0, 0b101, 3, 1.0)
+        self.assertLess(reg, 1 << 8)
+
+    def test_a_cycle_cannot_iterate_within_one_tick(self):
+        # A feeds B feeds A is a musically real request. Both reads are of the
+        # registers as they were at the START of the tick, so the pair cannot
+        # run away inside one wrap.
+        a0, b0 = self.REG, self.SRC
+        a1 = tl.mutate_coupled(a0, 8, 0.0, b0, 8, 1.0)
+        b1 = tl.mutate_coupled(b0, 8, 0.0, a0, 8, 1.0)
+        self.assertEqual(a1, b0)
+        self.assertEqual(b1, a0)
+
+
+class TestWalkLine(unittest.TestCase):
+    """The walk rendered as notes - line()'s counterpart, so the writer asks
+    one function whichever model a voice is on."""
+
+    def test_it_yields_one_note_per_step(self):
+        rng = random.Random(1).random
+        notes = tl.walk_line(64, 8, 12, 0, 0, 0, 2, 30, 4, rng)
+        self.assertEqual(len(notes), 12)
+
+    def test_every_note_is_in_the_scale(self):
+        rng = random.Random(3).random
+        notes = tl.walk_line(64, 8, 64, 0, 0, 0, 2, 60, 5, rng)
+        intervals = tl.SCALES[0][1]
+        for note in notes:
+            self.assertIn((note - tl.BASE_NOTE) % 12, intervals)
+
+    def test_every_note_is_a_legal_midi_note(self):
+        rng = random.Random(5).random
+        for note in tl.walk_line(200, 8, 64, 11, 1, 3, 4, 255, 9, rng):
+            self.assertGreaterEqual(note, 0)
+            self.assertLessEqual(note, 127)
+
+    def test_a_held_walk_repeats_one_note(self):
+        notes = tl.walk_line(64, 8, 8, 0, 0, 0, 2, 0, 4)
+        self.assertEqual(len(set(notes)), 1)
+
+
+class TestGenPage(unittest.TestCase):
+    """The GEN page: one new page in the voice STEP ring carrying three of
+    P1's five features. A new page in an existing ring is the cheapest surface
+    this instrument has - no button, no measurement, no overlay."""
+
+    def _state(self, **over):
+        st = tl.default_channel_state("voice")
+        st.update(over)
+        return st
+
+    def test_the_voice_step_ring_gains_a_gen_page(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[("STEP", "voice")]]
+        self.assertIn("GEN", titles)
+
+    def test_the_gen_page_verbs_match_what_it_draws(self):
+        # verbs decide what an encoder WRITES, _columns_inner what it DRAWS,
+        # and nothing checks they agree at runtime. This is that check.
+        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        self.assertEqual(desc["verbs"],
+                         ("rotate", "model", "walk_span", "walk_stride",
+                          "feed", "amount", None, None))
+        # On the WALK model every one of the six is live. On the register
+        # model SPAN and STRIDE draw dead - see the test below.
+        cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
+        self.assertEqual([c["name"] for c in cols][:6],
+                         ["ROTATE", "MODEL", "SPAN", "STRIDE", "FEED", "AMT"])
+
+    def test_the_two_unused_columns_draw_dead(self):
+        # A lit column that does nothing is the fault this surface must never
+        # commit - law L4, draw dead rather than a number the knob cannot move.
+        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        cols = tl.columns(desc, "voice", self._state())
+        self.assertTrue(cols[6]["grey"])
+        self.assertTrue(cols[7]["grey"])
+
+    def test_a_new_voice_reads_as_the_register_model(self):
+        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        cols = tl.columns(desc, "voice", self._state())
+        self.assertEqual(cols[1]["value"], "REG")
+
+    def test_the_walk_model_says_so(self):
+        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
+        self.assertEqual(cols[1]["value"], "WALK")
+
+    def test_no_feed_reads_as_off(self):
+        # A silent channel must say why - and so must a coupling that is not
+        # coupled to anything.
+        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        cols = tl.columns(desc, "voice", self._state())
+        self.assertEqual(cols[4]["value"], "OFF")
+
+
+class TestWalkPage(unittest.TestCase):
+    """The WALK page: the chord walker's four numbers, in the ALL ring beside
+    the globals it moves."""
+
+    def _globals(self, **over):
+        g = dict(root=0, scale=0, bpm=125, master=80, revsize=50, revtype=0,
+                 dlytime=2, dlyfbk=30, walk=0, wspan=2, pending=set())
+        g.update(over)
+        return g
+
+    def test_the_all_ring_gains_a_walk_page(self):
+        self.assertIn("WALK", [d["title"] for d in tl.PAGE_RINGS[("ALL", None)]])
+
+    def test_the_walk_page_draws_root_scale_and_the_walker(self):
+        desc = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "WALK"][0]
+        cols = tl.columns(desc, None, self._globals())
+        self.assertEqual([c["name"] for c in cols][:4],
+                         ["ROOT", "SCALE", "WALK", "SPAN"])
+
+    def test_a_locked_walker_says_lock_rather_than_a_number(self):
+        # 0 is LOCK everywhere else on this instrument; reading "0000" here
+        # would invite turning it down looking for off.
+        desc = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "WALK"][0]
+        cols = tl.columns(desc, None, self._globals())
+        self.assertEqual(cols[2]["value"], "LOCK")
+
+    def test_a_running_walker_shows_its_bar_count(self):
+        desc = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "WALK"][0]
+        cols = tl.columns(desc, None, self._globals(walk=4))
+        self.assertEqual(cols[2]["value"], "4bar")
+
+    def test_the_shipped_global_page_is_untouched(self):
+        desc = tl.PAGE_RINGS[("ALL", None)][0]
+        cols = tl.columns(desc, None, self._globals())
+        self.assertEqual([c["name"] for c in cols],
+                         ["ROOT", "SCALE", "BPM", "MASTER", "REVSIZE",
+                          "REVTYPE", "DLYTIME", "DLYFBK"])
+
+
+class TestGenPageDeadColumns(unittest.TestCase):
+    """SPAN and STRIDE belong to the walk. On the register model they are not
+    dimmed-but-turnable, they are DEAD - law L4, draw dead rather than a number
+    the knob cannot make audible."""
+
+    def _desc(self):
+        return [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+
+    def test_span_and_stride_are_dead_on_the_register_model(self):
+        st = tl.default_channel_state("voice")
+        cols = tl.columns(self._desc(), "voice", st)
+        self.assertTrue(cols[2]["grey"])
+        self.assertTrue(cols[3]["grey"])
+
+    def test_they_come_alive_on_the_walk_model(self):
+        st = tl.default_channel_state("voice")
+        st["model"] = tl.MODEL_WALK
+        cols = tl.columns(self._desc(), "voice", st)
+        self.assertFalse(cols[2]["grey"])
+        self.assertFalse(cols[3]["grey"])
+
+
+class TestGenStateKeys(unittest.TestCase):
+    """Every GEN verb needs a home in the state dict, or apply() has nowhere to
+    write and the snapshot has nothing to save."""
+
+    def test_a_new_voice_carries_every_gen_verb(self):
+        st = tl.default_channel_state("voice")
+        for key in ("rotate", "model", "walk_span", "walk_stride", "feed",
+                    "amount"):
+            self.assertIn(key, st)
+
+    def test_a_new_voice_is_unrotated_uncoupled_and_on_the_register(self):
+        # Zero is bit-identical to today on all three, which is what lets this
+        # ship without changing any existing voice.
+        st = tl.default_channel_state("voice")
+        self.assertEqual(st["rotate"], 0)
+        self.assertIsNone(st["feed"])
+        self.assertEqual(st["amount"], 0)
+        self.assertEqual(st["model"], tl.MODEL_REGISTER)
+
+    def test_an_old_snapshot_gains_them_all(self):
+        st = tl.upgrade_state("voice", {"register": 0b1011, "length": 4,
+                                        "rhythm_reg": 0xFFFF}, 16)
+        self.assertEqual(st["rotate"], 0)
+        self.assertIsNone(st["feed"])
+        self.assertEqual(st["amount"], 0)
+
+    def test_a_drum_does_not_grow_voice_only_keys(self):
+        st = tl.default_channel_state("drum")
+        self.assertNotIn("model", st)
+        self.assertNotIn("feed", st)
+
+
+class TestWalkerFreezes(unittest.TestCase):
+    """The chord walker is a bar-rate machine and FREEZE must hold it.
+
+    A key change is one of the largest things that can happen under a player
+    who has asked for nothing to change - the same argument that put "macro"
+    in this set on 2026-08-20, found by playing it."""
+
+    def test_walk_is_a_generative_subject(self):
+        self.assertIn("walk", tl.FREEZE_GENERATIVE)
+
+    def test_a_latched_freeze_holds_the_walker(self):
+        self.assertTrue(tl.freeze_blocks("walk", True, False))
+
+    def test_a_deep_freeze_holds_it_too(self):
+        self.assertTrue(tl.freeze_blocks("walk", False, True))
+
+    def test_a_thawed_walker_runs(self):
+        self.assertFalse(tl.freeze_blocks("walk", False, False))
+
+    def test_the_rhythm_subject_now_has_a_caller(self):
+        # It sat in this set with NO caller until 2026-08-31 - correct only by
+        # accident of an early return elsewhere. The drum rhythm register asks
+        # it through generator_may_write, so the entry means something now.
+        self.assertFalse(tl.generator_may_write("rhythm", True, False, None))
+
+
+class TestPageVerbsNameRealStateKeys(unittest.TestCase):
+    """Every channel-page verb must be a key the state dict actually carries.
+
+    A verb that names nothing is a knob that silently does nothing: _verb looks
+    it up in the driver's range table and param_get reads it straight out of
+    the state dict, and neither raises - it just returns. This caught
+    `wspan`/`wstride` on the GEN page the day it was written."""
+
+    HANDLED_ELSEWHERE = {
+        # Dispatched by name in _verb before any table is consulted.
+        "kit", "sample", "preset", "div", "length", "hits", "rotate",
+        "model", "feed",
+    }
+
+    def test_every_channel_page_verb_is_a_state_key(self):
+        for (mode, kind), ring in tl.PAGE_RINGS.items():
+            if kind is None:
+                continue
+            state = tl.default_channel_state(kind)
+            for desc in ring:
+                if desc["shape"] != tl.SHAPE_CHANNEL:
+                    continue
+                for verb in desc["verbs"]:
+                    if verb is None or verb in self.HANDLED_ELSEWHERE:
+                        continue
+                    self.assertIn(verb, state,
+                                  f"{mode}/{kind} page {desc['title']}: "
+                                  f"verb {verb!r} names no state key")
