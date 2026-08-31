@@ -1020,6 +1020,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if chan is not None:
             view["level"] = int(round(self.state_manager.zynmixer.get_level(chan) * 100))
 
+        # A LIVE SQUEEZE SHOWS THE KNOB, NOT THE SWEEP. Pressure writes the
+        # displaced value through apply(), so without this the column tracked
+        # the finger and both screens repainted about thirty times a second -
+        # measured at the rig 2026-08-31 as 110 OSC messages/s, 104 of them
+        # display, which is inside the band that wedges the controller.
+        #
+        # The same mistake, and the same fix, as the MOD tick that was removed
+        # for rebuilding both screens six times a second. tlib.pressure_display
+        # carries the reasoning.
+        view = tlib.pressure_display(view, tlib.PRESSURE_VERB,
+                                     self._press_base[channel])
+
         # The ENGINE decides, not the behaviour: a sampler played by the
         # Turing register still has a kit and a sample, and the CONTROL page
         # it is given now shows both. Matches _page_kind().

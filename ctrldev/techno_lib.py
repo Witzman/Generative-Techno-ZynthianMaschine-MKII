@@ -2618,6 +2618,44 @@ class techno_lib:
     PRESSURE_FLOOR = 0.5
 
     @staticmethod
+    def pressure_display(view, verb, base):
+        """The display's copy of a channel's state, with a live squeeze hidden.
+
+        PURE, so it is tested on WSL where the driver cannot be imported.
+
+        THE NUMBER ON THE GLASS MUST NOT MOVE WHILE A FINGER PRESSES. Pressure
+        writes the swept value into state and the display renders state, so
+        with pad pressure on, the screens repainted about thirty times a
+        second: measured at the rig on 2026-08-31 as 110 OSC messages a second,
+        of which 104 were display traffic against 5.6 for the pads. That is
+        inside the band that wedges the controller off the USB bus, and a wedge
+        needs a physical replug.
+
+        This surface has already paid for this lesson once. _render_display's
+        comment about the MOD tick that was taken out: "a number that changes
+        when you change it, rather than an animation that rebuilt both screens
+        six times a second and killed the controller." Pressure brought it back
+        at five times the rate.
+
+        It is also the modulation law, which was written down and not applied
+        here: base and offset are separate, the driver owns the base, and the
+        swept value is for the engine rather than for the knob. Pressure kept
+        its base so the KNOB survived a squeeze; nothing kept the DISPLAY off
+        the sweep.
+
+        `base is None` means no squeeze is live, and the view is returned
+        untouched. A base of ZERO is a real base - `if base:` would show the
+        swept value at the bottom of the range, which is exactly where a filter
+        sweep is most audible.
+        """
+
+        if base is None:
+            return view
+        out = dict(view)
+        out[verb] = base
+        return out
+
+    @staticmethod
     def pressure_offset(value, lo, hi, depth=None):
         """Surface-unit offset for an aftertouch value 0-127.
 

@@ -5197,3 +5197,65 @@ class WalkIsDeterministic(unittest.TestCase):
         _r.seed(1234)
         self._walk(99)
         self.assertEqual(_r.random(), before)
+
+
+class PressureDoesNotAnimateTheDisplay(unittest.TestCase):
+    """A live squeeze must not make the display's number move.
+
+    THE BUG THIS PREVENTS, measured at the rig 2026-08-31 with pad pressure
+    switched on: 110 OSC messages a second, of which 104 were DISPLAY - 61
+    rect/s, 40 text/s, 3 fbclear/s - against 5.6 for the pads. The screens were
+    repainting about thirty times a second because pressure writes the SWEPT
+    value into state and the display renders state.
+
+    This surface has already learned this once. _render_display's own comment,
+    about the MOD tick that was removed: "a number that changes when you change
+    it, rather than an animation that rebuilt both screens six times a second
+    and killed the controller." Pressure reintroduced it at five times the
+    rate.
+
+    And it breaks a written law. notes/traps/MODULATION.md: "Base and offset
+    are separate - the driver owns the base and writes base + offset; writing
+    the swept value back kills the knob." Pressure keeps its base in
+    _press_base so the KNOB survives, but nothing kept the DISPLAY off the
+    swept value.
+    """
+
+    def test_no_squeeze_leaves_the_view_alone(self):
+        view = {"cutoff": 70, "reso": 20}
+        self.assertEqual(tl.pressure_display(view, "cutoff", None), view)
+
+    def test_a_live_squeeze_shows_the_BASE_not_the_swept_value(self):
+        # The knob is at 70; the squeeze has pushed the engine to 118. The
+        # glass must say 70, because that is where the knob is and where the
+        # sound returns to when the finger lifts.
+        view = {"cutoff": 118, "reso": 20}
+        got = tl.pressure_display(view, "cutoff", 70)
+        self.assertEqual(got["cutoff"], 70)
+
+    def test_it_does_not_mutate_the_view_it_was_given(self):
+        # state_view() hands out a dict the caller owns; writing through it
+        # would put the base into the driver's own state and lose the sweep.
+        view = {"cutoff": 118}
+        tl.pressure_display(view, "cutoff", 70)
+        self.assertEqual(view["cutoff"], 118)
+
+    def test_every_other_column_is_untouched(self):
+        view = {"cutoff": 118, "reso": 20, "level": 90}
+        got = tl.pressure_display(view, "cutoff", 70)
+        self.assertEqual(got["reso"], 20)
+        self.assertEqual(got["level"], 90)
+
+    def test_the_value_is_STEADY_while_the_squeeze_varies(self):
+        # The whole point: forty pressure steps, one display value. Without
+        # this each step is a repaint of both screens.
+        base = 70
+        seen = {tl.pressure_display({"cutoff": v}, "cutoff", base)["cutoff"]
+                for v in range(70, 110)}
+        self.assertEqual(seen, {70})
+
+    def test_a_base_of_zero_is_honoured_and_not_read_as_absent(self):
+        # `if base:` would show the swept value at the bottom of the range,
+        # which is exactly where a filter sweep is most audible.
+        got = tl.pressure_display({"cutoff": 40}, "cutoff", 0)
+        self.assertEqual(got["cutoff"], 0)
