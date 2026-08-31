@@ -18,7 +18,7 @@ run each step yourself.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![1047 tests](https://img.shields.io/badge/tests-1047%20passing-b4b4bc)
+![1182 tests](https://img.shields.io/badge/tests-1182%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -36,8 +36,22 @@ sequencer — so patterns persist in snapshots and the touchscreen pattern edito
 mirrors exactly what the pads show.
 
 The three voices are Turing machines: a shift register clocked once per pass and
-mutated one bit at a time, read as pitch. Set `RANDOM` to 0 and the loop you are
-hearing is frozen **bit-identically**, for as long as you leave it there.
+mutated one bit at a time, read as pitch. Set `MELODY` to 0 and the loop you are
+hearing is frozen **bit-identically**, for as long as you leave it there. A voice
+can be switched to a **bounded random walk** instead, which strolls where the
+register jumps, and one voice can be **fed** another's register so the two drift
+toward each other without ever becoming the same line. A slow **chord walker**
+moves the root all three share, along the scale rather than chromatically, so
+three independent lines become a progression.
+
+The drums have an evolving generator of their own now: **RHYTHM** lets steps
+appear and disappear from bar to bar. Tapping a pad flips a step in that same
+register rather than editing the pattern, so a hand-chosen rhythm survives
+rotation and is saved with the snapshot — and HITS, DIVIDE or LENGTH put every
+step back when you want the plain euclidean line again.
+
+**The pads are pressure-sensitive.** Squeeze a held pad on a voice and the filter
+opens for as long as you press, easing back when you let go.
 
 **A gesture can land on a bar rather than under your finger.** The instrument
 counts bars, so ARM composes a macro with a length — a drop, a thinning of the
@@ -93,9 +107,10 @@ is authoritative; `install.sh` is only a wrapper over it.
 Every test in this repository runs without a Pi and without the controller:
 
 ```bash
-cd ctrldev && python3 -m unittest discover -s tests -q   # → 786   the driver
-cd daemon  && cargo test                                 # → 122   the HID daemon
+cd ctrldev && python3 -m unittest discover -s tests -q   # → 900   the driver
+cd daemon  && cargo test                                 # → 128   the HID daemon
 bash system/tests/test-system-files.sh                   # →  53   units, udev, helpers
+python3 -m unittest discover -s tools/tests -q           # →  15   the offline snapshot tools
 bash system/tests/test-dry-run.sh                        # →  86   what each installer PRINTS
 ```
 

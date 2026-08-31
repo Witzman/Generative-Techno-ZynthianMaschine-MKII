@@ -70,7 +70,7 @@ BASELINE = {
     # line and a second section, Performing it, for ARM and FREEZE - a
     # second section rather than two more entries, because What it does was
     # then over the 300-word unit cap.
-    "02-features.html":            (616,  "2026-08-22"),
+    "02-features.html":            (664,  "2026-08-31"),
     # Section 3 was written 2026-08-14; this is its first measurement.
     # +617: MOD published, as three sections - binding one, steering and
     # clearing, and what it refuses. Split rather than waiving the unit cap.
