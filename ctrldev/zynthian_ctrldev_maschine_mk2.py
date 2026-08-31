@@ -2584,7 +2584,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # the stride and still comes back playing a different
                     # melody.
                     "walk_seed": self.state[i].get("walk_seed", 0),
-                    "rotate": self.state[i].get("rotate", 0),
+                    # THROUGH param_get, NOT the state dict. `rotate` lives in
+                    # the legacy array self.rot, so reading self.state here
+                    # saved 0 for every channel on every snapshot ever written
+                    # - found 2026-08-31 while fixing the same shape in the
+                    # encoder and the renderer.
+                    "rotate": self.param_get(i, "rotate"),
                     "feed": self.state[i].get("feed"),
                     "amount": self.state[i].get("amount", 0),
                 }
@@ -2805,9 +2810,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             for field in ("register", "length", "random", "gate", "octave",
                           "range", "kit_range", "velo", "rhythm", "rhythm_reg",
                           "model", "walk_span", "walk_stride", "walk_seed",
-                          "rotate", "feed", "amount"):
+                          "feed", "amount"):
                 if field in saved:
                     st[field] = saved[field]
+            if "rotate" in saved:
+                # INTO THE LEGACY ARRAY. `rotate` was in the list above until
+                # 2026-08-31, which put it in self.state where param_get never
+                # looks - so a restored rotation was dead data and the driver
+                # kept whatever rotation was last on the panel.
+                #
+                # It cannot be derived instead: _derive_params says so in its
+                # own docstring - "Rotation is not recoverable from a pattern -
+                # it stays at whatever the driver last set." The notes come
+                # back rotated because they were WRITTEN rotated, so without
+                # this the surface and the pattern disagree until the next
+                # regeneration, which then jumps the pattern to the stale
+                # value.
+                #
+                # Clamped here rather than trusted: a snapshot saved at a
+                # longer division carries a rotation this pattern has no room
+                # for.
+                self.rot[channel] = max(
+                    0, min(max(0, self._steps(channel) - 1),
+                           int(saved["rotate"])))
             if "rhythm_reg" not in saved:
                 # A snapshot from before the rhythm generator. Seed its
                 # register from the mask its DENSITY would have produced, so
