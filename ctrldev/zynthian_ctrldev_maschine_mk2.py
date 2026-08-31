@@ -5719,7 +5719,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         st = self.state[channel]
         notes = self._voice_notes(channel, steps)
         mask = tlib.rhythm_mask(st.get("rhythm_reg", 0xFFFF), steps)
-        return tlib.rotate_line(notes, mask, int(st.get("rotate", 0)))
+        # ROTATE IS NOT IN self.state. It is in the legacy per-group array
+        # self.rot - _LEGACY says so, apply() writes it there, and param_get
+        # is the accessor that knows. Reading the state dict here returned 0
+        # forever, so the line was rotated by nothing: the owner turned ROTATE
+        # on a voice at the rig on 2026-08-31, watched the value count
+        # correctly, and heard the sound never change.
+        #
+        # The value read correctly on the display because the display goes
+        # through param_get. Two readers of one verb disagreeing about where
+        # it lives is what makes this shape so quiet - and this is its FOURTH
+        # appearance. See the note at the ROTATE encoder path.
+        return tlib.rotate_line(notes, mask,
+                                int(self.param_get(channel, "rotate") or 0))
 
     def _step_notes(self, channel, steps):
         """The note each step carries, as a list. Computed once per repaint:
