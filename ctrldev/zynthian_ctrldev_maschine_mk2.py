@@ -4519,9 +4519,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
             if delta:
                 steps = max(1, self._steps(channel))
-                st = self.state[channel]
-                self.apply(channel, "rotate",
-                           (int(st.get("rotate", 0)) + delta) % steps)
+                # READ IT WHERE IT LIVES. `rotate` is in the LEGACY per-group
+                # array self.rot, not in self.state - _LEGACY says so and
+                # apply() writes it there. Reading self.state[channel] gave 0
+                # every time, so every turn started from zero and the value
+                # could only ever be +1 or -1: the owner saw it jump between
+                # 1 and 15 on the first turn of this knob at the rig,
+                # 2026-08-31.
+                #
+                # THIS IS THE THIRD TIME THIS EXACT SHAPE HAS SHIPPED, and
+                # param_get's own docstring describes the second: SP8's
+                # `range` alias read `range` and wrote `kit_range`, "so every
+                # turn started from 2 again and only ever produced 1 or 3".
+                # The rule the three of them share: a verb whose storage is
+                # not self.state must be read through param_get, never through
+                # the state dict directly.
+                current = int(self.param_get(channel, "rotate") or 0)
+                self.apply(channel, "rotate", (current + delta) % steps)
                 with self.lock:
                     self._render_display()
             return
