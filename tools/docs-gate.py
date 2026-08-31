@@ -140,7 +140,9 @@ BASELINE = {
     # rather than on a downbeat, and nothing on the panel marks a modulator as
     # one-shot. The last one is why the section has to exist at all: a feature
     # with no indicator has to be carried by the documentation or not at all.
-    "modulation.html":             (1943, "2026-08-20"),
+    # +329, 2026-08-31: the pump, which is MOD + RESTART rather than a new
+    # LFO, and why bare RESTART deliberately does not re-phase.
+    "modulation.html":             (2272,  "2026-08-31"),
     # Stubs created 2026-08-16 so the sidebar could be written once, with no
     # broken links. Each baseline is re-set when its tutorial is written.
     # +171, 2026-08-16: a voice now has TWO generators, not one. MELODY and
@@ -182,7 +184,13 @@ BASELINE = {
     # six divisions cannot move in one direction or the other, so a partial
     # result is the ORDINARY case here rather than an error, and a reader who
     # does not know that will report the display's "5/8" as a bug.
-    "generating-patterns.html":    (2551, "2026-08-20"),
+    # +954, 2026-08-31: five generative features documented after their
+    # hardware gate, not before it. The GEN page (ROTATE, MODEL/SPAN/STRIDE for
+    # the wandering voice, FEED/AMOUNT for coupling), the drum rhythm register
+    # - which also had to explain that SWING moved off encoder 7 - and the
+    # chord walker with its measured numbers. Rule 11: a feature is done when a
+    # reader can find out about it.
+    "generating-patterns.html":    (3505,  "2026-08-31"),
     # +132, 2026-08-20: audio capture on SHIFT + REC, and what REC's light
     # means now that it carries two facts. The red-while-recording rule is
     # here so a capture running on a page where overdub is impossible is
@@ -190,7 +198,11 @@ BASELINE = {
     # +219, 2026-08-22: the documentation audit. The pad colour legend, which
     # this page and The surface each said the other one carried, plus ERASE +
     # pad in the step editor and the REC light while a capture runs.
-    "playing-and-recording.html":  (1169, "2026-08-22"),
+    # +349, 2026-08-31: pad pressure, gated the same evening. Includes the two
+    # deliberate limits - voices only, and the number on screen does not move
+    # while you press - because the second one was a live wedge hazard before
+    # it was fixed.
+    "playing-and-recording.html":  (1518,  "2026-08-31"),
     # +142, 2026-08-16: CONTROL now follows the ENGINE rather than the
     # behaviour, SHIFT + the big encoder's buttons steps the kit, and the
     # "known defect" published here was withdrawn - the buttons always
@@ -339,7 +351,7 @@ BASELINE = {
     # one. Owner-requested, and the counterpart to the "already has" table:
     # between them a reader learns what is answered, what is open, and what
     # will not happen.
-    "whats-next.html":             (1933, "2026-08-31"),
+    "whats-next.html":             (1716, "2026-08-31"),
 }
 SKIP_BUDGET = {"index.html"}
 

@@ -67,7 +67,7 @@
 <main>
 <article>
 <h1 id="whats-next">What could come next</h1>
-<p>Seventy ideas for this instrument. <strong>None of them is promised</strong>, and only the seven named in the next section have been written at all.</p>
+<p>Sixty-two ideas for this instrument, and <strong>none of them is promised</strong>. Eight left the list on 31 August 2026 by being built, played and written up &mdash; they are in <a href="#already-here">Ideas this instrument already has</a> now.</p>
 <p><strong>This page was regrouped on 31 August 2026.</strong> It used to be organised by when an idea arrived and which project suggested it, and it carried rank numbers. Both are gone. Where an idea came from does not help you decide whether you want it, and two rounds of numbering had reached the point where six numbers each named two different features. Ideas are grouped by <em>what they would change about playing the instrument</em>, and they are referred to by name.</p>
 <hr>
 
@@ -77,21 +77,6 @@
 <p><strong>Cost</strong> is S, M or L. S means a day or less and nothing new underneath. M means new state or a new part of the surface, still inside the shape the instrument already has. L means a new mechanism, a new page of the surface, or a question that cannot be answered without measuring the hardware first.</p>
 <p><strong>Impact</strong> is 1 to 5, and it means musical consequence &mdash; how much the thing you hear changes &mdash; not how clever the idea is.</p>
 <p>Within each section the strongest ratio of impact to cost comes first. That ratio is where an argument starts, not where it ends: it knows nothing about what depends on what. The countdown ruler ranked twenty-second while nine of the entries above it could not exist without it, which is why it was the first thing built.</p>
-
-<h2 id="written-not-playable">Written, but not yet on the instrument</h2>
-<p>Seven ideas left this page in August 2026 by being built. They are on a branch with their tests passing and <strong>they are not on the rig, not played and not documented</strong>, so nothing in the rest of this guide describes them yet.</p>
-<ul>
-<li><strong>Rotate a melody</strong> &mdash; voices get the gesture drums already had.</li>
-<li><strong>Voices that listen to each other</strong> &mdash; one voice&rsquo;s register feeds another&rsquo;s, so they drift together instead of apart.</li>
-<li><strong>A wandering voice</strong> &mdash; a bounded random walk as an alternative to the shift register.</li>
-<li><strong>A drum rhythm register</strong> &mdash; drums get the same evolving generator the voices have.</li>
-<li><strong>A chord walker</strong> &mdash; a slow walk of the shared root, so three lines become a progression.</li>
-<li><strong>A sidechain pump</strong> &mdash; the bar-synced gain movement that glues a techno mix, re-phased on demand.</li>
-<li><strong>Gate collapse</strong> &mdash; every note shortens across the last two bars, then returns.</li>
-</ul>
-<p>Two of them change the panel, and the guide will say so when they land: the drum step page&rsquo;s seventh encoder becomes RHYTHM rather than SWING, and the RHYTHM spread page reaches drums.</p>
-<p>Before those, eleven more ideas left this page by shipping and are in the guide proper: FREEZE, half and double time, BREAK, the ratchet ramp, phrase-locked modulation, audio capture, the pending page, the mute grid, the master-bus insert, beat repeat, and one-knob modulation depth on the big encoder.</p>
-
 
 <h2 id="already-here">Ideas this instrument already has</h2>
 <p>Most lists of generative and DJ tools suggest the same things, and a good part of that list is already built here. This section exists so that a reader arriving with an idea can find out in one place whether it is a gap or a feature &mdash; and so that the list above is read as what is genuinely <em>missing</em> rather than as everything anyone has ever wanted.</p>
@@ -106,6 +91,14 @@
 <tr><td>Notes constrained to a key and a scale</td><td>ROOT and SCALE, shared by all three voices and landing on the bar, so they cannot drift out of key from each other.</td><td><a href="generating-patterns.html">Generating patterns</a></td></tr>
 <tr><td>A shift-register melody generator</td><td>Three Turing voices, each evolving its own register.</td><td><a href="generating-patterns.html">Generating patterns</a></td></tr>
 <tr><td>Freeze &mdash; hold the machine still</td><td>Two stages on one button: latch the generators, or hold the modulators as well.</td><td><a href="the-surface.html#freeze">The surface</a></td></tr>
+<tr><td>A melody that can be turned around the bar</td><td>ROTATE on a voice, on the GEN page, alongside the drums that always had it.</td><td><a href="generating-patterns.html#the-gen-page">Generating patterns</a></td></tr>
+<tr><td>A random walk or Markov-style generator</td><td>A wandering voice: MODEL switches a voice between its shift register and a bounded walk, with SPAN and STRIDE for how far and how big its steps are.</td><td><a href="generating-patterns.html#the-gen-page">Generating patterns</a></td></tr>
+<tr><td>Voices that influence each other</td><td>FEED and AMOUNT: one voice&rsquo;s register drifts toward another&rsquo;s over the following bars, related but never identical.</td><td><a href="generating-patterns.html#the-gen-page">Generating patterns</a></td></tr>
+<tr><td>An evolving generator on the drums, not just the melodies</td><td>The drum rhythm register: steps appear and disappear bar to bar, without the pattern sliding sideways.</td><td><a href="generating-patterns.html#drum-rhythm">Generating patterns</a></td></tr>
+<tr><td>A chord progression rather than a fixed key</td><td>The chord walker moves the shared root every few bars, along the scale the three voices are already in.</td><td><a href="generating-patterns.html#chord-walker">Generating patterns</a></td></tr>
+<tr><td>A sidechain pump that stays in phase</td><td>A negative-depth modulator on LEVEL, with MOD + RESTART to snap every one of them to the same phase.</td><td><a href="modulation.html#pump">Modulation</a></td></tr>
+<tr><td>Note lengths that tighten into a drop</td><td>Gate collapse, on ARM: every note shortens across the bars you choose, then returns. Ratchets survive it.</td><td><a href="the-surface.html#gate-collapse">The surface</a></td></tr>
+<tr><td>Pressure-sensitive pads</td><td>Squeeze a held pad on a voice and the filter opens, proportionally, easing back when you let go.</td><td><a href="playing-and-recording.html#pad-pressure">Playing and recording</a></td></tr>
 <tr><td>Slow automatic variation</td><td>DRIFT moves the pattern at the wrap, and refuses on any channel you have taken over.</td><td><a href="modulation.html#drift">Modulation</a></td></tr>
 <tr><td>Music that goes on without repeating</td><td>Polymeter and drift together: the bar is regenerated rather than looped, so it does not come back around.</td><td><a href="generating-patterns.html#polymeter">Polymeter</a></td></tr>
 <tr><td>Taking the patterns out as MIDI</td><td>A tool writes the eight patterns as an ordinary MIDI file, read from the saved snapshot so it never touches the running instrument.</td><td><a href="saving.html#taking-patterns-elsewhere">Saving your work</a></td></tr>
@@ -115,7 +108,7 @@
 <tr><td>Builds and drops that land on a boundary</td><td>The phrase clock and ARM, with DROP, RISE and the CHANCE ramp firing into it.</td><td><a href="the-surface.html#phrase">The surface</a></td></tr>
 <tr><td>Rule-based generation, with no machine learning</td><td>This is a description of the whole instrument. Every generator here is hand-designed and runs on the Pi with nothing trained and nothing phoning home.</td><td><a href="02-features.html">Features</a></td></tr>
 </table>
-<p>Two more are written and waiting for the instrument rather than missing: a <strong>bounded random walk</strong> as an alternative to the shift register, and <strong>voices that feed each other</strong>. Both are in the section above about work that is built but not yet on the rig.</p>
+<p>Eight of those rows arrived on 31 August 2026 and were played on the instrument the same evening before this page claimed them. That order is the rule here, not a coincidence: a feature is finished when a reader can find out about it, and it is only written up once it has been heard.</p>
 
 <h2 id="plays-itself">The instrument plays itself</h2>
 <p>The instrument can invent a bar and it can schedule a gesture. Between those two there is nothing that decides what the next eight bars should be. This is the section that would fill that gap &mdash; and the safety it needs, because a machine that arranges by itself must also be able to say when it has stopped.</p>

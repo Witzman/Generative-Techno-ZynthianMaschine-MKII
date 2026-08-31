@@ -197,6 +197,25 @@
 <p><strong>It cannot leave a channel silent.</strong> A drum always keeps at least one hit, a voice always keeps some steps and a play chance above a floor. Silence with nothing to explain it is the one thing this instrument refuses to produce, and a reroll that muted a channel by accident would be exactly that.</p>
 <p><strong>ERASE and the same button puts it back</strong> &mdash; one deep. ERASE is the take-it-back gesture everywhere on this instrument, and SHIFT is spoken for here.</p>
 <hr>
+<h2 id="the-gen-page">The GEN page &mdash; how a voice invents its line</h2>
+<p>The three voices have a page of their own. Page past STEP, SWING, CHANCE and RHYTHM and you reach <strong>GEN</strong>, which holds six controls that change <em>how</em> a voice makes up its melody rather than what that melody currently is.</p>
+<p><strong>ROTATE</strong> turns the whole line around the bar, the way it always has on the drums. The notes keep their order and their shape; they simply start somewhere else. Like every other parameter knob it stops at each end rather than wrapping round &mdash; only the big encoder cycles.</p>
+<p><strong>MODEL</strong> chooses which generator the voice uses. Turn it right for a <strong>wandering voice</strong> and left for the shift register it has always had. The register flips bits at random, so its line jumps about; the walk moves by steps, so its line strolls. They sound like different instruments rather than different settings. <strong>SPAN</strong> is how far the walk may stray from where it started, and <strong>STRIDE</strong> is how big each step is. Switching between the two models does not teleport the line: the register is the walk&rsquo;s starting point.</p>
+<p><strong>FEED</strong> and <strong>AMOUNT</strong> make one voice listen to another. Point FEED at a different voice and raise AMOUNT, and this voice&rsquo;s register drifts toward that one&rsquo;s over the following bars &mdash; related, never identical. It is a slow effect and it only acts at the bar. Two things to know: it rides the register&rsquo;s own mutation, so <strong>MELODY has to be off LOCK or nothing happens at all</strong>; and a voice cannot be fed to itself. The wheel steps over its own channel, because a control that appears to do nothing is worse than one that refuses.</p>
+<p>All six are held by FREEZE and refused on a channel you have taken over by playing it, exactly like everything else that rewrites a pattern.</p>
+
+<h2 id="drum-rhythm">The drum rhythm register &mdash; the soft randomiser</h2>
+<p>The voices have always had a generator that evolves. The drums now have the same one. On a drum&rsquo;s STEP page, <strong>encoder 7 is RHYTHM</strong>, and turning it up lets steps appear and disappear from bar to bar instead of the euclid line repeating exactly.</p>
+<p>Watch what it does and does not do: steps come and go, and <strong>the pattern never slides sideways</strong>. Sliding is rotation, that is a separate control, and this one must not quietly consume it.</p>
+<p>At zero it reads <strong>LOCK</strong>, the same word MELODY uses, and holds the line still.</p>
+<p><strong>This moved a knob you may know.</strong> SWING used to sit on encoder 7 of the drum STEP page. It has not gone anywhere &mdash; it is on the SWING spread page, one page along, where it applies to every channel at once, which is where it is wanted in a jam. The RHYTHM spread page now reaches the drums for the same reason.</p>
+
+<h2 id="chord-walker">The chord walker &mdash; three voices, one progression</h2>
+<p>ROOT and SCALE are shared: all three voices pick their notes from the same key, and a key change lands on the bar. The walker moves that root for you.</p>
+<p>In ALL mode, page to <strong>WALK</strong>. <strong>WALK</strong> is how often it moves, in bars, and <strong>SPAN</strong> is how far it may wander. At zero WALK reads <strong>LOCK</strong> and the key stands still.</p>
+<p>Every WALK bars the root steps to a new degree <em>of the scale you are already in</em> &mdash; never chromatically, because three voices sharing a scale should not be walked out of it. It reflects at the edge of its span rather than parking against it, and a walk that returns to zero returns to exactly the key you dialled in, not near it.</p>
+<p>Measured on the instrument: at four bars and 121 BPM the root moved every 7.9 seconds, which is four bars to within a twentieth of a second, and every root it visited belonged to the same minor key.</p>
+
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="modulation.html">Modulation</a> — how to make these values move on their own, and why the generator's own knobs refuse it</li>

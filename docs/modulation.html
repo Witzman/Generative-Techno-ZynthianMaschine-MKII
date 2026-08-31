@@ -158,6 +158,12 @@
 <p><strong>Every modulator counts from the phrase, not from when the instrument was switched on.</strong> An eight-bar sweep is <em>the</em> eight bars rather than an eight-bar sweep at some arbitrary offset, and starting the transport or pressing RESTART re-zeros the whole modulation system along with the bar count.</p>
 <p>The relative spread between modulators is kept, so eight LFOs that were chasing each other go on chasing each other.</p>
 <hr>
+<h2 id="pump">The pump &mdash; MOD + RESTART</h2>
+<p>The bar-synced gain movement that glues a techno mix is not a separate feature here. It is a modulator on LEVEL with a negative depth: bind one on each channel and every strip ducks and recovers in time.</p>
+<p>The problem was never the sound, it was the phase. Binding eight of them one after another gives you eight modulators each starting from the moment you bound it, so they duck at eight different times and the mix sounds smeared rather than pumped.</p>
+<p><strong>Hold MOD and press RESTART.</strong> Every modulator jumps to the start of its cycle together, and from then on they move as one.</p>
+<p><strong>Bare RESTART deliberately does not do this.</strong> It restarts the patterns and re-zeros the bar count, and it leaves your sweeps running. A sixteen-bar filter sweep should not snap back because you restarted a loop &mdash; when you reach for RESTART you are asking about the pattern. Hold MOD and you are asking about modulation, and that is exactly when the answer changes.</p>
+
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="02-features.html">Features</a> — everything the instrument does, in one list</li>
