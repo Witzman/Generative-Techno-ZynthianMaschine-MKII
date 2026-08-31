@@ -4977,9 +4977,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # one, which is what keeps HITS meaning the number of hits. 0xFFFF -
         # every existing channel and every existing snapshot - removes nothing,
         # so a pattern written before this existed is written the same way now.
+        # THE MASK ROTATES WITH THE LINE. Owner at the rig, 2026-08-31: with
+        # two hits tapped out of five, rotating gave 5, 5, 3, 5, 5, 3 sounding
+        # steps as the euclid line slid under a stationary mask. You do not
+        # remove a POSITION, you remove a HIT, and it should stay removed
+        # wherever the line is turned to.
+        #
+        # The voices have always done this - rotate_line turns "notes and rests
+        # together" - so drums were the odd one out. Both rotations move the
+        # same way: euclid at rot 1 lights steps 1, 3, 6 and tlib.rotate lights
+        # the same three, verified before this was written.
         pattern = tlib.drum_steps(
             lib.build_pattern_steps(steps, self.hits[group], self.rot[group]),
-            int(self.state[group].get("rhythm_reg", 0xFFFF)))
+            tlib.rotate(int(self.state[group].get("rhythm_reg", 0xFFFF)),
+                        steps, self.rot[group]))
         for step, on in enumerate(pattern):
             if on:
                 self.libseq.addNote(step, note, velocity, 1.0, 0.0)
@@ -5740,7 +5751,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             else self._steps(channel)
         if not 0 <= step < steps:
             return
-        st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], step)
+        # The register is stored UNROTATED and rotated onto the grid when the
+        # pattern is written, so a tap on grid step `step` has to come back the
+        # other way to reach the bit behind it. A drum only: a voice's rotation
+        # is applied to the rendered line rather than to the mask.
+        bit = step if voice else (step - self.rot[channel]) % steps
+        st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], bit)
         if voice:
             # BY HAND: a tap is honoured even on a channel the player owns.
             # It used to be silently refused, which is the same fault as a dead
