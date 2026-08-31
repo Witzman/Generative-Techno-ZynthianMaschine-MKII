@@ -75,11 +75,23 @@ OSC_ADDR = ("127.0.0.1", 42434)
 # A line appended to tmpfs is a fraction of that, and every call site is EVENT
 # driven, so a busy bar costs a handful of lines and a quiet one costs none.
 #
-# OFF ON MAIN, and one constant away from on. It earned its place on
-# 2026-08-21 - a session nobody could diagnose became four measured checks -
-# but a log that writes by default is a cost every player pays for a problem
-# they do not have. Set it to a path to turn it on.
-SESSION_LOG_PATH = None
+# OFF BY DEFAULT, and it stays off. It earned its place on 2026-08-21 - a
+# session nobody could diagnose became four measured checks - but a log that
+# writes by default is a cost every player pays for a problem they do not have.
+#
+# TURNED ON FROM THE ENVIRONMENT since 2026-08-31, not by editing this line.
+# Editing it on the rig left the deployed file one line different from every
+# commit, and finding that out cost a checksum hunt against five commits the
+# same day. A drop-in leaves the source byte-identical to what was shipped:
+#
+#   systemctl edit zynthian
+#   [Service]
+#   Environment=MASCHINE_SESSION_LOG=/tmp/maschine-session.log
+#
+# /tmp is a 100 M tmpfs, which is the intent - a line appended to tmpfs, never
+# the journal. Relative paths, directories and the journal's own device
+# aliases are refused rather than resolved; tlib.session_log_path says why.
+SESSION_LOG_PATH = tlib.session_log_path(os.environ)
 
 GROUP_CC_FIRST = 80                 # Group A..H = CC 80..87
 GROUP_NOTE_BASE = (24, 36, 48, 60, 72, 84, 96, 108)

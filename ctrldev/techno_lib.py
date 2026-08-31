@@ -3401,6 +3401,49 @@ class techno_lib:
         ]
 
     @staticmethod
+    def session_log_path(environ):
+        """Where the play-session log goes, or None for off.
+
+        PURE, so it is testable on WSL where the driver cannot be imported.
+
+        THE LOG STAYS OFF BY DEFAULT. That is not timidity: it was measured.
+        Roughly six log lines a second through journald was enough to make the
+        daemon's reader run late and wedge the controller off the USB bus on
+        2026-08-20, and a log that writes for every player is a cost paid for a
+        problem they do not have.
+
+        What this changes is HOW it is turned on. It used to be a constant to
+        edit on the rig, which leaves the deployed file one line different from
+        every commit - the hazard that cost a checksum hunt on 2026-08-31, when
+        the Pi had to be diffed against five commits to find out what it was
+        running. A systemd drop-in setting MASCHINE_SESSION_LOG turns it on and
+        leaves the source byte-identical to what was shipped.
+
+        Three things are REFUSED rather than resolved, and each has a failure
+        behind it:
+
+        - A RELATIVE path. The driver's working directory is whatever systemd
+          gave it, so the file lands somewhere nobody chose and nobody can
+          find. Refusing is louder than guessing.
+        - A DIRECTORY. `open(dir, "a")` raises, the driver catches it and logs
+          one warning, and the rig then reads as "logging is on" while nothing
+          is ever written - the exact shape of a silent failure this project
+          keeps finding.
+        - THE JOURNAL, by any of its device aliases. This log exists because
+          journald could not carry it. Letting somebody ask for it by accident
+          would rebuild the fault it was built to avoid.
+        """
+
+        raw = (environ.get("MASCHINE_SESSION_LOG") or "").strip()
+        if not raw:
+            return None
+        if not raw.startswith("/") or raw.endswith("/"):
+            return None
+        if raw in ("/dev/stdout", "/dev/stderr", "/dev/fd/1", "/dev/fd/2"):
+            return None
+        return raw
+
+    @staticmethod
     def session_line(stamp, tag, fields):
         """One line of the play-session event log.
 

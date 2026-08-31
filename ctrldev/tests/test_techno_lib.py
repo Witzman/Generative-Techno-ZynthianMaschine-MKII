@@ -5079,3 +5079,58 @@ class TestCollapseDuration(unittest.TestCase):
     def test_a_note_already_at_the_floor_survives_a_full_collapse(self):
         self.assertEqual(tl.collapse_duration(tl.NOTE_DURATION_MIN, 0.1),
                          tl.NOTE_DURATION_MIN)
+
+
+class SessionLogPath(unittest.TestCase):
+    """Where the play-session log goes, decided from the environment.
+
+    The log is OFF by default and always has been - a log that writes for
+    every player is a cost paid for a problem they do not have. What changes
+    is HOW it is turned on: editing a constant on the rig leaves the deployed
+    file one line different from every commit, which cost a checksum hunt on
+    2026-08-31. An environment variable is a systemd drop-in instead, and the
+    source stays byte-identical to what was shipped.
+    """
+
+    VAR = "MASCHINE_SESSION_LOG"
+
+    def test_an_absent_variable_leaves_the_log_off(self):
+        # The default must not move. Every player who has never heard of this
+        # gets exactly the behaviour they have today.
+        self.assertIsNone(tl.session_log_path({}))
+
+    def test_an_empty_value_leaves_the_log_off(self):
+        # `Environment=MASCHINE_SESSION_LOG=` in a unit file is how somebody
+        # turns it back off without deleting the line, so it must read as off
+        # rather than as a path called "".
+        self.assertIsNone(tl.session_log_path({self.VAR: ""}))
+        self.assertIsNone(tl.session_log_path({self.VAR: "   "}))
+
+    def test_an_absolute_path_turns_it_on(self):
+        self.assertEqual(tl.session_log_path({self.VAR: "/tmp/session.log"}),
+                         "/tmp/session.log")
+
+    def test_surrounding_whitespace_is_ignored(self):
+        # A drop-in written by hand is the normal way this arrives.
+        self.assertEqual(tl.session_log_path({self.VAR: "  /tmp/s.log \n"}),
+                         "/tmp/s.log")
+
+    def test_a_relative_path_is_REFUSED_rather_than_resolved(self):
+        # The driver's working directory is whatever systemd gave it, so a
+        # relative path writes somewhere nobody chose and nobody can find.
+        # Refusing is louder than guessing.
+        self.assertIsNone(tl.session_log_path({self.VAR: "session.log"}))
+        self.assertIsNone(tl.session_log_path({self.VAR: "./session.log"}))
+
+    def test_a_directory_is_REFUSED(self):
+        # open(dir, "a") raises IsADirectoryError, which the driver catches and
+        # turns into one warning - so this would read as "logging is on" while
+        # nothing was ever written.
+        self.assertIsNone(tl.session_log_path({self.VAR: "/tmp/"}))
+
+    def test_the_journal_cannot_be_asked_for_by_accident(self):
+        # The one path that must never work. Six log lines a second through
+        # journald made the daemon's reader run late and wedged the controller
+        # off the USB bus on 2026-08-20, and this log exists BECAUSE of that.
+        self.assertIsNone(tl.session_log_path({self.VAR: "/dev/stdout"}))
+        self.assertIsNone(tl.session_log_path({self.VAR: "/dev/stderr"}))
