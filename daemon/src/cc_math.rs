@@ -83,6 +83,39 @@ pub fn big_encoder_value(prev_counter: i32, cur_counter: i32, current: i32) -> u
     (current + delta * BIG_ENC_SCALE).rem_euclid(128) as u8
 }
 
+/// What a pad actually reaches under a firm hit, as a fraction of its 12-bit
+/// range.
+///
+/// MEASURED 2026-08-31, all sixteen pads, one firm press each with the daemon
+/// stopped and the raw stream at 749 reports/s: **3101 to 3479** against a
+/// nominal 4095. The highest pad reaches 85% of the range and the mean is 82%.
+/// Nothing gets near full scale, so `pressure / 4095.0` throws away the top
+/// fifth of the control.
+///
+/// 3500 rather than the 3479 measured: just above the highest reading, so the
+/// hardest pad reaches full without a player having to beat the exact maximum
+/// somebody once recorded.
+///
+/// THE PER-PAD SPREAD IS NOT USED, deliberately. It looks like hardware and it
+/// is mostly the player: the maxima correlate +0.79 with the ORDER the pads
+/// were pressed - the first ones pressed are the weakest - and only -0.17 and
+/// -0.08 with feature reports 0xDA and 0xDB, which had been the standing
+/// hypothesis for a per-pad calibration table. One ceiling for all sixteen is
+/// what the data supports.
+pub const PAD_FULL_SCALE: f32 = 3500.0 / 4095.0;
+
+/// Aftertouch only. Note velocity keeps the old scaling on purpose.
+///
+/// The divisor feeds BOTH, and velocity is shipped and already gated while
+/// pressure is new and ungated - so correcting the shared constant would
+/// change how hard every pad hits across the whole instrument, which is a
+/// bigger change than the bug and would need everything re-gated against it.
+/// Owner's decision, 2026-08-31: "scale aftertouch only, leave velocity
+/// alone."
+pub fn aftertouch_scale(pressure: f32) -> f32 {
+    (pressure / PAD_FULL_SCALE).clamp(0.0, 1.0)
+}
+
 pub fn button_cc_value(is_down: bool) -> u8 {
     if is_down { 127 } else { 0 }
 }
@@ -229,6 +262,46 @@ mod tests {
             }
             assert_eq!(moves, 160, "direction {dir} stalled");
         }
+    }
+
+    #[test]
+    fn aftertouch_zero_stays_zero() {
+        assert_eq!(aftertouch_scale(0.0), 0.0);
+    }
+
+    #[test]
+    fn a_pad_at_its_measured_ceiling_reaches_full() {
+        // The highest of the sixteen measured on 2026-08-31.
+        assert!(aftertouch_scale(3479.0 / 4095.0) > 0.99);
+    }
+
+    #[test]
+    fn even_the_weakest_measured_pad_gets_close_to_full() {
+        // The lowest of the sixteen. Under the old scaling it reached 0.757.
+        let weakest = aftertouch_scale(3101.0 / 4095.0);
+        assert!(weakest > 0.88, "weakest pad only reached {weakest}");
+    }
+
+    #[test]
+    fn it_clamps_rather_than_overshooting() {
+        // A pad harder than anything measured must not produce a value above
+        // full - pressure_to_vel multiplies by 127 and casts.
+        assert_eq!(aftertouch_scale(1.0), 1.0);
+        assert_eq!(aftertouch_scale(2.0), 1.0);
+    }
+
+    #[test]
+    fn it_is_a_boost_not_a_cut() {
+        // The whole point: 4095 was unreachable, so the scale must be < 1.
+        assert!(PAD_FULL_SCALE < 1.0);
+        assert!(aftertouch_scale(0.5) > 0.5);
+    }
+
+    #[test]
+    fn the_old_scaling_left_a_fifth_of_the_range_unreachable() {
+        // Documents what was wrong, in the numbers that were measured.
+        let hardest_before = 3479.0 / 4095.0;
+        assert!(hardest_before < 0.86);
     }
 
     #[test]

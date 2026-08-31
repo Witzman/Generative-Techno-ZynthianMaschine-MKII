@@ -1492,7 +1492,14 @@ impl<'a> MaschineHandler for MHandler<'a> {
         // pressure glow would mark the LED buffer dirty on every report, so a
         // single held pad would pin the 16 ms flush at its 187 writes/s
         // ceiling for as long as it was held.
-        let value = self.pressure_to_vel(pressure);
+        // AFTERTOUCH ONLY. The raw pressure is normalised against 4095 in
+        // mikro.rs, and all sixteen pads were measured on 2026-08-31 topping
+        // out between 3101 and 3479 - so a fifth of the control was
+        // unreachable however hard anyone pressed. Rescaled here rather than
+        // at the divisor, because that divisor also feeds NOTE VELOCITY, which
+        // is shipped and gated. Owner's call: scale aftertouch, leave velocity
+        // alone.
+        let value = self.pressure_to_vel(cc_math::aftertouch_scale(pressure));
         if value == self.at_last_val[pad_idx] {
             return;
         }
