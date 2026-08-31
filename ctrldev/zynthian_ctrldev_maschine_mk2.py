@@ -1687,12 +1687,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # fixed on 2026-08-19: a dispatcher where one arm forgot the
             # question all the others ask.
             with self.lock:
-                self._write_pattern(channel)
+                self._restyle_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "drum":
             # Velocity is written into the notes, so it only becomes audible
-            # once the pattern is rewritten.
+            # once they are rewritten - but WHICH steps sound does not change,
+            # so this restyles in place rather than regenerating from euclid.
+            # Turning VELO used to discard every hand-placed step.
             with self.lock:
-                self._write_pattern(channel)
+                self._restyle_pattern(channel)
         elif param in ("rotate", "model", "walk_span", "walk_stride", "feed",
                        "amount") and self.channel_kind(channel) == "voice":
             # THE KIND CHECK IS LOAD-BEARING AND IT IS WHY THIS ARM SITS ABOVE
@@ -4818,10 +4820,76 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.hits[group] = min(steps, self.hits[group])
         self.rot[group] = min(max(0, steps - 1), self.rot[group])
 
+    def _pattern_note(self, group):
+        """The pitch a generated drum pattern is written at.
+
+        Extracted 2026-08-31 so the full rewrite and the in-place restyle
+        below cannot drift about which note they are addressing - a restyle
+        that guessed a different pitch would silently find no notes and do
+        nothing, which is the quietest possible failure."""
+
+        if self._is_sampler(group):
+            return self._group_note(group)
+        # Euclid on a synth is a root pulse: ROOT transposes it, OCTAVE
+        # places it. Reusing whatever pitch _group_note discovers would
+        # leave the voice stuck on an arbitrary note no control can reach.
+        return tlib.pad_note(0, self.globals["root"], self.globals["scale"],
+                             self.state[group].get("octave", 0))
+
+    def _restyle_pattern(self, group):
+        """Rewrite VELOCITY and STUTTER on the notes already there, without
+        touching which steps sound.
+
+        WHY THIS EXISTS. VELO and RATCHET change how a step sounds, not which
+        steps sound - but the only write path was _write_pattern, which
+        regenerates positions from euclid. So turning either one discarded any
+        hand-placed step. The owner hit it at the rig on 2026-08-31: a hit
+        tapped onto step 12 of group C vanished when RATCHET was turned up and
+        euclid's own hit reappeared at step 1.
+
+        The contract that documented the destruction named encoders 1-3, and by
+        then SEVEN of the eight on a drum's STEP page were destructive. Owner's
+        decision the same evening: fix VELO and RATCHET, leave RHYTHM.
+
+        RHYTHM KEEPS THE FULL REWRITE, deliberately. It is a subtractive mask -
+        it genuinely changes which steps sound - so regenerating is honest
+        there, and pretending otherwise would need a second mechanism for a
+        difference that is real.
+
+        Addressed by the same note as the writer, through _pattern_note.
+        """
+
+        steps = self._steps(group)
+        self._select_pattern(group)
+        note = self._pattern_note(group)
+        velocity = int(self.state[group].get("velo", 110))
+        ratchet = int(self.state[group].get("ratchet", 1))
+        stutter, stut_dur = tlib.ratchet_stutter(
+            ratchet, self.libseq.getClocksPerStep())
+        for step in range(steps):
+            if not self.libseq.getNoteVelocity(step, note):
+                continue
+            self.libseq.setNoteVelocity(step, note, velocity)
+            if self.has_stutter:
+                # Assigned rather than nudged: changeStutterCountAll is a
+                # RELATIVE change, so it cannot put a ratchet back to none.
+                # Writing 0 here is what makes turning RATCHET down work.
+                self.libseq.setStutterCount(step, note, stutter)
+                self.libseq.setStutterDur(step, note, stut_dur)
+        self.libseq.updateSequenceInfo()
+        self._render_pads()
+
     def _write_pattern(self, group):
         """Regenerate a group's whole pattern from its euclid parameters.
-        Destructive by design: enc 1-3 own the steps, so a pad tap is an edit
-        that the next encoder turn wipes.
+
+        DESTRUCTIVE BY DESIGN: a pad tap is an edit that the next turn of a
+        step-owning encoder wipes. That contract used to say "enc 1-3", which
+        was true before LENGTH, VELO, RHYTHM and RATCHET existed and was wrong
+        by four of them by 2026-08-31. The step-owning verbs are HITS, ROTATE,
+        DIV, LENGTH and RHYTHM - the last because its mask genuinely decides
+        which steps sound. VELO and RATCHET go through _restyle_pattern
+        instead: they change how a step sounds, not which, and wiping the
+        pattern was a side effect nobody asked for.
 
         setStepsPerBeat rescales the notes already in the pattern
         (pattern.cpp:665-681), which is why this clears and rewrites rather
@@ -4831,14 +4899,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         beats = self.beats[group]
         steps = self._steps(group)
         self._select_pattern(group)
-        if self._is_sampler(group):
-            note = self._group_note(group)
-        else:
-            # Euclid on a synth is a root pulse: ROOT transposes it, OCTAVE
-            # places it. Reusing whatever pitch _group_note discovers would
-            # leave the voice stuck on an arbitrary note no control can reach.
-            note = tlib.pad_note(0, self.globals["root"], self.globals["scale"],
-                                 self.state[group].get("octave", 0))
+        note = self._pattern_note(group)
 
         # All three act on the selected pattern and take no pattern argument.
         # There is no clearPattern(index) in the installed API - clear() is it.
