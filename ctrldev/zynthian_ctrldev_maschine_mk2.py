@@ -5687,7 +5687,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_transport()
 
     def _toggle_rhythm_step(self, step):
-        """A pad tap on a voice: flip that step in the rhythm register.
+        """A pad tap on EITHER KIND: flip that step in the rhythm register.
+
+        Drums joined voices here on 2026-08-31, when they got a rhythm
+        register of their own. Before that a drum tap edited the pattern
+        directly and the next encoder turn wiped it.
 
         The rewrite goes through _write_voice_pattern, which returns early on
         a player-owned channel - so a REC take is not disturbed by tapping,
@@ -5699,11 +5703,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         channel = self.group
         st = self.state[channel]
-        steps = lib.step_count(self.div[channel])
+        voice = self.channel_kind(channel) == "voice"
+        # A VOICE's register spans the division's own step count; a DRUM's
+        # pattern is as long as LENGTH makes it, and a bit set past the end
+        # would reappear when the length changed back.
+        steps = lib.step_count(self.div[channel]) if voice \
+            else self._steps(channel)
         if not 0 <= step < steps:
             return
         st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], step)
-        self._write_voice_pattern(channel)
+        if voice:
+            self._write_voice_pattern(channel)
+        else:
+            # The drum's own writer. It reads rhythm_reg as a subtractive mask
+            # over the euclid line, so the flipped bit takes effect on this
+            # rewrite exactly as a turn of RHYTHM would.
+            with self.lock:
+                self._write_pattern(channel)
+            # A DRUM TAP HAS ALWAYS MADE A SOUND, and it must keep doing so.
+            # The old drum path previewed the note it had just written; this
+            # one writes no note, so the preview has to be explicit or tapping
+            # a pad in STEP mode goes silent - a feel regression that would
+            # read as the tap being ignored.
+            self._preview(self._group_note(channel))
         with self.lock:
             self._render_pads()
 
@@ -5720,34 +5742,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         2026-08-16 this docstring warned that the next encoder turn would wipe
         a hand edit; on a voice that is no longer true.
 
-        On a DRUM it still edits the pattern. A drum is euclidean, its rhythm
-        is HITS and ROTATE, and the old warning stands there: the generator
-        owns the pattern and the next encoder turn rewrites it."""
+        A DRUM DOES THE SAME SINCE 2026-08-31, and the reason it did not is
+        the reason it now can. The old docstring said "a drum is euclidean, its
+        rhythm is HITS and ROTATE, and the generator owns the pattern" - true
+        until the drum rhythm register shipped the same day. Drums have the
+        mask now, so a drum tap flips a bit in it exactly as a voice tap does,
+        and a hand-chosen step survives HITS, ROTATE, DIV, LENGTH and RHYTHM
+        instead of being wiped by whichever of them moved next. The owner asked
+        for it after watching a tapped step disappear twice in one evening.
 
-        if self.channel_kind(self.group) == "voice":
-            self._toggle_rhythm_step(step)
-            return
-        self._select_pattern(self.group)
-        steps = self.libseq.getSteps()
-        if step >= steps:
-            return
-        note = self._step_note(self.group, step)
-        if self.libseq.getNoteVelocity(step, note):
-            self.libseq.removeNote(step, note)
-        else:
-            vel = velocity if velocity else int(self.state[self.group].get("velo", 110))
-            if self.channel_kind(self.group) == "voice":
-                # Match the generator (_write_pattern): a hand-tapped step must
-                # obey GATE the same as a written one, or the two disagree by
-                # up to 8x at long gates. Drums keep a fixed one-shot duration -
-                # their gate is not a meaningful parameter.
-                duration = tlib.note_duration(self.state[self.group]["gate"], step, steps)
-            else:
-                duration = 1.0
-            self.libseq.addNote(step, note, max(1, min(127, vel)), duration, 0.0)
-        self.libseq.updateSequenceInfo()
-        self._preview(note)
-        self._render_pads()
+        WHAT IT COSTS, and it is a real trade rather than a free win. The mask
+        is SUBTRACTIVE: a tap can now silence a step euclid placed, or restore
+        one the register had removed, but it cannot invent a hit where euclid
+        put none. It also loses the per-step accent - the tap's velocity used
+        to become that note's velocity - because a mask bit has no room for a
+        number. That accent never survived a regeneration anyway, so what is
+        lost is a transient the next encoder turn erased."""
+
+        self._toggle_rhythm_step(step)
 
     def _erase_step(self, step):
         """ERASE + pad. Removes that step's note if it has one; a pad that is
