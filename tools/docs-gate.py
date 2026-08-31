@@ -315,7 +315,12 @@ BASELINE = {
     # so the pattern ideas are this project's own and what the survey supplied
     # was hardware knowledge plus two directions nobody here had considered
     # (control voltage out, and importing Maschine's own kits).
-    "whats-next.html":             (945,  "2026-08-30"),
+    # +94, 2026-08-31: the page was regrouped. Provenance sections and rank
+    # numbers were dropped (six numbers each named two features), seven built
+    # entries moved to a "written, not yet on the instrument" section, and the
+    # ideas were regrouped by what they would change into six themes, each
+    # needing a lead paragraph. The tables grew far more than the prose did.
+    "whats-next.html":             (1039, "2026-08-31"),
 }
 SKIP_BUDGET = {"index.html"}
 
