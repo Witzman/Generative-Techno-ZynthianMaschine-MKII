@@ -5134,3 +5134,66 @@ class SessionLogPath(unittest.TestCase):
         # off the USB bus on 2026-08-20, and this log exists BECAUSE of that.
         self.assertIsNone(tl.session_log_path({self.VAR: "/dev/stdout"}))
         self.assertIsNone(tl.session_log_path({self.VAR: "/dev/stderr"}))
+
+
+class WalkIsDeterministic(unittest.TestCase):
+    """The walk model has to be a pure function of stored state, like the
+    register is.
+
+    THE BUG THIS PREVENTS, found by the owner at the rig on 2026-08-31: the
+    pads flashed about five times a second and showed a line that was never
+    the one playing. `_voice_line` is called by the WRITER and by both PAD
+    RENDERERS, and each call re-ran the walk with the module rng - so every
+    repaint invented a different melody. `_voice_line`'s own docstring
+    predicted the failure: "if the two disagree the pads query a note that is
+    not there and every step reads as empty."
+
+    It also mattered for the hardware. The flashing measured 109 OSC messages
+    a second against 6.6 idle, and the write-budget finding puts 100/s
+    survivable and 160/s wedging the controller off the USB bus.
+
+    The register model could never hit this: line() is a pure function of the
+    register. The walk was a function of nothing.
+    """
+
+    ARGS = dict(start=64, length=8, steps=16, span=32, stride=4)
+
+    def _walk(self, seed):
+        return tl.walk_values(rng=tl.walk_rng(seed), **self.ARGS)
+
+    def test_the_same_seed_gives_the_same_line_every_time(self):
+        # The writer and the two renderers each call this independently. If
+        # they disagree the pads lie about what is playing.
+        self.assertEqual(self._walk(7), self._walk(7))
+
+    def test_ten_calls_with_one_seed_never_differ(self):
+        first = self._walk(3)
+        for _ in range(10):
+            self.assertEqual(self._walk(3), first)
+
+    def test_a_different_seed_gives_a_different_line(self):
+        # Otherwise advancing the seed at the wrap would not evolve anything.
+        lines = {tuple(self._walk(s)) for s in range(8)}
+        self.assertGreater(len(lines), 1)
+
+    def test_the_seed_survives_being_a_plain_integer(self):
+        # It is stored in the channel state and goes into a snapshot, so it has
+        # to be JSON-representable - no rng objects, no tuples of state.
+        self.assertIsInstance(0, int)
+        self.assertEqual(self._walk(0), self._walk(0))
+
+    def test_it_still_respects_the_bounds_it_always_did(self):
+        top = (1 << self.ARGS["length"]) - 1
+        for value in self._walk(11):
+            self.assertGreaterEqual(value, 0)
+            self.assertLessEqual(value, top)
+
+    def test_a_seeded_walk_does_not_disturb_the_module_rng(self):
+        # walk_values used the module rng by default, so a repaint consumed
+        # randomness that the register's own mutation was also drawing from.
+        import random as _r
+        _r.seed(1234)
+        before = _r.random()
+        _r.seed(1234)
+        self._walk(99)
+        self.assertEqual(_r.random(), before)

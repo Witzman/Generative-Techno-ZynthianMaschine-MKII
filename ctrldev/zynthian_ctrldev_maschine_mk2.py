@@ -1589,6 +1589,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # must not quietly consume it.
             st["rhythm_reg"] = tlib.mutate(st["rhythm_reg"], steps,
                                            rhythm / 100.0)
+        if melody > 0 and st.get("model") == tlib.MODEL_WALK:
+            # THE WALK EVOLVES HERE AND NOWHERE ELSE. Its line is a pure
+            # function of this seed, so this is the one place the walked
+            # melody is allowed to change - the same place, and on the same
+            # condition, that the register mutates. RANDOM at 0 therefore
+            # holds a walked line exactly as it holds a register line, which
+            # is the LOCK grammar this instrument already has.
+            st["walk_seed"] = (int(st.get("walk_seed", 0)) + 1) & 0xFFFFFFFF
         self._write_voice_pattern(channel)
 
     def _duplicate(self):
@@ -2557,6 +2565,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                                                tlib.MODEL_REGISTER),
                     "walk_span": self.state[i].get("walk_span", 32),
                     "walk_stride": self.state[i].get("walk_stride", 4),
+                    # The walked line IS this number - it is the walk's
+                    # register. Without it a snapshot restores the span and
+                    # the stride and still comes back playing a different
+                    # melody.
+                    "walk_seed": self.state[i].get("walk_seed", 0),
                     "rotate": self.state[i].get("rotate", 0),
                     "feed": self.state[i].get("feed"),
                     "amount": self.state[i].get("amount", 0),
@@ -2777,8 +2790,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             st = self.state[channel]
             for field in ("register", "length", "random", "gate", "octave",
                           "range", "kit_range", "velo", "rhythm", "rhythm_reg",
-                          "model", "walk_span", "walk_stride", "rotate",
-                          "feed", "amount"):
+                          "model", "walk_span", "walk_stride", "walk_seed",
+                          "rotate", "feed", "amount"):
                 if field in saved:
                     st[field] = saved[field]
             if "rhythm_reg" not in saved:
@@ -4555,16 +4568,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
 
         if verb == "model" and voice:
-            # A two-way switch, so any movement flips it. Discrete units, or a
-            # nudge of the knob would toggle the generator under the player's
-            # hand mid-bar.
+            # A two-way switch that takes its DIRECTION from the knob: right is
+            # the walk, left is the register. It used to flip on any movement,
+            # so it cycled - and the owner named the rule at the rig on
+            # 2026-08-31: "it should reach upper and then stop or lower and
+            # then stop - this should be default for all encoders - only the
+            # big one should cycle through pages." That is switch_step's law,
+            # which this arm was not going through.
+            #
+            # Discrete units still, or a nudge would change the generator under
+            # the player's hand mid-bar.
             delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
             if delta:
-                st = self.state[channel]
-                now = st.get("model", tlib.MODEL_REGISTER)
-                self.apply(channel, "model",
-                           tlib.MODEL_WALK if now == tlib.MODEL_REGISTER
-                           else tlib.MODEL_REGISTER)
+                want = (tlib.MODEL_WALK if delta > 0
+                        else tlib.MODEL_REGISTER)
+                if want == self.state[channel].get("model",
+                                                   tlib.MODEL_REGISTER):
+                    return
+                self.apply(channel, "model", want)
                 with self.lock:
                     self._render_display()
             return
@@ -5706,11 +5727,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             #
             # The register is the walk's starting point, so switching models
             # back and forth does not teleport the line somewhere unrelated.
+            # SEEDED, so this is a pure function of stored state. _voice_line
+            # is called by the writer AND by both pad renderers; unseeded, each
+            # call invented a different melody, the pads never showed the line
+            # that was playing, and the repaint rate reached 109 OSC messages a
+            # second against 6.6 idle - inside the band that wedges the
+            # controller. Owner found it at the rig, 2026-08-31.
+            #
+            # The seed advances at the WRAP, where the register would have
+            # mutated, so the walk evolves once a bar instead of five times a
+            # second - and RANDOM at 0 holds it, which is this instrument's
+            # existing grammar for LOCK.
             return tlib.walk_line(st["register"], st["length"], steps,
                                   self.globals["root"], self.globals["scale"],
                                   st["octave"], st["range"],
                                   st.get("walk_span", 32),
-                                  st.get("walk_stride", 4))
+                                  st.get("walk_stride", 4),
+                                  rng=tlib.walk_rng(st.get("walk_seed", 0)))
         return tlib.line(st["register"], st["length"], steps,
                          self.globals["root"], self.globals["scale"],
                          st["octave"], st["range"])

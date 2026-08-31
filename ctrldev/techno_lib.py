@@ -550,6 +550,33 @@ class techno_lib:
     MODELS = (MODEL_REGISTER, MODEL_WALK)
 
     @staticmethod
+    def walk_rng(seed):
+        """A deterministic random source for the walk, from a stored integer.
+
+        THE WALK MUST BE A PURE FUNCTION OF STATE, exactly as the register is.
+        `line()` derives the same notes from the same register every time, so
+        the writer and the pad renderers always agree. The walk had no such
+        anchor: `_voice_line` is called by `_write_voice_pattern` AND by both
+        pad renderers, and each call re-ran the walk against the module rng, so
+        every repaint invented a different melody.
+
+        The owner found it at the rig on 2026-08-31 - the pads flashed about
+        five times a second and never showed the line that was playing, which
+        is the failure `_voice_line`'s own docstring had predicted. It measured
+        109 OSC messages a second against 6.6 idle, inside the band the
+        write-budget finding says wedges the controller off the USB bus.
+
+        A private Random rather than seeding the module one, because the
+        register's own mutation draws from that and a repaint must not consume
+        the randomness the generator is about to use.
+
+        The seed is a plain int so it stores in the channel state and survives
+        a snapshot like every other value there.
+        """
+
+        return random.Random(seed).random
+
+    @staticmethod
     def walk_values(start, length, steps, span, stride, rng=random.random):
         """`steps` values from a bounded random walk, in the REGISTER's own
         domain, so everything downstream of it is untouched.
