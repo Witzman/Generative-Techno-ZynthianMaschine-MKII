@@ -73,7 +73,7 @@
 
 <h2 id="what-this-is">What this page is</h2>
 <p>Everything else in this guide describes an instrument you can play today. This page is the opposite: it is the idea list, kept in the open so that anyone forking the project can see what has been considered and how expensive it looked.</p>
-<p>The list was assembled by reading the code rather than by wishing &mdash; every entry has a known mechanism behind it, and several were rejected as impossible before they reached this page. Ideas that turned out to be already built have been removed rather than quietly left in, and the common ones are named in <a href="#already-here">Ideas this instrument already has</a> so that nobody has to guess whether something is a gap or a feature.</p>
+<p>The list was assembled by reading the code rather than by wishing &mdash; every entry has a known mechanism behind it, and several were rejected as impossible before they reached this page. Ideas that turned out to be already built have been removed rather than quietly left in, and the common ones are named in <a href="#already-here">Ideas this instrument already has</a> so that nobody has to guess whether something is a gap or a feature. What was considered and <em>rejected</em> is written down too, in <a href="#refused">Considered and refused</a> &mdash; grouped by the reason, because the reason is the part that transfers to anyone forking this.</p>
 <p><strong>Cost</strong> is S, M or L. S means a day or less and nothing new underneath. M means new state or a new part of the surface, still inside the shape the instrument already has. L means a new mechanism, a new page of the surface, or a question that cannot be answered without measuring the hardware first.</p>
 <p><strong>Impact</strong> is 1 to 5, and it means musical consequence &mdash; how much the thing you hear changes &mdash; not how clever the idea is.</p>
 <p>Within each section the strongest ratio of impact to cost comes first. That ratio is where an argument starts, not where it ends: it knows nothing about what depends on what. The countdown ruler ranked twenty-second while nine of the entries above it could not exist without it, which is why it was the first thing built.</p>
@@ -219,6 +219,36 @@
 <tr><td>Genre tags for the snapshot packs</td><td>Someone has already published a curated table of which expansion belongs to which style, under a licence that permits reuse.</td><td>S</td><td>2</td></tr>
 <tr><td>Sync with other gear over the network</td><td>Tempo and phase shared with a laptop or other machines on the same network, with no cable. Harder than it looks: the sequencer&rsquo;s tempo is not exactly the tempo you asked for, so on a shared clock this instrument would be the one drifting &mdash; which is the problem such a sync exists to solve.</td><td>L</td><td>2</td></tr>
 </table>
+
+
+<h2 id="refused">Considered and refused</h2>
+<p>The ideas above survived a filter. This is what did not, grouped by the reason rather than by where it came from &mdash; because the reason is the part that transfers. If you are forking this instrument and one of these looks tempting, the paragraph under it is the argument you would have to beat.</p>
+
+<h3 id="refused-two-decks">It needs two decks, and this has one</h3>
+<p>Automatic transitions, crossfades, blends, isolator swaps, double drops, bridges, rewinds, beat-matching, tempo alignment between tracks, harmonic mixing by key wheel. A whole research literature exists here and almost none of it applies: <strong>this instrument has one deck and no tracks</strong>. There is nothing to transition from, and nothing to transition to. It generates the music rather than replaying it.</p>
+<p>One idea did survive the crossing, and it is on the list above: a part that <em>closes</em> through a filter rather than being switched off. That is what a good transition actually is, applied to a single channel instead of a whole track.</p>
+
+<h3 id="refused-models">It needs a model this hardware cannot run</h3>
+<p>Real-time generative audio models, latent-space blending between sources, anything that infers a waveform. The Pi already runs eight audio chains and a sequencer with a hard real-time deadline; there is nothing left for inference. And the interaction those systems are built around is typing a description of the music you want, on an instrument that <strong>runs headless and has no keyboard</strong>.</p>
+<p>One thing did survive: their <em>interface</em>. Blending several weighted targets continuously, rather than fading from one preset to another, is a good idea independent of what does the generating &mdash; and it is on the list above as a pad gesture.</p>
+
+<h3 id="refused-typing">It needs typing</h3>
+<p>Live-coding environments are the most powerful generative tools that exist, and none of them can be adopted here for the same dull reason: this is a control surface with sixteen pads, nine encoders and two small screens, and the rig has no monitor attached. What <em>can</em> be taken from them is the algebra rather than the language &mdash; transforms that apply to a whole channel on a period, which is on the list above.</p>
+
+<h3 id="refused-sensors">It needs a sensor that is not there</h3>
+<p>Systems that read a crowd, or react to what is happening in a game, are answering a question this instrument cannot ask. There is no audience input and no game. The nearest real signal would be a MIDI controller plugged into the back, which is a mapping decision rather than a feature.</p>
+
+<h3 id="refused-measured">It was measured, and the hardware said no</h3>
+<ul>
+<li><strong>Cutting one drum off with another.</strong> Closed hat killing open hat is standard on drum machines. The sampler here plays a one-shot to the end whether or not a note-off arrives &mdash; measured. Any version of this has to cut the sound somewhere else, which is why it stays on the list above at low value rather than being quietly dropped.</li>
+<li><strong>Note repeat at useful rates.</strong> The driver's heartbeat leaves a quarter-note repeat about seven per cent out and a sixteenth about twenty-eight. Only the slowest rate could be offered honestly, and that is not what a player means by note repeat.</li>
+<li><strong>A precise analogue master clock.</strong> The expansion bus this Pi has jitters by about a millisecond from user space &mdash; fine for pitch, and about eight tenths of a per cent of a sixteenth note at 125 BPM, which is wrong for anything trying to stay in time with it. Pitch and gates out are still worth doing and are on the list; the clock belongs on a MIDI socket instead.</li>
+</ul>
+
+<h3 id="refused-yield">And the honest arithmetic</h3>
+<p>Three surveys were run: thirty-one other projects built for this same controller, and about thirty-five generative and DJ music tools.</p>
+<p>The controller survey found <strong>not one generative technique in the entire set</strong> &mdash; no probability, no evolving state, no humanisation. The music-tool survey yielded <strong>five ideas that were new</strong> to this list.</p>
+<p>That is not a complaint about other people's work, which is frequently better than this at the things it set out to do. It is a note for whoever reads this next: <strong>the search is closer to saturated than it looks</strong>, and the remaining value is in building what is already on the list rather than in finding more of it.</p>
 
 <h2 id="what-the-list-says">What the list says</h2>
 <p>Read down the ratios and one shape appears: <strong>the cheapest strong ideas are all about restraint rather than invention.</strong> A number for how much the machine may move a channel, a step it is not allowed to fill, a rule that beat one survives, a part that closes instead of vanishing &mdash; four small pieces of work, and between them they answer the one complaint a generative instrument earns, which is that it will not leave anything alone.</p>

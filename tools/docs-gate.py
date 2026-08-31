@@ -325,7 +325,17 @@ BASELINE = {
     # tools suggest and this one already ships, each pointed at the guide page
     # that covers it. Owner-requested: an idea list that does not say what is
     # answered reads as though none of it is.
-    "whats-next.html":             (1186, "2026-08-31"),
+    # +747, 2026-08-31 (third edit the same day): "Considered and refused" —
+    # what was looked at and rejected, grouped by the REASON rather than by
+    # project, because the reason is the part that transfers to a forker. Six
+    # subsections: needs two decks, needs a model this Pi cannot run, needs
+    # typing, needs a sensor that is not there, measured and refused by the
+    # hardware, and the honest yield arithmetic from three surveys. This is
+    # unavoidably prose - a rejection is an argument, and a table cannot carry
+    # one. Owner-requested, and the counterpart to the "already has" table:
+    # between them a reader learns what is answered, what is open, and what
+    # will not happen.
+    "whats-next.html":             (1933, "2026-08-31"),
 }
 SKIP_BUDGET = {"index.html"}
 
