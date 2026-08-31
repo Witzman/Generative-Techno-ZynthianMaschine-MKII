@@ -1393,9 +1393,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     # --- the Turing voices ---------------------------------------------
 
-    def _write_voice_pattern(self, channel):
+    def _write_voice_pattern(self, channel, by_hand=False):
         """Write the current register into the channel's pattern. Mutates
         nothing - Duplicate needs to write without advancing.
+
+        `by_hand` is a PAD TAP, and it overrides the ownership refusal below.
+        Owner's rule, 2026-08-31: "everything is generated first always. If I
+        tap in steps, they should be kept." A tap is the player asking for this
+        exact step, so refusing it because the player had already played the
+        channel refused them twice for the same reason. The generator's own
+        writes are still refused on an owned channel - that is what ownership
+        is for, and it is unchanged.
 
         Lock discipline: one acquisition for the whole burst, selectPattern
         exactly once inside it, and the note loop never touches anything else.
@@ -1408,7 +1416,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # thread is mutating, so the window is real, and two writers to one
         # pattern is the SIGSEGV this driver already survived once.
         with self.lock:
-            if self.owner[channel] == "player":
+            if self.owner[channel] == "player" and not by_hand:
                 # The take stays. The token cannot express this: it is the
                 # mutex between threads and clears itself after every write,
                 # so it cannot carry an ownership that survives a snapshot.
@@ -4715,6 +4723,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_display()
 
+    def _reset_rhythm_mask(self, group):
+        """Put every step back into the rhythm register.
+
+        HITS, DIV and LENGTH are the START-AGAIN knobs. Owner's rule,
+        2026-08-31: taps survive ROTATE and RHYTHM, and turning HITS overwrites
+        them. DIV and LENGTH go with it because they change how many steps
+        exist, so a mask meaning "steps 0, 5, 6 and 15" means something else
+        the moment the grid is a different size.
+
+        Without this there was no way back to a plain euclid line except
+        tapping every removed step in by hand, because the mask persisted
+        through everything once taps started living in it.
+        """
+
+        state = self.state.get(group)
+        if state is not None:
+            state["rhythm_reg"] = 0xFFFF
+
     def _encoder(self, cc_num, cc_val, verb):
         """The four euclid parameters. They keep their own handler because
         each one has to re-clamp the others and rewrite the pattern, which the
@@ -4739,6 +4765,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 return
             take_back()
             self.div[group] = min(len(lib.DIVISIONS) - 1, max(0, self.div[group] + delta))
+            self._reset_rhythm_mask(group)
             self._clamp_params(group)
             # Law L2: structure lands on the bar. The value shows in brackets
             # until the pattern's own next wrap takes it, so a division change
@@ -4756,6 +4783,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             beats = min(top, max(MIN_BEATS, self.beats[group] + delta))
             if beats != self.beats[group]:
                 self.beats[group] = beats
+                self._reset_rhythm_mask(group)
                 self._clamp_params(group)
                 self.state[group]["pending"].add("length")
                 with self.lock:
@@ -4769,6 +4797,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             take_back()
             if verb == "hits":
                 self.hits[group] = min(steps, max(0, self.hits[group] + delta))
+                self._reset_rhythm_mask(group)
             else:
                 self.rot[group] = min(max(0, steps - 1), max(0, self.rot[group] + delta))
         self._write_pattern(group)
@@ -5713,7 +5742,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], step)
         if voice:
-            self._write_voice_pattern(channel)
+            # BY HAND: a tap is honoured even on a channel the player owns.
+            # It used to be silently refused, which is the same fault as a dead
+            # knob - the player asked for a step and nothing happened and
+            # nothing said why.
+            self._write_voice_pattern(channel, by_hand=True)
         else:
             # The drum's own writer. It reads rhythm_reg as a subtractive mask
             # over the euclid line, so the flipped bit takes effect on this
