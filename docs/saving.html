@@ -90,6 +90,16 @@
 <p><strong>The phrase count and anything armed are not saved.</strong> The bar count is a live ruler rather than a position &mdash; it starts again from one on the next Play &mdash; and a macro still counting down is gone with it. A <a href="modulation.html#rise">one-shot modulator</a> comes back cycling, and a set saved while a <a href="mixing-and-effects.html#drop">drop</a> is running saves those mutes, because mixer mutes are exactly what a snapshot does carry.</p>
 <p><strong>Amber provenance on a drum channel does not survive a reload.</strong> Your take does; the colour does not. A played drum note has the same pitch as a generated one, so once the pattern is read back nothing can tell them apart. The <code>PLAY</code> indicator remains the authority.</p>
 <hr>
+<h2 id="taking-patterns-elsewhere">Taking your patterns elsewhere</h2>
+<p>A snapshot holds the eight patterns, and a small tool that ships with the project writes them out as an ordinary MIDI file you can open in anything:</p>
+<pre><code>python3 tools/export-patterns-midi.py snapshot/018-generative-techno-main-insert.zss</code></pre>
+<p>You get one file: a tempo track, then a track per channel, each on its own MIDI channel and named for its group. It reads the <em>saved snapshot</em> rather than the running instrument, so it takes nothing from the rig &mdash; you can run it while you are playing, or with the instrument switched off entirely.</p>
+<p>Two things it deliberately does not carry, so that nothing in the file is invented:</p>
+<ul>
+<li><strong>Note lengths.</strong> Every note comes out one step long. The length the sequencer stores is not consistent between a drum and a voice, and it never had to be &mdash; the drum sounds are one-shots that play to the end of the sample whichever way you ask, and a voice&rsquo;s notes are rewritten when the snapshot loads. A uniform gate you are told about is worth more than a length guessed from a field nobody has decoded.</li>
+<li><strong>Per-note chance.</strong> A step that plays four times in five is not something a MIDI file can express, so it is written as a note that always plays. What you get is the pattern as it would sound with every chance turned up.</li>
+</ul>
+
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="playing-and-recording.html">Playing and recording</a> — what ownership means, and why amber matters</li>

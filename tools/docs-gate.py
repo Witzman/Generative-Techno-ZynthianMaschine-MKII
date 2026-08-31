@@ -291,7 +291,11 @@ BASELINE = {
     # anything armed, and a modulator's one-shot flag - plus the one that cuts
     # the other way, that a set saved mid-drop saves those mutes because mixer
     # mutes are exactly what a snapshot carries.
-    "saving.html":                 (396,  "2026-08-20"),
+    # +223, 2026-08-31: "Taking your patterns elsewhere" - the MIDI export
+    # tool, and the two things it deliberately does not carry. It belongs on
+    # this page rather than on the idea list, because it is a thing a reader
+    # can do today; the entry left whats-next.html in the same commit.
+    "saving.html":                 (619,  "2026-08-31"),
     "a1-touchscreen-patch.html":   (325,  "2026-08-13"),
     # New 2026-08-20, owner-requested: the ranked idea list. 677 words MEASURED
     # at creation, not estimated. The page is deliberately mostly TABLE - the
