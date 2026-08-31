@@ -36,27 +36,51 @@ pub fn is_encoder_jump(delta: i32) -> bool {
 /// scale at 8 keeps that feel exactly while removing the wrap.
 pub const BIG_ENC_SCALE: i32 = 8;
 
-/// The big encoder's new reported value, or None when the report was a wrap.
+/// The counter behind the big encoder is FOUR BITS, so sixteen detents.
 ///
-/// THE BUG THIS FIXES: the big encoder never went through `send_encoder_cc`
-/// like the other eight. It sent its raw counter times eight as an ABSOLUTE
-/// value on every detent, so when the counter rolled over the target snapped
-/// from 120 to 0 - once per revolution, on whatever the knob was driving.
+/// MEASURED 2026-08-31, on the rig, over 117 monotonic detents: the counter is
+/// the LOW nibble of byte 8 of the 0x01 report - which is the descriptor's byte
+/// 7, because the descriptor numbers from after the report id and this project
+/// had been reading the raw offset. Every transition was +1 and the sequence
+/// wrapped 15 -> 0. The high nibble never moved.
+pub const BIG_ENC_MOD: i32 = 16;
+const BIG_ENC_HALF: i32 = BIG_ENC_MOD / 2;
+
+/// The big encoder's new reported value. It WRAPS; it does not clamp.
 ///
-/// A wrap is REJECTED rather than decoded, deliberately. Decoding it needs the
-/// counter's modulus, and the width of that counter is not established from
-/// the source: byte 7 is *named* as eight buttons A1-A8, and this project's
-/// own rule is that a token name is never evidence about the hardware. The
-/// caller resyncs its baseline on a rejection exactly as `send_encoder_cc`
-/// does, so the cost is ONE LOST DETENT per revolution instead of a yank.
-/// If a capture ever establishes the modulus, this becomes wrap arithmetic
-/// and the tests above already say what it must do.
-pub fn big_encoder_value(prev_counter: i32, cur_counter: i32, current: i32) -> Option<u8> {
-    let delta = cur_counter - prev_counter;
-    if is_encoder_jump(delta) {
-        return None;
-    }
-    Some(accumulate_encoder(current, delta * BIG_ENC_SCALE))
+/// This knob drives a RING - the page ring of whatever mode you are in - and
+/// the driver reads this value as a wrapping position: `big_delta` is
+/// `((cur - prev + 64) % 128) - 64`. Both halves have to agree about what
+/// happens at the top, and until 2026-08-31 they did not.
+///
+/// TWO BUGS, ONE AFTER THE OTHER, AND THIS IS THE SECOND FIX:
+///
+/// The first was a yank. The big encoder never went through `send_encoder_cc`
+/// and sent its raw counter times eight as an ABSOLUTE value, so the counter
+/// rolling over snapped the target from 120 to 0 once per revolution. MOD depth
+/// rides this knob, so it was audible.
+///
+/// The fix for that rejected the wrap and accumulated through
+/// `accumulate_encoder`, which CLAMPS to 0-127. At eight units per detent the
+/// value therefore pinned after sixteen detents - one revolution - and the ring
+/// went dead until the knob was turned back. The owner found it on the first
+/// turn of this knob at the rig: "encoder cycled pages but it stopped - turning
+/// back cycled back". 122 daemon tests passed on that build, because nothing in
+/// the suite turned a knob more than once around.
+///
+/// The rejection was deliberate and its author wrote down what would lift it:
+/// "Decoding it needs the counter's modulus... If a capture ever establishes
+/// the modulus, this becomes wrap arithmetic and the tests above already say
+/// what it must do." The capture happened an hour before the end-stop was
+/// found. This is that arithmetic.
+///
+/// The scale stays at eight, so a revolution is still a full sweep and the feel
+/// is unchanged. `is_encoder_jump` is not consulted: a wrap is now decoded
+/// rather than detected, so there is nothing left for it to catch here.
+pub fn big_encoder_value(prev_counter: i32, cur_counter: i32, current: i32) -> u8 {
+    let delta =
+        (cur_counter - prev_counter + BIG_ENC_HALF).rem_euclid(BIG_ENC_MOD) - BIG_ENC_HALF;
+    (current + delta * BIG_ENC_SCALE).rem_euclid(128) as u8
 }
 
 pub fn button_cc_value(is_down: bool) -> u8 {
@@ -127,57 +151,84 @@ mod tests {
 
     #[test]
     fn big_encoder_still_reports_when_it_has_not_moved() {
-        // A repeated report is not a wrap and must not be swallowed as one.
-        assert_eq!(big_encoder_value(7, 7, 64), Some(64));
+        assert_eq!(big_encoder_value(7, 7, 64), 64);
     }
 
     #[test]
     fn big_encoder_one_detent_moves_by_the_scale() {
-        assert_eq!(big_encoder_value(7, 8, 64), Some(72));
-        assert_eq!(big_encoder_value(8, 7, 64), Some(56));
+        assert_eq!(big_encoder_value(7, 8, 64), 72);
+        assert_eq!(big_encoder_value(8, 7, 64), 56);
     }
 
     #[test]
     fn big_encoder_one_revolution_covers_the_whole_range() {
-        // The feel this replaces: the old absolute path sent counter*8, so a
-        // revolution was a full sweep. Sixteen detents must still be one.
+        // The feel this preserves: the old absolute path sent counter*8, so a
+        // revolution was a full sweep. Sixteen detents is still one.
         let mut value = 0i32;
         for c in 0..16 {
-            value = big_encoder_value(c, c + 1, value).unwrap() as i32;
+            value = big_encoder_value(c, c + 1, value) as i32;
         }
-        assert_eq!(value, 127);
+        assert_eq!(value, 0);           // 16 * 8 = 128, which is 0 again
     }
 
     #[test]
-    fn big_encoder_rejects_the_counter_wrap() {
-        // THE BUG. The old path sent 15*8=120 then 0*8=0, so whatever the knob
-        // was driving snapped to zero once per revolution.
-        assert_eq!(big_encoder_value(15, 0, 120), None);
+    fn the_counter_wrap_is_one_detent_FORWARD() {
+        // Measured 2026-08-31: the counter is the LOW nibble of byte 8,
+        // modulus 16, over 117 monotonic detents. Rejecting this wrap cost one
+        // detent per revolution; decoding it costs nothing.
+        assert_eq!(big_encoder_value(15, 0, 64), 72);
     }
 
     #[test]
-    fn big_encoder_rejects_the_wrap_in_both_directions() {
-        assert_eq!(big_encoder_value(0, 15, 8), None);
+    fn the_counter_wrap_is_one_detent_BACKWARD_the_other_way() {
+        assert_eq!(big_encoder_value(0, 15, 64), 56);
     }
 
     #[test]
-    fn big_encoder_clamps_at_both_ends() {
-        assert_eq!(big_encoder_value(0, 1, 125), Some(127));
-        assert_eq!(big_encoder_value(1, 0, 2), Some(0));
+    fn turning_past_a_revolution_KEEPS_MOVING() {
+        // THE BUG THE OWNER FOUND, 2026-08-31, first turn of this knob on the
+        // rig: "encoder cycled pages but it stopped - turning back cycled
+        // back". accumulate_encoder clamps to 0-127, so at eight units per
+        // detent the value pinned after sixteen detents and the ring went
+        // dead. A ring control cannot have an end stop.
+        let mut value = 0i32;
+        let mut seen = 0;
+        for step in 0..64 {
+            let c = step % 16;
+            let next = big_encoder_value(c, (c + 1) % 16, value) as i32;
+            if next != value {
+                seen += 1;
+            }
+            value = next;
+        }
+        assert_eq!(seen, 64, "every detent of four revolutions must move it");
     }
 
     #[test]
-    fn big_encoder_leaves_an_end_stop_immediately() {
-        assert_eq!(big_encoder_value(1, 0, 127), Some(119));
+    fn the_value_wraps_rather_than_clamping() {
+        // The driver reads this as a WRAPPING position - big_delta is
+        // ((cur - prev + 64) % 128) - 64 - so the two halves have to agree
+        // about what happens at the top. Clamping here is what broke the ring.
+        assert_eq!(big_encoder_value(0, 1, 124), 4);
+        assert_eq!(big_encoder_value(1, 0, 4), 124);
     }
 
     #[test]
-    fn big_encoder_a_rejected_wrap_costs_one_detent_and_nothing_else() {
-        // What the player actually experiences after this fix: the wrap is
-        // dropped, the caller resyncs the baseline, and the very next detent
-        // moves normally. One lost detent per revolution instead of a yank.
-        assert_eq!(big_encoder_value(15, 0, 100), None);
-        assert_eq!(big_encoder_value(0, 1, 100), Some(108));
+    fn many_revolutions_never_stall_in_either_direction() {
+        for dir in [1i32, -1i32] {
+            let mut value = 64i32;
+            let mut moves = 0;
+            for step in 0..160 {
+                let c = (step * dir).rem_euclid(16);
+                let n = (c + dir).rem_euclid(16);
+                let next = big_encoder_value(c, n, value) as i32;
+                if next != value {
+                    moves += 1;
+                }
+                value = next;
+            }
+            assert_eq!(moves, 160, "direction {dir} stalled");
+        }
     }
 
     #[test]

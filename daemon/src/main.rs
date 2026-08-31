@@ -997,14 +997,12 @@ impl<'a> MHandler<'a> {
             // later delta carry the wrap too, and the knob goes dead until the
             // counter comes back round.
             maschine.set_roller_status(counter, BIG_ENC_SLOT);
-            if let Some(value) = cc_math::big_encoder_value(
-                prev, counter, maschine.get_roller_value(BIG_ENC_SLOT))
-            {
-                maschine.set_roller_value(value as i32, BIG_ENC_SLOT);
-                let msg = Message::RPN7(Ch1, controlbase, value);
-                self.seq_port.send_message(&msg).unwrap();
-                self.seq_handle.drain_output();
-            }
+            let value = cc_math::big_encoder_value(
+                prev, counter, maschine.get_roller_value(BIG_ENC_SLOT));
+            maschine.set_roller_value(value as i32, BIG_ENC_SLOT);
+            let msg = Message::RPN7(Ch1, controlbase, value);
+            self.seq_port.send_message(&msg).unwrap();
+            self.seq_handle.drain_output();
         }
 
         if status <= 250 {
