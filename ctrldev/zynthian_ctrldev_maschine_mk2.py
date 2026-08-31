@@ -4535,7 +4535,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # not self.state must be read through param_get, never through
                 # the state dict directly.
                 current = int(self.param_get(channel, "rotate") or 0)
-                self.apply(channel, "rotate", (current + delta) % steps)
+                # CLAMPED, NOT WRAPPED - owner, 2026-08-31, at the rig, and it
+                # is this surface's existing law rather than a new decision.
+                # switch_step says it: "Where an ENCODER turn lands: clamped.
+                # The knob and the button deliberately differ - a knob that
+                # wrapped would jump from the last position to the first on a
+                # single detent, which no hardware knob on this surface does."
+                # Buttons wrap (switch_next); the PAGE RING wraps under the big
+                # encoder (step_index); every parameter encoder clamps. The
+                # drum ROTATE three thousand lines down already did.
+                #
+                # This wrap was inherited from the code as first written and
+                # carried through two fixes in this same gate before anyone
+                # turned the knob far enough to see it.
+                self.apply(channel, "rotate",
+                           max(0, min(steps - 1, current + delta)))
                 with self.lock:
                     self._render_display()
             return
