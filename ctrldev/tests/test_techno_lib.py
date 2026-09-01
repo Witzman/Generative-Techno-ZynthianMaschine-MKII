@@ -2623,6 +2623,247 @@ class ALatchedOverlaySaysWhoseThePadsAre(unittest.TestCase):
             self.assertLessEqual(len(word), 6, word)
 
 
+class _Panel:
+    """A simulated surface, built ONLY out of the real predicates.
+
+    Not a second implementation of the driver - that is the duplication this
+    project has been burned by. It holds the seven latches (which are
+    tlib.latch, the shipped object) and a mode, and every question it answers
+    is delegated to the same pure function the driver asks. What it adds is
+    SEQUENCE: the driver's own tests can only reach one function at a time,
+    and every gesture a player makes is three or four of them composed.
+
+    `t` is a clock in seconds. Gestures take it explicitly so a tap and a hold
+    differ by a number rather than by a sleep."""
+
+    HOLD = 0.25
+
+    def __init__(self, mode="STEP", kind="drum"):
+        self.latches = {name: tl_mod.latch() for name in
+                        ("shift", "mod", "lens", "arm", "bank", "mute",
+                         "navigate")}
+        self.mode = mode
+        self.kind = kind
+        self.lens_verb = None
+        self.t = 0.0
+
+    # --- gestures -------------------------------------------------------
+    def tap(self, name):
+        self.latches[name].edge(True, self.t, self.HOLD)
+        self.t += 0.05
+        self.latches[name].edge(False, self.t, self.HOLD)
+        self.t += 0.05
+        return self
+
+    def hold(self, name):
+        self.latches[name].edge(True, self.t, self.HOLD)
+        self.t += 0.05
+        return self
+
+    def release(self, name):
+        self.t += 0.5                      # past the threshold: a real hold
+        self.latches[name].edge(False, self.t, self.HOLD)
+        self.t += 0.05
+        return self
+
+    def press_mode(self, mode):
+        # A mode press drops the latched lens, whichever branch it takes.
+        self.latches["lens"].clear()
+        self.mode = mode
+        return self
+
+    def turn(self, verb):
+        """A hand on a knob. Only a channel verb sets the lens."""
+        if tl.lens_verb(verb) == verb:
+            self.lens_verb = verb
+        return self
+
+    def home(self):
+        self.mode = "STEP"
+        for latch in self.latches.values():
+            latch.clear()
+        return self
+
+    # --- what the surface says ------------------------------------------
+    def pads(self):
+        return tl.pad_owner(**{n: self.latches[n].down for n in
+                               tl.OVERLAY_PRIORITY})
+
+    def page(self):
+        """The descriptor showing, lens included - the driver's _page()."""
+        if self.latches["lens"].down:
+            verb = self._lens_now()
+            if verb is not None:
+                return tl.lens_desc(verb)
+        return tl.PAGE_RINGS[tl.ring_key(self.mode, self.kind)][0]
+
+    def _lens_now(self):
+        verb = tl.lens_verb(self.lens_verb)
+        if verb is None:
+            return None
+        return verb if verb in self.lens_ring() else \
+            tl.lens_verb(tl.LENS_DEFAULT)
+
+    def lens_ring(self):
+        ring = ()
+        for mode in ("CONTROL", "STEP", "AUTO"):
+            ring = ring + tuple(tl.PAGE_RINGS[tl.ring_key(mode, self.kind)])
+        return tl.lens_verbs(ring)
+
+    def arrow(self, delta):
+        if self.latches["lens"].down:
+            self.lens_verb = tl.lens_step(self._lens_now(),
+                                          self.lens_ring(), delta)
+        return self
+
+    def light(self, name):
+        latch = self.latches[name]
+        return tl.state_light(latch.held, latch.latched, self.t)
+
+    def label(self, base=None):
+        base = base or self.page()["title"]
+        owner = self.pads()
+        return tl.overlay_label(base, owner,
+                                bool(owner) and self.latches[owner].latched)
+
+
+class TheJourneysAPlayerActuallyMakes(unittest.TestCase):
+    """The gestures from the design's interaction-cost table, played through.
+
+    Every other test here checks one function. A player never uses one: they
+    hold a thing, turn a thing, let go, and expect the surface to have kept up.
+    Composition is where a surface fails, and it is the only kind of failure
+    the driver's own tests cannot reach at all."""
+
+    def test_starting_a_jam_lands_on_the_step_picture(self):
+        p = _Panel()
+        self.assertIsNone(p.pads())
+        self.assertEqual(p.page()["title"], "STEP")
+
+    def test_reaching_the_generator_is_one_press(self):
+        p = _Panel().press_mode("AUTO")
+        self.assertEqual(p.page()["title"], "AUTO")
+        self.assertIn("rule", p.page()["verbs"])
+        self.assertIn("lean", p.page()["verbs"])
+
+    def test_a_held_lens_hands_the_pages_back_on_release(self):
+        p = _Panel().press_mode("AUTO").turn("rule")
+        before = p.page()["title"]
+        p.hold("lens")
+        self.assertEqual(p.page()["title"], "ALL RULE")
+        p.release("lens")
+        self.assertEqual(p.page()["title"], before)
+
+    def test_a_latched_lens_survives_the_finger_and_says_so(self):
+        p = _Panel().turn("chance").tap("lens")
+        self.assertEqual(p.page()["title"], "ALL CHANCE")
+        self.assertEqual(p.light("lens"),
+                         tl.state_light(False, True, p.t))
+        p.tap("lens")
+        self.assertEqual(p.page()["title"], "STEP")
+
+    def test_a_mode_press_gets_you_out_of_a_latched_lens(self):
+        # The failure this was written for: the mode LED moved and the screen
+        # did not, because the lens outranks the mode.
+        p = _Panel().turn("chance").tap("lens").press_mode("CONTROL")
+        self.assertEqual(p.page()["title"], "CTRL")
+        self.assertFalse(p.latches["lens"].down)
+
+    def test_the_arrows_walk_the_verbs_inside_the_lens(self):
+        p = _Panel().turn("hits").hold("lens")
+        self.assertEqual(p.page()["title"], "ALL HITS")
+        p.arrow(1)
+        self.assertEqual(p.page()["verb"], "rotate")
+        p.arrow(-1)
+        self.assertEqual(p.page()["verb"], "hits")
+
+    def test_the_lens_follows_you_to_the_other_kind(self):
+        # Hold a drum-only verb, select a voice: it falls back rather than
+        # showing eight columns that cannot answer.
+        p = _Panel().press_mode("AUTO").turn("lane").hold("lens")
+        self.assertEqual(p.page()["verb"], "lane")
+        p.kind = "voice"
+        self.assertEqual(p.page()["verb"], tl.LENS_DEFAULT)
+
+    def test_a_global_leaves_the_lens_where_it_was(self):
+        p = _Panel().turn("chance").turn("bpm").hold("lens")
+        self.assertEqual(p.page()["verb"], "chance")
+
+    def test_muting_from_the_grid_is_a_tap_and_the_light_says_so(self):
+        p = _Panel().tap("mute")
+        self.assertEqual(p.pads(), "mute")
+        self.assertTrue(p.label().endswith("MUTE"))
+        p.tap("mute")
+        self.assertIsNone(p.pads())
+
+    def test_launching_a_bank_leaves_the_hand_free(self):
+        # A bank press lands on the bar, so the latch is the useful half:
+        # nothing to do until the boundary arrives.
+        p = _Panel().tap("bank")
+        self.assertEqual(p.pads(), "bank")
+        self.assertEqual(p.light("bank"), tl.state_light(False, True, p.t))
+
+    def test_shift_still_outranks_everything(self):
+        p = _Panel().tap("mod").tap("bank").hold("shift")
+        self.assertEqual(p.pads(), "shift")
+        p.release("shift")
+        self.assertEqual(p.pads(), "bank")
+
+    def test_mod_and_arm_together_stay_on_mod(self):
+        # Building a one-shot modulator: the rate-and-shape menu must not be
+        # taken away at the moment it is being read.
+        p = _Panel().tap("mod").hold("arm")
+        self.assertEqual(p.pads(), "mod")
+
+    def test_home_gets_you_out_of_everything_latched(self):
+        p = (_Panel().press_mode("AUTO").turn("rule")
+             .tap("lens").tap("mute").tap("navigate"))
+        p.home()
+        self.assertEqual(p.mode, "STEP")
+        self.assertIsNone(p.pads())
+        self.assertEqual(p.page()["title"], "STEP")
+
+    def test_home_leaves_a_finger_that_is_still_down_alone(self):
+        p = _Panel().hold("shift")
+        p.home()
+        self.assertEqual(p.pads(), "shift")
+        p.release("shift")
+        self.assertIsNone(p.pads())
+
+    def test_a_held_overlay_does_not_name_itself(self):
+        # Your finger is on it; the indicator would repeat what your hand says
+        # on a row that truncates silently.
+        p = _Panel().hold("mute")
+        self.assertEqual(p.label(), "STEP")
+        p.release("mute")
+        p.tap("mute")
+        self.assertEqual(p.label(), "STEP MUTE")
+
+    def test_every_overlay_is_reachable_by_both_routes(self):
+        # The duration rule's whole promise: you never have to decide which
+        # you meant before you start.
+        for name in tl.OVERLAY_PRIORITY:
+            held = _Panel().hold(name)
+            self.assertEqual(held.pads(), name, f"{name} held")
+            tapped = _Panel().tap(name)
+            self.assertEqual(tapped.pads(), name, f"{name} tapped")
+
+    def test_every_overlay_leaves_by_the_button_it_came_in_on(self):
+        for name in tl.OVERLAY_PRIORITY:
+            p = _Panel().tap(name).tap(name)
+            self.assertIsNone(p.pads(), name)
+
+    def test_reaching_the_eight_channel_view_never_loses_the_channel(self):
+        # The lens's whole point, and the interaction-cost table's largest
+        # claim: two gestures, and the page underneath is untouched.
+        p = _Panel().press_mode("CONTROL").turn("level")
+        p.hold("lens")
+        self.assertEqual(p.page()["shape"], tl.SHAPE_SPREAD)
+        p.release("lens")
+        self.assertEqual(p.page()["title"], "CTRL")
+        self.assertEqual(p.mode, "CONTROL")
+
+
 
 if __name__ == "__main__":
     unittest.main()
