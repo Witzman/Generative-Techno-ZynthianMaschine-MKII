@@ -142,7 +142,9 @@ pub fn rows_per_report(row_bytes: usize) -> usize {
 pub fn blit_prefix(report_id: u8, region: Region, row: usize, rows: usize, col: u8) -> [u8; 9] {
     let mut p = [0u8; 9];
     p[0] = report_id;
-    p[1] = region.x as u8 + col;   // left edge, in BYTES
+    // Saturating, not wrapping: disp_col is an arbitrary byte off the OSC
+    // diagnostic verb, and a plain `+` panics on overflow in a debug build.
+    p[1] = (region.x as u8).saturating_add(col);   // left edge, in BYTES
     p[3] = row as u8;              // top row of THIS report
     p[5] = region.w as u8;         // bytes per row
     p[7] = rows as u8;             // rows in THIS report
@@ -570,6 +572,20 @@ mod tests {
         // normal use, which is why a full-screen region is unaffected.
         let p = blit_prefix(0xE0, Region::full(), 0, CHUNK_ROWS, 4);
         assert_eq!(p[1], 4);
+    }
+
+    #[test]
+    fn an_absurd_diagnostic_offset_does_not_panic() {
+        // disp_col comes straight off /maschine/display/opts and is not
+        // validated anywhere. A debug build must not die on it.
+        //
+        // The region must have a NON-ZERO x, or there is no addition to
+        // overflow and this test proves nothing - which is exactly what the
+        // first version of it did with Region::full().
+        let r = Region::from_pixels(32, 24, 64, 8);
+        assert_eq!(r.x, 4);
+        let p = blit_prefix(0xE0, r, r.y, r.h, 255);
+        assert_eq!(p[1], 255);
     }
 
     #[test]
