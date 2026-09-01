@@ -3006,34 +3006,6 @@ class techno_lib:
         nothing and does not admit it is the worst object on a control surface."""
         return techno_lib._col(name, "----", None, 0.0, grey=True)
 
-    # verb -> (bar kind, value -> 0..1 fraction). The formulas are lifted
-    # verbatim from the shipped channel pages so a parameter looks identical
-    # whichever shape shows it.
-    # An optional THIRD element formats the value. Only MOVE has one: 0 there
-    # means the machine may not touch the channel, and this instrument already
-    # says that with the word LOCK (RANDOM, RHYTHM, WALK). A bare 0 on a page
-    # about what the machine may do is exactly the kind of silence law L4
-    # exists to forbid.
-    SPREAD_SPECS = {
-        "level":  ("uni", lambda v: v / 100.0),
-        "reverb": ("uni", lambda v: v / 100.0),
-        "delay":  ("uni", lambda v: v / 100.0),
-        "chance": ("uni", lambda v: v / 100.0),
-        "rhythm": ("uni", lambda v: v / 100.0),
-        "swing":  ("uni", lambda v: (v - 50) / 25.0),
-        "cutoff": ("uni", lambda v: v / 127.0),
-        "reso":   ("uni", lambda v: v / 127.0),
-        "move":   ("uni", lambda v: v / 100.0,
-                   lambda v: "LOCK" if v <= 0 else techno_lib._num(v)),
-        "lane":   ("uni", lambda v: v / 100.0,
-                   lambda v: "RAW" if v <= 0 else techno_lib._num(v)),
-        "exit":   ("seg", lambda v: v / 4.0,
-                   lambda v: "HARD" if v <= 0 else "%dbar" % v),
-        "phrase": ("seg", lambda v: v / 4.0,
-                   lambda v: "BAR" if v <= 1 else "%dbar" % v),
-        "fill":   ("uni", lambda v: v / 100.0,
-                   lambda v: "OFF" if v <= 0 else techno_lib._num(v)),
-    }
 
     # ------------------------------------------------------- one verb, one column
     #

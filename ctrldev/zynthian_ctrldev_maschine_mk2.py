@@ -549,7 +549,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # two copies of one value diverge. param_get() and apply() read and
         # write those arrays, so the dict stays the only home for everything
         # else and there is still exactly one home per parameter.
-        self.mode = "CONTROL"
+        # STEP is the home state: the one page that is always true, showing
+        # what the selected channel plays with the playhead over it.
+        self.mode = "STEP"
         # One page index per ring, so selecting a drum and coming back to a
         # voice returns to the page you left rather than to whatever the drum's
         # shorter ring could hold.
@@ -2127,7 +2129,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         if mode == "CONTROL":
             return getattr(self._voice_processor(self.group), "eng_code", None)
-        if mode == "ALL":
+        if mode == "VOLUME":
+            # The ganged inserts. This was the ALL ring until 2026-09-01;
+            # ALL is the lens now and the globals moved onto VOLUME with them.
             return tuple(getattr(self.fx_handle(0, which), "eng_code", None)
                          for which in ("reverb", "delay"))
         return None
@@ -2154,7 +2158,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             pages = tlib.generated_pages(self._ports(proc), exclude,
                                          tlib.SHAPE_CHANNEL, tlib.VERB_LV2,
                                          "EXTRA")
-        elif mode == "ALL":
+        elif mode == "VOLUME":
             for which, table, title in (
                     ("reverb", tlib.FX_REVERB, "REV"),
                     ("delay", tlib.FX_DELAY, "DLY"),
@@ -2234,6 +2238,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # playhead over it - and page 1 of it because that is where every mode
     # button already lands you.
     HOME_MODE = "STEP"
+
+    # Where a snapshot's retired mode name lands. See _on_snapshot.
+    RETIRED_MODES = {"ALL": "VOLUME", "MIXER": "CONTROL", "FILTER": "CONTROL"}
 
     def _act_home(self):
         """The big encoder's press. Back to the default performance state.
@@ -3095,8 +3102,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # also mode names, so an old snapshot restores to the right mode
         # instead of silently landing on CONTROL.
         self.mode = state.get("mode", state.get("page", self.mode))
+        # A snapshot written before 2026-09-01 names a mode that no longer
+        # exists. Map it to where its pages went rather than dropping the
+        # player somewhere arbitrary: ALL held the globals and they are on
+        # VOLUME, while MIXER and FILTER were spreads of LEVEL and CUTOFF and
+        # both of those verbs live on the CONTROL page now - one lens press
+        # from the eight-channel view they used to be.
+        self.mode = self.RETIRED_MODES.get(self.mode, self.mode)
         if self.mode not in tlib.MODES:
-            self.mode = "CONTROL"
+            self.mode = self.HOME_MODE
         self.page_idx = {}
         for key, index in (state.get("pages") or {}).items():
             mode, _, kind = str(key).partition("|")
@@ -3429,6 +3443,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # instead of setting a rate - a destructive surprise from a
                 # gesture that is supposed to be inert.
                 self._mod_pad(step)
+                return True
+            if self._pad_owner() == "navigate":
+                # AN OVERLAY TAKES THE PADS WHOLE, 2026-09-01. NAVIGATE was
+                # the one that did not: it painted the phrase over the sixteen
+                # pads and then let a press fall through to _toggle_step or
+                # _pad_down, so a pad showing bar 11 of a phrase silently
+                # edited step 11 of a pattern. Five overlays taught "a
+                # modifier changes what a pad DOES" and this one taught "a
+                # modifier changes what a pad SHOWS", which is not a rule a
+                # player can hold two of.
+                #
+                # It is a page to READ, so its pads are inert - the same
+                # answer ARM's countdown ruler already gives, for the same
+                # reason: reading something must not also change it.
+                self._slog("pad", result="inert", overlay="navigate",
+                           step=step)
                 return True
             if self.mode == "STEP":
                 # The step editor stays bound to NoteOn only, so dropping the
@@ -5356,7 +5386,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._nudge_preset(channel, steps)
             return
 
-        if self.mode == "ALL":
+        if self.mode == "VOLUME":
             span = self.GLOBAL_RANGES.get(verb)
             if span is None:
                 return
@@ -8951,6 +8981,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_mutes()
         self._render_mod()
         self._render_coarse()
+        # The modifier lights and FREEZE follow the same alphabet and have to
+        # be repainted whenever anything else is: a latch survives the gesture
+        # that set it, so an event-driven paint alone would leave a blink
+        # frozen on whichever half the last paint caught.
+        self._render_overlay_leds()
+        self._render_freeze()
         self._render_static_leds()
         self._render_pads()
 
