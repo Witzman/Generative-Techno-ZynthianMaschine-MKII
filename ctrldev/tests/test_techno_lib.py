@@ -237,19 +237,23 @@ class TestColumnModel(unittest.TestCase):
             tl.columns(_page("AUTO", "voice", "AUTO"), "voice", st)[3]["name"],
             "RHYTHM")
 
-    def test_drum_control_has_two_greyed_columns(self):
+    def test_drum_control_has_three_greyed_columns(self):
         cols = tl.columns(_desc("CONTROL", "drum"), "drum", self.drum_state())
         grey = [c for c in cols if c["grey"]]
-        # Was three. RANGE landed on slot 3 on 2026-09-01 - the kit-walk
-        # window was reachable from no page at all, and it is a sound
-        # parameter, so it takes one of the three slots a sampler could never
-        # fill. The other two stay dead honestly.
+        # RANGE landed on slot 3 on 2026-09-01 to close a real gap - the
+        # kit-walk window was reachable from no page at all - and it opened a
+        # worse one, found at the rig within the hour: the kit walk only runs
+        # when a channel is driven by the Turing register, so on a euclidean
+        # drum RANGE is a column showing a number the knob cannot move. It
+        # draws dead here and comes alive the moment the channel is switched
+        # to voice behaviour.
         #
         # The names are the page title plus the slot number since 2026-09-01.
         # A slot with no verb has nothing else to be called, and a made-up
         # instrument name ("tune", "filtr") on a control that does not exist
         # was a promise the sampler could never keep.
-        self.assertEqual([c["name"] for c in grey], ["ctrl4", "ctrl5"])
+        self.assertEqual([c["name"] for c in grey],
+                         ["range", "ctrl4", "ctrl5"])
         for c in grey:
             self.assertEqual(c["value"], "----")
             self.assertIsNone(c["bar"])
@@ -2884,6 +2888,108 @@ class TheJourneysAPlayerActuallyMakes(unittest.TestCase):
         p.release("lens")
         self.assertEqual(p.page()["title"], "CTRL")
         self.assertEqual(p.mode, "CONTROL")
+
+
+class EveryPageCanActuallyBeDrawn(unittest.TestCase):
+    """Render every page of every ring and assert the driver can consume it.
+
+    THE TEST THAT WAS MISSING, and its absence cost a frozen display at the
+    rig. PHRASE and EXIT gave a seg bar a FLOAT fraction where the driver
+    unpacks `index, count = frac`. They are columns 6 and 8 of the AUTO page,
+    so screen 0 built and screen 1 raised TypeError - inside the poll thread's
+    catch-all, which logs one traceback and then counts. The right-hand
+    display sat frozen on the previous page, showing four values that were no
+    longer true and could not be moved.
+
+    Every other test here checks one verb, one column or one predicate. None
+    of them walked a whole page and asked whether the SHAPE of what came out
+    is what the consumer expects - and the consumer is in the driver, which
+    cannot be imported off the rig.
+
+    So this encodes the driver's contract instead: a seg bar's frac is an
+    (index, count) pair, a uni or bi bar's is a float in 0..1, a dead column
+    has no bar at all. It is a second copy of a rule, which this project
+    treats as a cost - but the alternative was finding it by playing."""
+
+    def _drum(self):
+        st = dict(tl.default_channel_state("drum"))
+        st.update(kit="909", sample="BD", hits=4, rotate=0, div=1, length=16,
+                  kind="drum")
+        return st
+
+    def _voice(self):
+        st = dict(tl.default_channel_state("voice"))
+        st.update(preset="SAW", kind="voice", synth_ctrl=(1, 1, 1, 1))
+        return st
+
+    def _globals(self):
+        return dict(root=0, scale=0, bpm=125, master=80, revsize=25,
+                    revtype=3, dlytime=1, dlyfbk=35, walk=0, wspan=2,
+                    pending=set())
+
+    def _check(self, where, cols):
+        self.assertEqual(len(cols), 8, where)
+        for i, col in enumerate(cols):
+            bar, frac = col["bar"], col["frac"]
+            at = f"{where} column {i + 1} ({col['name']})"
+            if bar is None:
+                continue
+            if bar == "seg":
+                self.assertIsInstance(
+                    frac, tuple,
+                    f"{at}: a seg bar's frac must be (index, count) - the "
+                    f"driver unpacks it - and this is {frac!r}")
+                self.assertEqual(len(frac), 2, at)
+                index, count = frac
+                self.assertIsInstance(index, int, at)
+                self.assertGreater(count, 0, at)
+                self.assertLessEqual(index, count, at)
+            else:
+                self.assertIsInstance(frac, float, f"{at}: {bar} wants a float")
+                self.assertGreaterEqual(frac, -0.01, at)
+                self.assertLessEqual(frac, 1.01, at)
+
+    def test_every_static_page_of_every_ring(self):
+        for (mode, kind), ring in tl.PAGE_RINGS.items():
+            for desc in ring:
+                if desc["shape"] == tl.SHAPE_PENDING:
+                    continue
+                if desc["shape"] == tl.SHAPE_SPREAD:
+                    views = [(chr(65 + i), tl.CHANNELS[i][1],
+                              self._drum() if i < 5 else self._voice())
+                             for i in range(8)]
+                    cols = tl.columns(desc, None, views)
+                elif desc["shape"] == tl.SHAPE_GLOBAL:
+                    cols = tl.columns(desc, None, self._globals())
+                else:
+                    state = self._drum() if kind == "drum" else self._voice()
+                    cols = tl.columns(desc, kind, state)
+                self._check(f"{mode}/{kind} {desc['title']}", cols)
+
+    def test_every_page_the_lens_can_open(self):
+        # The lens draws any channel verb across eight channels, so it can
+        # reach a shape no hand-written page ever put on screen.
+        views = [(chr(65 + i), tl.CHANNELS[i][1],
+                  self._drum() if i < 5 else self._voice()) for i in range(8)]
+        for verb in tl.VERB_COLS:
+            if tl.lens_verb(verb) != verb:
+                continue
+            desc = tl.lens_desc(verb)
+            self._check(f"lens {verb}", tl.columns(desc, None, views))
+
+    def test_it_holds_at_the_ends_of_every_range(self):
+        # A frac is easy to get right in the middle and wrong at a bound.
+        for verb, spec in tl.VERB_COLS.items():
+            for value in (0, 1, 4, 16, 100, 127, -2):
+                state = {verb: value, "kind": "drum", "model": "reg"}
+                col = tl.verb_col(verb, state, "drum")
+                if col is None or col["bar"] is None:
+                    continue
+                at = f"{verb} at {value}"
+                if col["bar"] == "seg":
+                    self.assertIsInstance(col["frac"], tuple, at)
+                else:
+                    self.assertIsInstance(col["frac"], float, at)
 
 
 

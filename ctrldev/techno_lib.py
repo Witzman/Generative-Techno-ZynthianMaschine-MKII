@@ -3260,6 +3260,19 @@ class techno_lib:
         if verb in ("walk_span", "walk_stride"):
             return state.get("model", techno_lib.MODEL_REGISTER) != \
                 techno_lib.MODEL_WALK
+        if verb == "range" and kind == "drum":
+            # RANGE on a sampler is the KIT-WALK WINDOW, and the kit walk only
+            # runs when the channel is driven by the Turing register - a drum
+            # in VOICE behaviour. On a euclidean drum nothing reads it, so the
+            # column would show a number the knob cannot move.
+            #
+            # It was put on the drum CONTROL page on 2026-09-01 to close a
+            # real gap: kit_range was reachable from no page at all. Closing
+            # it that way opened a worse one, and the owner found it at the
+            # rig within the hour - turning RANGE on a drum changed nothing
+            # audible. Law L4 does not care that the value exists; it cares
+            # whether the knob can move it.
+            return True
         index = techno_lib.SYNTH_ROLE_INDEX.get(verb)
         if index is not None and kind == "voice":
             return not techno_lib.synth_ctrl_flags(state)[index]
@@ -4784,8 +4797,27 @@ def _hits_frac(v, state=None, kind=None):
     return v / float(_steps(state))
 
 
+def _pick(table, v):
+    """Index a label table WITHOUT ever raising.
+
+    THE RENDER PATH MUST NOT THROW. It runs inside the poll thread's
+    catch-all, which logs one traceback and then counts - so an exception
+    here does not show as an error, it shows as a SCREEN THAT STOPS
+    REPAINTING and goes on displaying values that are no longer true and
+    cannot be moved. That was measured at the rig on 2026-09-01 from a
+    different cause, and it took a journal to find.
+
+    A stale index is not hypothetical: a snapshot written by an older build
+    can carry one, and `upgrade_state` cannot know about a table that has
+    since got shorter."""
+
+    if not table:
+        return "----"
+    return table[max(0, min(len(table) - 1, int(v)))]
+
+
 def _div_fmt(v, state=None, kind=None):
-    return techno_lib.DIVISION_LABELS[int(v)]
+    return _pick(techno_lib.DIVISION_LABELS, v)
 
 
 def _ratchet_fmt(v, state=None, kind=None):
@@ -4807,15 +4839,15 @@ def _octave_frac(v, state=None, kind=None):
 
 
 def _root_fmt(v, state=None, kind=None):
-    return techno_lib.NOTE_NAMES[int(v)]
+    return _pick(techno_lib.NOTE_NAMES, v)
 
 
 def _scale_fmt(v, state=None, kind=None):
-    return techno_lib.SCALES[int(v)][0]
+    return _pick([sc[0] for sc in techno_lib.SCALES], v)
 
 
 def _dlytime_fmt(v, state=None, kind=None):
-    return techno_lib.DELAY_DIVISIONS[int(v)][0]
+    return _pick([d[0] for d in techno_lib.DELAY_DIVISIONS], v)
 
 
 techno_lib.VERB_COLS = {
@@ -4850,10 +4882,28 @@ techno_lib.VERB_COLS = {
                 lambda v, s=None, k=None: str(int(v))),
     # ---- how much the machine may do ---------------------------------------
     "move":    ("MOVE", "uni", _pct, _word(0, "LOCK")),
-    "phrase":  ("PHRASE", "seg", _over(4.0),
+    # A SEG BAR'S FRACTION IS AN (index, count) PAIR, NEVER A FLOAT. The
+    # driver unpacks it - `index, count = frac` - so a float here is a
+    # TypeError on the render path, and the render path is inside the poll
+    # thread's catch-all: one traceback, then a counter, and a screen that
+    # never repaints again.
+    #
+    # Measured at the rig 2026-09-01: PHRASE and EXIT are columns 6 and 8 of
+    # the AUTO page, so screen 0 built and screen 1 threw. The right-hand
+    # display sat frozen on the previous page's contents, showing four values
+    # that were no longer true and could not be moved. It predates the
+    # redesign - both verbs had this shape as spread pages that shipped the
+    # same morning and were never played - and the redesign moved them onto a
+    # page somebody actually visits.
+    #
+    # PHRASE is 1..4, so index is v-1 over 4. EXIT is 0..4, so index is v
+    # over 5.
+    "phrase":  ("PHRASE", "seg",
+                lambda v, s=None, k=None: (max(0, int(v) - 1), 4),
                 lambda v, s=None, k=None: "BAR" if v <= 1 else "%dbar" % v),
     "fill":    ("FILL", "uni", _pct, _word(0, "OFF")),
-    "exit":    ("EXIT", "seg", _over(4.0),
+    "exit":    ("EXIT", "seg",
+                lambda v, s=None, k=None: (max(0, int(v)), 5),
                 lambda v, s=None, k=None: "HARD" if v <= 0 else "%dbar" % v),
     # ---- how it sounds ------------------------------------------------------
     # A name has no position in a list the surface can know, so its segment
