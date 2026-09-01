@@ -1020,6 +1020,76 @@ class TheDocsGateKnowsEveryButton(unittest.TestCase):
         self.assertNotIn(5, self._gate_ccs())
 
 
+class EveryNameTheDriverAsksTheLibraryForExists(unittest.TestCase):
+    """`tlib.X` must be an attribute of the CLASS, not merely of the module.
+
+    The driver does
+
+        from techno_lib import techno_lib as tlib
+
+    so `tlib` is the class. A helper defined at module level - the way
+    `latch` is, because it is a class and cannot live inside another class
+    body - is NOT reachable through that name unless something binds it on.
+
+    It was not, for one deploy. The rig answered
+
+        Can't load ctrldev driver ... type object 'techno_lib' has no
+        attribute 'latch'
+
+    and the whole surface was absent: no pads, no lights, no screens, while
+    the music went on playing. Nothing caught it. py_compile cannot see an
+    attribute lookup; the library's own tests import the MODULE and reach
+    `latch` there, which is exactly the difference that mattered; and the
+    driver cannot be imported off the rig at all.
+
+    So this reads every `tlib.NAME` out of the driver's AST and asks the class
+    for it. It is the third guard of its kind and the pattern is now clear:
+    ON THIS HALF OF THE PROJECT, ANYTHING STATIC IS WORTH CHECKING STATICALLY,
+    because the alternative is a deploy."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _asked(self):
+        """Every attribute the driver reads off `tlib`, and one line number."""
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        found = {}
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Attribute)
+                    and isinstance(node.value, ast.Name)
+                    and node.value.id == "tlib"):
+                found.setdefault(node.attr, node.lineno)
+        return found
+
+    def test_the_driver_really_does_ask_for_things(self):
+        # A sweep that finds nothing would pass for the wrong reason.
+        asked = self._asked()
+        self.assertGreater(len(asked), 40, asked)
+        self.assertIn("PAGE_RINGS", asked)
+
+    def test_every_one_of_them_is_on_the_class(self):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+        from techno_lib import techno_lib as tlib
+        missing = sorted((name, line) for name, line in self._asked().items()
+                         if not hasattr(tlib, name))
+        self.assertEqual(missing, [],
+                         "the driver reads these off techno_lib and the class "
+                         f"does not have them: {missing}")
+
+    def test_latch_specifically(self):
+        # The one that shipped. Named on its own so a failure says WHICH
+        # rather than making a reader diff two lists.
+        from techno_lib import techno_lib as tlib
+        self.assertTrue(hasattr(tlib, "latch"),
+                        "techno_lib.latch = latch has gone missing again - "
+                        "the driver cannot load without it")
+        entry = tlib.latch()
+        entry.edge(True, 0.0, 0.25)
+        self.assertTrue(entry.down)
+
+
 
 if __name__ == "__main__":
     unittest.main()

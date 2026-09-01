@@ -4657,6 +4657,24 @@ class latch:
         self.latched = False
 
 
+# BOUND ONTO THE CLASS, and this line is load-bearing. The driver does
+#   from techno_lib import techno_lib as tlib
+# so `tlib` is the CLASS, not the module - every other name it uses is a class
+# attribute, and `tlib.latch()` therefore has to be one too.
+#
+# It was not, for one deploy. The rig answered
+#   Can't load ctrldev driver ... type object 'techno_lib' has no attribute
+#   'latch'
+# and the whole surface was simply absent - no pads, no lights, no screens,
+# while the music went on playing. py_compile cannot see it, the 1149 tests
+# could not see it because they import the MODULE and reach `latch` there, and
+# nothing else on this half of the project runs off the rig.
+#
+# tests/test_maschine_mk2_lib.py now walks every `tlib.X` in the driver and
+# checks X is reachable on the class. That test is the reason this line cannot
+# quietly go away again.
+techno_lib.latch = latch
+
 # The verb table is built after the class body for the same reason the rings
 # are: its entries call techno_lib's own helpers, which are not bound until the
 # class exists. It is read as techno_lib.VERB_COLS like everything else.
