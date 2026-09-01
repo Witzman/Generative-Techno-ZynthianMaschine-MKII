@@ -2250,6 +2250,11 @@ class NoFeatureLostItsWayIn(unittest.TestCase):
     NOT_PARAMETERS = {
         "pending",       # law L2's bookkeeping set
         "rhythm_reg",    # the register itself; `rhythm` is its evolve rate
+        # The steps a player tapped IN. Written by the pads and by nothing
+        # else - there is no knob for "which steps did somebody choose", and
+        # a verb that tried to be one would be a number standing for sixteen
+        # independent decisions.
+        "hand_reg",
         "register",      # the Turing register; `random` is its evolve rate
         "ring",          # the four-deep undo history behind NOTE REPEAT
         "kit_range",     # reached through the `range` alias on a sampler
@@ -3355,7 +3360,8 @@ class AVerbDrawsDeadOnAKindThatDoesNotHaveIt(unittest.TestCase):
         voice = tl.default_channel_state("voice")
         LEGACY = {"hits", "rotate", "div", "length"}   # per-group arrays
         BY_BEHAVIOUR = {"range"}                       # see verb_is_dead
-        INTERNAL = {"register", "ring", "rhythm_reg", "kit_range", "pending"}
+        INTERNAL = {"register", "ring", "rhythm_reg", "hand_reg",
+                    "kit_range", "pending"}
         for verb in set(drum) | set(voice):
             if verb in LEGACY | BY_BEHAVIOUR | INTERNAL:
                 continue
@@ -3381,6 +3387,100 @@ class AVerbDrawsDeadOnAKindThatDoesNotHaveIt(unittest.TestCase):
         voice["kind"] = "voice"
         self.assertTrue(tl.verb_is_dead("ratchet", "voice", voice))
         self.assertTrue(tl.verb_is_dead("lean", "voice", voice))
+
+
+class ADrumTapAddsAStep(unittest.TestCase):
+    """The same gesture means the same thing on both kinds, 2026-09-01.
+
+    It did not. On a voice a pad tap adds a step; on a drum the rhythm
+    register is SUBTRACTIVE - HITS and ROTATE draw the line and the register
+    may take a hit away and never invent one - so a tap did nothing wherever
+    euclid had not already placed one.
+
+    It was invisible until the same day, because the tap previewed the drum
+    whether or not it had done anything: the instrument made a sound that said
+    it had worked. The owner found the limitation within a minute of that
+    preview being made honest, on a channel with HITS at 2 where fourteen of
+    the sixteen pads were inert.
+
+    TWO REGISTERS RATHER THAN ONE MEANING CHANGED. The subtractive register
+    keeps its exact behaviour, so RHYTHM's evolution and every existing
+    snapshot are untouched; `hand_reg` is a separate set of steps the player
+    put in, and zero is the migration."""
+
+    LINE = (True, False, False, False, True, False, False, False)
+    ALL_KEPT = 0xFF
+
+    def test_a_channel_nobody_has_tapped_is_unchanged(self):
+        # The migration, and the reason this was cheap: hand_reg defaults to
+        # zero, and zero adds nothing.
+        self.assertEqual(tl.drum_steps(self.LINE, self.ALL_KEPT, 0),
+                         tl.drum_steps(self.LINE, self.ALL_KEPT))
+
+    def test_tapping_where_euclid_has_nothing_adds_a_step(self):
+        reg, hand, added = tl.drum_tap(self.ALL_KEPT, 0, 2, False)
+        self.assertTrue(added)
+        self.assertTrue(tl.drum_steps(self.LINE, reg, hand)[2])
+
+    def test_tapping_it_again_takes_it_back_out(self):
+        reg, hand, _ = tl.drum_tap(self.ALL_KEPT, 0, 2, False)
+        reg, hand, added = tl.drum_tap(reg, hand, 2, True)
+        self.assertFalse(added)
+        self.assertFalse(tl.drum_steps(self.LINE, reg, hand)[2])
+
+    def test_tapping_a_euclid_hit_removes_it(self):
+        reg, hand, added = tl.drum_tap(self.ALL_KEPT, 0, 0, True)
+        self.assertFalse(added)
+        self.assertFalse(tl.drum_steps(self.LINE, reg, hand)[0])
+
+    def test_tapping_a_removed_hit_puts_it_back_where_it_came_from(self):
+        # Restored through the register it was taken from rather than added a
+        # second time by hand, so the two registers go on meaning what they
+        # say.
+        reg, hand, _ = tl.drum_tap(self.ALL_KEPT, 0, 0, True)
+        reg, hand, added = tl.drum_tap(reg, hand, 0, False)
+        self.assertTrue(added)
+        self.assertEqual(hand, 0)
+        self.assertTrue(tl.drum_steps(self.LINE, reg, hand)[0])
+
+    def test_only_adding_reports_added(self):
+        # The preview follows this flag. Previewing a step you have just
+        # removed was contradictory since the day it shipped.
+        self.assertTrue(tl.drum_tap(self.ALL_KEPT, 0, 3, False)[2])
+        self.assertFalse(tl.drum_tap(self.ALL_KEPT, 0, 0, True)[2])
+
+    def test_a_hand_step_survives_an_evolving_rhythm(self):
+        """The promise the guide already makes, and the reason the hand
+        register is added AFTER the subtraction rather than folded into it."""
+        _, hand, _ = tl.drum_tap(self.ALL_KEPT, 0, 2, False)
+        for reg in (0x00, 0x0F, 0xAA, 0xFF):     # whatever RHYTHM leaves
+            self.assertTrue(tl.drum_steps(self.LINE, reg, hand)[2], hex(reg))
+
+    def test_a_hand_step_survives_a_lane_that_prunes_everything(self):
+        # lane_filter prunes the GENERATED line, which is the argument the
+        # writer already makes for the subtractive register. It has to hold
+        # for the additive one too.
+        pruned = (False,) * 8
+        _, hand, _ = tl.drum_tap(self.ALL_KEPT, 0, 5, False)
+        self.assertTrue(tl.drum_steps(pruned, self.ALL_KEPT, hand)[5])
+
+    def test_a_removed_step_still_cannot_be_revived_by_the_generator(self):
+        # The other half, unchanged: a step tapped OUT stays out however busy
+        # the line gets.
+        reg, hand, _ = tl.drum_tap(self.ALL_KEPT, 0, 0, True)
+        busy = (True,) * 8
+        self.assertFalse(tl.drum_steps(busy, reg, hand)[0])
+
+    def test_only_the_pattern_s_own_bits_are_read(self):
+        # A 12-step triplet division must not pick up hand bits 12-15 left
+        # behind by a 16-step one, exactly as the subtractive register says.
+        short = (False,) * 4
+        self.assertEqual(len(tl.drum_steps(short, self.ALL_KEPT, 0xFFFF)), 4)
+
+    def test_the_hand_register_is_drum_only(self):
+        self.assertIn("hand_reg", tl.default_channel_state("drum"))
+        self.assertNotIn("hand_reg", tl.default_channel_state("voice"))
+        self.assertEqual(tl.default_channel_state("drum")["hand_reg"], 0)
 
 
 

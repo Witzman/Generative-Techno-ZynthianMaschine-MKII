@@ -3234,6 +3234,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 str(i): {
                     "rhythm": self.state[i].get("rhythm", 0),
                     "rhythm_reg": self.state[i].get("rhythm_reg", 0xFFFF),
+                    # THE HAND REGISTER TRAVELS TOO, 2026-09-01. Steps the
+                    # player tapped IN are not recoverable from anything else
+                    # in the snapshot - the subtractive register cannot
+                    # express them and the euclid line does not contain them -
+                    # so a set saved without this comes back missing exactly
+                    # the hits somebody chose by hand. Defaulted on the SAVE
+                    # path as well as the load, for the reason the kit window
+                    # gives above.
+                    "hand_reg": self.state[i].get("hand_reg", 0),
                     # HITS TRAVELS WITH THE REGISTER. Once the register thins
                     # the line, _recount_hits refuses to read HITS back out of
                     # the pattern - so the snapshot has to carry the number the
@@ -3505,6 +3514,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # existing snapshot on load.
             self.state[channel]["rhythm"] = saved.get("rhythm", 0)
             self.state[channel]["rhythm_reg"] = saved.get("rhythm_reg", 0xFFFF)
+            # ABSENT IS NO HAND EDITS, and here absent really IS zero - the
+            # opposite default to the line above, for the opposite reason. The
+            # subtractive register defaults to every bit SET because that is
+            # "take nothing away"; this one defaults to every bit CLEAR
+            # because that is "add nothing". A snapshot written before a drum
+            # tap could add a step had no hand edits in it.
+            self.state[channel]["hand_reg"] = saved.get("hand_reg", 0)
             # ABSENT IS EUCLID, and absent is the shift register - the same
             # argument as the line above. A snapshot written before these
             # generators existed was played by the ones they default to.
@@ -5654,6 +5670,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         state = self.state.get(group)
         if state is not None:
             state["rhythm_reg"] = 0xFFFF
+            # BOTH registers, because both are hand edits against a grid that
+            # has just changed shape. The guide already promises exactly this
+            # - a hand-chosen step survives ROTATE and RHYTHM, and HITS, DIV
+            # and LENGTH reset it - and a bit left behind here would reappear
+            # on a step the player never chose.
+            state["hand_reg"] = 0
 
     def _encoder(self, cc_num, cc_val, verb, channel=None):
         """The four euclid parameters. They keep their own handler because
@@ -5943,6 +5965,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         pattern = tlib.drum_steps(
             line,
             tlib.rotate(int(self.state[group].get("rhythm_reg", 0xFFFF)),
+                        steps, self.rot[group]),
+            # ROTATED THE SAME WAY. Both registers are stored unrotated and
+            # turned onto the grid here, so a step the player put in travels
+            # with the line under ROTATE exactly as one they took out does.
+            tlib.rotate(int(self.state[group].get("hand_reg", 0)),
                         steps, self.rot[group]))
         for step, on in enumerate(pattern):
             if on:
@@ -6732,8 +6759,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # other way to reach the bit behind it. A drum only: a voice's rotation
         # is applied to the rendered line rather than to the mask.
         bit = step if voice else (step - self.rot[channel]) % steps
-        was_kept = bool(st["rhythm_reg"] >> bit & 1)
-        st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], bit)
+        if not voice:
+            # A DRUM TAP ADDS, since 2026-09-01. Three cases in the order a
+            # finger means them - take back one you added, remove one euclid
+            # placed, or put one where there is none - and the driver already
+            # knows which by caching the step picture for the pads.
+            reg, hand, added = tlib.drum_tap(
+                int(st["rhythm_reg"]), int(st.get("hand_reg", 0)), bit,
+                bool(self.step_on[step]))
+            st["rhythm_reg"], st["hand_reg"] = reg, hand
+        else:
+            st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], bit)
         if voice:
             # BY HAND: a tap is honoured even on a channel the player owns.
             # It used to be silently refused, which is the same fault as a dead
@@ -6764,7 +6800,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # and it can only happen where euclid HAS a hit: the mask is reset
             # to all-ones whenever HITS, DIV or LENGTH move, and ROTATE turns
             # the mask with the line, so a zero bit and a hit stay aligned.
-            if not was_kept:
+            if added:
                 self._preview(self._group_note(channel))
         with self.lock:
             self._render_pads()

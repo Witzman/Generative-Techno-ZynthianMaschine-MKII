@@ -573,22 +573,80 @@ class techno_lib:
         return tuple(bool(rhythm_reg >> i & 1) for i in range(steps))
 
     @staticmethod
-    def drum_steps(pattern, rhythm_reg):
+    def drum_tap(rhythm_reg, hand_reg, bit, lit):
+        """One pad tap on a drum step. Returns (rhythm_reg, hand_reg, added).
+
+        A DRUM TAP ADDS A HIT NOW, 2026-09-01, owner's decision at the rig.
+        It could only ever remove one, because the rhythm register is
+        subtractive - HITS and ROTATE draw the line and the register may take
+        a hit away and never invent one. So the same gesture meant two
+        different things on the two kinds: on a voice a tap adds a step, on a
+        drum it did nothing wherever euclid had not already placed one.
+
+        Until the same day that was HIDDEN, because the tap previewed the drum
+        whether or not it had done anything - the instrument made a sound that
+        said it had worked. The owner found it within a minute of that preview
+        being made honest.
+
+        TWO REGISTERS RATHER THAN ONE, and that is what makes this cheap. The
+        subtractive register keeps its exact meaning, so RHYTHM's evolution,
+        every existing snapshot and the migration defaults are all untouched;
+        `hand_reg` is a separate set of steps the player put in, defaulting to
+        none. A snapshot without one behaves as it always did.
+
+        The three cases, in the order a finger means them:
+          - a step YOU added -> take it back out
+          - a step that sounds because euclid placed it -> remove it
+          - a step that does not sound -> put one there, either by undoing an
+            earlier removal or, where euclid has nothing, by hand
+
+        `lit` is whether the step currently sounds, which the driver already
+        knows: it caches the step picture for the pads. Passing it in keeps
+        this pure and keeps the euclid line in one place."""
+
+        mask = 1 << bit
+        if hand_reg & mask:
+            return (rhythm_reg, hand_reg & ~mask, False)
+        if lit:
+            return (rhythm_reg & ~mask, hand_reg, False)
+        if not rhythm_reg & mask:
+            # One this player removed earlier. Put it back where it came from
+            # rather than adding a second copy by hand, so the two registers
+            # go on meaning what they say.
+            return (rhythm_reg | mask, hand_reg, True)
+        return (rhythm_reg, hand_reg | mask, True)
+
+    @staticmethod
+    def drum_steps(pattern, rhythm_reg, hand_reg=0):
         """A euclidean drum pattern thinned by the drum rhythm register.
 
-        SUBTRACTIVE, and that is the whole design decision. On a voice the
-        rhythm register decides which steps sound outright, because nothing
-        else has an opinion. On a drum, HITS and ROTATE have already drawn the
-        line - so the register may take a hit away and may never invent one. A
-        register that could add steps would leave the HITS encoder reporting a
-        number that is not the number of hits, with nothing on the surface to
-        say so.
+        THE RHYTHM REGISTER IS SUBTRACTIVE. On a voice it decides which steps
+        sound outright, because nothing else has an opinion. On a drum, HITS
+        and ROTATE have already drawn the line, so it may take a hit away and
+        may never invent one.
+
+        A HAND REGISTER SITS ON TOP, 2026-09-01. `hand_reg` is the steps the
+        PLAYER put in, added after the subtraction so a lane, a fill or an
+        evolving rhythm cannot take one away. Zero by default, so a channel
+        that has never been tapped is bit for bit what it always was.
+
+        That is what lets a drum tap ADD a step. Before it, the same gesture
+        meant two different things on the two kinds - on a voice a tap adds,
+        on a drum it did nothing wherever euclid had not already placed a hit.
+
+        THE ARGUMENT IT OVERTURNS, recorded because it was a good one: a
+        register that could add steps leaves the HITS encoder reporting a
+        number that is not the number of hits. True, and it is the same
+        bargain every generator verb here already makes - MELODY does not
+        report how many notes a voice plays either. The PADS are the truth
+        about what sounds, and they always were.
 
         Only the pattern's own bits are read, exactly as rhythm_mask does, so a
         12-step triplet division cannot pick up bits 12-15 left behind by a
         16-step one."""
 
-        return tuple(bool(step) and bool(rhythm_reg >> i & 1)
+        return tuple((bool(step) and bool(rhythm_reg >> i & 1))
+                     or bool(hand_reg >> i & 1)
                      for i, step in enumerate(pattern))
 
     @staticmethod
@@ -1084,6 +1142,13 @@ class techno_lib:
                          # from here, so this literal is what an old snapshot
                          # inherits.
                          rhythm=0, rhythm_reg=0xFFFF,
+                         # THE HAND REGISTER, 2026-09-01. Steps the player
+                         # tapped IN, added on top of the subtractive one so a
+                         # lane, a fill or an evolving rhythm cannot take one
+                         # away. ZERO IS THE MIGRATION: a channel that has
+                         # never been tapped, and every existing snapshot,
+                         # plays exactly what it played before.
+                         hand_reg=0,
                          # LEAN, 2026-09-01. Which PLACEMENT generator draws
                          # the line. `off` is euclid and IS the migration: a
                          # drum channel out of any existing snapshot is placed
