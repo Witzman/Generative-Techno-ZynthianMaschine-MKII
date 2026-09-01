@@ -221,7 +221,11 @@ class TestColumnModel(unittest.TestCase):
     def test_drum_control_has_three_greyed_columns(self):
         cols = tl.columns(_desc("CONTROL", "drum"), "drum", self.drum_state())
         grey = [c for c in cols if c["grey"]]
-        self.assertEqual([c["name"] for c in grey], ["tune", "decay", "filtr"])
+        # The names are the page title plus the slot number since 2026-09-01.
+        # A slot with no verb has nothing else to be called, and a made-up
+        # instrument name ("tune", "filtr") on a control that does not exist
+        # was a promise the sampler could never keep.
+        self.assertEqual([c["name"] for c in grey], ["ctrl3", "ctrl4", "ctrl5"])
         for c in grey:
             self.assertEqual(c["value"], "----")
             self.assertIsNone(c["bar"])
@@ -1750,8 +1754,11 @@ class TestNameColumnsDrawSmall(unittest.TestCase):
     double-height value that reads at a glance while playing."""
 
     def _cols(self, kind, state):
-        desc = {"title": "CTRL", "shape": tl.SHAPE_CHANNEL,
-                "verbs": [None] * 8}
+        # The real descriptor, not a stub with eight empty slots. Since
+        # 2026-09-01 a page IS its verbs tuple, so a stub with no verbs draws
+        # eight dead columns - which is correct, and useless as a test of what
+        # the shipped CONTROL page does.
+        desc = tl.PAGE_RINGS[("CONTROL", kind)][0]
         return tl.columns(desc, kind, state)
 
     def test_preset_column_is_small_and_shortened(self):

@@ -2871,6 +2871,157 @@ class techno_lib:
                    lambda v: "OFF" if v <= 0 else techno_lib._num(v)),
     }
 
+    # ------------------------------------------------------- one verb, one column
+    #
+    # THE ONE TABLE. Before 2026-09-01 every page drew its own hand-written
+    # list of eight columns, and three of those lists carried the comment
+    # "THIS LIST'S ORDER MUST MATCH the verbs tuple position for position ...
+    # nothing checks that they agree at runtime". That is a defect waiting in
+    # a comment: reorder one and the knob under a name moves something else,
+    # with no error and no log - the exact shape of every quiet bug in this
+    # project's history.
+    #
+    # Now a page IS its verbs tuple. `_columns_inner` walks it and asks here
+    # what each verb draws, so the two cannot disagree - there is only one of
+    # them. It also makes a new page free: name the verbs and it renders.
+    #
+    # One entry is (label, bar kind, frac, format). `frac` and `format` both
+    # take (value, state, kind), so a verb whose bar depends on the pattern
+    # (HITS against LENGTH) needs no special case above.
+
+    @staticmethod
+    def _pct(v, state=None, kind=None):
+        return v / 100.0
+
+    @staticmethod
+    def _127(v, state=None, kind=None):
+        return v / 127.0
+
+    @staticmethod
+    def _word_at(floor, word):
+        """A value that reads as a WORD at its floor and a number above it.
+
+        LOCK, RAW, OFF, HARD, BAR - each of them is a choice the player made,
+        and a bare 0000 there invites turning the knob down looking for an off
+        that is already under the hand."""
+
+        def fmt(v, state=None, kind=None):
+            return word if v <= floor else techno_lib._num(v)
+        return fmt
+
+    @staticmethod
+    def _enum(values, labels=None, upper=True):
+        """A discrete column: the word, and a segment bar showing where in the
+        list it sits."""
+
+        def fmt(v, state=None, kind=None):
+            if labels is not None:
+                return labels.get(v, str(v))
+            return str(v).upper() if upper else str(v)
+
+        def frac(v, state=None, kind=None):
+            index = values.index(v) if v in values else 0
+            return (index, len(values))
+        return fmt, frac
+
+    @staticmethod
+    def _steps_of(state):
+        """How many steps this channel's pattern has, never zero."""
+        return max(1, int(state.get("length", 16) or 16))
+
+    @staticmethod
+    def _rotate_span(v, state=None, kind=None):
+        # A voice ROTATE turns the rendered LINE and is bounded by the sixteen
+        # pads; a drum ROTATE turns the field and is bounded by its own length.
+        if kind == "voice":
+            return (v, 16)
+        return (v, techno_lib._steps_of(state))
+
+    VERB_COLS = None       # built after the class body, see below
+
+    @staticmethod
+    def verb_col(verb, state, kind, pending=frozenset()):
+        """One column for one verb, or None when this verb has no entry here.
+
+        PURE. `state` is a channel view for a channel verb and the globals
+        dict for a global one - the table does not care which, because a verb
+        name is unique across both."""
+
+        spec = techno_lib.VERB_COLS.get(verb)
+        if spec is None:
+            return None
+        label, bar, frac, fmt = spec
+        value = state.get(verb, techno_lib.VERB_DEFAULTS.get(verb))
+        if value is None and verb in techno_lib.NULLABLE_VERBS:
+            # FEED alone: None is its OFF, not an absent verb. Everywhere else
+            # a missing key is law L4 and draws dead.
+            value = None
+        elif value is None:
+            # Law L4. A channel that does not carry this verb at all - LANE on
+            # a voice, CUTOFF on a drum - draws dead rather than drawing a lie.
+            return techno_lib._dead(label.lower())
+        return techno_lib._col(label, fmt(value, state, kind), bar,
+                               frac(value, state, kind),
+                               pending=verb in pending,
+                               small=verb in techno_lib.NAME_VERBS)
+
+    # Verbs whose value is a NAME rather than a number: single height, nine
+    # characters, shortened by short_label. Four characters cannot tell one
+    # preset from the next.
+    NAME_VERBS = frozenset(("kit", "sample", "preset"))
+
+    # Verbs whose None is a real value rather than an absent key.
+    NULLABLE_VERBS = frozenset(("feed",))
+
+    # A verb here is one EVERY channel of every kind carries, so a view that
+    # arrives without it is an incomplete view - a snapshot written before the
+    # verb existed, or a caller that built a partial dict - and NOT a channel
+    # that lacks the verb. It draws its default rather than drawing dead.
+    #
+    # THE ABSENCES ARE THE POINT and each one is load-bearing. `lane` is on
+    # the drums alone; `cutoff`, `reso`, `env`, `decay`, `gate`, `octave` and
+    # `preset` on the voices alone; `kit` and `sample` on the samplers alone.
+    # Give any of them a default here and law L4 stops working for it: the
+    # column would show a number on a channel whose knob cannot move it,
+    # which is the one lie this surface is built not to tell.
+    #
+    # The values match default_channel_state exactly - migration defaults, so
+    # an old snapshot renders as what it played before the verb existed.
+    VERB_DEFAULTS = {
+        "rhythm": 0, "ratchet": 1, "rotate": 0, "amount": 0,
+        "walk_span": 32, "walk_stride": 4, "move": 100, "phrase": 1,
+        "fill": 0, "exit": 0, "swing": 50, "chance": 100,
+        "rule": "rand", "lean": "off", "model": "reg",
+    }
+
+    # The four CONTROL columns that exist only where the running plugin
+    # publishes a symbol for that role, and their position in the flags tuple
+    # synth_ctrl_flags returns.
+    SYNTH_ROLE_INDEX = {"cutoff": 0, "reso": 1, "env": 2, "decay": 3}
+
+    @staticmethod
+    def verb_is_dead(verb, kind, state):
+        """True when this verb exists in the state but cannot act right now.
+
+        Law L4's CONTEXTUAL half. The other half - a verb the channel has no
+        key for at all - is handled by verb_col, which draws dead on a missing
+        key. Both end in the same picture; they differ only in what the driver
+        has to know to refuse the encoder, so both go through _column_dead.
+
+        SPAN and STRIDE belong to the WALK model and mean nothing to the shift
+        register. CUTOFF, RESO, ENV and DECAY exist on every voice state but
+        reach a plugin only where that plugin publishes the symbol - a sampler
+        behaving as a voice publishes none of the four, and a synth the
+        measured table has never seen may publish three."""
+
+        if verb in ("walk_span", "walk_stride"):
+            return state.get("model", techno_lib.MODEL_REGISTER) != \
+                techno_lib.MODEL_WALK
+        index = techno_lib.SYNTH_ROLE_INDEX.get(verb)
+        if index is not None and kind == "voice":
+            return not techno_lib.synth_ctrl_flags(state)[index]
+        return False
+
     @staticmethod
     def page_label(title, index, count):
         """What the indicator row draws. A one-page ring says only its name -
@@ -3847,7 +3998,15 @@ class techno_lib:
 
         `desc` is a page descriptor. For SHAPE_SPREAD, `state` is eight
         (letter, name, view) tuples; for the other two shapes it is one view
-        dict, as it has always been."""
+        dict, as it has always been.
+
+        A CHANNEL or GLOBAL page IS ITS VERBS TUPLE, since 2026-09-01. Every
+        page used to draw a hand-written list of eight columns beside the
+        tuple that decided what the encoders wrote, and three of those lists
+        carried the comment "nothing checks that they agree at runtime".
+        Nothing has to now: there is one list, walked here and dispatched
+        through VERB_COLS."""
+
         if desc["shape"] == techno_lib.SHAPE_SPREAD:
             return techno_lib.spread_columns(desc, state)
         if desc["shape"] == techno_lib.SHAPE_PENDING:
@@ -3858,181 +4017,25 @@ class techno_lib:
         if desc.get("generated"):
             return techno_lib.generated_columns(desc, state)
 
-        page = desc["title"]
-        p = state.get("pending", set())
-        n, c, dead = techno_lib._num, techno_lib._col, techno_lib._dead
-
-        def rule_col():
-            """RULE, on both kinds. RAND is a WORD, not a blank: the shift
-            register is a choice the player made, and a column that showed
-            nothing for it would read as a control that is not working."""
-            rule = state.get("rule", techno_lib.RULE_RANDOM)
-            index = (techno_lib.RULES.index(rule)
-                     if rule in techno_lib.RULES else 0)
-            return c("RULE", rule.upper() if rule != techno_lib.RULE_RANDOM
-                     else "RAND", "seg", (index, len(techno_lib.RULES)))
-
-        if page == "GEN" and kind == "drum":
-            lean = state.get("lean", techno_lib.LEAN_OFF)
-            index = (techno_lib.LEANS.index(lean)
-                     if lean in techno_lib.LEANS else 0)
-            return [
-                rule_col(),
-                # EUCL is a word, not a blank: euclid is a choice the player
-                # made and the column has to say which generator is drawing.
-                c("LEAN", techno_lib.LEAN_LABELS.get(lean, "EUCL"), "seg",
-                  (index, len(techno_lib.LEANS))),
-            ] + [dead("gen%d" % i) for i in range(3, 9)]
-
-
-        if desc["shape"] == techno_lib.SHAPE_GLOBAL and page == "WALK":
-            walk = state.get("walk", 0)
-            return [
-                c("ROOT", techno_lib.NOTE_NAMES[state["root"]], "seg",
-                  (state["root"], 12), pending="root" in p),
-                c("SCALE", techno_lib.SCALES[state["scale"]][0], "seg",
-                  (state["scale"], len(techno_lib.SCALES)),
-                  pending="scale" in p),
-                # LOCK rather than 0000, the same word MELODY and RHYTHM use
-                # at zero. A number here invites turning it down looking for
-                # off, and there is nothing below zero.
-                c("WALK", "LOCK" if walk <= 0 else "%dbar" % walk, "seg",
-                  (walk, 17)),
-                c("SPAN", n(state.get("wspan", 2)), "uni",
-                  state.get("wspan", 2) / 7.0),
-                dead("walk5"), dead("walk6"), dead("walk7"), dead("walk8"),
-            ]
-
-        if desc["shape"] == techno_lib.SHAPE_GLOBAL:
-            return [
-                c("ROOT", techno_lib.NOTE_NAMES[state["root"]], "seg",
-                  (state["root"], 12), pending="root" in p),
-                c("SCALE", techno_lib.SCALES[state["scale"]][0], "seg",
-                  (state["scale"], len(techno_lib.SCALES)), pending="scale" in p),
-                c("BPM", n(state["bpm"]), "uni", (state["bpm"] - 60) / 140.0),
-                c("MASTER", n(state["master"]), "uni", state["master"] / 100.0),
-                c("REVSIZE", n(state["revsize"]), "uni", state["revsize"] / 100.0),
-                c("REVTYPE", n(state["revtype"]), "seg", (state["revtype"], 43)),
-                c("DLYTIME", techno_lib.DELAY_DIVISIONS[state["dlytime"]][0], "seg",
-                  (state["dlytime"], len(techno_lib.DELAY_DIVISIONS))),
-                c("DLYFBK", n(state["dlyfbk"]), "uni", state["dlyfbk"] / 100.0),
-            ]
-
-        if page == "CTRL":
-            tail = [
-                c("LEVEL", n(state["level"]), "uni", state["level"] / 100.0),
-                c("REVERB", n(state["reverb"]), "uni", state["reverb"] / 100.0),
-                c("DELAY", n(state["delay"]), "uni", state["delay"] / 100.0),
-            ]
-            if kind == "drum":
-                return [
-                    c("KIT", state["kit"], "seg", (0, 1), pending="kit" in p,
-                      small=True),
-                    c("SAMPLE", state["sample"], "seg", (0, 1),
-                      pending="sample" in p, small=True),
-                    dead("tune"), dead("decay"), dead("filtr"),
-                ] + tail
-            # A column is live only where the running plugin publishes a
-            # symbol for that role. Per column, not per channel: a sampler
-            # behaving as a voice has none of the four (SP4), and a synth the
-            # measured table has never seen may publish three of them.
-            # Law L4 - draw dead, never a number the knob cannot move.
-            live = techno_lib.synth_ctrl_flags(state)
-            return [
-                c("PRESET", state["preset"], "seg", (0, 1),
-                  pending="preset" in p, small=True),
-            ] + [
-                c(label, n(state[key]), "uni", state[key] / 127.0)
-                if live[index] else dead(key)
-                for index, (label, key) in enumerate((
-                    ("CUTOFF", "cutoff"), ("RESO", "reso"),
-                    ("ENV", "env"), ("DECAY", "decay")))
-            ] + tail
-
-        # STEP
-        if kind == "drum":
-            return [
-                c("HITS", n(state["hits"]), "uni", state["hits"] / max(1, state["length"])),
-                c("ROTATE", n(state["rotate"]), "seg",
-                  (state["rotate"], max(1, state["length"]))),
-                c("DIVIDE", techno_lib.DIVISION_LABELS[state["div"]], "seg",
-                  (state["div"], len(techno_lib.DIVISION_LABELS)), pending="div" in p),
-                c("LENGTH", n(state["length"]), "uni", state["length"] / 16.0,
-                  pending="length" in p),
-                c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
-                c("CHANCE", n(state["chance"]), "uni", state["chance"] / 100.0),
-                # The drum rhythm register's evolve knob, 0 = LOCK, exactly
-                # as it reads on a voice. SWING moved to the spread page in
-                # the same round - see the verbs tuple for why.
-                c("RHYTHM", n(state.get("rhythm", 0)), "uni",
-                  state.get("rhythm", 0) / 100.0),
-                # SP10 step 3: the page's dead eighth column, filled. OFF at 1
-                # rather than "1", because one hit is not a ratchet and reading
-                # "1" invites turning it down looking for off.
-                c("RATCH", "OFF" if state.get("ratchet", 1) <= 1
-                  else "x%d" % state["ratchet"], "seg",
-                  (max(0, state.get("ratchet", 1) - 1), 4)),
-            ]
-        if page == "GEN":
-            # ORDER MUST MATCH the GEN page's verbs tuple position for
-            # position, exactly as the STEP page's list does below.
-            model = state.get("model", techno_lib.MODEL_REGISTER)
-            walking = model == techno_lib.MODEL_WALK
-            feed = state.get("feed")
-            length = max(1, state.get("length", 8))
-            return [
-                c("ROTATE", n(state.get("rotate", 0)), "seg",
-                  (state.get("rotate", 0), 16)),
-                c("MODEL", "WALK" if walking else "REG", "seg",
-                  (1 if walking else 0, len(techno_lib.MODELS))),
-                # SPAN and STRIDE belong to the walk and mean nothing to the
-                # register - drawn dead on the register model rather than
-                # showing a number the knob cannot make audible. Law L4.
-                c("SPAN", n(state.get("walk_span", 32)), "uni",
-                  state.get("walk_span", 32) / 128.0) if walking
-                else dead("span"),
-                c("STRIDE", n(state.get("walk_stride", 4)), "uni",
-                  state.get("walk_stride", 4) / 32.0) if walking
-                else dead("stride"),
-                # OFF, not a channel letter, when nothing is feeding this
-                # voice. A coupling that is not coupled has to say so.
-                c("FEED", "OFF" if feed is None else "ABCDEFGH"[feed % 8],
-                  "seg", (0 if feed is None else feed + 1, 9)),
-                c("AMT", n(state.get("amount", 0)), "uni",
-                  state.get("amount", 0) / 100.0),
-                rule_col(), dead("gen8"),
-            ]
-
-        # THIS LIST'S ORDER MUST MATCH PAGE_RINGS[("STEP", "voice")][0]["verbs"]
-        # position for position - the verbs tuple decides which encoder writes
-        # what, this decides what each encoder DRAWS, and nothing checks that
-        # they agree at runtime. Reorder one and you reorder the other.
-        #
-        # Owner's layout, 2026-08-16, chosen at the rig: pattern time first
-        # (DIVIDE, GATE), then THE TWO GENERATORS SIDE BY SIDE (MELODY,
-        # RHYTHM) because they are one idea and the hand should find them
-        # together, then pitch (LENGTH, OCTAVE, RANGE) and VELO.
-        return [
-            c("DIVIDE", techno_lib.DIVISION_LABELS[state["div"]], "seg",
-              (state["div"], len(techno_lib.DIVISION_LABELS)), pending="div" in p),
-            c("GATE", n(state["gate"]), "uni", state["gate"] / techno_lib.GATE_MAX),
-            # LOCK is a word, not a number that could be a coincidence.
-            # MELODY, not RANDOM: there are two generators now and "random"
-            # never said random WHAT. The state key stays `random` - renaming
-            # it would move the data in every saved snapshot for a cosmetic
-            # gain.
-            c("MELODY", "LOCK" if state["random"] <= 0 else n(state["random"]), "uni",
-              state["random"] / 100.0),
-            # The rhythm generator, reading LOCK at zero exactly as MELODY
-            # does - one grammar for both, because they are one idea.
-            c("RHYTHM", "LOCK" if state["rhythm"] <= 0 else n(state["rhythm"]), "uni",
-              state["rhythm"] / 100.0),
-            c("LENGTH", n(state["length"]), "uni", state["length"] / 16.0,
-              pending="length" in p),
-            c("OCTAVE", f"{state['octave']:+03d}", "bi", (state["octave"] + 2) / 4.0),
-            c("RANGE", str(state["range"]), "seg", (state["range"] - 1, 4)),
-            c("VELO", n(state["velo"]), "uni", state["velo"] / 127.0),
-        ]
+        pending = state.get("pending", set())
+        out = []
+        for index, verb in enumerate(desc["verbs"]):
+            if verb is None:
+                # A slot with no verb at all. It has a NAME so the dead
+                # column is distinguishable in a test failure, and the page
+                # title makes it unique across pages.
+                out.append(techno_lib._dead(
+                    f"{desc['title'].lower()}{index + 1}"))
+                continue
+            col = techno_lib.verb_col(verb, state, kind, pending)
+            if col is None:
+                out.append(techno_lib._dead(verb.lower()))
+            elif techno_lib.verb_is_dead(verb, kind, state):
+                out.append(techno_lib._dead(
+                    techno_lib.VERB_COLS[verb][0].lower()))
+            else:
+                out.append(col)
+        return out
 
     @staticmethod
     def session_log_path(environ):
@@ -4255,6 +4258,170 @@ class techno_lib:
             return (f"zynseq bank moved {was} -> {bank} from outside this "
                     f"driver; adopting it and resyncing (drift {self.drifts}).")
 
+
+# The verb table is built after the class body for the same reason the rings
+# are: its entries call techno_lib's own helpers, which are not bound until the
+# class exists. It is read as techno_lib.VERB_COLS like everything else.
+_n = techno_lib._num
+_pct = techno_lib._pct
+_127 = techno_lib._127
+_word = techno_lib._word_at
+_enum = techno_lib._enum
+_steps = techno_lib._steps_of
+
+
+def _plain(v, state=None, kind=None):
+    return _n(v)
+
+
+def _span(count):
+    """A segment bar over a fixed-length list."""
+    def frac(v, state=None, kind=None):
+        return (v, count)
+    return frac
+
+
+def _over(hi):
+    def frac(v, state=None, kind=None):
+        return v / float(hi)
+    return frac
+
+
+def _name_value(v, state=None, kind=None):
+    return v
+
+
+def _no_position(v, state=None, kind=None):
+    return (0, 1)
+
+
+_rule_fmt, _rule_frac = _enum(techno_lib.RULES)
+_lean_fmt, _lean_frac = _enum(techno_lib.LEANS,
+                              labels=techno_lib.LEAN_LABELS)
+_model_fmt, _model_frac = _enum(techno_lib.MODELS,
+                                labels={techno_lib.MODEL_REGISTER: "REG",
+                                        techno_lib.MODEL_WALK: "WALK"})
+
+
+def _rand_fmt(v, state=None, kind=None):
+    # RAND is a WORD, not a blank: the shift register is a choice the player
+    # made, and a column showing nothing for it reads as a broken control.
+    return "RAND" if v == techno_lib.RULE_RANDOM else str(v).upper()
+
+
+def _feed_fmt(v, state=None, kind=None):
+    # OFF, not a channel letter, when nothing is feeding this voice.
+    return "OFF" if v is None else "ABCDEFGH"[int(v) % 8]
+
+
+def _feed_frac(v, state=None, kind=None):
+    return (0 if v is None else int(v) + 1, 9)
+
+
+def _hits_frac(v, state=None, kind=None):
+    return v / float(_steps(state))
+
+
+def _div_fmt(v, state=None, kind=None):
+    return techno_lib.DIVISION_LABELS[int(v)]
+
+
+def _ratchet_fmt(v, state=None, kind=None):
+    # OFF at 1: one hit is not a ratchet, and reading "1" invites turning it
+    # down looking for an off that is already there.
+    return "OFF" if v <= 1 else "x%d" % v
+
+
+def _ratchet_frac(v, state=None, kind=None):
+    return (max(0, int(v) - 1), 4)
+
+
+def _octave_fmt(v, state=None, kind=None):
+    return f"{int(v):+03d}"
+
+
+def _octave_frac(v, state=None, kind=None):
+    return (int(v) + 2) / 4.0
+
+
+def _root_fmt(v, state=None, kind=None):
+    return techno_lib.NOTE_NAMES[int(v)]
+
+
+def _scale_fmt(v, state=None, kind=None):
+    return techno_lib.SCALES[int(v)][0]
+
+
+def _dlytime_fmt(v, state=None, kind=None):
+    return techno_lib.DELAY_DIVISIONS[int(v)][0]
+
+
+techno_lib.VERB_COLS = {
+    # ---- what the generator writes -----------------------------------------
+    "hits":    ("HITS", "uni", _hits_frac, _plain),
+    "rotate":  ("ROTATE", "seg", techno_lib._rotate_span, _plain),
+    "div":     ("DIVIDE", "seg", _span(len(techno_lib.DIVISION_LABELS)),
+                _div_fmt),
+    "length":  ("LENGTH", "uni", _over(16.0), _plain),
+    "rule":    ("RULE", "seg", _rule_frac, _rand_fmt),
+    "lean":    ("LEAN", "seg", _lean_frac, _lean_fmt),
+    "model":   ("MODEL", "seg", _model_frac, _model_fmt),
+    # MELODY, not RANDOM: there are two generators and "random" never said
+    # random WHAT. The state key stays `random` - renaming it would move the
+    # data in every saved snapshot for a cosmetic gain.
+    "random":  ("MELODY", "uni", _pct, _word(0, "LOCK")),
+    "rhythm":  ("RHYTHM", "uni", _pct, _word(0, "LOCK")),
+    "walk_span":   ("SPAN", "uni", _over(128.0), _plain),
+    "walk_stride": ("STRIDE", "uni", _over(32.0), _plain),
+    "feed":    ("FEED", "seg", _feed_frac, _feed_fmt),
+    "amount":  ("AMT", "uni", _pct, _plain),
+    "lane":    ("LANE", "uni", _pct, _word(0, "RAW")),
+    # ---- how it is played ---------------------------------------------------
+    "velo":    ("VELO", "uni", _127, _plain),
+    "gate":    ("GATE", "uni", _over(float(techno_lib.GATE_MAX)), _plain),
+    "chance":  ("CHANCE", "uni", _pct, _plain),
+    "swing":   ("SWING", "uni", lambda v, s=None, k=None: (v - 50) / 25.0,
+                _plain),
+    "ratchet": ("RATCH", "seg", _ratchet_frac, _ratchet_fmt),
+    "octave":  ("OCTAVE", "bi", _octave_frac, _octave_fmt),
+    "range":   ("RANGE", "seg", lambda v, s=None, k=None: (int(v) - 1, 4),
+                lambda v, s=None, k=None: str(int(v))),
+    # ---- how much the machine may do ---------------------------------------
+    "move":    ("MOVE", "uni", _pct, _word(0, "LOCK")),
+    "phrase":  ("PHRASE", "seg", _over(4.0),
+                lambda v, s=None, k=None: "BAR" if v <= 1 else "%dbar" % v),
+    "fill":    ("FILL", "uni", _pct, _word(0, "OFF")),
+    "exit":    ("EXIT", "seg", _over(4.0),
+                lambda v, s=None, k=None: "HARD" if v <= 0 else "%dbar" % v),
+    # ---- how it sounds ------------------------------------------------------
+    # A name has no position in a list the surface can know, so its segment
+    # bar is a plain full frame rather than a meter - _span() would put the
+    # NAME where a number belongs.
+    "kit":     ("KIT", "seg", _no_position, _name_value),
+    "sample":  ("SAMPLE", "seg", _no_position, _name_value),
+    "preset":  ("PRESET", "seg", _no_position, _name_value),
+    "cutoff":  ("CUTOFF", "uni", _127, _plain),
+    "reso":    ("RESO", "uni", _127, _plain),
+    "env":     ("ENV", "uni", _127, _plain),
+    "decay":   ("DECAY", "uni", _127, _plain),
+    "level":   ("LEVEL", "uni", _pct, _plain),
+    "reverb":  ("REVERB", "uni", _pct, _plain),
+    "delay":   ("DELAY", "uni", _pct, _plain),
+    # ---- what holds for everything -----------------------------------------
+    "root":    ("ROOT", "seg", _span(12), _root_fmt),
+    "scale":   ("SCALE", "seg", _span(len(techno_lib.SCALES)), _scale_fmt),
+    "bpm":     ("BPM", "uni", lambda v, s=None, k=None: (v - 60) / 140.0,
+                _plain),
+    "master":  ("MASTER", "uni", _pct, _plain),
+    "revsize": ("REVSIZE", "uni", _pct, _plain),
+    "revtype": ("REVTYPE", "seg", _span(43), _plain),
+    "dlytime": ("DLYTIME", "seg", _span(len(techno_lib.DELAY_DIVISIONS)),
+                _dlytime_fmt),
+    "dlyfbk":  ("DLYFBK", "uni", _pct, _plain),
+    "walk":    ("WALK", "seg", _span(17),
+                lambda v, s=None, k=None: "LOCK" if v <= 0 else "%dbar" % v),
+    "wspan":   ("SPAN", "uni", _over(7.0), _plain),
+}
 
 # Rings are built after the class body so page_desc() is callable. Keeping them
 # out of the class body is the only reason they are down here; they are read as
