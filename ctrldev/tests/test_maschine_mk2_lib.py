@@ -916,9 +916,17 @@ class TheDriverIsParsableEvenWhereItIsNotImportable(unittest.TestCase):
                     and isinstance(node.ctx, ast.Load)):
                 read.setdefault(node.attr, node.lineno)
 
-        # The driver's own vocabulary: the modifier flags and everything it
-        # names with a leading underscore. Anything else may come from the
-        # base class, which this file cannot see.
+        # The driver's own vocabulary: the modifier flags, everything it
+        # names with a leading underscore, and every ALL_CAPS constant - a
+        # constant in SCREAMING_CASE is this file's own by convention and
+        # never something zynthian_ctrldev_base provides.
+        #
+        # THE CAPS HALF WAS ADDED AFTER IT WAS NEEDED. METER_PIXELS and
+        # METER_FLOOR were deleted by accident on 2026-09-01, a hundred lines
+        # from their readers, and this test - which existed by then - let it
+        # through because neither name matched. One of the two readers hid the
+        # failure inside a try/except and would have shown a dead meter
+        # forever; the other raised on the first MOD gesture.
         MINE = {"shift_down", "mod_down", "mod_held", "mod_latched",
                 "lens_down", "lens_held", "lens_latched", "arm_down",
                 "bank_down", "mute_down", "navigate_down", "erase_down",
@@ -926,7 +934,8 @@ class TheDriverIsParsableEvenWhereItIsNotImportable(unittest.TestCase):
                 "freeze_deep", "latches", "mode", "group", "state", "owner"}
         missing = sorted(
             (name, line) for name, line in read.items()
-            if (name in MINE or name.startswith("_"))
+            if (name in MINE or name.startswith("_")
+                or (name.isupper() and len(name) > 2))
             and name not in assigned and name not in methods)
         self.assertEqual(missing, [],
                          f"read but never assigned: {missing}")

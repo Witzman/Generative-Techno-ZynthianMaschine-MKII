@@ -633,6 +633,22 @@ class led_cache:
         self._at[key] = self._now()
         return True
 
+    def forget(self, key):
+        """Drop ONE key, so the next write under it always goes out.
+
+        For an LED with two writers that take turns - SELECT is the modifier
+        light most of the time and the armed-macro countdown the rest of it.
+        Each writer has its own key, so the one standing down leaves a cache
+        entry describing a value the other has since overwritten; when it
+        takes over again it computes the same value, finds no change, and
+        sends nothing. The LED then keeps whatever the other writer left.
+
+        Measured shape rather than theory: SELECT went dark when a macro
+        landed and stayed dark until the button was pressed again."""
+
+        self._last.pop(key, None)
+        self._at.pop(key, None)
+
     def clear(self):
         self._last = {}
         self._at = {}

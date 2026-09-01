@@ -631,6 +631,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # `mod` keeps its own names below as properties, because MOD is read
         # in ten places and by three threads and a rename would touch every
         # one of them for no behavioural gain.
+        # CCs whose PRESS was taken by a chord. Their release must be taken
+        # too, or it reaches the latch and is measured against an unrelated
+        # earlier press.
+        self._chord_swallowed = set()
         self.latches = {name: tlib.latch() for name in
                         ("shift", "mod", "lens", "arm", "bank", "mute",
                          "navigate")}
@@ -863,6 +867,33 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     @property
     def lens_down(self):
         return self.latches["lens"].down
+
+    def _lens_now(self):
+        """The verb the lens is actually holding, or None.
+
+        VALIDATED AGAINST THE SELECTED CHANNEL, every time. `_lens_verb` is
+        whatever the hand last moved, and the hand may have moved it on a
+        channel of the other kind - turn a drum's HITS, select a voice, and
+        the lens would otherwise be holding a verb that channel does not have
+        and its own pages cannot reach.
+
+        That was not merely untidy: the euclid path took the column index as
+        its channel, so a stale HITS aimed at a voice would have rewritten a
+        Turing melody as a drum line. The refusal is at the door in _encoder
+        too - two gates, because this one keeps the PICTURE honest and that
+        one keeps the SOUND honest, and this surface's expensive bugs are all
+        the cases where those two disagreed.
+
+        Falls back to LENS_DEFAULT rather than closing the lens: an empty
+        page under a held button reads as a fault, and LEVEL is live on all
+        eight of anything."""
+
+        verb = tlib.lens_verb(self._lens_verb)
+        if verb is None:
+            return None
+        if verb in self._lens_ring():
+            return verb
+        return tlib.lens_verb(tlib.LENS_DEFAULT)
 
     @property
     def arm_down(self):
@@ -2219,7 +2250,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         the same question."""
 
         if self.lens_down:
-            verb = tlib.lens_verb(self._lens_verb)
+            verb = self._lens_now()
             if verb is not None:
                 return tlib.lens_desc(verb)
         ring = self._ring()
@@ -2245,11 +2276,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         - law G4 says ERASE is the only word for taking something away, and
         this button does not take anything. It puts the surface back.
 
-        Every latch that could hide the step picture is dropped: the lens, MOD
-        and FREEZE. The HELD flags are deliberately NOT touched - a finger on
-        SHIFT while the other hand hits HOME is still a finger on SHIFT, and
-        clearing it here would leave the driver's picture disagreeing with the
-        player's hand until they let go.
+        Every latch is dropped - all seven modifiers and both depths of
+        FREEZE - because every one of them can hide the step picture, and the
+        step picture is what this button is for. The HELD halves are
+        deliberately NOT touched: a finger on SHIFT while the other hand hits
+        HOME is still a finger on SHIFT, and clearing it here would leave the
+        driver's picture disagreeing with the player's hand until they let
+        go.
 
         It also re-anchors the big encoder. That control is absolute with no
         wrap handling in the daemon (main.rs:911), so it yanks its target once
@@ -2267,8 +2300,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # leaves the hold: a finger still on the button is a fact about the
         # world, and clearing it here would leave the driver's picture
         # disagreeing with the hand until it let go.
-        for name in ("lens", "mod"):
-            self.latches[name].clear()
+        # EVERY LATCH, not the two that latched when this was written. MUTE,
+        # DUPLICATE and NAVIGATE all latch since the duration rule went in,
+        # and each of them owns the sixteen pads - a latched NAVIGATE makes
+        # every pad inert on top of that. So the button whose whole job is to
+        # put the surface back was leaving a player in the three states that
+        # hide the step picture most completely.
+        #
+        # The HOLDS are deliberately left alone. A finger still on a button is
+        # a fact about the world, and clearing it here would leave the
+        # driver's picture disagreeing with the hand until it let go.
+        for latch in self.latches.values():
+            latch.clear()
         self.frozen = False
         self.freeze_deep = False
         # Re-anchor: the next turn is measured from where the knob is now.
@@ -2508,8 +2551,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         if self.lens_down:
             verbs = self._lens_ring()
-            self._lens_verb = tlib.lens_step(
-                tlib.lens_verb(self._lens_verb), verbs, delta)
+            self._lens_verb = tlib.lens_step(self._lens_now(), verbs, delta)
             self._recentre_encoders()
             self.enc_carry.clear()
             with self.lock:
@@ -3560,6 +3602,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # every other cancellation on the panel.
             if (action == "arm" and down and self.erase_down):
                 self._cancel_all_pending()
+                self._chord_swallowed.add(cc_num)
                 return True
             # MOD + ERASE + ALL drops every modulator. Three keys and two of
             # them modifiers, because it is destructive and nothing
@@ -3575,6 +3618,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if (action == "lens" and down and self.mod_down
                     and self.erase_down):
                 self._mod_clear_all()
+                self._chord_swallowed.add(cc_num)
+                return True
+            # THE RELEASE OF A SWALLOWED PRESS IS SWALLOWED TOO. Without this
+            # the chord ate the press and the release still reached
+            # latch.edge(), which measured it against the timestamp of some
+            # EARLIER, unrelated press - and if that was under the threshold,
+            # flipped the latch. A panic gesture that occasionally leaves an
+            # overlay latched behind it is worse than no panic gesture.
+            if not down and cc_num in self._chord_swallowed:
+                self._chord_swallowed.discard(cc_num)
                 return True
             if action is not None:
                 getattr(self, "_act_" + action)(down)
@@ -3652,20 +3705,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _act_arm(self, down):
         """ARM composes a macro and a length and lands it on a bar.
 
-        HELD, not latched - see the CC table for why. A BARE TAP while
-        anything is pending cancels EVERYTHING pending: the identical window
-        _act_reroll implements, and cancel-all rather than cancel-one for the
-        identical reason, that a half-cancelled gesture is harder to reason
-        about than none.
+        HELD OR LATCHED, like every other modifier - the duration rule. A tap
+        used to CANCEL everything pending, which meant the only way to read
+        the countdown ruler was to hold down the button that destroyed what
+        you were reading. Two fixes were made to that before the right one:
+        first any release cancelled, then only a release under 250 ms did.
 
-        A TAP, MEASURED - law L1's 250 ms, the same threshold _act_mod,
-        _act_freeze and _solo_button use. It used to be any release with no
-        pad press, whatever its length, and that made the countdown ruler
-        unreadable: the grid says "reading the countdown must not also change
-        it" and every pad on it is inert, but the button you have to HOLD to
-        see the pads wiped the queue when you let go. Found on the rig
-        2026-08-21, by following this project's own test plan, which says to
-        hold ARM mid-countdown and read the ruler.
+        The right one is that cancelling is not this button's job. It is
+        ERASE + SELECT now, on the modifier that means taking away everywhere
+        else on the panel, and it rhymes with the surgical version that
+        already existed on the PENDING page.
 
         The pick is cleared on press rather than on release so a second hold
         starts from nothing. Leaving it set would let a bare length tap re-arm
@@ -5436,7 +5485,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
 
         if verb in ("hits", "rotate", "div", "length"):
-            self._encoder(cc_num, cc_val, verb)
+            # THE CHANNEL IS PASSED, since 2026-09-01. _encoder used to read
+            # self.group and ignore its caller's channel, which was safe while
+            # these four only ever appeared on a channel-shaped page - there,
+            # the caller's channel IS the selected one.
+            #
+            # The lens broke that. It spreads any channel verb across all
+            # eight, so turning column F under the lens has to write channel
+            # F; before this it wrote whichever channel happened to be
+            # selected, while column F drew live and moved. Worse with a stale
+            # lens verb: hold HITS from a drum, select a voice, turn a live
+            # column, and the drum euclid path rewrites a Turing melody -
+            # exactly what the kind guards further down exist to prevent,
+            # re-entered through a different door.
+            self._encoder(cc_num, cc_val, verb, channel)
             return
         if verb == "kit":
             steps = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
@@ -5520,12 +5582,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if state is not None:
             state["rhythm_reg"] = 0xFFFF
 
-    def _encoder(self, cc_num, cc_val, verb):
+    def _encoder(self, cc_num, cc_val, verb, channel=None):
         """The four euclid parameters. They keep their own handler because
         each one has to re-clamp the others and rewrite the pattern, which the
-        generic verb path deliberately does not do."""
+        generic verb path deliberately does not do.
 
-        group = self.group
+        `channel` defaults to the selected one so every existing caller keeps
+        its meaning; the LENS passes a column index instead, because there the
+        knob under your finger belongs to a channel you have not selected.
+
+        THE KIND IS CHECKED HERE, not only at the callers. This is the drum
+        euclid path - it rewrites the whole pattern from hits and rotation -
+        and a voice's pattern comes from its shift register. The guards below
+        for `div`, `length` and `rotate` on a voice were written when the only
+        way in was a drum page; the lens can hand this any channel, so the
+        refusal belongs at the door."""
+
+        group = self.group if channel is None else int(channel)
+        if verb in ("hits", "rotate") and self.channel_kind(group) != "drum":
+            # A voice has no euclid field to turn. Its own ROTATE is a
+            # different verb on a different page and goes through apply().
+            return
 
         def take_back():
             """The generator takes back what you turn. A dead knob would be
@@ -8250,36 +8327,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._send_osc(lib.button_osc(led, state[0], state[1]))
 
     def _render_mutes(self):
-        """F1-F8 light what they did: lit = muted, or lit = soloed while the
-        F row means solo. SOLO itself is lit only while its mode is latched,
-        so the row's meaning is always readable from the panel.
+        """F1-F8 light what they do: bright = muted, or bright = soloed while
+        the row means solo. Dim = audible and reachable. Dark = there is no
+        channel behind that button at all.
 
-        In CONTROL the row is the page's SWITCHES instead, and then lit means
-        the switch is off its first position - dark on a column that carries
-        no switch, which is a button honestly saying it does nothing. Both
-        readings come from _switch_row(), the same call _f_button() asks."""
+        ONE MEANING IN EVERY MODE since 2026-09-01. CONTROL used to take the
+        row for the page's switches and this method had a second reading for
+        that; the row never leaves now, so both the branch and the predicate
+        behind it went with it. SOLO blinks while its mode is latched, which is the panel's
+        word for latched and the one thing telling you what these eight
+        buttons currently mean."""
 
         mixer = self.state_manager.zynmixer
         soloing = self.solo_down or self.solo_mode
-        switches = self._switch_row()
         for group in range(8):
             chan = self._mixer_chan(group)
-            if switches is not None:
-                on = bool(switches[group])
-            elif chan is None:
+            if chan is None:
                 on = False
             elif soloing:
                 on = bool(mixer.get_solo(chan))
             else:
                 on = bool(mixer.get_mute(chan))
             # A TOGGLE: bright when true, DIM when reachable, dark when there
-            # is nothing behind it - a Group with no chain, or a CONTROL
-            # column that carries no switch. The dark used to cover all three,
-            # so a channel with no chain looked exactly like an unmuted one.
-            available = switches is not None or chan is not None
-            if switches is not None:
-                available = switches[group] is not None
-            state = (COLOR_PAGE, tlib.toggle_light(on, available))
+            # is nothing behind it. The dark used to cover both "audible" and
+            # "no chain", so a channel that was not there looked exactly like
+            # one that was playing.
+            state = (COLOR_PAGE, tlib.toggle_light(on, chan is not None))
             if self.leds.changed(f"mute{group}", state):
                 self._send_osc(lib.button_osc(F_BUTTON_NAMES[group], state[0], state[1]))
         # SOLO latches, so it wears the latch blink like every other latch on
@@ -8352,7 +8425,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for name, led in self.OVERLAY_LEDS.items():
             if name == "arm" and (self._pending_macros.pending()
                                   or self._armed_while_stopped):
-                continue                      # _render_arm owns it
+                # _render_arm owns the LED while a macro counts down. ITS
+                # CACHE KEY IS DROPPED ON THE WAY PAST, and that is the whole
+                # point of this line: two writers on one LED with two keys
+                # meant the handover only worked in one direction. While
+                # pending, this writer's key froze at whatever it last wrote;
+                # when pending cleared, _render_arm wrote DARK and then this
+                # one recomputed the identical value it had cached, found no
+                # change, and sent nothing. SELECT stayed dark - reading, on a
+                # panel where dark now means "does nothing", as a dead button
+                # - until the next press of it.
+                self.leds.forget(f"overlay_{name}")
+                continue
             latch = self.latches[name]
             bright = tlib.state_light(latch.held, latch.latched, now)
             state = (COLOR_PAGE, bright)
@@ -8885,20 +8969,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         index = tlib.switch_index(value, ticks, labels)
         return (index, len(ticks), labels[index])
 
-    def _switch_row(self):
-        """RETIRED as an F-row predicate, 2026-09-01. Always None now.
-
-        The F row is mute in every mode, so there is nothing here to decide.
-        Kept as a named no-op rather than deleted because _render_mutes still
-        asks it, and because the answer it gives - "the row is never anything
-        but mute" - is the thing a future exception would have to argue
-        against out loud rather than by quietly growing a branch.
-
-        What it used to return lives on where it belongs: a switch column
-        draws the plugin's own word over a segment bar, and the ENCODER above
-        the button steps it through its own ticks."""
-
-        return None
+    # RESTORED 2026-09-01. These two were deleted by accident in the same hunk
+    # that removed _switch_press - they sat between it and _meter_frac - and
+    # nothing caught it, because both remaining readers hide the failure:
+    # _meter_frac's own try/except swallowed the AttributeError and returned
+    # None for every channel forever, so the level meter would simply never
+    # have worked again and the bar would have gone on showing fader position
+    # with nothing to say it had stopped measuring. The other reader, in
+    # _columns, is NOT guarded and raises the moment any visible column
+    # carries a modulator - which is the first thing MOD does.
+    #
+    # A deletion that removes a constant a hundred lines from its readers is
+    # exactly the kind of edit py_compile cannot see, and it is why the AST
+    # guard in tests/test_maschine_mk2_lib.py now checks that every `self.X`
+    # the driver reads is one the driver also sets.
+    METER_PIXELS = lib.SCREEN_COL - 12      # the bar's inner width in pixels
+    METER_FLOOR = 40.0                      # dB below 0 that fills the bar
 
     def _meter_frac(self, channel):
         """This channel's peak level as a 0-1 fraction, quantised to the bar's
@@ -8930,9 +9016,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         repaint, and a full screen is ~50 OSC packets."""
 
         desc = self._page()
-        ring = self._ring()
-        key = tlib.ring_key(self.mode, self._page_kind(self.group))
-        label = tlib.page_label(desc["title"], self.page_idx.get(key, 0), len(ring))
+        if self.lens_down:
+            # THE LENS IS ONE PAGE and its arrows step the VERB, not a page.
+            # Reading page_idx here counted the ring UNDERNEATH it, so the
+            # indicator showed a position in a ring nothing could move -
+            # `ALL RULE 2/2` while the arrows walked twenty verbs. Its own
+            # title already names the verb, which is the only position that
+            # means anything here.
+            label = desc["title"]
+        else:
+            ring = self._ring()
+            key = tlib.ring_key(self.mode, self._page_kind(self.group))
+            label = tlib.page_label(desc["title"],
+                                    self.page_idx.get(key, 0), len(ring))
         # THE STALL BANNER REPLACES EVERYTHING BELOW IT. Composed first and
         # returned early, because every suffix in the chain that follows makes
         # the line longer and the indicator truncates silently at 42

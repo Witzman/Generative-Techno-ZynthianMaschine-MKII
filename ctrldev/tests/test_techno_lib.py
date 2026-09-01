@@ -2124,8 +2124,26 @@ class TheLens(unittest.TestCase):
         # An fx: port is already one control for all eight.
         self.assertIsNone(tl.lens_verb("fx:reverb:decay"))
 
-    def test_a_plugin_port_is_per_channel_and_spreads(self):
-        self.assertEqual(tl.lens_verb("lv2:cutoff"), "lv2:cutoff")
+    def test_a_plugin_port_is_refused(self):
+        # It IS per channel, so it looks spreadable in principle and is wrong
+        # in every particular: VERB_COLS has no entry for it, so all eight
+        # columns would draw dead and every encoder would refuse; the title
+        # would read the raw symbol; and the eight channels run three
+        # different synths, so column 4's `lv2:cutoff` and column 6's are not
+        # the same control even when the symbol matches. A page of eight dead
+        # columns under a held button is what law L4 exists to prevent.
+        self.assertIsNone(tl.lens_verb("lv2:cutoff"))
+        self.assertIsNone(tl.lens_verb("lv2:DCF1_CUTOFF"))
+
+    def test_the_lens_only_ever_holds_a_verb_it_can_draw(self):
+        # The closing invariant, and the one that catches the next verb added
+        # to a page without an entry in VERB_COLS.
+        for verb in list(tl.VERB_COLS) + ["lv2:x", "fx:reverb:x", "kit",
+                                          "bpm", "nonsense", None, ""]:
+            held = tl.lens_verb(verb)
+            if held is None:
+                continue
+            self.assertIn(held, tl.VERB_COLS, f"{verb!r} -> {held!r}")
 
     def test_a_refusal_leaves_the_lens_where_it_was(self):
         # None is the signal to KEEP the previous verb, not to blank the page.

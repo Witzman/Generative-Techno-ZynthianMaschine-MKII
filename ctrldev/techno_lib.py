@@ -2630,9 +2630,10 @@ class techno_lib:
         # of working rule 7 satisfied, and this is the only feature in four
         # packages that had no blocking measurement at all.
         #
-        # Held like SHIFT. A latched mute overlay is state a player can walk
-        # away from, and the pads would stop being the step picture until they
-        # noticed.
+        # HELD OR LATCHED, the duration rule. The old note here said a
+        # latched grid is state a player can walk away from; that is true of
+        # every latch on this panel and is what the LIGHT is for - MUTE blinks
+        # while it is latched, and HOME drops it.
         33: "mute",
         # DUPLICATE. CC 29 is one of the three in CCS_MEASURED_AND_UNCLAIMED -
         # measured in the G4 capture, and `grep duplicate daemon/src/main.rs`
@@ -2640,9 +2641,9 @@ class techno_lib:
         # 2026-08-15. Both halves of working rule 7 are satisfied and neither
         # was read off a token name.
         #
-        # HELD, never latched, exactly like MUTE: a latched arrangement picker
-        # is state a player can walk away from, and the pads would stop being
-        # the step picture until they noticed.
+        # HELD OR LATCHED, and the latch is the USEFUL half here: a bank
+        # press lands on the bar, so the hand has nothing to do until the
+        # boundary arrives and holding the button through it is wasted.
         #
         # DUPLICATE sits in the same physical row as SELECT (ARM), SOLO and
         # MUTE - the row this surface already spends on pad overlays.
@@ -2651,19 +2652,23 @@ class techno_lib:
         # LED index 22 MEASURED 2026-08-15 - both halves of working rule 7 are
         # satisfied, and neither was read off the daemon's token name.
         #
-        # STATEFUL and HELD, never latched. Deliberately unlike MOD: MOD
-        # latches because both hands then go to encoders, while ARM is composed
-        # with the pads under the same hand. A latched ARM would leave armed
-        # state a player can walk away from and trip four bars later.
+        # HELD OR LATCHED since 2026-09-01, like every other modifier - the
+        # duration rule replaced seven of these paragraphs. It used to say a
+        # latched ARM would leave state a player could walk away from; what
+        # actually happened was the opposite, because a bare tap CANCELLED
+        # everything pending, so the only way to read the countdown ruler was
+        # to hold the button that destroyed what you were reading. The cancel
+        # is ERASE + SELECT now, where taking-away lives.
         30: "arm",
         # NAVIGATE. CC 34 MEASURED in the G4 runbook, LED index 20 MEASURED
         # 2026-08-16 in the third round of the LED probe - it was carried as
         # "inferred, high" in a stale summary block for four days, which is
         # what blocked this page.
         #
-        # Held, never latched: the phrase page is something you glance at
-        # mid-bar, and a latched one would hide the step picture until you
-        # noticed it had.
+        # HELD OR LATCHED. Its pads are INERT either way since 2026-09-01 -
+        # it is a page to read, and reading something must not also change it
+        # - so a latched one hides the step picture and can do nothing else.
+        # The light says it is latched and HOME drops it.
         34: "navigate",
         # PAD MODE. CC 27 MEASURED at G4; LED index 19 MEASURED 2026-08-16.
         #
@@ -4097,7 +4102,17 @@ class techno_lib:
             # A ganged insert is one control for all eight already.
             return None
         if last.startswith(techno_lib.VERB_LV2):
-            return last
+            # REFUSED, 2026-09-01. A plugin port IS per channel, so spreading
+            # it looks right in principle - and is wrong in every particular.
+            # VERB_COLS has no entry for it, so spread_columns draws all eight
+            # dead and refuses every encoder; the title would read the raw
+            # symbol, `ALL LV2:DCF1_CUTOFF`; and the eight channels run three
+            # different synths, so column 4's `lv2:cutoff` and column 6's are
+            # not the same control even when the symbol matches.
+            #
+            # A page of eight dead columns under a held button is the exact
+            # object law L4 exists to prevent, wearing the lens.
+            return None
         if last not in techno_lib.VERB_COLS:
             return None
         if last in techno_lib.GLOBAL_VERBS:
