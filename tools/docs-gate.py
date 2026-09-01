@@ -14,6 +14,7 @@ put back:
   G3  search-index.json matches what the pages actually say
   G4  no internal-only path is published
   G5  prose has not drifted past its dated baseline
+  G6  every bound button is named on the surface page, and vice versa
 
 A budget here is a ratchet against drift, not a claim about ideal length. Going
 over is allowed - move the number in BASELINE and its date, deliberately. Never
@@ -325,7 +326,12 @@ BASELINE = {
     # look one up mid-bar; and HOME, which the instrument did not have. The
     # light table itself grew because every modifier lights now: four of them
     # took the sixteen pads and said nothing while they did it.
-    "the-surface.html":            (4987, "2026-09-01"),
+    # +401, 2026-09-01, from the design review: what a LATCHED overlay says on
+    # the display and why colour could not do that job (measured - the eight
+    # channel hues leave two usable gaps and both are spent), the arrows
+    # steering the lens, and the ERASE warning on the Group row, which is the
+    # only irreversible gesture on this panel and had no warning at all.
+    "the-surface.html":            (5388, "2026-09-01"),
     # +69, 2026-08-20: what the new gestures do NOT survive - the phrase count,
     # anything armed, and a modulator's one-shot flag - plus the one that cuts
     # the other way, that a set saved mid-drop saves those mutes because mixer
@@ -455,6 +461,49 @@ def build_index(pages, write=True):
     return blob
 
 
+# Every CC the driver binds, and the words the guide is allowed to call it by.
+# The FIRST is the name printed on the panel, because that is what a player
+# reads; the rest are the names this instrument gives the function, which is
+# what the prose usually says. Either satisfies the gate - what it refuses is
+# a bound button the page mentions by NEITHER name.
+#
+# Kept here rather than imported from techno_lib because this tool must run
+# with no path games and no import of a module that pulls in the driver's
+# world. It is a second copy, and that is a real cost - so the count is
+# asserted against the live tables by ctrldev/tests, which fails the moment a
+# binding is added or removed without this list moving with it.
+PANEL_NAMES = {
+    1:  ("PLAY",),
+    2:  ("ERASE",),
+    3:  ("REC",),
+    4:  ("GRID",),
+    6:  ("STEP", "beat repeat"),
+    7:  ("RESTART",),
+    10: ("NOTE REPEAT",),
+    11: ("CONTROL",),
+    12: ("big encoder", "HOME"),
+    13: ("beside the big encoder", "master"),
+    14: ("beside the big encoder", "master"),
+    25: ("SCENE",),
+    26: ("PATTERN",),
+    27: ("PAD MODE", "FREEZE"),
+    29: ("DUPLICATE",),
+    30: ("SELECT", "ARM"),
+    31: ("SOLO",),
+    32: ("STEP",),
+    33: ("MUTE",),
+    34: ("NAVIGATE",),
+    35: ("TEMPO",),
+    37: ("AUTO",),
+    38: ("ALL", "lens"),
+    47: ("arrows beside the display",),
+    48: ("arrows beside the display",),
+    49: ("SHIFT",),
+    50: ("SWING", "MOD"),
+    51: ("VOLUME",),
+}
+
+
 def main():
     check_only = "--check" in sys.argv
     pages = sorted(p for p in DOCS.glob("*.html") if p.name != "index.html")
@@ -559,6 +608,30 @@ def main():
             if n > UNIT_CAP and f.name not in SKIP_UNIT_CAP:
                 head = strip_tags(re.match(r"<h[23][^>]*>(.*?)</h[23]>", unit, re.S).group(1))
                 fail.append(f"G5 {f.name}: section over {UNIT_CAP} words ({n}): {head}")
+
+    # --- G6 the button map against the page that documents it ----------------
+    #
+    # THE GATE THIS PROJECT HAS NEEDED MOST OFTEN. Its recorded failure mode is
+    # "a document that describes the code, believed, and wrong" - the guide
+    # said a frozen instrument says so three times when its light had never
+    # lit, said a shipped LENGTH range did not exist, and ranked sixteen built
+    # features as open. Every one of those was prose drifting from a table.
+    #
+    # This compares the two directly. Every CC in BUTTONS_STATEFUL or
+    # BUTTONS_PRESS is a button a player can press, so the-surface.html has to
+    # name it; every panel name the page uses has to be one that is bound.
+    # Neither direction is decoration: the first catches a binding nobody
+    # wrote up, the second catches a paragraph outliving its feature.
+    print("  G6  buttons vs the guide")
+    surface = DOCS / "the-surface.html"
+    if not surface.exists():
+        fail.append("G6 docs/the-surface.html is missing")
+    else:
+        text = strip_tags(surface.read_text(encoding="utf-8")).upper()
+        for cc, action in sorted(PANEL_NAMES.items()):
+            if not any(name.upper() in text for name in action):
+                fail.append(f"G6 CC {cc} is bound and the surface page never "
+                            f"names it ({' / '.join(action)})")
 
     if fail:
         print("\nFAIL")

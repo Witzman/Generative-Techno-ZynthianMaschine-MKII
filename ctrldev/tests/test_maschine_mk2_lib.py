@@ -958,6 +958,62 @@ class TheDriverIsParsableEvenWhereItIsNotImportable(unittest.TestCase):
         self.assertIn("_never_set", reads)
 
 
+class TheDocsGateKnowsEveryButton(unittest.TestCase):
+    """`tools/docs-gate.py` holds a SECOND copy of the button map - CC to the
+    words the guide may call that button by - and gate G6 uses it to prove
+    every bound button is documented.
+
+    A second copy is a real cost and this project has paid it before: two
+    lists of CCs disagreed for four days, and the comment block above
+    CCS_MEASURED_AND_UNCLAIMED still contradicted the enforced set a day after
+    a binding landed. So the copy is allowed to exist and is not allowed to
+    drift: this fails the moment a button is bound or unbound without the gate
+    moving with it.
+
+    The gate cannot simply import techno_lib - it is a repository tool that
+    must run with no path games and no import of the driver's world - which is
+    why the copy exists at all rather than being deleted."""
+
+    GATE = os.path.join(os.path.dirname(__file__), "..", "..",
+                        "tools", "docs-gate.py")
+
+    def _gate_ccs(self):
+        import ast
+        tree = ast.parse(open(self.GATE, encoding="utf-8").read())
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Assign)
+                    and any(getattr(t, "id", None) == "PANEL_NAMES"
+                            for t in node.targets)):
+                return {k.value for k in node.value.keys}
+        raise AssertionError("PANEL_NAMES not found in tools/docs-gate.py")
+
+    def _bound(self):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+        from techno_lib import techno_lib as tl
+        return set(tl.BUTTONS_STATEFUL) | set(tl.BUTTONS_PRESS) | {
+            # The mode buttons are dispatched from the driver's MODE_BUTTONS
+            # rather than either table, and they are buttons a player presses.
+            11, 32, 37, 51,
+        }
+
+    def test_every_bound_cc_is_in_the_gate(self):
+        missing = sorted(self._bound() - self._gate_ccs())
+        self.assertEqual(missing, [],
+                         "bound but not in docs-gate's PANEL_NAMES, so G6 "
+                         f"cannot check it is documented: {missing}")
+
+    def test_the_gate_lists_nothing_that_is_not_bound(self):
+        extra = sorted(self._gate_ccs() - self._bound())
+        self.assertEqual(extra, [],
+                         "docs-gate expects the guide to name a button "
+                         f"nothing binds: {extra}")
+
+    def test_the_last_free_cc_is_not_in_the_gate(self):
+        # CC 5 is measured, unclaimed and deliberately unbound. G6 asking the
+        # guide to document it would be asking for a paragraph about nothing.
+        self.assertNotIn(5, self._gate_ccs())
+
+
 
 if __name__ == "__main__":
     unittest.main()
