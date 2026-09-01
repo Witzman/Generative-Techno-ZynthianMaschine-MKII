@@ -56,6 +56,7 @@
 import ctypes
 import logging
 import os
+import random
 import socket
 import time
 from collections import deque
@@ -810,6 +811,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._resync_all()
             self._render_all()
+
+    def _move_of(self, channel):
+        """This channel's MOVE, for the gate. Read through param_get, never
+        out of self.state: a verb whose storage moves is a verb that reads
+        right, displays right and does the wrong thing - five times in one
+        evening on 2026-08-31."""
+
+        return self.param_get(channel, "move")
+
+    def _move_roll(self):
+        """One 0..99 draw for one gate question. The library stays pure and
+        deterministic; the randomness is here."""
+
+        return random.randrange(100)
+
+    def _moves(self):
+        """Every channel's MOVE, for the macro walkers that ask about all
+        eight at once."""
+
+        return {ch: self._move_of(ch) for ch in range(len(tlib.CHANNELS))}
 
     def _seq_addr(self, group):
         """Sequence address for a group, as the installed libzynseq expects:
@@ -1588,7 +1609,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if rhythm <= 0:
             return
         if not tlib.generator_may_write("rhythm", self.frozen, self.freeze_deep,
-                                        self.owner.get(channel)):
+                                        self.owner.get(channel),
+                                        move=self._move_of(channel),
+                                        roll=self._move_roll()):
             return
         steps = self._steps(channel)
         st["rhythm_reg"] = tlib.mutate(int(st.get("rhythm_reg", 0xFFFF)),
@@ -1610,7 +1633,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the WRITE was refused. Asking here refuses the mutation too, so a
         # recorded take comes back to the line it was recorded over.
         if not tlib.generator_may_write("melody", self.frozen, self.freeze_deep,
-                                        self.owner.get(channel)):
+                                        self.owner.get(channel),
+                                        move=self._move_of(channel),
+                                        roll=self._move_roll()):
             return
 
         st = self.state[channel]
@@ -3332,7 +3357,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if collapse:
             if self._repeat_restore:
                 return                      # already collapsed
-            channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+            channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS),
+                                       moves=self._moves(),
+                                       roll=self._move_roll)
             with self.lock:
                 for channel in channels:
                     self._repeat_restore[channel] = (
@@ -4501,6 +4528,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "env": (0, 127, None),
         "decay": (0, 127, None),
         "random": (0, 100, None),
+        # MOVE, 2026-09-01. 0 is LOCK - the machine may not touch the channel -
+        # and 100 is what shipped before the verb existed.
+        "move": (0, 100, None),
         # 5-800, widened from 5-100 for the 8-step note length. The old
         # 5-100 range is now a sliver of the sweep, so gate moves in jumps
         # of roughly 6-24 per encoder report - a deliberate resolution
@@ -6418,7 +6448,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         eight."""
 
         factor = 0.5 if macro == "half" else 2.0
-        channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS))
+        channels = tlib.generated_channels(self.owner, len(tlib.CHANNELS),
+                                       moves=self._moves(),
+                                       roll=self._move_roll)
         moved = 0
         with self.lock:
             for channel in channels:
@@ -6517,7 +6549,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         inverse; it rebuilds from what was read."""
 
         channels = [ch for ch in tlib.generated_channels(self.owner,
-                                                         len(tlib.CHANNELS))
+                                                         len(tlib.CHANNELS),
+                                                         moves=self._moves(),
+                                                         roll=self._move_roll)
                     if self.channel_kind(ch) == "voice"]
         captured = {}
         with self.lock:
@@ -6588,7 +6622,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for channel, events in ramp["notes"].items():
             if not tlib.generator_may_write("macro", self.frozen,
                                             self.freeze_deep,
-                                            self.owner.get(channel)):
+                                            self.owner.get(channel),
+                                            move=self._move_of(channel),
+                                            roll=self._move_roll()):
                 continue
             self._write_captured(channel, events, factor)
         if step >= ramp["bars"]:
@@ -6770,7 +6806,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # overwrote their melodies.
             channels = [ch for ch
                         in tlib.generated_channels(self.owner,
-                                                   len(tlib.CHANNELS))
+                                                   len(tlib.CHANNELS),
+                                                   moves=self._moves(),
+                                                   roll=self._move_roll)
                         if self.channel_kind(ch) == "drum"]
             self._ratchet_ramp = {
                 "bars": self._arm_bars.get("ratchet", 4),
@@ -6798,8 +6836,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._chance_ramp = {
                 "bars": self._arm_bars.get("chance", 8),
                 "start": bar,
+                # Ownership is deliberately NOT asked here - setPlayChance
+                # regenerates nothing, so a recorded take is safe, and that
+                # exception is in _chance_tick's docstring. MOVE is a
+                # different question and IS asked: a channel the player has
+                # locked must not have its odds walked out from under it.
                 "base": {ch: int(self.state[ch].get("chance", 100))
-                         for ch in range(len(tlib.CHANNELS))},
+                         for ch in range(len(tlib.CHANNELS))
+                         if tlib.move_allows(self._move_of(ch),
+                                             self._move_roll())},
             }
 
     def _wrap_channel(self, channel):

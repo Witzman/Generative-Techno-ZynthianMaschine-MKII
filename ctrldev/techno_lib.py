@@ -622,7 +622,13 @@ class techno_lib:
         chance is common to both kinds: setPlayChance is a per-pattern zynseq
         property and kind-agnostic, so STEP's spread page reaches a voice too."""
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
-                     chance=100, pending=set())
+                     chance=100, pending=set(),
+                     # MOVE, 2026-09-01. How much the machine's own gestures
+                     # may touch this channel. 100 IS LOAD-BEARING: it is
+                     # exactly the behaviour that shipped before this verb
+                     # existed, and upgrade_state builds from here, so every
+                     # existing snapshot comes back playing what it played.
+                     move=100)
         if kind == "drum":
             # RANGE on a DRUM is SP8's kit-walk window, and it starts at 4 -
             # the whole kit - so a channel walks exactly as it did before SP8
@@ -876,7 +882,38 @@ class techno_lib:
     OWNER_PLAYER = "player"
 
     @staticmethod
-    def generator_may_write(what, frozen, deep, owner):
+    def move_allows(move, roll):
+        """MOVE: how much the machine's own gestures may touch this channel.
+
+        A PROBABILITY, not a switch - the owner decision of 2026-09-01. As a
+        switch it is per-channel FREEZE renamed, and this instrument already
+        has that button; as a probability the machine still surprises you on a
+        channel you have half-claimed.
+
+        100 is exactly today's behaviour and is the default everywhere, so an
+        existing snapshot plays bit for bit what it played before this existed.
+        0 is LOCK and is checked before the roll, so LOCK is exact rather than
+        one-in-a-hundred.
+
+        `roll` is 0..99, supplied by the caller - the library stays pure and
+        the test stays deterministic. A MISSING roll ALLOWS: a gesture that
+        vanished because a caller forgot an argument would be a channel that
+        goes quiet with nothing explaining it, which is the one law this
+        surface cannot break."""
+
+        if move is None:
+            return True
+        move = max(0, min(100, move))
+        if move >= 100:
+            return True
+        if move <= 0:
+            return False
+        if roll is None:
+            return True
+        return roll < move
+
+    @staticmethod
+    def generator_may_write(what, frozen, deep, owner, move=100, roll=None):
         """May a pattern-rewriting generator write this channel right now?
 
         ONE PREDICATE FOR EVERY GENERATOR THAT REWRITES THE PATTERN, and that
@@ -903,7 +940,12 @@ class techno_lib:
 
         if techno_lib.freeze_blocks(what, frozen, deep):
             return False
-        return owner != techno_lib.OWNER_PLAYER
+        if owner == techno_lib.OWNER_PLAYER:
+            return False
+        # MOVE, third and last. Deliberately after the other two: FREEZE and
+        # ownership are absolute, and asking a probability first would let a
+        # frozen channel's refusal depend on a dice roll.
+        return techno_lib.move_allows(move, roll)
 
     @staticmethod
     def freeze_blocks(what, frozen, deep):
@@ -2161,7 +2203,7 @@ class techno_lib:
     MUTEPATH_MACROS = ("drop", "drop_end", "break", "break_end")
 
     @staticmethod
-    def generated_channels(owners, count=8):
+    def generated_channels(owners, count=8, moves=None, roll=None):
         """Every channel a pattern-rewriting macro may touch.
 
         ALL EIGHT, minus the player-owned ones - and the skip is not a
@@ -2174,8 +2216,20 @@ class techno_lib:
         one engine type, and neither is "all eight". A macro armed bars in
         advance has no button under the player's finger to read a scope from.
         """
-        return tuple(ch for ch in range(count)
-                     if owners.get(ch, "gen") != "player")
+        out = []
+        for ch in range(count):
+            if owners.get(ch, "gen") == "player":
+                continue
+            if moves is not None:
+                # One roll per channel, drawn only for the channels that get
+                # this far - so a locked or player-owned channel never costs
+                # one, and a test can hand over an exact sequence.
+                move = moves.get(ch, 100)
+                if not techno_lib.move_allows(
+                        move, None if roll is None else roll()):
+                    continue
+            out.append(ch)
+        return tuple(out)
 
     @staticmethod
     def scope_label(label, name, moved, asked):
@@ -2316,6 +2370,11 @@ class techno_lib:
     # verb -> (bar kind, value -> 0..1 fraction). The formulas are lifted
     # verbatim from the shipped channel pages so a parameter looks identical
     # whichever shape shows it.
+    # An optional THIRD element formats the value. Only MOVE has one: 0 there
+    # means the machine may not touch the channel, and this instrument already
+    # says that with the word LOCK (RANDOM, RHYTHM, WALK). A bare 0 on a page
+    # about what the machine may do is exactly the kind of silence law L4
+    # exists to forbid.
     SPREAD_SPECS = {
         "level":  ("uni", lambda v: v / 100.0),
         "reverb": ("uni", lambda v: v / 100.0),
@@ -2325,6 +2384,8 @@ class techno_lib:
         "swing":  ("uni", lambda v: (v - 50) / 25.0),
         "cutoff": ("uni", lambda v: v / 127.0),
         "reso":   ("uni", lambda v: v / 127.0),
+        "move":   ("uni", lambda v: v / 100.0,
+                   lambda v: "LOCK" if v <= 0 else techno_lib._num(v)),
     }
 
     @staticmethod
@@ -3197,7 +3258,9 @@ class techno_lib:
         """One verb across eight channels. `views` is eight
         (letter, name, view) tuples in channel order."""
         verb = desc["verb"]
-        kind, to_frac = techno_lib.SPREAD_SPECS[verb]
+        spec = techno_lib.SPREAD_SPECS[verb]
+        kind, to_frac = spec[0], spec[1]
+        fmt = spec[2] if len(spec) > 2 else techno_lib._num
         out = []
         for letter, name, view in views:
             label = f"{letter} {name}"[:8]
@@ -3207,7 +3270,7 @@ class techno_lib:
                 # dead rather than drawing a lie.
                 out.append(techno_lib._dead(label.lower()))
                 continue
-            out.append(techno_lib._col(label, techno_lib._num(value), kind,
+            out.append(techno_lib._col(label, fmt(value), kind,
                                        to_frac(value)))
         return out
 
@@ -3753,6 +3816,14 @@ techno_lib.PAGE_RINGS = {
         # effect of the knob under their hand.
         _d(techno_lib.SHAPE_GLOBAL, "WALK",
            verbs=("root", "scale", "walk", "wspan", None, None, None, None)),
+        # MOVE, 2026-09-01. A SPREAD, because the question it answers is about
+        # all eight at once - "which of these may the machine touch tonight" -
+        # and a per-channel column on a channel page would make the player walk
+        # eight pages to read one answer. It is on the ALL ring rather than
+        # STEP because it governs every automatic gesture, not the generators
+        # alone: the four bar-rate macros and the chord walker are exactly the
+        # ones that never asked.
+        _d(techno_lib.SHAPE_SPREAD, "MOVE", verb="move"),
     ),
     ("MIXER", None): (
         _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),

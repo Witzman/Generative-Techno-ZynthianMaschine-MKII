@@ -5367,3 +5367,129 @@ class TheBankIsPinnedNotFollowed(unittest.TestCase):
     def test_pinning_a_normal_bank_is_silent(self):
         pin = tl.BankPin()
         self.assertIsNone(pin.pin(1))
+
+
+class HowMuchTheMachineMayMoveAChannel(unittest.TestCase):
+    """MOVE, 2026-09-01. One number per channel: how much the machine's own
+    gestures may touch it. 0 is LOCK, 100 is today's behaviour.
+
+    A PROBABILITY, not a switch - the owner decision. As a boolean it is
+    per-channel FREEZE renamed, and this instrument already has that button."""
+
+    def test_full_move_always_allows_and_needs_no_roll(self):
+        self.assertTrue(tl.move_allows(100, None))
+
+    def test_lock_never_allows_whatever_the_roll_says(self):
+        for roll in (0, 50, 99):
+            with self.subTest(roll=roll):
+                self.assertFalse(tl.move_allows(0, roll))
+
+    def test_a_partial_move_is_the_probability_the_gesture_lands(self):
+        self.assertTrue(tl.move_allows(50, 49))
+        self.assertFalse(tl.move_allows(50, 50))
+        self.assertFalse(tl.move_allows(50, 99))
+
+    def test_a_missing_roll_ALLOWS_rather_than_silently_holding(self):
+        # A gesture that vanished because a caller forgot an argument would be
+        # a channel that goes quiet with nothing to explain it. The driver
+        # always passes a real roll; the default is the safe direction.
+        self.assertTrue(tl.move_allows(50, None))
+
+    def test_a_missing_move_reads_as_full(self):
+        # An older snapshot, or any caller that has not been taught the verb.
+        self.assertTrue(tl.move_allows(None, 99))
+
+    def test_out_of_range_moves_are_clamped_not_believed(self):
+        self.assertTrue(tl.move_allows(140, 99))
+        self.assertFalse(tl.move_allows(-20, 0))
+
+
+class MoveGatesEveryAutomaticGesture(unittest.TestCase):
+    """The gate lives in the two places every automatic gesture already passes
+    through, so a fifth generator inherits it instead of re-deriving it."""
+
+    def test_generator_may_write_refuses_a_locked_channel(self):
+        self.assertFalse(tl.generator_may_write("melody", False, False, None,
+                                                move=0))
+
+    def test_generator_may_write_is_unchanged_at_full_move(self):
+        self.assertTrue(tl.generator_may_write("melody", False, False, None,
+                                               move=100, roll=99))
+
+    def test_move_defaults_to_full_so_every_existing_caller_is_unchanged(self):
+        self.assertTrue(tl.generator_may_write("melody", False, False, None))
+
+    def test_ownership_still_wins_over_a_full_move(self):
+        self.assertFalse(tl.generator_may_write("melody", False, False,
+                                                "player", move=100))
+
+    def test_freeze_still_wins_over_a_full_move(self):
+        self.assertFalse(tl.generator_may_write("melody", True, False, None,
+                                                move=100))
+
+    def test_generated_channels_drops_the_locked_ones(self):
+        moves = {0: 100, 1: 0, 2: 100, 3: 0, 4: 100, 5: 100, 6: 100, 7: 100}
+        got = tl.generated_channels({}, moves=moves)
+        self.assertEqual(got, (0, 2, 4, 5, 6, 7))
+
+    def test_generated_channels_is_unchanged_when_nothing_is_locked(self):
+        self.assertEqual(tl.generated_channels({}), tuple(range(8)))
+
+    def test_generated_channels_still_drops_player_owned_first(self):
+        moves = {ch: 100 for ch in range(8)}
+        got = tl.generated_channels({2: "player"}, moves=moves)
+        self.assertNotIn(2, got)
+
+    def test_a_partial_move_uses_the_roll_the_caller_supplies(self):
+        moves = {ch: 50 for ch in range(8)}
+        # One roll per channel, in channel order.
+        rolls = iter([10, 90, 10, 90, 10, 90, 10, 90])
+        got = tl.generated_channels({}, moves=moves, roll=lambda: next(rolls))
+        self.assertEqual(got, (0, 2, 4, 6))
+
+
+class MoveIsOnTheSurfaceAndInTheSnapshot(unittest.TestCase):
+
+    def test_both_kinds_start_at_full_move(self):
+        # The migration: 100 is exactly today's behaviour, so an existing
+        # snapshot plays bit for bit what it played before this shipped.
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                self.assertEqual(tl.default_channel_state(kind)["move"], 100)
+
+    def test_an_older_snapshot_gains_move_at_full(self):
+        old = tl.default_channel_state("drum")
+        del old["move"]
+        got = tl.upgrade_state("drum", old, 16)
+        self.assertEqual(got["move"], 100)
+
+    def test_a_saved_move_survives_the_upgrade(self):
+        saved = tl.default_channel_state("voice")
+        saved["move"] = 0
+        self.assertEqual(tl.upgrade_state("voice", saved, 16)["move"], 0)
+
+    def test_the_ALL_ring_carries_a_MOVE_page(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[("ALL", None)]]
+        self.assertIn("MOVE", titles)
+
+    def test_the_MOVE_page_is_a_spread_over_all_eight_channels(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "MOVE"][0]
+        self.assertEqual(page["shape"], tl.SHAPE_SPREAD)
+        self.assertEqual(page["verb"], "move")
+
+    def test_zero_reads_LOCK_on_the_spread_page_not_a_bare_zero(self):
+        # The LOCK grammar this instrument already uses for RANDOM, RHYTHM and
+        # WALK. A channel the machine may not touch has to say so.
+        views = [("A", "KICK", {"move": 0})] * 8
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "MOVE"][0]
+        cols = tl.spread_columns(page, views)
+        self.assertEqual(cols[0]["value"], "LOCK")
+
+    def test_a_non_zero_move_still_reads_as_a_number(self):
+        views = [("A", "KICK", {"move": 70})] * 8
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "MOVE"][0]
+        # Four characters, zero padded - the shipped spread value format.
+        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "0070")
