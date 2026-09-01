@@ -2860,8 +2860,15 @@ class techno_lib:
         # every latch on this panel and is what the LIGHT is for - MUTE blinks
         # while it is latched, and HOME drops it.
         33: "mute",
-        # DUPLICATE. CC 29 is one of the three in CCS_MEASURED_AND_UNCLAIMED -
-        # measured in the G4 capture, and `grep duplicate daemon/src/main.rs`
+        # DUPLICATE, CC 29. It WAS in CCS_MEASURED_AND_UNCLAIMED and it is
+        # not any more - binding it here is what took it out, and the sentence
+        # that used to sit in this comment ("one of the three in
+        # CCS_MEASURED_AND_UNCLAIMED") went on describing the world before the
+        # line below it. Corrected 2026-09-01. The set is up at :2812 and is
+        # {5, 8, 9, 25, 36}; read it there rather than from prose beside a
+        # binding, because a comment cannot go red and that set is a test.
+        #
+        # Measured in the G4 capture, and `grep duplicate daemon/src/main.rs`
         # shows a plain CC forward with no side effect. LED index 21 MEASURED
         # 2026-08-15. Both halves of working rule 7 are satisfied and neither
         # was read off a token name.
