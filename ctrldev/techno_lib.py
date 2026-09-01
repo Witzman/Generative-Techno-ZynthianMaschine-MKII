@@ -979,6 +979,53 @@ class techno_lib:
             value = max(lo, min(hi, nxt))
         return out
 
+    # WHAT BELONGS TO THE CHANNEL RATHER THAN TO THE KIND, and therefore what
+    # must SURVIVE a kind switch instead of being rebuilt from the defaults.
+    #
+    # The bug this exists to stop, found at the rig 2026-09-01: switching a
+    # channel's kind built a fresh state dict, which carries chance=100 - and
+    # CHANCE IS NOT A PROPERTY OF THE KIND. It is a per-pattern zynseq
+    # property; the sequencer kept the old value while the driver's mirror
+    # said 100. The owner read 100 on the display and heard a pattern that was
+    # not four on the floor, and only found it by nudging the knob off 100 and
+    # back, which wrote the mirror through to the sequencer.
+    #
+    # That is the one failure this surface may not have. A silent or thinned
+    # channel must say why, and the number a player checks first is the number
+    # that was wrong.
+    #
+    # The rule, and it is a category rather than a list to memorise:
+    #   - a SEQUENCER property (chance, swing) belongs to the pattern
+    #   - a MIXER or INSERT property (level, reverb, delay) belongs to the strip
+    #   - an ARRANGEMENT property (move, phrase, fill, exit) belongs to the part
+    #   - VELO and RULE mean the same thing to both kinds
+    # None of those change meaning when a channel starts behaving as something
+    # else, so none of them may be reset by that gesture. `div` and `beats`
+    # were already carried for exactly this reason - the comment saying so sits
+    # one line below the bug.
+    #
+    # `pending` is deliberately absent: it is law L2's bookkeeping and the new
+    # state gets its own empty set.
+    CHANNEL_SCOPED = frozenset((
+        "chance", "swing",                       # zynseq, per pattern
+        "level", "reverb", "delay",              # mixer strip and inserts
+        "move", "phrase", "fill", "exit",        # arrangement
+        "velo", "rule",                          # same meaning to both kinds
+    ))
+
+    @staticmethod
+    def carry_channel_scoped(old_state, new_state):
+        """Move the channel's own values onto a state built for another kind.
+
+        PURE, and it returns the dict it was given so a caller can chain. Only
+        keys the OLD state actually has are carried - a partial view must not
+        plant a None where the new kind expects a number."""
+
+        for key in techno_lib.CHANNEL_SCOPED:
+            if key in old_state:
+                new_state[key] = old_state[key]
+        return new_state
+
     @staticmethod
     def default_channel_state(kind):
         """A complete starting state set for one kind.

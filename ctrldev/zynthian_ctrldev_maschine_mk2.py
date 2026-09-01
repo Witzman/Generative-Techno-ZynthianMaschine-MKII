@@ -6541,8 +6541,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.stash[channel][old] = self.state[channel]
         self.stash[channel][old + ":hits"] = self.hits[channel]
         self.stash[channel][old + ":rot"] = self.rot[channel]
-        self.state[channel] = self.stash[channel].get(
-            new, tlib.default_channel_state(new))
+        # CARRY WHAT BELONGS TO THE CHANNEL. A stashed set already holds it;
+        # a freshly built one does not, and that was a real defect found at
+        # the rig - a first switch to a kind rebuilt the state from defaults,
+        # which put CHANCE back to 100 in the driver's mirror while the
+        # SEQUENCER kept the pattern's real value. The display read 100 and
+        # the channel played thinner than that, which is the one lie this
+        # surface may not tell: the number a player checks when something goes
+        # quiet was the number that was wrong.
+        #
+        # Carried either way, not only on a fresh build: a stash taken before
+        # this fix can hold the same stale mirror, and a channel switched back
+        # and forth twice would otherwise restore it.
+        previous = self.state[channel]
+        arriving = self.stash[channel].get(new)
+        if arriving is None:
+            arriving = tlib.default_channel_state(new)
+        self.state[channel] = tlib.carry_channel_scoped(previous, arriving)
         self.hits[channel] = self.stash[channel].get(new + ":hits",
                                                      self.hits[channel])
         self.rot[channel] = self.stash[channel].get(new + ":rot",

@@ -3040,6 +3040,104 @@ class RangeIsLiveOnlyWhereTheKitWalkRuns(unittest.TestCase):
         self.assertEqual(switched[2]["name"], "RANGE")
 
 
+class AKindSwitchMustNotResetTheChannel(unittest.TestCase):
+    """Switching what a channel BEHAVES AS must not touch what the channel IS.
+
+    Found at the rig 2026-09-01, by the owner, from the sound. A first switch
+    to a kind built a fresh state dict, which carries chance=100 - and CHANCE
+    IS NOT A PROPERTY OF THE KIND. It is a per-pattern zynseq property; the
+    sequencer kept the real value while the driver's mirror said 100. The
+    display read 100 and the channel played thinner than that.
+
+    That is the one failure this surface may not have. A thinned or silent
+    channel must say why, and the number a player checks first was the number
+    that lied. It was found only by nudging the knob off 100 and back, which
+    wrote the mirror through.
+
+    The rule is a category, not a list: a SEQUENCER property belongs to the
+    pattern, a MIXER property to the strip, an ARRANGEMENT property to the
+    part, and none of them changes meaning when a channel starts behaving as
+    something else. `div` and `beats` were already carried for exactly this
+    reason - the comment saying so sits one line below where the bug was."""
+
+    def _played(self, kind):
+        st = dict(tl.default_channel_state(kind))
+        st.update(chance=40, swing=62, level=77, reverb=30, delay=12,
+                  move=50, phrase=4, fill=80, exit=2, velo=96, rule="r110")
+        return st
+
+    def test_a_sequencer_property_survives(self):
+        # The one that was actually wrong, and the most dangerous because
+        # CHANCE is what you read when a channel goes quiet.
+        new = tl.carry_channel_scoped(self._played("drum"),
+                                      tl.default_channel_state("voice"))
+        self.assertEqual(new["chance"], 40)
+        self.assertEqual(new["swing"], 62)
+
+    def test_a_mixer_property_survives(self):
+        new = tl.carry_channel_scoped(self._played("drum"),
+                                      tl.default_channel_state("voice"))
+        self.assertEqual((new["level"], new["reverb"], new["delay"]),
+                         (77, 30, 12))
+
+    def test_an_arrangement_property_survives(self):
+        new = tl.carry_channel_scoped(self._played("voice"),
+                                      tl.default_channel_state("drum"))
+        self.assertEqual((new["move"], new["phrase"], new["fill"],
+                          new["exit"]), (50, 4, 80, 2))
+
+    def test_what_belongs_to_the_kind_is_rebuilt(self):
+        # The other half of the rule. A voice's GATE means nothing to a drum,
+        # and a drum's KIT means nothing to a voice, so those must NOT carry.
+        new = tl.carry_channel_scoped(self._played("voice"),
+                                      tl.default_channel_state("drum"))
+        self.assertNotIn("gate", new)
+        self.assertNotIn("octave", new)
+        self.assertIn("kit", new)
+        self.assertEqual(new["kit"], "----")
+
+    def test_the_registers_are_rebuilt_not_carried(self):
+        # rhythm_reg is per kind: subtractive on a drum, and which steps sound
+        # on a voice. Carrying one into the other is not a mirror problem, it
+        # is a different meaning wearing the same key.
+        old = dict(tl.default_channel_state("drum"))
+        old["rhythm_reg"] = 0x00FF
+        new = tl.carry_channel_scoped(old, tl.default_channel_state("voice"))
+        self.assertEqual(new["rhythm_reg"], 0xFFFF)
+
+    def test_pending_is_not_carried(self):
+        # Law L2's bookkeeping. The arriving state gets its own empty set, or
+        # a change that landed under the old kind would show as pending under
+        # the new one forever.
+        old = dict(tl.default_channel_state("drum"))
+        old["pending"] = {"div", "length"}
+        new = tl.carry_channel_scoped(old, tl.default_channel_state("voice"))
+        self.assertEqual(new["pending"], set())
+
+    def test_a_partial_state_plants_nothing(self):
+        # A caller with a half-built dict must not put a None where the new
+        # kind expects a number.
+        new = tl.carry_channel_scoped({"chance": 25},
+                                      tl.default_channel_state("voice"))
+        self.assertEqual(new["chance"], 25)
+        self.assertEqual(new["level"], tl.default_channel_state("voice")["level"])
+
+    def test_every_carried_key_exists_on_both_kinds(self):
+        # A key that only one kind has would be carried onto a state that has
+        # no use for it - which is how a stale mirror gets a second home.
+        for kind in ("drum", "voice"):
+            state = tl.default_channel_state(kind)
+            for key in tl.CHANNEL_SCOPED:
+                self.assertIn(key, state, f"{key} missing on {kind}")
+
+    def test_a_round_trip_changes_nothing_that_belongs_to_the_channel(self):
+        start = self._played("drum")
+        there = tl.carry_channel_scoped(start, tl.default_channel_state("voice"))
+        back = tl.carry_channel_scoped(there, tl.default_channel_state("drum"))
+        for key in tl.CHANNEL_SCOPED:
+            self.assertEqual(back[key], start[key], key)
+
+
 
 if __name__ == "__main__":
     unittest.main()
