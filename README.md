@@ -16,9 +16,13 @@ From a blank SD card to a rig that plays. Start with **Fast installation** — o
 command on the Pi — or work through **Manual installation** if you would rather
 run each step yourself.
 
+Want to know whether it does a particular thing? The guide's **Features** page
+is the whole instrument in one list, every entry linked to the page that walks
+you through it, and **Changelog** says when each of them arrived.
+
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![1182 tests](https://img.shields.io/badge/tests-1182%20passing-b4b4bc)
+![1459 tests](https://img.shields.io/badge/tests-1459%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -107,11 +111,11 @@ is authoritative; `install.sh` is only a wrapper over it.
 Every test in this repository runs without a Pi and without the controller:
 
 ```bash
-cd ctrldev && python3 -m unittest discover -s tests -q   # → 900   the driver
-cd daemon  && cargo test                                 # → 128   the HID daemon
-bash system/tests/test-system-files.sh                   # →  53   units, udev, helpers
-python3 -m unittest discover -s tools/tests -q           # →  15   the offline snapshot tools
-bash system/tests/test-dry-run.sh                        # →  86   what each installer PRINTS
+cd ctrldev && python3 -m unittest discover -s tests -q   # → 1044  the driver
+cd daemon  && cargo test                                 # →  179  the HID daemon
+bash system/tests/test-system-files.sh                   # →   55  units, udev, helpers
+python3 -m unittest discover -s tools/tests -q           # →   95  the offline tools
+bash system/tests/test-dry-run.sh                        # →   86  what each installer PRINTS
 ```
 
 That is what the badge counts. The driver itself cannot be imported off a Pi —
