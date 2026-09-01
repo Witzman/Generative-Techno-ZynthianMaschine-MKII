@@ -2264,8 +2264,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.mode = self.HOME_MODE
         for key in list(self.page_idx):
             self.page_idx[key] = 0
-        self.lens_latched = False
-        self.mod_latched = False
+        # THE LATCHES, THROUGH THEIR OWN CLEAR. `lens_latched` and
+        # `mod_latched` are read-only properties now, so assigning to them
+        # raises AttributeError on the MIDI thread - which py_compile cannot
+        # see and which would take the whole surface down on the first press
+        # of this button. tlib.latch.clear() drops the latch and DELIBERATELY
+        # leaves the hold: a finger still on the button is a fact about the
+        # world, and clearing it here would leave the driver's picture
+        # disagreeing with the hand until it let go.
+        for name in ("lens", "mod"):
+            self.latches[name].clear()
         self.frozen = False
         self.freeze_deep = False
         # Re-anchor: the next turn is measured from where the knob is now.

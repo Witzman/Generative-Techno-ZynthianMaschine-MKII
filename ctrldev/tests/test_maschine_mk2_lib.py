@@ -831,3 +831,73 @@ class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NoPropertyIsEverAssignedTo(unittest.TestCase):
+    """A write to a read-only property is an AttributeError on the MIDI
+    thread, and py_compile cannot see it.
+
+    This is not hypothetical. The 2026-09-01 surface redesign turned eight
+    modifier flags into properties backed by tlib.latch, and one assignment
+    survived the sweep - in `_act_home`, the button whose whole job is to be
+    the thing you press when you are lost. The first press would have taken
+    the surface down.
+
+    The driver cannot be imported off the rig, so the check reads its AST.
+    That is the same shape as the LED-name test above and for the same
+    reason: on this half of the project, static analysis is the only
+    analysis there is."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _tree(self):
+        import ast
+        return ast.parse(open(self.DRIVER, encoding="utf-8").read())
+
+    def _properties(self):
+        """Every name defined with @property in the driver's classes."""
+        import ast
+        found = set()
+        for node in ast.walk(self._tree()):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            for dec in node.decorator_list:
+                if isinstance(dec, ast.Name) and dec.id == "property":
+                    found.add(node.name)
+        return found
+
+    def _self_assignments(self):
+        """Every attribute name assigned through `self.` anywhere.
+
+        Augmented and annotated assignments count: `self.x += 1` reads and
+        writes, and a property with no setter refuses both halves."""
+        import ast
+        found = set()
+        for node in ast.walk(self._tree()):
+            targets = []
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)):
+                targets = [node.target]
+            for target in targets:
+                for leaf in ast.walk(target):
+                    if (isinstance(leaf, ast.Attribute)
+                            and isinstance(leaf.value, ast.Name)
+                            and leaf.value.id == "self"):
+                        found.add(leaf.attr)
+        return found
+
+    def test_the_driver_defines_the_properties_this_expects(self):
+        # If the modifier properties are ever renamed this test could pass by
+        # checking nothing at all, so it asserts they are there first.
+        props = self._properties()
+        for name in ("mod_down", "shift_down", "lens_down", "arm_down",
+                     "bank_down", "mute_down", "navigate_down"):
+            self.assertIn(name, props, f"{name} is no longer a property")
+
+    def test_nothing_assigns_to_a_property(self):
+        clashes = sorted(self._properties() & self._self_assignments())
+        self.assertEqual(clashes, [],
+                         "assigning to a read-only property raises at "
+                         f"runtime, and py_compile cannot see it: {clashes}")
