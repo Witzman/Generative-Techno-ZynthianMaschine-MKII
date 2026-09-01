@@ -2444,6 +2444,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         steps, self._big_carry = tlib.big_detents(self._big_carry + units)
         if not steps:
             return
+        if self.lens_down and not self.bank_down and not self.mod_down:
+            # THE LENS IS ONE PAGE by construction, so there is no ring to
+            # walk and the arrows beside the display are dark for the same
+            # reason. Turning the big encoder here used to move the page index
+            # of the level UNDERNEATH the lens - invisible while you turned,
+            # and a different page waiting when you let go. Law G5 wearing a
+            # knob: a control that would do nothing you can see does nothing.
+            return
         if self.bank_down:
             # WHILE THE BANK OVERLAY IS HELD the big encoder walks the four
             # pages of sixteen banks - which is the job it does everywhere
@@ -3503,6 +3511,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if (action == "arm" and down and self.erase_down):
                 self._cancel_all_pending()
                 return True
+            # MOD + ERASE + ALL drops every modulator. Three keys and two of
+            # them modifiers, because it is destructive and nothing
+            # destructive happens on a single press.
+            #
+            # CAUGHT HERE, NOT BELOW, since ALL became the lens on
+            # 2026-09-01. It used to sit under the press-only filter and
+            # therefore AFTER the mode dispatch that also owned CC 38: the
+            # chord cleared the modulators and then fell through, so the
+            # player also landed in a mode they had not asked for.
+            # button_conflicts() could not see it - it compares tables, and
+            # this was a special case above them.
+            if (action == "lens" and down and self.mod_down
+                    and self.erase_down):
+                self._mod_clear_all()
+                return True
             if action is not None:
                 getattr(self, "_act_" + action)(down)
                 return True
@@ -3513,14 +3536,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
             if not down:                         # everything else: press only
                 return False
-            if cc_num == CC_MODE_ALL and self.mod_down and self.erase_down:
-                # MOD + ERASE + ALL clears every modulator. Three keys and
-                # two of them modifiers, because it is destructive and the
-                # standing law is that nothing destructive happens on a
-                # single press. ALL keeps its ordinary meaning in every
-                # other combination.
-                self._mod_clear_all()
-                return True
             if cc_num in MODE_BUTTONS:
                 self._set_mode(MODE_BUTTONS[cc_num])
                 return True
@@ -3788,6 +3803,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         two flags that can cross."""
 
         self._repeat_due = bool(down)
+        self._render_repeat()
         with self.lock:
             self._render_display()
 
@@ -4365,6 +4381,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         self._modifier_edge("mod", down)
         self._render_mod()
+        # RESTART becomes the pump while MOD is on, and says so.
+        self._render_restart()
         self._render_rec()
         self._render_display()
         with self.lock:
@@ -8163,7 +8181,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # sampler in Turing mode is still a sampler, so PATTERN stays lit on it.
         sampler = self._is_sampler(self.group)
         for led, lit in (("pattern", sampler), ("scene", not sampler)):
-            state = (COLOR_PAGE, BRIGHT_PAGE_ON if lit else BRIGHT_PAGE_OFF)
+            # ACTION LIGHTS: dim on the button that would act, dark on the one
+            # that would not. They were both full brightness, which put them
+            # at the level a HELD modifier now uses, and full-versus-dark said
+            # "this one is active" about a button that latches nothing.
+            state = (COLOR_PAGE, tlib.action_light(lit))
             if self.leds.changed(f"reroll_{led}", state):
                 self._send_osc(lib.button_osc(led, state[0], state[1]))
 
@@ -8208,10 +8230,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 on = bool(mixer.get_solo(chan))
             else:
                 on = bool(mixer.get_mute(chan))
-            state = (0xFFFFFF, 1.0 if on else 0.0)
+            # A TOGGLE: bright when true, DIM when reachable, dark when there
+            # is nothing behind it - a Group with no chain, or a CONTROL
+            # column that carries no switch. The dark used to cover all three,
+            # so a channel with no chain looked exactly like an unmuted one.
+            available = switches is not None or chan is not None
+            if switches is not None:
+                available = switches[group] is not None
+            state = (COLOR_PAGE, tlib.toggle_light(on, available))
             if self.leds.changed(f"mute{group}", state):
                 self._send_osc(lib.button_osc(F_BUTTON_NAMES[group], state[0], state[1]))
-        solo_state = (0xFFFFFF, 1.0 if self.solo_mode else 0.0)
+        # SOLO latches, so it wears the latch blink like every other latch on
+        # this panel - and it is the one light that says what the eight
+        # buttons under your hand currently mean.
+        solo_state = (COLOR_PAGE, tlib.state_light(
+            self.solo_down, self.solo_mode, time.monotonic()))
         if self.leds.changed("solo", solo_state):
             self._send_osc(lib.button_osc("solo", solo_state[0], solo_state[1]))
 
@@ -8236,7 +8269,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # the same brightness a HELD modifier now uses. `shift` and `stop`
     # (the daemon's measured name for ERASE) left for the modifier alphabet,
     # and the display arrows learned to go dark on a ring with one page.
-    ACTION_LEDS = ("nav_left", "nav_right", "step_right", "restart")
+    ACTION_LEDS = ("nav_left", "nav_right")
     BRIGHT_STATIC = 1.0
 
     # Which LED each modifier lights. NAVIGATE, DUPLICATE and MUTE had no
@@ -8305,6 +8338,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._send_osc(lib.button_osc("step_left", dark[0], dark[1]))
         self._render_page_arrows()
         self._render_erase()
+        self._render_repeat()
+        self._render_restart()
         self._render_overlay_leds()
         self._render_register_undo()
         self._render_rec()
@@ -8322,6 +8357,31 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for name in ("page_left", "page_right"):
             if self.leds.changed(f"arrow_{name}", state):
                 self._send_osc(lib.button_osc(name, state[0], state[1]))
+
+    def _render_repeat(self):
+        """STEP-right, the beat repeat. A modifier that cannot latch: bright
+        while held, dim while it waits.
+
+        It had no light at all. A gesture that collapses the whole machine to
+        one beat and comes back on release is the last one that should be
+        invisible while it is happening - and this is the button a player
+        holds while looking somewhere else entirely."""
+
+        state = (COLOR_PAGE, tlib.state_light(bool(self._repeat_due), False))
+        if self.leds.changed("repeat", state):
+            self._send_osc(lib.button_osc("step_right", state[0], state[1]))
+
+    def _render_restart(self):
+        """RESTART. Dim, and BRIGHT while MOD is on, because there it is the
+        pump - MOD + RESTART snaps every modulator into phase together.
+
+        It had no light either, and it is the one button whose meaning changes
+        under a modifier without the modifier being visible on it."""
+
+        state = (COLOR_PAGE,
+                 tlib.state_light(self.mod_down, False))
+        if self.leds.changed("restart", state):
+            self._send_osc(lib.button_osc("restart", state[0], state[1]))
 
     def _render_erase(self):
         """ERASE, on the LED the daemon measured as `stop`.
@@ -8354,13 +8414,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         without either of them knowing about this button."""
 
         lit = self.channel_kind(self.group) == "voice"
-        state = (0xFFFFFF, self.BRIGHT_STATIC if lit else 0.0)
+        # An ACTION: dim where it would act, dark where it would not. On a
+        # euclidean channel there is no shift register to give back.
+        state = (COLOR_PAGE, tlib.action_light(lit))
         if self.leds.changed("register_undo", state):
             self._send_osc(lib.button_osc("note_repeat", state[0], state[1]))
-
-    # GRID blink: half-period in seconds. 0.5 gives a 1 Hz blink, which reads
-    # as deliberate rather than as a fault.
-    GRID_BLINK_S = 0.5
 
     def _render_grid(self):
         """GRID is lit whenever it does something - which is always, since
@@ -8380,12 +8438,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         GRID is index 52, measured 2026-08-15."""
 
+        # An overridden kind IS a latched state - the player put this channel
+        # somewhere its engine is not - so it wears the panel's word for
+        # latched: a 1 Hz blink. Otherwise DIM: GRID does nothing on its own
+        # and only acts under SHIFT, so full brightness was the level a held
+        # modifier now uses, promising more than the button does.
         overridden = self.kind_override[self.group] is not None
-        if overridden:
-            on = int(time.monotonic() / self.GRID_BLINK_S) % 2 == 0
-        else:
-            on = True
-        state = (0xFFFFFF, self.BRIGHT_STATIC if on else 0.0)
+        state = (COLOR_PAGE,
+                 tlib.state_light(False, overridden, time.monotonic()))
         if self.leds.changed("grid", state):
             self._send_osc(lib.button_osc("grid", state[0], state[1]))
 
@@ -8424,18 +8484,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Diffed through self.leds like every other LED write: the device has
         been flooded off the USB bus once."""
 
-        if self.mod_latched:
-            # Blinking = LATCHED, steady = HELD. Held and latched were
-            # indistinguishable before, yet only one of them survives your
-            # finger leaving the button - and a latched MOD leaves most of the
-            # surface without bars for as long as it lasts, so it has to say
-            # so. Same clock-derived phase and the same GRID_BLINK_S as
-            # _render_grid: a second blink rate on one panel would read as a
-            # second meaning.
-            on = int(time.monotonic() / self.GRID_BLINK_S) % 2 == 0
-        else:
-            on = self.mod_held
-        state = (0xFFFFFF, 1.0 if on else 0.0)
+        # THE ALPHABET, and MOD was the button it was derived from: steady
+        # while held, blinking while latched, dim while it waits. Only the
+        # third is new - an unlit MOD looked exactly like an unlit anything.
+        state = (COLOR_PAGE, tlib.state_light(
+            self.mod_held, self.mod_latched, time.monotonic()))
         if self.leds.changed("mod", state):
             self._send_osc(lib.button_osc("swing", state[0], state[1]))
 
@@ -8452,7 +8505,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         writer because there is nothing to animate. Diffed through self.leds
         like every other LED write."""
 
-        state = (0xFFFFFF, 1.0 if self.coarse_down else 0.0)
+        # A modifier that cannot latch, exactly like ERASE: bright while held,
+        # dim while it waits. It does not latch on purpose - a latched
+        # sensitivity change is a surface that lies about its own feel.
+        state = (COLOR_PAGE, tlib.state_light(self.coarse_down, False))
         if self.leds.changed("coarse", state):
             self._send_osc(lib.button_osc("tempo", state[0], state[1]))
 
