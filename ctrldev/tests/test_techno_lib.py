@@ -695,7 +695,10 @@ class TestRhythmPage(unittest.TestCase):
         # reason: swing is on the spread page below, reachable for all eight
         # channels at once, which is where it is wanted in a jam.
         ring = tl.PAGE_RINGS[("STEP", "drum")]
-        self.assertEqual([d["verb"] for d in ring[1:]], ["swing", "chance"])
+        # The two spread pages, plus the GEN page added 2026-09-01, which is a
+        # channel page and carries no single `verb`.
+        self.assertEqual([d["verb"] for d in ring[1:3]], ["swing", "chance"])
+        self.assertEqual(ring[3]["title"], "GEN")
 
     def test_rhythm_sits_beside_melody_on_the_voice_channel_page(self):
         self.assertEqual(
@@ -4782,20 +4785,24 @@ class TestGenPage(unittest.TestCase):
                 if d["title"] == "GEN"][0]
         self.assertEqual(desc["verbs"],
                          ("rotate", "model", "walk_span", "walk_stride",
-                          "feed", "amount", None, None))
+                          # RULE joined in column 7, 2026-09-01, deliberately
+                          # NOT folded into MODEL.
+                          "feed", "amount", "rule", None))
         # On the WALK model every one of the six is live. On the register
         # model SPAN and STRIDE draw dead - see the test below.
         cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
         self.assertEqual([c["name"] for c in cols][:6],
                          ["ROTATE", "MODEL", "SPAN", "STRIDE", "FEED", "AMT"])
 
-    def test_the_two_unused_columns_draw_dead(self):
+    def test_the_LAST_unused_column_draws_dead(self):
         # A lit column that does nothing is the fault this surface must never
         # commit - law L4, draw dead rather than a number the knob cannot move.
+        # Column 7 became RULE on 2026-09-01; column 8 is still honest.
         desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
                 if d["title"] == "GEN"][0]
         cols = tl.columns(desc, "voice", self._state())
-        self.assertTrue(cols[6]["grey"])
+        self.assertFalse(cols[6]["grey"])
+        self.assertEqual(cols[6]["name"], "RULE")
         self.assertTrue(cols[7]["grey"])
 
     def test_a_new_voice_reads_as_the_register_model(self):
@@ -5493,3 +5500,141 @@ class MoveIsOnTheSurfaceAndInTheSnapshot(unittest.TestCase):
                 if d["title"] == "MOVE"][0]
         # Four characters, zero padded - the shipped spread value format.
         self.assertEqual(tl.spread_columns(page, views)[0]["value"], "0070")
+
+
+class TheCellularAutomaton(unittest.TestCase):
+    """A third way for a channel to invent, 2026-09-01. It is an EVOLUTION
+    rule and it replaces `mutate` - not a pitch source, so it is NOT on the
+    MODEL column, which chooses where a voice's pitch values come from. That
+    was the PM decision: merged, picking a rule would silently also decide the
+    pitch source."""
+
+    def test_the_rule_set_is_the_three_named_ones_plus_the_shift_register(self):
+        self.assertEqual(tl.RULES[0], tl.RULE_RANDOM)
+        self.assertEqual(set(tl.CA_RULES), {"r30", "r90", "r110"})
+
+    def test_chance_zero_is_the_IDENTITY_so_LOCK_stays_exact(self):
+        # mutate's promise, kept: "a full rotation is the identity at chance 0,
+        # which is what makes LOCK exact rather than approximate".
+        for rule in tl.CA_RULES:
+            with self.subTest(rule=rule):
+                self.assertEqual(tl.ca_step(0b1011001110001111, 16, rule, 0.0),
+                                 0b1011001110001111)
+
+    def test_rule_90_is_the_xor_of_the_two_neighbours(self):
+        # One bit set in the middle of a wide register becomes two.
+        got = tl.ca_step(0b00010000, 8, "r90", 1.0)
+        self.assertEqual(got, 0b00101000)
+
+    def test_the_neighbourhood_WRAPS_at_the_register_edge(self):
+        # Bit 0 and bit width-1 are neighbours: the pattern is a loop, and a
+        # shape that travels has to be able to leave one end and arrive at the
+        # other.
+        got = tl.ca_step(0b00000001, 8, "r90", 1.0)
+        self.assertEqual(got, 0b10000010)
+
+    def test_no_rule_ever_sets_a_bit_OUTSIDE_the_width(self):
+        # A 12-step triplet division must never pick up bits 12-15 left behind
+        # by a 16-step one - the trap drum_steps' own docstring documents.
+        for rule in tl.CA_RULES:
+            for width in (2, 3, 12, 16):
+                with self.subTest(rule=rule, width=width):
+                    got = tl.ca_step(0xFFFF, width, rule, 1.0)
+                    self.assertEqual(got & ~((1 << width) - 1), 0)
+
+    def test_width_two_is_stable_and_does_not_raise(self):
+        for rule in tl.CA_RULES:
+            with self.subTest(rule=rule):
+                got = tl.ca_step(0b10, 2, rule, 1.0)
+                self.assertIsInstance(got, int)
+                self.assertLessEqual(got, 0b11)
+
+    def test_NO_RULE_CAN_LEAVE_THE_REGISTER_EMPTY(self):
+        # THE risk, and it is a test rather than a comment. Every elementary
+        # rule this instrument offers maps 000 -> 0, so a register that reaches
+        # empty would stay empty forever with the knob reading whatever it
+        # read - a silent channel with nothing explaining it, which is the one
+        # law this surface cannot break.
+        for rule in tl.CA_RULES:
+            for width in (2, 8, 12, 16):
+                with self.subTest(rule=rule, width=width):
+                    self.assertNotEqual(tl.ca_step(0, width, rule, 1.0), 0)
+
+    def test_a_register_that_would_die_this_step_is_reseeded_DETERMINISTICALLY(self):
+        # Same input, same output: a CA is bought for "some rules never repeat,
+        # some grow shapes", and a random rescue would make the whole thing
+        # unreproducible.
+        a = tl.ca_step(0, 16, "r90", 1.0)
+        b = tl.ca_step(0, 16, "r90", 1.0)
+        self.assertEqual(a, b)
+
+    def test_a_full_chance_step_needs_no_randomness_at_all(self):
+        # The rng must not even be consulted at chance 1 - that is what makes
+        # the automaton reproducible from a seed.
+        def boom():
+            raise AssertionError("the rng was consulted at chance 1.0")
+        tl.ca_step(0b0110, 4, "r110", 1.0, rng=boom)
+
+    def test_a_partial_chance_applies_the_rule_to_SOME_bits(self):
+        # The owner decision: RANDOM is the probability the rule is applied to
+        # each bit, the rest held. LOCK stays exact at 0, 100 is the pure
+        # automaton, and the knob keeps one meaning on every channel kind.
+        held = tl.ca_step(0b00010000, 8, "r90", 0.5, rng=lambda: 0.9)
+        self.assertEqual(held, 0b00010000)
+        applied = tl.ca_step(0b00010000, 8, "r90", 0.5, rng=lambda: 0.1)
+        self.assertEqual(applied, 0b00101000)
+
+    def test_an_unknown_rule_holds_the_register_rather_than_inventing_one(self):
+        self.assertEqual(tl.ca_step(0b1010, 4, "r7", 1.0), 0b1010)
+        self.assertEqual(tl.ca_step(0b1010, 4, tl.RULE_RANDOM, 1.0), 0b1010)
+
+
+class TheRuleIsAVerbOnBothKinds(unittest.TestCase):
+
+    def test_both_kinds_start_on_the_shift_register(self):
+        # The migration: `rand` is what every channel has always done.
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                self.assertEqual(tl.default_channel_state(kind)["rule"],
+                                 tl.RULE_RANDOM)
+
+    def test_an_older_snapshot_gains_the_verb_on_the_shift_register(self):
+        old = tl.default_channel_state("voice")
+        del old["rule"]
+        self.assertEqual(tl.upgrade_state("voice", old, 16)["rule"],
+                         tl.RULE_RANDOM)
+
+    def test_the_voice_GEN_page_carries_RULE(self):
+        page = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        self.assertIn("rule", page["verbs"])
+
+    def test_the_drum_ring_has_a_GEN_page_carrying_RULE(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[("STEP", "drum")]]
+        self.assertIn("GEN", titles)
+        page = [d for d in tl.PAGE_RINGS[("STEP", "drum")]
+                if d["title"] == "GEN"][0]
+        self.assertIn("rule", page["verbs"])
+
+    def test_RULE_is_NOT_on_the_model_column(self):
+        # The PM decision of 2026-09-01, and the reason it is worth a test:
+        # MODEL chooses a voice's pitch source. A rule folded into it would
+        # mean picking R110 silently also decides where the notes come from.
+        page = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
+                if d["title"] == "GEN"][0]
+        self.assertIn("model", page["verbs"])
+        self.assertNotEqual(page["verbs"].index("model"),
+                            page["verbs"].index("rule"))
+
+    def test_the_column_says_which_rule_is_running(self):
+        state = tl.default_channel_state("voice")
+        state["rule"] = "r110"
+        cols = tl.columns(tl.PAGE_RINGS[("STEP", "voice")][4], "voice", state)
+        rule_col = [c for c in cols if c["name"].startswith("RULE")][0]
+        self.assertEqual(rule_col["value"], "R110")
+
+    def test_the_shift_register_setting_says_RAND_not_a_blank(self):
+        state = tl.default_channel_state("voice")
+        cols = tl.columns(tl.PAGE_RINGS[("STEP", "voice")][4], "voice", state)
+        rule_col = [c for c in cols if c["name"].startswith("RULE")][0]
+        self.assertEqual(rule_col["value"], "RAND")

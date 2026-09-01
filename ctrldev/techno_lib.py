@@ -44,6 +44,67 @@ class techno_lib:
             reg = ((reg << 1) | bit) & mask
         return reg
 
+    RULE_RANDOM = "rand"         # the shift register, as it always was
+    CA_RULES = ("r30", "r90", "r110")
+    RULES = (RULE_RANDOM,) + CA_RULES
+
+    # Wolfram numbering: bit (left<<2 | centre<<1 | right) of the rule number
+    # is the cell's next value. Three chosen, and the choice is musical rather
+    # than mathematical - 30 scatters, 90 makes travelling diagonals that
+    # collide, 110 grows structures that persist for many bars.
+    _CA_NUMBERS = {"r30": 30, "r90": 90, "r110": 110}
+
+    @staticmethod
+    def ca_step(register, width, rule, chance=1.0, rng=random.random):
+        """Evolve a rhythm register one generation by an elementary CA rule.
+
+        THIS REPLACES mutate, NOT the MODEL column. `model` chooses where a
+        voice's PITCH values come from; this chooses how the register EVOLVES.
+        Folding them together would mean picking R110 silently also decided the
+        pitch source - the PM decision of 2026-09-01, and there is a test on it.
+
+        The neighbourhood WRAPS: the pattern is a loop, so a shape that travels
+        has to leave one end and arrive at the other. Nothing is ever written
+        outside `width` - a 12-step triplet division must not pick up bits
+        12-15 left behind by a 16-step one.
+
+        `chance` is the probability the rule is applied to each bit, the rest
+        held - the owner decision. LOCK stays EXACT at 0 (mutate's own promise,
+        kept), 100 is the pure automaton, and RANDOM keeps one meaning on every
+        channel kind. At chance 1.0 the rng is not consulted at all, which is
+        what makes the automaton reproducible.
+
+        AN EMPTY REGISTER IS RESEEDED, DETERMINISTICALLY. Every elementary rule
+        offered here maps 000 -> 0, so a register that reached empty would stay
+        empty forever with the knob reading whatever it read: a silent channel
+        with nothing explaining it, and that is the one law this surface cannot
+        break. The reseed is one bit at step 0 and never a random one - a CA is
+        bought for "some rules never repeat, some grow shapes", and a random
+        rescue would make it unreproducible."""
+
+        width = max(1, int(width))
+        mask = (1 << width) - 1
+        reg = int(register) & mask
+        number = techno_lib._CA_NUMBERS.get(rule)
+        if number is None:
+            # Not an automaton - the shift register, or a name from a newer
+            # snapshot. Hold, rather than invent a rule that was not asked for.
+            return reg
+        if chance <= 0:
+            return reg
+        out = 0
+        for i in range(width):
+            bit = (reg >> i) & 1
+            if chance < 1.0 and rng() >= chance:
+                out |= bit << i
+                continue
+            left = (reg >> ((i - 1) % width)) & 1
+            right = (reg >> ((i + 1) % width)) & 1
+            out |= ((number >> ((left << 2) | (bit << 1) | right)) & 1) << i
+        if out == 0:
+            return 1
+        return out
+
     @staticmethod
     def mutate_coupled(register, length, chance, source, source_length,
                        amount, rng=random.random):
@@ -623,6 +684,11 @@ class techno_lib:
         property and kind-agnostic, so STEP's spread page reaches a voice too."""
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
                      chance=100, pending=set(),
+                     # RULE, 2026-09-01. How the rhythm register EVOLVES:
+                     # the shift register as always, or an elementary cellular
+                     # automaton. `rand` IS THE MIGRATION - it is bit for bit
+                     # what every channel did before this verb existed.
+                     rule=techno_lib.RULE_RANDOM,
                      # MOVE, 2026-09-01. How much the machine's own gestures
                      # may touch this channel. 100 IS LOAD-BEARING: it is
                      # exactly the behaviour that shipped before this verb
@@ -3467,6 +3533,22 @@ class techno_lib:
                   else "x%d" % state["ratchet"], "seg",
                   (max(0, state.get("ratchet", 1) - 1), 4)),
             ]
+        def rule_col():
+            """RULE, on both kinds. RAND is a WORD, not a blank: the shift
+            register is a choice the player made, and a column that showed
+            nothing for it would read as a control that is not working."""
+            rule = state.get("rule", techno_lib.RULE_RANDOM)
+            index = (techno_lib.RULES.index(rule)
+                     if rule in techno_lib.RULES else 0)
+            return c("RULE", rule.upper() if rule != techno_lib.RULE_RANDOM
+                     else "RAND", "seg", (index, len(techno_lib.RULES)))
+
+        if page == "GEN" and kind == "drum":
+            # One column so far. The leaning generator has a named home in
+            # column 2 when it is built; until then the rest draw dead and
+            # honest rather than reserved and mysterious.
+            return [rule_col()] + [dead("gen%d" % i) for i in range(2, 9)]
+
         if page == "GEN":
             # ORDER MUST MATCH the GEN page's verbs tuple position for
             # position, exactly as the STEP page's list does below.
@@ -3494,7 +3576,7 @@ class techno_lib:
                   "seg", (0 if feed is None else feed + 1, 9)),
                 c("AMT", n(state.get("amount", 0)), "uni",
                   state.get("amount", 0) / 100.0),
-                dead("gen7"), dead("gen8"),
+                rule_col(), dead("gen8"),
             ]
 
         # THIS LIST'S ORDER MUST MATCH PAGE_RINGS[("STEP", "voice")][0]["verbs"]
@@ -3776,6 +3858,13 @@ techno_lib.PAGE_RINGS = {
                   "rhythm", "ratchet")),
         _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
         _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
+        # GEN, 2026-09-01. The drum ring has been one page shorter than the
+        # voice ring since the GEN page shipped, and a new page in an existing
+        # ring costs no button, no capture and no overlay - the cheapest
+        # surface on this instrument. Column 1 only for now; the leaning
+        # generator has a named home in column 2 when it is built.
+        _d(techno_lib.SHAPE_CHANNEL, "GEN",
+           verbs=("rule", None, None, None, None, None, None, None)),
     ),
     # Encoder 7 carries DENSITY rather than SWING: it is the only slot on a
     # full page whose verb has a second home, and swing is on the spread page
@@ -3799,7 +3888,11 @@ techno_lib.PAGE_RINGS = {
            # GLOBAL walk page's `wspan` is a different value in a different
            # table - the walker's span, not this voice's.
            verbs=("rotate", "model", "walk_span", "walk_stride", "feed",
-                  "amount", None, None)),
+                  # RULE is its own column and NOT a value on MODEL, 2026-09-01.
+                  # MODEL chooses where the pitch values come from; RULE
+                  # chooses how the rhythm register evolves. One knob showing
+                  # one word must not decide two axes.
+                  "amount", "rule", None)),
     ),
     ("ALL", None): (
         _d(techno_lib.SHAPE_GLOBAL, "GLOBAL",

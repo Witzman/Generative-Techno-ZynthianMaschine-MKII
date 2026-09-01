@@ -812,6 +812,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._resync_all()
             self._render_all()
 
+    # RULE is deliberately NOT in GENERATOR_PARAMS and has no apply() branch.
+    # It is not a pattern write: it chooses which generator runs at the next
+    # wrap, and the register it evolves does not move until then. Putting it in
+    # that set without a branch in _apply_generator would be the exact shape of
+    # the hole that hid HITS and ROTATE for months - a verb the set promises
+    # reaches the pattern and that nothing writes.
+    def _evolve(self, channel, register, steps, rhythm):
+        """Evolve a rhythm register one generation, by whichever generator the
+        channel is on. ONE PLACE, so the drum path and the voice path can never
+        end up on different rules.
+
+        RANDOM/RHYTHM means the same thing either way: on the shift register it
+        is the probability the fed-back bit flips, on an automaton it is the
+        probability the rule is applied to each bit. LOCK is exact on both, and
+        that is what let the knob keep one meaning."""
+
+        rule = self.param_get(channel, "rule")
+        if rule in tlib.CA_RULES:
+            return tlib.ca_step(register, steps, rule, rhythm / 100.0)
+        return tlib.mutate(register, steps, rhythm / 100.0)
+
     def _move_of(self, channel):
         """This channel's MOVE, for the gate. Read through param_get, never
         out of self.state: a verb whose storage moves is a verb that reads
@@ -1614,8 +1635,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                                         roll=self._move_roll()):
             return
         steps = self._steps(channel)
-        st["rhythm_reg"] = tlib.mutate(int(st.get("rhythm_reg", 0xFFFF)),
-                                       steps, rhythm / 100.0)
+        st["rhythm_reg"] = self._evolve(channel, int(st.get("rhythm_reg",
+                                                           0xFFFF)),
+                                        steps, rhythm)
         with self.lock:
             self._write_pattern(channel)
 
@@ -1671,8 +1693,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # appearing and disappearing - never as the pattern sliding
             # sideways. Rotating the melody is a separate request and this
             # must not quietly consume it.
-            st["rhythm_reg"] = tlib.mutate(st["rhythm_reg"], steps,
-                                           rhythm / 100.0)
+            st["rhythm_reg"] = self._evolve(channel, st["rhythm_reg"],
+                                            steps, rhythm)
         if melody > 0 and st.get("model") == tlib.MODEL_WALK:
             # THE WALK EVOLVES HERE AND NOWHERE ELSE. Its line is a pure
             # function of this seed, so this is the one place the walked
@@ -2652,6 +2674,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # value rather than raise on the save path.
                     "model": self.state[i].get("model",
                                                tlib.MODEL_REGISTER),
+                    # RULE, 2026-09-01. Same .get-with-a-default rule: a
+                    # channel whose state predates the verb saves `rand`,
+                    # which is what it was doing anyway.
+                    "rule": self.state[i].get("rule", tlib.RULE_RANDOM),
                     "walk_span": self.state[i].get("walk_span", 32),
                     "walk_stride": self.state[i].get("walk_stride", 4),
                     # The walked line IS this number - it is the walk's
@@ -2884,8 +2910,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             st = self.state[channel]
             for field in ("register", "length", "random", "gate", "octave",
                           "range", "kit_range", "velo", "rhythm", "rhythm_reg",
-                          "model", "walk_span", "walk_stride", "walk_seed",
-                          "feed", "amount"):
+                          "model", "rule", "walk_span", "walk_stride",
+                          "walk_seed", "feed", "amount"):
                 if field in saved:
                     st[field] = saved[field]
             if "rotate" in saved:
@@ -4682,6 +4708,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # turned the knob far enough to see it.
                 self.apply(channel, "rotate",
                            max(0, min(steps - 1, current + delta)))
+                with self.lock:
+                    self._render_display()
+            return
+
+        if verb == "rule":
+            # A four-way switch on BOTH kinds - the automaton evolves a rhythm
+            # register, and both kinds have one. Clamped, never cyclic: the
+            # owner's law of 2026-08-31, "it should reach upper and then stop
+            # or lower and then stop - only the big one should cycle".
+            delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
+            if delta:
+                have = self.param_get(channel, "rule")
+                index = (tlib.RULES.index(have)
+                         if have in tlib.RULES else 0)
+                want = tlib.RULES[tlib.switch_step(index, len(tlib.RULES),
+                                                   delta)]
+                if want == have:
+                    return
+                self.apply(channel, "rule", want)
                 with self.lock:
                     self._render_display()
             return
