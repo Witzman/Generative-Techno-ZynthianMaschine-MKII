@@ -698,6 +698,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # three voices playing the same line over a different pattern set,
         # which is not a scene.
         self._bank_state = {}
+        # Which channels are writing their fill bar right now. Set at the
+        # phrase boundary and read by the writers - a flag rather than an
+        # argument, because both writers are reached from several places and
+        # threading one more parameter through every caller is how a default
+        # ends up meaning "no fill" in a path nobody checked.
+        self._fill_now = set()
         # Queued mute changes: channel -> the mute state to take at that
         # channel's next wrap. DELIBERATELY NOT state[ch]["pending"] - that
         # set holds only "div" and "length", and _wrap_channel treats any
@@ -2882,6 +2888,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "move": self.state[i].get("move", 100),
                     "exit": self.state[i].get("exit", 0),
                     "rule": self.state[i].get("rule", tlib.RULE_RANDOM),
+                    "phrase": self.state[i].get("phrase", 1),
+                    "fill": self.state[i].get("fill", 0),
                 }
                 for i, ch in enumerate(tlib.CHANNELS)
                 if self.channel_kind(i) == "drum"
@@ -3073,7 +3081,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             for field in ("register", "length", "random", "gate", "octave",
                           "range", "kit_range", "velo", "rhythm", "rhythm_reg",
                           "model", "rule", "walk_span", "walk_stride",
-                          "walk_seed", "feed", "amount", "move", "exit"):
+                          "walk_seed", "feed", "amount", "move", "exit",
+                          "phrase", "fill"):
                 if field in saved:
                     st[field] = saved[field]
             if "rotate" in saved:
@@ -3139,6 +3148,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # channel, and a queued mute landed hard.
             self.state[channel]["move"] = saved.get("move", 100)
             self.state[channel]["exit"] = saved.get("exit", 0)
+            self.state[channel]["phrase"] = saved.get("phrase", 1)
+            self.state[channel]["fill"] = saved.get("fill", 0)
             self.state[channel]["rule"] = saved.get("rule", tlib.RULE_RANDOM)
             if "hits" in saved:
                 self.hits[channel] = int(saved["hits"])
@@ -4855,6 +4866,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # LANE, 2026-09-01. 0 is the raw field, 100 keeps only what lands on
         # the beat.
         "lane": (0, 100, None),
+        # A PHRASE, NOT A BAR, 2026-09-01. 1 is off - every bar is its own
+        # phrase, which is what shipped before this existed.
+        "phrase": (1, 4, ENC_UNITS_DISCRETE),
+        "fill": (0, 100, None),
         # EXIT, 2026-09-01. In BARS, and four is the longest close this
         # instrument has a use for - past that the part has left before the
         # gesture finishes. Discrete, or a nudge would change a bar count.
@@ -5436,6 +5451,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # put one back. On a voice this verb does not exist at all - a voice's
         # placement IS its rhythm register, which is where a tap lands.
         line = tlib.lane_filter(line, self.state[group].get("lane", 0))
+        # THE FILL BAR, 2026-09-01. After the lane deliberately: the lane says
+        # how far the GENERATOR may stray, and a fill is not the generator
+        # straying - it is the phrase answering itself, and it is allowed to
+        # be busier than the lane would let a bar be on its own. Before the
+        # hand register, like everything else, so a step tapped out stays out.
+        if group in self._fill_now:
+            line = tlib.fill_line(line, self.state[group].get("fill", 0))
         pattern = tlib.drum_steps(
             line,
             tlib.rotate(int(self.state[group].get("rhythm_reg", 0xFFFF)),
@@ -6385,8 +6407,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # through param_get. Two readers of one verb disagreeing about where
         # it lives is what makes this shape so quiet - and this is its FOURTH
         # appearance. See the note at the ROTATE encoder path.
-        return tlib.rotate_line(notes, mask,
-                                int(self.param_get(channel, "rotate") or 0))
+        notes, mask = tlib.rotate_line(
+            notes, mask, int(self.param_get(channel, "rotate") or 0))
+        # THE FILL BAR, after the rotation: the fill answers the bar as it is
+        # actually heard, not as it was before it was turned. The pads read
+        # this same function, so the picture shows the fill too - which is the
+        # point. A voice's rests ARE its rhythm register, so filling the mask
+        # is filling the line.
+        if channel in self._fill_now:
+            mask = tlib.fill_line(mask, self.state[channel].get("fill", 0))
+        return notes, mask
 
     def _step_notes(self, channel, steps):
         """The note each step carries, as a list. Computed once per repaint:
@@ -6626,6 +6656,48 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._slog("reanchor", bar=self._phrase_bar, pos=pos, ref=ref[1],
                        err=round(err, 2), move=round(move, 5))
 
+    def _fill_tick(self, bar):
+        """Turn each channel's fill bar on and off at the boundary.
+
+        ONLY FOR CHANNELS WHOSE ANSWER CHANGED. Rewriting eight patterns every
+        bar would be the write burst this design has avoided everywhere else; a
+        channel on a one-bar phrase, or with the fill at zero, is never touched
+        at all.
+
+        Gated through generator_may_write like every other generator, so FREEZE
+        holds the fill, a player-owned channel never has one written over its
+        take, and MOVE at LOCK means what it says. "fill" joined
+        FREEZE_GENERATIVE in the same commit as this caller - the standing
+        lesson from `rhythm`, which sat in that set for months with nothing
+        asking and was correct only by the accident of an early return."""
+
+        for channel in range(len(tlib.CHANNELS)):
+            phrase = int(self.param_get(channel, "phrase") or 1)
+            fill = int(self.param_get(channel, "fill") or 0)
+            want = fill > 0 and tlib.is_fill_bar(bar, phrase)
+            if want == (channel in self._fill_now):
+                continue
+            if not tlib.generator_may_write("fill", self.frozen,
+                                            self.freeze_deep,
+                                            self.owner.get(channel),
+                                            move=self._move_of(channel),
+                                            roll=self._move_roll()):
+                continue
+            if want:
+                self._fill_now.add(channel)
+            else:
+                self._fill_now.discard(channel)
+            try:
+                with self.lock:
+                    if self.channel_kind(channel) == "voice":
+                        self._write_voice_pattern(channel)
+                    else:
+                        self._write_pattern(channel)
+            except Exception as e:
+                # The flag is set either way, so the next bar puts the channel
+                # back rather than leaving it stuck inside a fill.
+                self._log_poll_error(f"fill bar ch{channel}", e)
+
     def _phrase_tick(self):
         """Advance the phrase clock and fire anything the bar has reached.
 
@@ -6694,6 +6766,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._render_display()
                 self._render_transport()
             return
+        self._fill_tick(bar)
         if self._bank_pending is not None:
             # THE BANK LANDS ON THE BAR, and after the freeze gate above: a
             # whole arrangement is the largest change this instrument makes,

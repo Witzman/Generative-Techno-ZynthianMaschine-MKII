@@ -228,6 +228,58 @@ class techno_lib:
             return label
         return "GEN STOPPED %ds" % int(now - beat)
 
+    PHRASE_LENGTHS = (1, 2, 4)
+
+    @staticmethod
+    def is_fill_bar(bar, phrase):
+        """Is this the last bar of the phrase?
+
+        A phrase of 1 is OFF and no bar is ever a fill, which is exactly the
+        behaviour that shipped before this existed."""
+
+        phrase = int(phrase)
+        if phrase <= 1:
+            return False
+        return int(bar) % phrase == phrase - 1
+
+    @staticmethod
+    def fill_line(pattern, amount):
+        """The same bar, answered.
+
+        ADDS steps and never removes one: a fill that took hits away would be
+        a breakdown, and the player has a knob for that. It reaches for the
+        OFFBEATS first - a fill that added on the beats would just be a louder
+        version of the bar it is meant to answer - and it is deterministic, so
+        the fourth bar is the same fourth bar every time round.
+
+        `amount` is how much of the room left in the bar to use, 0-100, so a
+        dense pattern fills less than a sparse one for the same number: what
+        the knob controls is how FULL the answer gets, not how many hits are
+        added to whatever is there."""
+
+        amount = max(0, min(100, int(amount)))
+        if amount <= 0:
+            return tuple(pattern)
+        steps = len(pattern)
+        out = list(pattern)
+        free = [i for i in range(steps) if not out[i]]
+        if not free:
+            return tuple(out)
+        grid = techno_lib.beat_grid(steps)
+
+        def distance(i):
+            return min(min((i - g) % steps, (g - i) % steps) for g in grid)
+
+        # FURTHEST FROM THE BEAT FIRST - the mirror image of the lane, which
+        # drops in exactly this order. The two verbs pull against each other on
+        # purpose: one is how far the generator may stray, the other is how far
+        # the fill is allowed to.
+        free.sort(key=lambda i: (-distance(i), i))
+        take = max(1, int(round(len(free) * amount / 100.0)))
+        for i in free[:take]:
+            out[i] = True
+        return tuple(out)
+
     @staticmethod
     def beat_grid(steps):
         """The quarter-note positions of a bar of `steps`. Derived by dividing
@@ -940,6 +992,12 @@ class techno_lib:
         property and kind-agnostic, so STEP's spread page reaches a voice too."""
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
                      chance=100, pending=set(),
+                     # A PHRASE, NOT A BAR, 2026-09-01. `phrase` is how many
+                     # bars the phrase is and `fill` is how full its last bar
+                     # gets. 1 and 0 ARE THE MIGRATION: no bar is ever a fill
+                     # and nothing is ever added, which is what every channel
+                     # did before these existed.
+                     phrase=1, fill=0,
                      # EXIT, 2026-09-01. How long a QUEUED mute takes to close
                      # the channel, in bars. 0 IS THE MIGRATION - hard, the
                      # instant the wrap arrives, exactly as a queued mute has
@@ -1270,8 +1328,11 @@ class techno_lib:
     # NAVIGATE-overlay shape: a library entry with no code behind it reads as
     # covered and is not. The drum rhythm register asks it through
     # generator_may_write, so it means something now.
+    # "fill" joined 2026-09-01 WITH its caller, in the same commit - the
+    # standing lesson from `rhythm`, which sat in this set for months with
+    # nothing asking and was correct only by the accident of an early return.
     FREEZE_GENERATIVE = frozenset(("melody", "rhythm", "drift", "reroll",
-                                   "macro", "walk"))
+                                   "macro", "walk", "fill"))
 
     # Ice blue, and nothing else on the panel uses it.
     COLOR_FREEZE = 0x60D0FF
@@ -2804,6 +2865,10 @@ class techno_lib:
                    lambda v: "RAW" if v <= 0 else techno_lib._num(v)),
         "exit":   ("seg", lambda v: v / 4.0,
                    lambda v: "HARD" if v <= 0 else "%dbar" % v),
+        "phrase": ("seg", lambda v: v / 4.0,
+                   lambda v: "BAR" if v <= 1 else "%dbar" % v),
+        "fill":   ("uni", lambda v: v / 100.0,
+                   lambda v: "OFF" if v <= 0 else techno_lib._num(v)),
     }
 
     @staticmethod
@@ -4288,6 +4353,12 @@ techno_lib.PAGE_RINGS = {
         # often, how far, and how it goes - and because an arrangement gesture
         # is read for all eight at once or it is not read at all.
         _d(techno_lib.SHAPE_SPREAD, "EXIT", verb="exit"),
+        # A PHRASE, NOT A BAR, 2026-09-01. Two spreads rather than one page of
+        # pairs: the question "which channels are on a four-bar phrase" and the
+        # question "how full is the fill" are asked at different moments, and
+        # each is read across all eight at once.
+        _d(techno_lib.SHAPE_SPREAD, "PHRASE", verb="phrase"),
+        _d(techno_lib.SHAPE_SPREAD, "FILL", verb="fill"),
     ),
     ("MIXER", None): (
         _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),

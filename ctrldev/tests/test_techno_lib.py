@@ -3523,7 +3523,7 @@ class TestFreeze(unittest.TestCase):
         # that put "macro" here in 2026-08-20.
         self.assertEqual(tl.FREEZE_GENERATIVE,
                          frozenset(("melody", "rhythm", "drift", "reroll",
-                                    "macro", "walk")))
+                                    "macro", "walk", "fill")))
 
 
 class TestFreezeLabel(unittest.TestCase):
@@ -6045,3 +6045,99 @@ class BanksAsScenes(unittest.TestCase):
     def test_the_label_says_which_page_of_banks_is_showing(self):
         self.assertEqual(tl.bank_label(0, 3), "BANK 1/4 . 3")
         self.assertEqual(tl.bank_label(2, 17), "BANK 3/4 . 17")
+
+
+class APhraseNotABar(unittest.TestCase):
+    """2026-09-01. A channel plays four bars where the fourth differs.
+
+    THE MECHANISM IS A REWRITE AT THE BOUNDARY, NOT A TIMELINE, and the
+    difference is worth being plain about. zynseq's track really is a
+    position->pattern map, so a true timeline exists - but the driver
+    hardcodes track 0 / position 0 in ten places, and a wrap would then fire
+    once per PHRASE rather than once per bar, silently changing six shipped
+    generators. That is the L+ this entry was costed at. What ships here is the
+    musical outcome for a fraction of the risk: the generator writes a fill on
+    the last bar of the phrase and writes the plain line back on the next one."""
+
+    def test_a_phrase_of_one_is_OFF_and_no_bar_is_ever_a_fill(self):
+        for bar in range(8):
+            with self.subTest(bar=bar):
+                self.assertFalse(tl.is_fill_bar(bar, 1))
+
+    def test_the_LAST_bar_of_the_phrase_is_the_fill(self):
+        self.assertFalse(tl.is_fill_bar(0, 4))
+        self.assertFalse(tl.is_fill_bar(1, 4))
+        self.assertFalse(tl.is_fill_bar(2, 4))
+        self.assertTrue(tl.is_fill_bar(3, 4))
+
+    def test_it_repeats_every_phrase(self):
+        self.assertTrue(tl.is_fill_bar(7, 4))
+        self.assertTrue(tl.is_fill_bar(11, 4))
+        self.assertFalse(tl.is_fill_bar(8, 4))
+
+    def test_a_two_bar_phrase_fills_every_other_bar(self):
+        self.assertEqual([tl.is_fill_bar(b, 2) for b in range(4)],
+                         [False, True, False, True])
+
+    def test_a_fill_of_zero_returns_the_line_UNTOUCHED(self):
+        line = tuple(i % 4 == 0 for i in range(16))
+        self.assertEqual(tl.fill_line(line, 0), line)
+
+    def test_a_fill_ADDS_steps_and_never_removes_one(self):
+        line = tuple(i % 4 == 0 for i in range(16))
+        got = tl.fill_line(line, 50)
+        for i, on in enumerate(line):
+            if on:
+                self.assertTrue(got[i])
+        self.assertGreater(sum(got), sum(line))
+
+    def test_a_fill_reaches_for_the_OFFBEATS_first(self):
+        # A fill that added on the beats would just be a louder version of the
+        # bar it is supposed to answer.
+        line = tuple(i % 4 == 0 for i in range(16))
+        got = tl.fill_line(line, 25)
+        added = [i for i in range(16) if got[i] and not line[i]]
+        self.assertTrue(added)
+        for i in added:
+            self.assertNotIn(i, tl.beat_grid(16))
+
+    def test_a_full_fill_does_not_overflow_the_bar(self):
+        line = tuple(i % 4 == 0 for i in range(16))
+        self.assertEqual(len(tl.fill_line(line, 100)), 16)
+        self.assertLessEqual(sum(tl.fill_line(line, 100)), 16)
+
+    def test_it_is_deterministic(self):
+        line = tuple(i % 4 == 0 for i in range(16))
+        self.assertEqual(tl.fill_line(line, 60), tl.fill_line(line, 60))
+
+    def test_a_triplet_bar_fills_over_its_own_twelve_steps(self):
+        line = tuple(i % 3 == 0 for i in range(12))
+        got = tl.fill_line(line, 50)
+        self.assertEqual(len(got), 12)
+
+    def test_both_kinds_carry_the_verbs_and_start_OFF(self):
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                state = tl.default_channel_state(kind)
+                self.assertEqual(state["phrase"], 1)
+                self.assertEqual(state["fill"], 0)
+
+    def test_an_older_snapshot_gains_them_OFF(self):
+        old = tl.default_channel_state("drum")
+        del old["phrase"]
+        del old["fill"]
+        got = tl.upgrade_state("drum", old, 16)
+        self.assertEqual((got["phrase"], got["fill"]), (1, 0))
+
+    def test_the_ALL_ring_carries_a_PHRASE_spread(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "PHRASE"][0]
+        self.assertEqual(page["verb"], "phrase")
+
+    def test_a_phrase_of_one_reads_BAR_rather_than_a_bare_one(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "PHRASE"][0]
+        views = [("A", "KICK", {"phrase": 1})] * 8
+        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "BAR")
+        views = [("A", "KICK", {"phrase": 4})] * 8
+        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "4bar")
