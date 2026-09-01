@@ -3769,27 +3769,38 @@ class techno_lib:
     # only caller - so the LED painter and the button handler ask one question
     # once.
     F_ROW_MUTE = "mute"        # mute, or solo while SOLO is held or latched
-    F_ROW_SWITCH = "switch"    # the CONTROL page's switches, one per column
-    F_ROW_INERT = "inert"      # dark and doing nothing
+    # RETIRED 2026-09-01, kept as names rather than deleted. F_ROW_SWITCH was
+    # the CONTROL page's switches and F_ROW_INERT was MOD's answer to them;
+    # the row is mute in every mode now. They stay so that a future proposal
+    # to take the row again has to say which of these it means and argue for
+    # it out loud, rather than growing a third meaning by accident - which is
+    # how the second one arrived, and it shipped with a bug.
+    F_ROW_SWITCH = "switch"
+    F_ROW_INERT = "inert"
 
     @staticmethod
     def f_row_kind(mode, shift, soloing, mod):
-        """Whether F1-F8 are mutes, switches, or nothing at all.
+        """What F1-F8 are. MUTE, or SOLO while SOLO is held or latched.
 
-        Only CONTROL gives the row away, and only unmodified: SHIFT + Fn hands
-        mute back inside CONTROL, and SOLO + Fn is solo there exactly as it is
-        in every other mode. Mute is a control a player reaches for without
-        looking, so it stays one modifier away rather than being unreachable.
+        ONE MEANING IN EVERY MODE, since 2026-09-01. CONTROL used to take the
+        row for the page's parameter switches, which needed an exception of
+        its own (SHIFT + Fn handed mute back) and a third state on top of that
+        (MOD made the row inert). Three meanings on one row, told apart by a
+        mode AND a modifier, on the eight buttons a player hits without
+        looking.
 
-        MOD makes the row INERT rather than leaving it as switches: MOD makes
-        the pads inert and repurposes every encoder, and a parameter switch
-        firing inside a bind gesture would be a surprise from a gesture that
-        is supposed to change nothing."""
-        if mode != "CONTROL" or shift or soloing:
-            return techno_lib.F_ROW_MUTE
-        if mod:
-            return techno_lib.F_ROW_INERT
-        return techno_lib.F_ROW_SWITCH
+        Nothing was lost by giving it back. A switch column's ENCODER already
+        steps that switch through its own ticks - _verb_lv2 walks
+        switch_spec/switch_step and draws the plugin's own word - so the
+        button was a second way to do a thing the knob above it already did,
+        bought at the price of the row's only meaning.
+
+        `mode` and `mod` are kept in the signature deliberately: they are what
+        a future exception would be argued from, and a caller that stops
+        passing them is a caller that has stopped thinking about them."""
+
+        del mode, mod                 # one row, one meaning
+        return techno_lib.F_ROW_MUTE
 
     @staticmethod
     def switch_spec(labels, ticks):

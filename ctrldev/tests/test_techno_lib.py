@@ -3244,38 +3244,44 @@ class TestSwitchColumns(unittest.TestCase):
 
 
 class TestFRowKind(unittest.TestCase):
-    """Taking the F row is the only part of switch exposure that is not
-    additive, so what the row means is a table, tested."""
+    """ONE ROW, ONE MEANING, since 2026-09-01.
 
-    def test_control_unmodified_is_switches(self):
-        self.assertEqual(tl.f_row_kind("CONTROL", False, False, False),
-                         tl.F_ROW_SWITCH)
+    CONTROL used to take the row for the page's parameter switches. That
+    needed an exception of its own (SHIFT + Fn handed mute back) and a third
+    state on top of it (MOD made the row inert) - three meanings on the eight
+    buttons a player hits without looking, told apart by a mode AND a
+    modifier.
 
-    def test_every_other_mode_keeps_mute(self):
-        for mode in ("STEP", "ALL", "MIXER", "FILTER"):
+    Nothing was lost giving it back: a switch column's ENCODER already steps
+    that switch through its own ticks, so the button was a second way to do
+    what the knob above it did, bought at the price of the row's only
+    meaning."""
+
+    def test_every_mode_is_mute(self):
+        for mode in ("CONTROL", "STEP", "AUTO", "VOLUME"):
             self.assertEqual(tl.f_row_kind(mode, False, False, False),
-                             tl.F_ROW_MUTE)
+                             tl.F_ROW_MUTE, mode)
 
-    def test_shift_hands_mute_back_inside_control(self):
-        self.assertEqual(tl.f_row_kind("CONTROL", True, False, False),
+    def test_control_no_longer_takes_the_row(self):
+        # The regression this whole change exists to prevent.
+        self.assertEqual(tl.f_row_kind("CONTROL", False, False, False),
                          tl.F_ROW_MUTE)
 
-    def test_solo_still_solos_inside_control(self):
-        self.assertEqual(tl.f_row_kind("CONTROL", False, True, False),
-                         tl.F_ROW_MUTE)
+    def test_no_modifier_changes_what_the_row_is(self):
+        # SHIFT used to be the way BACK to mute inside CONTROL, and MOD used
+        # to make the row inert. Neither has anything left to do here: the row
+        # never leaves, so it never has to be handed back.
+        for shift in (False, True):
+            for mod in (False, True):
+                self.assertEqual(
+                    tl.f_row_kind("CONTROL", shift, False, mod),
+                    tl.F_ROW_MUTE, f"shift={shift} mod={mod}")
 
-    def test_mod_makes_the_row_inert_rather_than_switching(self):
-        self.assertEqual(tl.f_row_kind("CONTROL", False, False, True),
-                         tl.F_ROW_INERT)
-
-    def test_mod_outside_control_is_still_mute(self):
-        # MOD only takes a row that switch exposure had taken in the first
-        # place; outside CONTROL nothing about the row changed.
-        self.assertEqual(tl.f_row_kind("STEP", False, False, True),
-                         tl.F_ROW_MUTE)
-
-    def test_shift_outranks_mod(self):
-        self.assertEqual(tl.f_row_kind("CONTROL", True, False, True),
+    def test_solo_is_not_a_different_row(self):
+        # SOLO changes what a press MEANS - mute or solo - and that is
+        # _f_button's business, not the row's. The row is still the eight
+        # channels either way, which is why soloing does not appear here.
+        self.assertEqual(tl.f_row_kind("STEP", False, True, False),
                          tl.F_ROW_MUTE)
 
 

@@ -5770,6 +5770,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _f_button(self, index, down):
         """F1-F8. Mute by default, solo while SOLO is held or latched.
 
+        ONE MEANING IN EVERY MODE since 2026-09-01. CONTROL used to take the
+        row for the page's parameter switches, which needed an exception
+        (SHIFT + Fn handed mute back) and then an exception to the exception
+        (MOD made the row inert) - and the second of those shipped as a bug:
+        F_ROW_INERT returns (None,) * 8, which is not None, so under MOD the
+        row was painted dark and advanced the switch anyway. Measured on the
+        rig 2026-08-21.
+
+        Nothing was lost giving the row back. A switch column's ENCODER
+        already steps that switch through its own ticks - _verb_lv2 walks
+        switch_spec/switch_step and draws the plugin's own word - so the
+        button was a second route to a thing the knob above it already did,
+        bought at the price of the row's only meaning.
+
         Law L1: a tap latches, a hold is momentary. Both are needed from the
         same button inside the same bar - momentary is how you play a gesture,
         latched is how you make a decision - so the press always acts and the
@@ -5777,28 +5791,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         key = ("f", index)
         soloing = self.solo_down or self.solo_mode
-        row = self._switch_row()
-        if row is not None:
-            # CONTROL, unmodified: the row is the page's switches. Asked
-            # through the same predicate the LED is painted from, so the
-            # button and its light cannot disagree about what the row means.
-            #
-            # The pop is unconditional: a press that landed as a mute, with
-            # SHIFT released before the button, would otherwise leave a
-            # _down_at entry behind for a later hold to measure its time from.
-            self._down_at.pop(key, None)
-            # A None ENTRY is a dark, inert button - either this column carries
-            # no switch, or MOD has made the whole row inert. Both must do
-            # nothing, and testing the row for `is not None` was not enough:
-            # F_ROW_INERT returns (None,) * 8, which is not None, so under MOD
-            # the row was painted dark and still advanced the switch. Measured
-            # on the rig 2026-08-21 - the page label read MOD, the F LED was
-            # held dark, and three presses walked the switch anyway. That is
-            # the exact object _switch_row's docstring calls the worst this
-            # surface can produce: a light that disagrees with the button.
-            if down and row[index] is not None:
-                self._switch_press(index)
-            return
         if down:
             self._down_at[key] = (time.monotonic(), soloing)
             self._toggle_solo(index) if soloing else self._toggle_mute(index)
@@ -8834,91 +8826,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return (index, len(ticks), labels[index])
 
     def _switch_row(self):
-        """What the F row means right now: a tuple of eight entries when it is
-        the page's switches, None when it is still mute and solo.
+        """RETIRED as an F-row predicate, 2026-09-01. Always None now.
 
-        THE SINGLE PREDICATE for both the painter (_render_mutes) and the
-        action (_f_button), for the reason _column_dead exists: a second
-        approximation of "what does this button do" drifts from the first, and
-        an F LED that disagrees with what the button does is the worst object
-        this surface can produce.
+        The F row is mute in every mode, so there is nothing here to decide.
+        Kept as a named no-op rather than deleted because _render_mutes still
+        asks it, and because the answer it gives - "the row is never anything
+        but mute" - is the thing a future exception would have to argue
+        against out loud rather than by quietly growing a branch.
 
-        An entry is True when the switch is off its first position, False when
-        it is on it, and None when that column carries no switch at all - a
-        dark button that does nothing, which is law L4 on a button.
+        What it used to return lives on where it belongs: a switch column
+        draws the plugin's own word over a segment bar, and the ENCODER above
+        the button steps it through its own ticks."""
 
-        Mute and solo are one modifier away inside CONTROL: SHIFT + Fn mutes,
-        SOLO + Fn solos exactly as it does everywhere else. Every other mode
-        is untouched."""
-
-        kind = tlib.f_row_kind(self.mode, self.shift_down,
-                               self.solo_down or self.solo_mode, self.mod_down)
-        if kind == tlib.F_ROW_MUTE:
-            return None
-        if kind == tlib.F_ROW_INERT:
-            # MOD: dark and doing nothing. The rule itself is in
-            # techno_lib.f_row_kind, where it is unit tested.
-            return (None,) * 8
-        verbs = self._page().get("verbs") or ()
-        out = []
-        for column in range(8):
-            verb = verbs[column] if column < len(verbs) else None
-            view = self._switch_view(verb)
-            out.append(None if view is None else view[0] > 0)
-        return tuple(out)
-
-    def _switch_press(self, column):
-        """F1-F8 in CONTROL: advance the switch above the button, wrapping.
-
-        Press only. The tap/hold law is about mute and solo - a momentary
-        parameter switch would be a different feature, and a held one would
-        fight the display.
-
-        A modulated port has its modulator's BASE moved instead of being
-        written, the same contract mod_steer() gives the encoders: writing the
-        engine here would be overwritten by the next modulator tick inside
-        200 ms and the button would read as broken."""
-
-        verbs = self._page().get("verbs") or ()
-        verb = verbs[column] if column < len(verbs) else None
-        if verb is None or not verb.startswith(tlib.VERB_LV2):
-            # Only the channel's own synth. An `fx:` verb is ganged across all
-            # eight inserts and lives on the ALL pages, which this row never
-            # reaches - writing one from here would move insert 0 alone.
-            return
-        view = self._switch_view(verb)
-        if view is None:
-            return
-        spec = self._switch_spec(verb)
-        if spec is None:
-            return
-        _, ticks = spec
-        target = ticks[tlib.switch_next(view[0], len(ticks))]
-        zctrl = self._mod_zctrl(self.group, verb)
-        key = self._mod_key(self.group, verb)
-        entry = self.mod.get(key)
-        if entry is not None:
-            span = zctrl.value_max - zctrl.value_min
-            if span <= 0:
-                return
-            entry["base"] = min(100.0, max(
-                0.0, (float(target) - zctrl.value_min) / span * 100.0))
-        else:
-            zctrl.set_value(target, True)
-        with self.lock:
-            self._render_display()
-            self._render_mutes()
-
-    # Peak metering. Two mixer APIs exist and the Pi runs the older one -
-    # measured 2026-08-11, G4 step 4:
-    #   new (this checkout): update_dpm_states() fills mixer.dpm, a DPM array of
-    #                        (a, b, a_hold, b_hold, mono); enable_dpm(enable)
-    #   old (on the Pi):     get_dpm_states(start, end) -> [[a, b, ha, hb, mono]]
-    #                        per channel; enable_dpm(start, end, enable)
-    # Both report dBFS (mixer.c convertToDBFS). Neither present means the bar
-    # keeps showing fader position, which is what it showed before this feature.
-    METER_PIXELS = lib.SCREEN_COL - 12      # the bar's inner width in pixels
-    METER_FLOOR = 40.0                      # dB below 0 that fills the bar
+        return None
 
     def _meter_frac(self, channel):
         """This channel's peak level as a 0-1 fraction, quantised to the bar's
