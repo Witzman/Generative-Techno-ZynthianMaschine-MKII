@@ -493,6 +493,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # would otherwise write 30 journal lines a second. Keyed, so one
         # failing channel cannot silence the report for another.
         self.playhead_thread = None
+        self.watchdog_thread = None
+        # THE GENERATOR'S HEARTBEAT. Stamped at the top of every poll tick,
+        # read by the watchdog thread. None until the first tick: reporting a
+        # stall before the loop has ever run would cry wolf on every boot.
+        self._beat_at = None
+        self._stalled = False
         # libzynseq is not thread-safe and this driver touches it from three
         # threads: the MIDI handler, the zynsigman queued signal handler and
         # the playhead poll. Zynthian's UI died with SIGSEGV (exit 139) inside
@@ -2555,12 +2561,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.playhead_thread = Thread(
             target=self._playhead_loop, name="maschine_mk2_playhead", daemon=True)
         self.playhead_thread.start()
+        # A SECOND THREAD, and it has to be one: the fault it watches for is
+        # the poll thread BLOCKING, so nothing the poll thread runs could ever
+        # notice it. It does no zynseq work and takes no lock - the blocked
+        # thread may be holding one - so it cannot itself become the fault.
+        self.watchdog_thread = Thread(
+            target=self._watchdog_loop, name="maschine_mk2_watchdog",
+            daemon=True)
+        self.watchdog_thread.start()
 
     def end(self):
         self.stopping.set()
         if self.playhead_thread:
             self.playhead_thread.join(timeout=1.0)
             self.playhead_thread = None
+        if self.watchdog_thread:
+            self.watchdog_thread.join(timeout=1.0)
+            self.watchdog_thread = None
         zynsigman.unregister(
             zynsigman.S_STEPSEQ, self.zynseq.SS_SEQ_PROGRESS, self._on_progress)
         zynsigman.unregister(
@@ -7228,6 +7245,57 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.head_shown = None
         self._render_all()
 
+    WATCHDOG_POLL_S = 1.0
+
+    def _watchdog_loop(self):
+        """Notice that the generator has stopped, say so, and keep the pads
+        alive while it is stopped.
+
+        WHAT "REDUCED MODE" IS HERE. While the poll thread is stuck, the
+        note-base heartbeat it normally sends every second stops with it - and
+        the daemon re-bases the pads on every Group press whatever the driver
+        thinks, so the base drifts and every pad press decodes out of range,
+        silently. So this thread keeps sending it. The generator is stopped
+        either way; the difference is whether the instrument can still be
+        PLAYED while it is.
+
+        NO LOCK IS TAKEN ANYWHERE IN HERE. The thread this watches may be
+        blocked while holding one, and a watchdog that can deadlock on the
+        fault it reports is worse than none. One UDP packet a second is the
+        whole cost.
+
+        The banner itself is composed on the render path (tlib.stall_label) so
+        it appears the moment anything repaints. It is not painted from this
+        thread: writing text over a row with no clear primitive would leave
+        the old label underneath it, and inventing one from here - untested,
+        on the write path that is the prime suspect for every controller wedge
+        this project has had - is not a trade worth making for a message the
+        journal already carries."""
+
+        while not self.stopping.wait(self.WATCHDOG_POLL_S):
+            try:
+                now = time.monotonic()
+                stalled = tlib.stalled(now, self._beat_at)
+                if stalled:
+                    # Reduced mode: the pads keep decoding.
+                    self._send_osc(lib.note_base_osc(
+                        GROUP_NOTE_BASE[self.group]))
+                if stalled and not self._stalled:
+                    self._stalled = True
+                    logging.warning(
+                        "Maschine: generation has stopped - no poll tick for "
+                        f"{now - (self._beat_at or now):.1f}s. The pads are "
+                        "still being re-based; nothing else is running.")
+                    self._slog("watchdog", event="stall",
+                               since=round(now - (self._beat_at or now), 1))
+                elif self._stalled and not stalled:
+                    self._stalled = False
+                    logging.warning("Maschine: generation resumed.")
+                    self._slog("watchdog", event="resumed")
+            except Exception as e:
+                # A watchdog that can die is not a watchdog.
+                logging.error(f"Maschine watchdog: {e}")
+
     def _playhead_loop(self):
         """Repaint just the two pads the playhead moves between. A full
         _render_pads() at this rate would mean 16 getNoteVelocity() calls
@@ -7241,6 +7309,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         while not self.stopping.wait(PLAYHEAD_POLL_S):
             try:
                 tick += 1
+                # THE HEARTBEAT, stamped before the two calls that can block.
+                # Anything below this line failing to return is exactly what
+                # the watchdog exists to notice.
+                self._beat_at = time.monotonic()
                 # Outside the lock on purpose: loading a kit talks to
                 # LinuxSampler over a socket and can block.
                 self._commit_kit()
@@ -8221,6 +8293,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         ring = self._ring()
         key = tlib.ring_key(self.mode, self._page_kind(self.group))
         label = tlib.page_label(desc["title"], self.page_idx.get(key, 0), len(ring))
+        # THE STALL BANNER REPLACES EVERYTHING BELOW IT. Composed first and
+        # returned early, because every suffix in the chain that follows makes
+        # the line longer and the indicator truncates silently at 42
+        # characters - the one message that must never be the one cut is the
+        # one saying the instrument has stopped.
+        stall = tlib.stall_label(time.monotonic(), self._beat_at, label)
         # The page indicator also carries who owns the channel and whether a
         # take is being captured. The tab row is left alone: dashed there means
         # "this channel is not sounding", and that meaning is not diluted.
@@ -8255,6 +8333,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self._timescale_note is not None:
             name, moved, asked = self._timescale_note
             label = tlib.scope_label(label, name, moved, asked)
+        if stall != label and tlib.stalled(time.monotonic(), self._beat_at):
+            label = stall
         for screen in (0, 1):
             # The label joins the cached tuple deliberately: paging with no
             # other change must still repaint.

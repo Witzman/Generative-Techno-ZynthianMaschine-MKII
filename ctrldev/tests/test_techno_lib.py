@@ -5931,3 +5931,54 @@ class ChannelsThatLeaveThroughAFilter(unittest.TestCase):
                 if d["title"] == "EXIT"][0]
         views = [("A", "KICK", {"exit": 2})] * 8
         self.assertEqual(tl.spread_columns(page, views)[0]["value"], "2bar")
+
+
+class TheWatchdogSaysWhenTheMachineStopped(unittest.TestCase):
+    """2026-09-01. The three-hour silence this was written from - a poll thread
+    that died by raising - CANNOT recur: that thread has carried an exception
+    guard since 643659f. What remains is a thread that stops by BLOCKING, on
+    the LinuxSampler socket with no timeout, and no exception handler catches
+    that. So the watchdog is a HEARTBEAT, not a try/except."""
+
+    def test_a_fresh_beat_is_not_a_stall(self):
+        self.assertFalse(tl.stalled(100.0, 100.0))
+
+    def test_a_beat_inside_the_window_is_not_a_stall(self):
+        self.assertFalse(tl.stalled(102.0, 100.0, after=3.0))
+
+    def test_a_beat_older_than_the_window_IS_a_stall(self):
+        self.assertTrue(tl.stalled(104.0, 100.0, after=3.0))
+
+    def test_a_beat_that_has_never_happened_is_not_a_stall(self):
+        # Before the poll thread's first tick there is nothing to compare
+        # against, and reporting a stall at start-up would cry wolf on every
+        # boot.
+        self.assertFalse(tl.stalled(100.0, None))
+
+    def test_the_window_is_long_enough_not_to_fire_on_a_slow_tick(self):
+        # The poll tick is 33 ms and the shipped sub-rate is ~200 ms. A window
+        # under a second would fire on a kit change that merely took a while.
+        self.assertGreaterEqual(tl.STALL_AFTER_S, 2.0)
+
+    def test_the_banner_says_the_machine_stopped_and_for_how_long(self):
+        self.assertEqual(tl.stall_label(114.0, 100.0), "GEN STOPPED 14s")
+
+    def test_the_banner_REPLACES_the_page_label_rather_than_appending(self):
+        # The page indicator already composes up to eleven suffixes onto a
+        # 42-character line and truncates silently - a logged defect. The one
+        # message that must never be the one truncated is this one.
+        # 3.5s: past the window, and the banner still says whole seconds.
+        self.assertEqual(tl.stall_label(103.5, 100.0, "STEP 1/5"),
+                         "GEN STOPPED 3s")
+
+    def test_no_stall_leaves_the_label_exactly_as_it_was(self):
+        self.assertEqual(tl.stall_label(100.5, 100.0, "STEP 1/5"), "STEP 1/5")
+
+    def test_a_stall_with_no_beat_leaves_the_label_alone(self):
+        self.assertEqual(tl.stall_label(100.0, None, "STEP 1/5"), "STEP 1/5")
+
+    def test_the_seconds_are_whole_because_a_moving_decimal_is_an_animation(self):
+        # Never animate a value on the screens. A tenth of a second ticking on
+        # the label would repaint both screens ten times a second, which is
+        # how this controller has been wedged before.
+        self.assertEqual(tl.stall_label(103.9, 100.0), "GEN STOPPED 3s")

@@ -183,6 +183,51 @@ class techno_lib:
         f = min(1.0, max(0.0, float(factor)))
         return f ** techno_lib.EXIT_CUTOFF_CURVE
 
+    # THE WATCHDOG, 2026-09-01. Long enough that a kit change which merely
+    # took a while does not cry wolf - the poll tick is 33 ms and the shipped
+    # sub-rate is ~200 ms - and short enough that a player notices the banner
+    # in the same breath as the silence.
+    STALL_AFTER_S = 3.0
+
+    @staticmethod
+    def stalled(now, beat, after=None):
+        """Has the generator's heartbeat stopped?
+
+        A HEARTBEAT, NOT A try/except, and the distinction is the whole
+        feature. The failure this was written from - a poll thread that died by
+        raising - cannot recur: that thread has had an exception guard since
+        `643659f`. What remains is a thread that stops by BLOCKING, on the
+        LinuxSampler socket with no timeout, and no exception handler catches
+        that. A watchdog shaped like the entry's description would guard the
+        half that is already guarded.
+
+        A beat that has never happened is NOT a stall: before the first tick
+        there is nothing to compare against, and reporting one at start-up
+        would cry wolf on every boot."""
+
+        if beat is None:
+            return False
+        after = techno_lib.STALL_AFTER_S if after is None else after
+        return (now - beat) > after
+
+    @staticmethod
+    def stall_label(now, beat, label=""):
+        """The page indicator while the machine is stopped.
+
+        IT REPLACES THE LABEL RATHER THAN APPENDING TO IT. The indicator
+        already composes up to eleven suffixes onto a 42-character line and
+        truncates silently - a logged defect - and the one message that must
+        never be the one truncated is the one saying the instrument has
+        stopped.
+
+        WHOLE SECONDS. A tenth ticking on the label is an animation, and it
+        would repaint both screens ten times a second, which is how this
+        controller has been wedged before."""
+
+        if not techno_lib.stalled(now, beat):
+            return label
+        return "GEN STOPPED %ds" % int(now - beat)
+
     @staticmethod
     def beat_grid(steps):
         """The quarter-note positions of a bar of `steps`. Derived by dividing
