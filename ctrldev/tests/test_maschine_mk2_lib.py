@@ -829,6 +829,127 @@ class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
                          f"driver writes LED names the daemon drops: {unknown}")
 
 
+class TheDriverIsParsableEvenWhereItIsNotImportable(unittest.TestCase):
+    """Three static checks on the 8700 lines that have no other test.
+
+    THE ONLY TESTS THAT REACH THE DRIVER. It imports zynlibs.zynseq and
+    zyngine, so it cannot be imported off the rig; py_compile proves it parses
+    and nothing else. Two defects of exactly this shape landed in one
+    afternoon during the 2026-09-01 redesign, both invisible to every check
+    that existed, and both would have taken the surface down on the first
+    press rather than misbehaving quietly:
+
+      - `_act_home` assigned to `self.mod_latched`, which had become a
+        read-only property in the same round.
+      - `lens_down` was defined TWICE. Python keeps the later one, and the
+        later one read `self.lens_held` and `self.lens_latched`, which are
+        assigned nowhere. `_page()` reads it, and every painter calls
+        `_page()`.
+
+    A class body is a dict comprehension: a second `def` of a name silently
+    replaces the first, with no warning from anything. That is the single
+    most dangerous property of a file this long."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _classes(self):
+        import ast
+        tree = ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+
+    def test_no_name_is_defined_twice_in_a_class_body(self):
+        import ast
+        for cls in self._classes():
+            seen, twice = set(), []
+            for node in cls.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    # A @foo.setter legitimately repeats the property's name.
+                    setter = any(isinstance(d, ast.Attribute)
+                                 and d.attr in ("setter", "getter", "deleter")
+                                 for d in node.decorator_list)
+                    if node.name in seen and not setter:
+                        twice.append(node.name)
+                    seen.add(node.name)
+            self.assertEqual(twice, [],
+                             f"{cls.name}: defined twice, the later one wins "
+                             f"and nothing warns: {twice}")
+
+    def test_every_self_attribute_read_is_one_that_is_assigned(self):
+        """A read of an attribute nothing ever writes is an AttributeError
+        waiting for the gesture that reaches it.
+
+        Deliberately narrow: only names matching the driver's own private
+        conventions are checked, because the class inherits from
+        zynthian_ctrldev_base and this file cannot see that base class. What
+        it CAN prove is that a name the driver invented is a name the driver
+        also sets - which is exactly the `lens_held` case."""
+
+        import ast
+        tree = ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        assigned, methods, read = set(), set(), {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                methods.add(node.name)
+            targets = []
+            if isinstance(node, ast.Assign):
+                targets = node.targets
+            elif isinstance(node, (ast.AugAssign, ast.AnnAssign)):
+                targets = [node.target]
+            for target in targets:
+                for leaf in ast.walk(target):
+                    if (isinstance(leaf, ast.Attribute)
+                            and isinstance(leaf.value, ast.Name)
+                            and leaf.value.id == "self"):
+                        assigned.add(leaf.attr)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                for item in node.body:
+                    if isinstance(item, ast.Assign):
+                        for t in item.targets:
+                            if isinstance(t, ast.Name):
+                                assigned.add(t.id)      # a class attribute
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Attribute)
+                    and isinstance(node.value, ast.Name)
+                    and node.value.id == "self"
+                    and isinstance(node.ctx, ast.Load)):
+                read.setdefault(node.attr, node.lineno)
+
+        # The driver's own vocabulary: the modifier flags and everything it
+        # names with a leading underscore. Anything else may come from the
+        # base class, which this file cannot see.
+        MINE = {"shift_down", "mod_down", "mod_held", "mod_latched",
+                "lens_down", "lens_held", "lens_latched", "arm_down",
+                "bank_down", "mute_down", "navigate_down", "erase_down",
+                "coarse_down", "solo_down", "solo_mode", "frozen",
+                "freeze_deep", "latches", "mode", "group", "state", "owner"}
+        missing = sorted(
+            (name, line) for name, line in read.items()
+            if (name in MINE or name.startswith("_"))
+            and name not in assigned and name not in methods)
+        self.assertEqual(missing, [],
+                         f"read but never assigned: {missing}")
+
+    def test_the_check_can_fail(self):
+        """The guard above is worth nothing if it cannot go red.
+
+        Proved against a synthetic class rather than by mutating the driver,
+        so it stays true without anybody remembering to put a line back."""
+
+        import ast
+        src = ("class C:\n"
+               "    def f(self):\n"
+               "        return self._never_set\n")
+        tree = ast.parse(src)
+        reads = {n.attr for n in ast.walk(tree)
+                 if isinstance(n, ast.Attribute)
+                 and isinstance(n.value, ast.Name) and n.value.id == "self"
+                 and isinstance(n.ctx, ast.Load)}
+        self.assertIn("_never_set", reads)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 

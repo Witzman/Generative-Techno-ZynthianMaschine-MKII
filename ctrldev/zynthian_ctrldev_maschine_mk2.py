@@ -2228,11 +2228,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.page_idx[key] = index
         return ring[index]
 
-    @property
-    def lens_down(self):
-        """Held or latched - law L1, and the same shape as mod_down."""
-        return self.lens_held or self.lens_latched
-
     # The state the instrument returns to. STEP because it is the one page
     # that is always true - what the selected channel is playing, with the
     # playhead over it - and page 1 of it because that is where every mode
