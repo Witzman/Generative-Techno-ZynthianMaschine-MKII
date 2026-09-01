@@ -2632,7 +2632,19 @@ class techno_lib:
     #      the bound set; treat it as measured but know why it is the weakest.
     #   35 TEMPO, 2026-08-16 -
     #      notes/findings/2026-08-16-tempo-cc-and-encoder-sensitivity.md
-    CCS_MEASURED_SINGLE = frozenset({10, 35})
+    #   8 BROWSE, 9 SAMPLING, 36 ENTER, 2026-09-01 at the rig with the owner -
+    #      notes/findings/2026-09-01-browse-sampling-enter-are-free.md, with
+    #      the raw aseqdump beside it. Pressed one at a time in a stated order
+    #      so each number is attached to a BUTTON rather than inferred. Both
+    #      edges on all three, so any of them can carry a held-or-latched
+    #      modifier and not merely a press.
+    #
+    #      The daemon's source says 8, 9 and 36 in plain text and reading that
+    #      would not have been evidence: its token names sat on the wrong
+    #      physical buttons for DL/DR, and nine of thirteen LED indices were
+    #      guesses that turned out wrong. Here the names were right. That is a
+    #      fact about these three and not a reason to trust the next one.
+    CCS_MEASURED_SINGLE = frozenset({10, 35, 8, 9, 36})
 
     CCS_MEASURED = CCS_MEASURED_G4 | CCS_MEASURED_G5 | CCS_MEASURED_SINGLE
 
@@ -2661,12 +2673,25 @@ class techno_lib:
     # 5 (TL, transport left-step) and 12 (the big encoder press). The test on
     # this set is what caught the double-claim the moment the binding landed,
     # which is the reason it is a test and not a comment.
-    # 12 (the big encoder's press) was SPENT on 2026-09-01 by HOME. One left:
-    # 5, the transport's STEP-left arrow. The standing recommendation for it
-    # is a step stutter - the escalation rung below the beat repeat already on
-    # its neighbour CC 6 - and it is in new_features.md rather than here,
-    # because a new musical gesture is not a surface redesign.
-    CCS_MEASURED_AND_UNCLAIMED = frozenset({5})
+    # 12 (the big encoder's press) was SPENT on 2026-09-01 by HOME, and the
+    # same evening BROWSE, SAMPLING and ENTER were MEASURED and turned out to
+    # emit - so the budget went from one free control to FOUR.
+    #
+    #   5  STEP-left. The standing recommendation is a step stutter, the rung
+    #      below the beat repeat already on its neighbour CC 6; it is in
+    #      new_features.md, because a new musical gesture is not a surface
+    #      redesign.
+    #   8  BROWSE · 9 SAMPLING · 36 ENTER. Each is a whole control - a button,
+    #      both edges, and an LED index the daemon already accepts (3, 4 and
+    #      30) that this driver has never written.
+    #
+    # THREE FREE BUTTONS IS NOT A REASON TO SPEND THEM. The redesign that
+    # found them removed eleven pages and two modes; the budget is wide
+    # because the surface got simpler, and that is the state worth keeping.
+    # Before binding any of them, grep daemon/src/main.rs for its token: PAD
+    # MODE emits its CC *and* runs the daemon's own sequencer mode, and
+    # SHIFT + PAD MODE never reaches the driver at all.
+    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 8, 9, 36})
 
     BUTTONS_STATEFUL = {
         2: "erase",

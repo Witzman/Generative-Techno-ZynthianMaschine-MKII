@@ -1414,8 +1414,10 @@ class TestButtonTables(unittest.TestCase):
         self.assertEqual(len(tl.CCS_MEASURED_G4), 24)
         # G5 is REC plus the eight encoders.
         self.assertEqual(sorted(tl.CCS_MEASURED_G5), [3] + list(range(16, 24)))
-        # The two later single-button captures.
-        self.assertEqual(sorted(tl.CCS_MEASURED_SINGLE), [10, 35])
+        # The later single-button captures: NOTE REPEAT and TEMPO, then
+        # BROWSE, SAMPLING and ENTER measured at the rig on 2026-09-01 with
+        # the owner pressing them one at a time in a stated order.
+        self.assertEqual(sorted(tl.CCS_MEASURED_SINGLE), [8, 9, 10, 35, 36])
         # TEMPO is the whole reason this file has provenance sets: measured,
         # but NOT by G4.
         self.assertIn(35, tl.CCS_MEASURED)
@@ -2339,10 +2341,30 @@ class NoFeatureLostItsWayIn(unittest.TestCase):
         self.assertEqual(tl.BUTTONS_STATEFUL[38], "lens")
         self.assertEqual(tl.button_conflicts(), [])
 
-    def test_home_is_bound_and_the_last_free_cc_is_still_offered(self):
+    def test_home_is_bound_and_the_free_ccs_are_still_offered(self):
         self.assertEqual(tl.BUTTONS_PRESS[12], "home")
         self.assertNotIn(12, tl.CCS_MEASURED_AND_UNCLAIMED)
-        self.assertEqual(tl.CCS_MEASURED_AND_UNCLAIMED, frozenset({5}))
+        # FOUR free controls since 2026-09-01: CC 5 was the only one until
+        # BROWSE, SAMPLING and ENTER were measured at the rig and turned out
+        # to emit, both edges. Each is a whole control - a button, both edges,
+        # and an LED index the daemon accepts and the driver has never
+        # written.
+        self.assertEqual(tl.CCS_MEASURED_AND_UNCLAIMED, frozenset({5, 8, 9, 36}))
+
+    def test_nothing_binds_a_cc_that_is_offered_as_free(self):
+        # The direction that actually costs something. An offered CC that is
+        # bound is a number two features will claim, and the second claimant
+        # is unreachable with no runtime symptom - which is the collision this
+        # whole family of tests exists to catch.
+        bound = (set(tl.BUTTONS_STATEFUL) | set(tl.BUTTONS_PRESS)
+                 | tl.RESERVED_CCS | {11, 32, 37, 51})
+        clash = sorted(tl.CCS_MEASURED_AND_UNCLAIMED & bound)
+        self.assertEqual(clash, [], f"offered as free but bound: {clash}")
+
+    def test_every_offered_cc_has_actually_been_measured(self):
+        for cc in tl.CCS_MEASURED_AND_UNCLAIMED:
+            self.assertIn(cc, tl.CCS_MEASURED,
+                          f"CC {cc} is offered as free without a measurement")
 
 
 class TheArrowsSteerTheLens(unittest.TestCase):
