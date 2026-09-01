@@ -3230,6 +3230,71 @@ class OneButtonRegenerates(unittest.TestCase):
         self.assertEqual(tl.action_light(bool(wider)), tl.LIGHT_DIM)
 
 
+class ANameColumnWithNothingToStepDrawsDead(unittest.TestCase):
+    """`KIT ----` in upper case with a bar is a LIE, not a silence.
+
+    Found while sweeping for silent refusals on 2026-09-01, and the rig had
+    been in exactly this state an hour earlier - the deploy printed "no kits
+    (no synth processor)" into the journal while the column looked completely
+    normal. The knob above it did nothing.
+
+    The distinction that matters: **"----" is a name this driver could not
+    read**, and the knob can still walk past it to one it can. **An empty list
+    is a knob that cannot move at all**, and this surface has a precise way of
+    saying that - lower case, no bar, and the encoder refused by the same
+    flag. This case was not using it.
+
+    The driver decides which by passing None into the view, never by inspecting
+    the string, because "----" is a legitimate name for a kit somebody could
+    author."""
+
+    def _kit(self, value):
+        state = dict(tl.default_channel_state("drum"))
+        state["kind"] = "drum"
+        if value is None:
+            state.pop("kit", None)
+        else:
+            state["kit"] = value
+        return tl.verb_col("kit", state, "drum")
+
+    def test_a_real_kit_draws_live(self):
+        col = self._kit("Roland 909")
+        self.assertFalse(col["grey"])
+        self.assertEqual(col["name"], "KIT")
+        self.assertIsNotNone(col["bar"])
+
+    def test_an_unreadable_name_still_draws_live(self):
+        # The knob can walk past it. This is the case "----" is FOR.
+        col = self._kit("----")
+        self.assertFalse(col["grey"])
+        self.assertEqual(col["name"], "KIT")
+
+    def test_nothing_to_step_draws_dead(self):
+        col = self._kit(None)
+        self.assertTrue(col["grey"])
+        self.assertEqual(col["name"], "kit")
+        self.assertEqual(col["value"], "----")
+        self.assertIsNone(col["bar"])
+
+    def test_the_same_holds_for_sample_and_preset(self):
+        for verb, kind in (("sample", "drum"), ("preset", "voice")):
+            state = dict(tl.default_channel_state(kind))
+            state["kind"] = kind
+            state.pop(verb, None)
+            col = tl.verb_col(verb, state, kind)
+            self.assertTrue(col["grey"], verb)
+            self.assertIsNone(col["bar"], verb)
+
+    def test_a_dead_name_column_refuses_its_encoder_too(self):
+        # The painter and the encoder read the same flag, so a column that
+        # says it cannot act cannot then be turned. That is the half of law
+        # L4 that stops a silent refusal being possible at all.
+        col = self._kit(None)
+        self.assertTrue(col["grey"])
+        live = self._kit("Roland 909")
+        self.assertFalse(live["grey"])
+
+
 
 if __name__ == "__main__":
     unittest.main()

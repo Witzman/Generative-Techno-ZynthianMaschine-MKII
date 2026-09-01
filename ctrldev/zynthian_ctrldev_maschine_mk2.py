@@ -1325,6 +1325,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             target = round(target)
         zctrl.set_value(target, True)
 
+    @staticmethod
+    def _known_empty(cached):
+        """True only when a cache PROVES a list is empty.
+
+        Three answers, and the third is why this exists: True means the list
+        was loaded and holds nothing, False means it holds something, and None
+        means nobody has looked.
+
+        THE RENDER PATH MUST NOT GO LOOKING. `_kit_list`, `_preset_list` and
+        `_load_keymap` all reach the engine or the disk, and state_view is
+        called from the MIDI thread - the thread that must not run late, on a
+        surface that has been thrown off the USB bus by load. So a column
+        draws dead only where a cache ALREADY knows there is nothing to step
+        through, and an unknown list is drawn live.
+
+        Erring live is deliberate. A column wrongly drawn dead is a control
+        the player stops reaching for; a column wrongly drawn live corrects
+        itself the moment anything populates the cache."""
+
+        return None if cached is None else not cached
+
     def state_view(self, channel):
         """The state techno_lib.columns() reads: the dict, the four parameters
         that live in the legacy arrays, and the values owned by the mixer and
@@ -1378,10 +1399,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # short_label(), which keeps the trailing digits that tell two
             # neighbours apart. Truncating here as well would throw those
             # away before the rule that protects them ever runs.
-            view["kit"] = name or "----"
-            view["sample"] = self._sample_name(channel) or "----"
+            # NONE WHERE THERE IS NOTHING TO STEP THROUGH, and the
+            # distinction is the whole point: "----" is a name this driver
+            # could not read, and the knob can still walk past it to one it
+            # can. An EMPTY LIST is a knob that cannot move at all, and
+            # verb_col draws dead on None - lower case, no bar, and the
+            # encoder refused by the same flag.
+            #
+            # Without this a chain with no kits drew `KIT ----` in upper case
+            # with a full bar, which looks exactly like a chain holding a kit
+            # named "----". The instrument has a precise way of saying a
+            # control cannot act and this case was not using it. Found on
+            # 2026-09-01 while sweeping for silent refusals; the rig had been
+            # in exactly that state an hour earlier, printing "no kits (no
+            # synth processor)" into the journal while the column looked live.
+            view["kit"] = (name or "----") if kits else None
+            view["sample"] = ((self._sample_name(channel) or "----")
+                              if self._known_empty(
+                                  self.keymap_cache[channel]) is not True
+                              else None)
         else:
-            view["preset"] = self._preset_name(channel) or "----"
+            view["preset"] = ((self._preset_name(channel) or "----")
+                              if self._known_empty(self.preset_cache.get(
+                                  channel)) is not True else None)
         # Per column, because the four page-1 symbols come from the plugin that
         # is actually loaded: a sampler behaving as a voice (SP4) publishes
         # none of them, and a synth swapped in from the touchscreen may publish

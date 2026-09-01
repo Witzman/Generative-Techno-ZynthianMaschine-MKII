@@ -102,6 +102,7 @@
 <h2 id="reading-the-displays">Reading the displays</h2>
 <p>Both displays carry a tab row across the top — A&ndash;D on the left, E&ndash;H on the right — with four encoder columns under each.</p>
 <p><strong>On a generated page the tab row carries parameter names instead</strong> — the names need the room. On CONTROL that page is the selected channel’s own plugin; on VOLUME it is the reverb, the delay or the master insert, one page each, reaching every remaining port of an effect that is ganged across all eight chains. See <a href="deep-parameters.html">Deep parameter control</a>. Everywhere else the tab row is the channels:</p>
+<p><strong>A column drawn in lower case with <code>----</code> and no bar cannot act</strong>, and that is the instrument telling you so rather than failing quietly. A sampler publishes no filter, so CUTOFF draws dead on a drum; a chain with no kits loaded draws KIT dead, because there is nothing for the knob to step through. The encoder above a dead column does nothing, deliberately &mdash; the alternative is a knob that looks live and is not.</p>
 <p><strong>The inverted tab is the selected channel. A dashed tab means that channel is not sounding</strong>, whether it is muted at the mixer or silenced by its own generator. It is the one mechanism this instrument has for explaining silence, so read the tab row before assuming a fault.</p>
 <figure class="lcdfig">
   <div class="lcd">
