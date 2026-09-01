@@ -4123,6 +4123,55 @@ class techno_lib:
                                     f"ALL {label}", verb=verb)
 
     @staticmethod
+    def lens_verbs(ring):
+        """The verbs the lens can be stepped through, in page order.
+
+        Every channel verb the level underneath it can reach, minus the ones
+        the lens refuses - a global has one of it, a name spreads to eight
+        lists that share no index. Order follows the pages, so stepping the
+        lens walks the panel left to right rather than an order nobody chose.
+
+        Duplicates are dropped keeping the FIRST appearance: `chance` is on
+        both STEP pages and a verb should not come round twice in one walk."""
+
+        out = []
+        for desc in ring:
+            for verb in (desc["verbs"] or ()):
+                if verb is None or verb in out:
+                    continue
+                if techno_lib.lens_verb(verb) == verb:
+                    out.append(verb)
+        return tuple(out)
+
+    @staticmethod
+    def lens_step(verb, verbs, delta):
+        """The next verb the lens should hold, wrapping.
+
+        THE ARROWS DO THIS WHILE THE LENS IS OPEN, 2026-09-01. They are
+        otherwise dark there - the lens is one page and there is no ring to
+        walk - so this costs no button and no new gesture, and it turns the
+        lens from a glance into a tool.
+
+        It is what makes "the verb your hand last moved" safe. That rule is
+        perfect for the knob you were just on and arbitrary for the one you
+        want next; before this, being on the wrong verb meant leaving the
+        lens, finding a page that carries the right one, turning it, and
+        coming back. Now it is one arrow.
+
+        An unknown verb - the lens holding something from a page you have
+        since left - starts the walk from the beginning rather than refusing,
+        because a dead arrow at exactly the moment the player wants to move is
+        the failure this is fixing."""
+
+        if not verbs:
+            return verb
+        try:
+            index = verbs.index(verb)
+        except ValueError:
+            return verbs[0] if delta > 0 else verbs[-1]
+        return verbs[(index + delta) % len(verbs)]
+
+    @staticmethod
     def columns(desc, kind, state, mod=False, owned=False, frozen=False):
         """The 8 columns for a page, with MOD's refusals drawn.
 

@@ -2327,6 +2327,78 @@ class NoFeatureLostItsWayIn(unittest.TestCase):
         self.assertEqual(tl.CCS_MEASURED_AND_UNCLAIMED, frozenset({5}))
 
 
+class TheArrowsSteerTheLens(unittest.TestCase):
+    """DL and DR step the lens's VERB while it is open.
+
+    They are otherwise dark there - the lens is one page and has no ring to
+    walk - so this costs no button and no new gesture. It is also what makes
+    "the verb your hand last moved" safe: that rule is perfect for the knob
+    you were just on and arbitrary for the one you want next. Before it,
+    being on the wrong verb meant leaving the lens, finding a page carrying
+    the right one, turning it, and coming back."""
+
+    def _drum_ring(self):
+        return (tl.PAGE_RINGS[("CONTROL", "drum")]
+                + tl.PAGE_RINGS[("STEP", "drum")]
+                + tl.PAGE_RINGS[("AUTO", "drum")])
+
+    def test_the_walk_is_every_spreadable_verb_the_channel_has(self):
+        verbs = tl.lens_verbs(self._drum_ring())
+        for expected in ("hits", "chance", "swing", "rule", "lane", "move",
+                         "level", "reverb", "delay", "range"):
+            self.assertIn(expected, verbs, expected)
+
+    def test_a_global_never_enters_the_walk(self):
+        # There is one BPM. An arrow that stopped on it would be an arrow
+        # that stops on nothing.
+        verbs = tl.lens_verbs(tl.PAGE_RINGS[("VOLUME", None)])
+        self.assertEqual(verbs, ())
+
+    def test_a_name_verb_never_enters_the_walk(self):
+        verbs = tl.lens_verbs(self._drum_ring())
+        for name in ("kit", "sample", "preset"):
+            self.assertNotIn(name, verbs, name)
+
+    def test_a_verb_on_two_pages_appears_once(self):
+        # `chance` is on both STEP pages. A verb that came round twice in one
+        # walk would make the arrows feel broken rather than thorough.
+        verbs = tl.lens_verbs(self._drum_ring() + tl.PAGE_RINGS[("STEP", "voice")])
+        self.assertEqual(verbs.count("chance"), 1)
+
+    def test_the_order_follows_the_pages(self):
+        # Left to right across the panel, rather than an order nobody chose.
+        verbs = tl.lens_verbs(tl.PAGE_RINGS[("STEP", "drum")])
+        self.assertEqual(verbs[:4], ("hits", "rotate", "div", "length"))
+
+    def test_stepping_forward_and_back(self):
+        verbs = ("hits", "rotate", "div")
+        self.assertEqual(tl.lens_step("hits", verbs, 1), "rotate")
+        self.assertEqual(tl.lens_step("rotate", verbs, -1), "hits")
+
+    def test_it_wraps_both_ways(self):
+        verbs = ("hits", "rotate", "div")
+        self.assertEqual(tl.lens_step("div", verbs, 1), "hits")
+        self.assertEqual(tl.lens_step("hits", verbs, -1), "div")
+
+    def test_an_unknown_verb_starts_the_walk_rather_than_refusing(self):
+        # The lens can be holding a verb from a page the player has since
+        # left - a voice verb after selecting a drum. A dead arrow at exactly
+        # the moment they want to move is the failure this exists to fix.
+        verbs = ("hits", "rotate", "div")
+        self.assertEqual(tl.lens_step("gate", verbs, 1), "hits")
+        self.assertEqual(tl.lens_step("gate", verbs, -1), "div")
+
+    def test_an_empty_walk_leaves_the_verb_alone(self):
+        self.assertEqual(tl.lens_step("hits", (), 1), "hits")
+
+    def test_every_verb_in_a_walk_is_one_the_lens_accepts(self):
+        # The closing check: lens_verbs and lens_verb must agree, or an arrow
+        # could land somewhere the lens then refuses to draw.
+        for key, ring in tl.PAGE_RINGS.items():
+            for verb in tl.lens_verbs(ring):
+                self.assertEqual(tl.lens_verb(verb), verb, f"{key}: {verb}")
+
+
 
 if __name__ == "__main__":
     unittest.main()

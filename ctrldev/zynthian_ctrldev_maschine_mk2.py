@@ -2481,10 +2481,41 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for _ in range(abs(steps)):
             self._step_page(1 if steps > 0 else -1)
 
+    def _lens_ring(self):
+        """Every verb the lens can hold, for this channel, in panel order.
+
+        All three channel-shaped levels, not just the one showing: the lens
+        is answered from a page you have left as often as from the one you
+        are on, and an arrow that could only reach the current level would
+        make the walk depend on where you happened to be standing."""
+
+        kind = self._page_kind(self.group)
+        ring = ()
+        for mode in ("CONTROL", "STEP", "AUTO"):
+            ring = ring + tuple(self._ring(mode, kind))
+        return tlib.lens_verbs(ring)
+
     def _step_page(self, delta):
         """DL / DR. Wrapping, and it recentres the encoders for the same reason
         a mode change does: the accumulated fraction belongs to the parameter
-        that was under the knob a moment ago."""
+        that was under the knob a moment ago.
+
+        WHILE THE LENS IS OPEN they step the VERB instead. The lens is one
+        page and has no ring, so the arrows would otherwise be dark there -
+        this costs no button and no new gesture, and it is what makes "the
+        verb your hand last moved" safe: that rule is perfect for the knob you
+        were just on and arbitrary for the one you want next."""
+
+        if self.lens_down:
+            verbs = self._lens_ring()
+            self._lens_verb = tlib.lens_step(
+                tlib.lens_verb(self._lens_verb), verbs, delta)
+            self._recentre_encoders()
+            self.enc_carry.clear()
+            with self.lock:
+                self._render_all()
+                self._render_display()
+            return
 
         ring = self._ring()
         key = tlib.ring_key(self.mode, self._page_kind(self.group))
@@ -2508,7 +2539,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         The mode buttons are deliberately NOT subject to the tap/hold law - a
         momentary mode is a mode you cannot two-hand."""
 
-        if name == self.mode:
+        # A MODE PRESS DROPS THE LATCHED LENS, whichever branch it takes.
+        # Without this the lens outranks the mode - _page() returns it
+        # whatever self.mode says - so pressing a mode button while the lens
+        # was latched moved the mode LED and changed nothing else. A lit
+        # button that does nothing is the worst object this surface can
+        # produce, and the most ordinary gesture on the panel produced it.
+        #
+        # BEFORE the same-mode test, so "press the mode you are in" gets you
+        # out of the lens too. That press means "this mode, from the top",
+        # and the top is not somebody else's page.
+        #
+        # Only the LATCH: a finger physically on ALL is a fact about the
+        # world, and that hold ends when the finger leaves.
+        lens_was_open = self.latches["lens"].latched
+        self.latches["lens"].clear()
+
+        if name == self.mode and not lens_was_open:
             # Home: page 1 of the ring this mode shows for this channel kind.
             # Keyed through tlib.ring_key, exactly as _page and _step_page do -
             # a hand-rolled tuple would miss the entry they actually use and
@@ -8354,7 +8401,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         the arrows go dark while it is open too. That is not a special case:
         it is the same question, asked of whatever _page() is showing."""
 
-        pages = 1 if self.lens_down else len(self._ring())
+        # In the lens they step the VERB rather than a page, so they are lit -
+        # they were dark here while they did nothing, which was correct then
+        # and would be a lie now.
+        pages = len(self._lens_ring()) if self.lens_down else len(self._ring())
         state = (COLOR_PAGE, tlib.action_light(pages > 1))
         for name in ("page_left", "page_right"):
             if self.leds.changed(f"arrow_{name}", state):
