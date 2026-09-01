@@ -44,6 +44,108 @@ class techno_lib:
             reg = ((reg << 1) | bit) & mask
         return reg
 
+    LEAN_OFF = "off"             # euclid, as it always was
+    LEAN_BEAT = "beat"           # the floor: toward the quarter notes
+    LEAN_EIGHTH = "8th"          # hats: toward the eighths
+    LEAN_OFFBEAT = "offb"        # syncopation: away from the strong positions
+    LEANS = (LEAN_OFF, LEAN_BEAT, LEAN_EIGHTH, LEAN_OFFBEAT)
+    LEAN_LABELS = {LEAN_OFF: "EUCL", LEAN_BEAT: "BEAT",
+                   LEAN_EIGHTH: "8TH", LEAN_OFFBEAT: "OFFB"}
+
+    @staticmethod
+    def metric_weight(i, steps):
+        """How strong position `i` is, on a bar of `steps`.
+
+        The metric hierarchy, derived rather than tabulated so a 12-step
+        triplet division gets its own thirds instead of a 16-step pattern's
+        halves: a position scores a point for every subdivision of the bar it
+        lands on. Step 0 lands on all of them and is always the strongest.
+
+        Pure arithmetic on `steps`, so nothing here assumes sixteen."""
+
+        i %= max(1, steps)
+        weight = 0
+        span = steps
+        while span >= 2:
+            if i % span == 0:
+                weight += 1
+            if span % 2:
+                break
+            span //= 2
+        return weight
+
+    @staticmethod
+    def lean_grid(steps, profile):
+        """The positions a profile is aiming AT, as a set of step indices.
+
+        Built by dividing the bar rather than by tabulating sixteen, so a
+        12-step triplet division gets its own grid: BEAT is the four quarters,
+        8TH the eight eighths, and OFFB the quarters shifted half a beat - the
+        "and" of each beat, which is where a syncopating part lives."""
+
+        steps = max(1, int(steps))
+        if profile == techno_lib.LEAN_BEAT:
+            return {(k * steps) // 4 % steps for k in range(4)}
+        if profile == techno_lib.LEAN_EIGHTH:
+            return {(k * steps) // 8 % steps for k in range(8)}
+        if profile == techno_lib.LEAN_OFFBEAT:
+            return {((2 * k + 1) * steps) // 8 % steps for k in range(4)}
+        return set()
+
+    @staticmethod
+    def lean(steps, hits, profile):
+        """Place `hits` by what the part is FOR, instead of evenly.
+
+        A THIRD PLACEMENT GENERATOR BESIDE EUCLID, not a replacement: OFF
+        returns None and the caller keeps euclid, which is what makes every
+        existing channel and every existing snapshot bit for bit what it was.
+
+        The hits closest to the profile's grid win; ties break on the metric
+        hierarchy and then on index. So the first hits land ON the grid, and
+        the ones past it crowd the strong positions rather than spreading out -
+        which is the difference a listener hears between a part that leans and
+        a euclidean part that cannot.
+
+        DETERMINISTIC BY CONSTRUCTION. A weighted random pick would need a seed
+        of its own, and a pattern that changed on every rewrite is not a
+        pattern.
+
+        ROTATE STILL ROTATES. On a leaning channel that moves the accent off
+        the grid it was computed against, which is a real musical consequence -
+        and it is the right trade: anchoring the lean would make ROTATE do
+        nothing on these channels, and a knob that silently does nothing is the
+        worst object on a control surface. The pads show where the hits went."""
+
+        if profile == techno_lib.LEAN_OFF or profile not in techno_lib.LEANS:
+            return None
+        steps = max(1, int(steps))
+        hits = max(0, min(int(hits), steps))
+        grid = sorted(techno_lib.lean_grid(steps, profile),
+                      key=lambda g: (-techno_lib.metric_weight(g, steps), g))
+        chosen = []
+        taken = set()
+        # ROUND ROBIN over the grid, and it is what makes this a lean rather
+        # than a pile. Each pass gives every grid position one hit before any
+        # of them gets a second, so eight hits on the floor profile land as a
+        # flam on each beat and not as four hits crowded onto beat one. The
+        # order within a pass is the metric hierarchy, so if the hits run out
+        # mid-pass it is the weak beats that go without.
+        offset = 0
+        while len(chosen) < hits and offset <= steps:
+            for g in grid:
+                if len(chosen) >= hits:
+                    break
+                # FORWARD FIRST: a hit that arrives just after the beat is a
+                # push, which is what these parts do. Backward is the pickup
+                # and comes second.
+                for i in ((g + offset) % steps, (g - offset) % steps):
+                    if i not in taken:
+                        taken.add(i)
+                        chosen.append(i)
+                        break
+            offset += 1
+        return tuple(i in taken for i in range(steps))
+
     RULE_RANDOM = "rand"         # the shift register, as it always was
     CA_RULES = ("r30", "r90", "r110")
     RULES = (RULE_RANDOM,) + CA_RULES
@@ -717,7 +819,12 @@ class techno_lib:
                          # the 2026-08-18 class of bug: upgrade_state builds
                          # from here, so this literal is what an old snapshot
                          # inherits.
-                         rhythm=0, rhythm_reg=0xFFFF)
+                         rhythm=0, rhythm_reg=0xFFFF,
+                         # LEAN, 2026-09-01. Which PLACEMENT generator draws
+                         # the line. `off` is euclid and IS the migration: a
+                         # drum channel out of any existing snapshot is placed
+                         # exactly as it was before this generator existed.
+                         lean=techno_lib.LEAN_OFF)
         else:
             state.update(
                 preset="----", cutoff=64, reso=32, env=64, decay=40,
@@ -3445,6 +3552,29 @@ class techno_lib:
         p = state.get("pending", set())
         n, c, dead = techno_lib._num, techno_lib._col, techno_lib._dead
 
+        def rule_col():
+            """RULE, on both kinds. RAND is a WORD, not a blank: the shift
+            register is a choice the player made, and a column that showed
+            nothing for it would read as a control that is not working."""
+            rule = state.get("rule", techno_lib.RULE_RANDOM)
+            index = (techno_lib.RULES.index(rule)
+                     if rule in techno_lib.RULES else 0)
+            return c("RULE", rule.upper() if rule != techno_lib.RULE_RANDOM
+                     else "RAND", "seg", (index, len(techno_lib.RULES)))
+
+        if page == "GEN" and kind == "drum":
+            lean = state.get("lean", techno_lib.LEAN_OFF)
+            index = (techno_lib.LEANS.index(lean)
+                     if lean in techno_lib.LEANS else 0)
+            return [
+                rule_col(),
+                # EUCL is a word, not a blank: euclid is a choice the player
+                # made and the column has to say which generator is drawing.
+                c("LEAN", techno_lib.LEAN_LABELS.get(lean, "EUCL"), "seg",
+                  (index, len(techno_lib.LEANS))),
+            ] + [dead("gen%d" % i) for i in range(3, 9)]
+
+
         if desc["shape"] == techno_lib.SHAPE_GLOBAL and page == "WALK":
             walk = state.get("walk", 0)
             return [
@@ -3533,22 +3663,6 @@ class techno_lib:
                   else "x%d" % state["ratchet"], "seg",
                   (max(0, state.get("ratchet", 1) - 1), 4)),
             ]
-        def rule_col():
-            """RULE, on both kinds. RAND is a WORD, not a blank: the shift
-            register is a choice the player made, and a column that showed
-            nothing for it would read as a control that is not working."""
-            rule = state.get("rule", techno_lib.RULE_RANDOM)
-            index = (techno_lib.RULES.index(rule)
-                     if rule in techno_lib.RULES else 0)
-            return c("RULE", rule.upper() if rule != techno_lib.RULE_RANDOM
-                     else "RAND", "seg", (index, len(techno_lib.RULES)))
-
-        if page == "GEN" and kind == "drum":
-            # One column so far. The leaning generator has a named home in
-            # column 2 when it is built; until then the rest draw dead and
-            # honest rather than reserved and mysterious.
-            return [rule_col()] + [dead("gen%d" % i) for i in range(2, 9)]
-
         if page == "GEN":
             # ORDER MUST MATCH the GEN page's verbs tuple position for
             # position, exactly as the STEP page's list does below.
@@ -3864,7 +3978,7 @@ techno_lib.PAGE_RINGS = {
         # surface on this instrument. Column 1 only for now; the leaning
         # generator has a named home in column 2 when it is built.
         _d(techno_lib.SHAPE_CHANNEL, "GEN",
-           verbs=("rule", None, None, None, None, None, None, None)),
+           verbs=("rule", "lean", None, None, None, None, None, None)),
     ),
     # Encoder 7 carries DENSITY rather than SWING: it is the only slot on a
     # full page whose verb has a second home, and swing is on the spread page

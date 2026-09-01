@@ -818,6 +818,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # that set without a branch in _apply_generator would be the exact shape of
     # the hole that hid HITS and ROTATE for months - a verb the set promises
     # reaches the pattern and that nothing writes.
+    # The switch columns and their value sets. RULE is on both kinds - both
+    # have a rhythm register - and LEAN is drums only, because placement on a
+    # voice is the rhythm register's own job.
+    SWITCH_VERBS = {"rule": tlib.RULES, "lean": tlib.LEANS}
+
     def _evolve(self, channel, register, steps, rhythm):
         """Evolve a rhythm register one generation, by whichever generator the
         channel is on. ONE PLACE, so the drum path and the voice path can never
@@ -2720,6 +2725,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # euclid generator was actually given, or a load would
                     # resume from whatever the driver happened to hold.
                     "hits": self.hits[i],
+                    # LEAN, 2026-09-01. .get with a default for the reason
+                    # every field above has one: a channel whose state
+                    # predates the verb saves euclid, which is what it was
+                    # doing anyway.
+                    "lean": self.state[i].get("lean", tlib.LEAN_OFF),
+                    "rule": self.state[i].get("rule", tlib.RULE_RANDOM),
                 }
                 for i, ch in enumerate(tlib.CHANNELS)
                 if self.channel_kind(i) == "drum"
@@ -2966,6 +2977,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # existing snapshot on load.
             self.state[channel]["rhythm"] = saved.get("rhythm", 0)
             self.state[channel]["rhythm_reg"] = saved.get("rhythm_reg", 0xFFFF)
+            # ABSENT IS EUCLID, and absent is the shift register - the same
+            # argument as the line above. A snapshot written before these
+            # generators existed was played by the ones they default to.
+            self.state[channel]["lean"] = saved.get("lean", tlib.LEAN_OFF)
+            self.state[channel]["rule"] = saved.get("rule", tlib.RULE_RANDOM)
             if "hits" in saved:
                 self.hits[channel] = int(saved["hits"])
 
@@ -4712,22 +4728,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     self._render_display()
             return
 
-        if verb == "rule":
-            # A four-way switch on BOTH kinds - the automaton evolves a rhythm
-            # register, and both kinds have one. Clamped, never cyclic: the
-            # owner's law of 2026-08-31, "it should reach upper and then stop
-            # or lower and then stop - only the big one should cycle".
+        if verb in self.SWITCH_VERBS:
+            # RULE and LEAN. Clamped, never cyclic: the owner's law of
+            # 2026-08-31, "it should reach upper and then stop or lower and
+            # then stop - only the big one should cycle". One arm rather than
+            # one each, so a third generator selector cannot arrive with a
+            # different feel under the same hand.
+            values = self.SWITCH_VERBS[verb]
             delta = self._enc_steps_fixed(cc_num, cc_val, ENC_UNITS_DISCRETE)
             if delta:
-                have = self.param_get(channel, "rule")
-                index = (tlib.RULES.index(have)
-                         if have in tlib.RULES else 0)
-                want = tlib.RULES[tlib.switch_step(index, len(tlib.RULES),
-                                                   delta)]
+                have = self.param_get(channel, verb)
+                index = values.index(have) if have in values else 0
+                want = values[tlib.switch_step(index, len(values), delta)]
                 if want == have:
                     return
-                self.apply(channel, "rule", want)
+                self.apply(channel, verb, want)
                 with self.lock:
+                    # A placement change rewrites the line NOW rather than at
+                    # the next wrap: HITS and ROTATE do the same, and a
+                    # generator switch that took a bar to be heard would read
+                    # as a knob that did not work.
+                    if verb == "lean" and self.channel_kind(channel) == "drum":
+                        self._write_pattern(channel)
                     self._render_display()
             return
 
@@ -5104,8 +5126,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # together" - so drums were the odd one out. Both rotations move the
         # same way: euclid at rot 1 lights steps 1, 3, 6 and tlib.rotate lights
         # the same three, verified before this was written.
+        # THE PLACEMENT GENERATOR, 2026-09-01. `off` returns None and euclid
+        # draws the line exactly as it always has, which is what makes every
+        # existing channel and every existing snapshot bit for bit unchanged.
+        # A lean is rotated by the same call euclid is, so ROTATE keeps doing
+        # what it says on a leaning channel - see tlib.lean's docstring for why
+        # anchoring it was refused.
+        leaned = tlib.lean(steps, self.hits[group],
+                           self.state[group].get("lean", tlib.LEAN_OFF))
+        line = (lib.rotate(list(leaned), self.rot[group]) if leaned is not None
+                else lib.build_pattern_steps(steps, self.hits[group],
+                                             self.rot[group]))
         pattern = tlib.drum_steps(
-            lib.build_pattern_steps(steps, self.hits[group], self.rot[group]),
+            line,
             tlib.rotate(int(self.state[group].get("rhythm_reg", 0xFFFF)),
                         steps, self.rot[group]))
         for step, on in enumerate(pattern):

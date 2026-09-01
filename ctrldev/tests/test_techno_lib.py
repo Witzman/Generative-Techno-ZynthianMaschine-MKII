@@ -5638,3 +5638,123 @@ class TheRuleIsAVerbOnBothKinds(unittest.TestCase):
         cols = tl.columns(tl.PAGE_RINGS[("STEP", "voice")][4], "voice", state)
         rule_col = [c for c in cols if c["name"].startswith("RULE")][0]
         self.assertEqual(rule_col["value"], "RAND")
+
+
+class TheGeneratorThatLeans(unittest.TestCase):
+    """A THIRD PLACEMENT generator beside euclid, 2026-09-01. Euclid spaces
+    hits evenly and cannot write a hat line that leans; this weights the
+    positions by what the part is for, so a part has an accent shape of its
+    own.
+
+    DETERMINISTIC BY CONSTRUCTION - the strongest positions win, ties break on
+    index. A weighted RANDOM pick would need a seed, and a pattern that changed
+    on every rewrite is not a pattern."""
+
+    def test_off_is_not_a_lean_and_the_caller_keeps_euclid(self):
+        self.assertIsNone(tl.lean(16, 4, tl.LEAN_OFF))
+
+    def test_an_unknown_profile_refuses_rather_than_inventing_one(self):
+        self.assertIsNone(tl.lean(16, 4, "sideways"))
+
+    def test_a_lean_places_exactly_the_hits_it_was_asked_for(self):
+        for profile in tl.LEANS[1:]:
+            for hits in (0, 1, 3, 4, 7, 16):
+                with self.subTest(profile=profile, hits=hits):
+                    got = tl.lean(16, hits, profile)
+                    self.assertEqual(sum(got), hits)
+                    self.assertEqual(len(got), 16)
+
+    def test_more_hits_than_steps_fills_the_bar_and_does_not_raise(self):
+        got = tl.lean(16, 40, tl.LEAN_BEAT)
+        self.assertEqual(sum(got), 16)
+
+    def test_the_floor_lean_puts_four_hits_on_the_four_beats(self):
+        got = tl.lean(16, 4, tl.LEAN_BEAT)
+        self.assertEqual([i for i, on in enumerate(got) if on], [0, 4, 8, 12])
+
+    def test_the_floor_lean_fills_the_HALF_bar_first_when_it_has_two(self):
+        # Metric hierarchy: step 0 is stronger than step 8, which is stronger
+        # than steps 4 and 12.
+        got = tl.lean(16, 2, tl.LEAN_BEAT)
+        self.assertEqual([i for i, on in enumerate(got) if on], [0, 8])
+
+    def test_the_eighth_lean_reaches_the_offbeat_eighths_before_the_16ths(self):
+        got = tl.lean(16, 8, tl.LEAN_EIGHTH)
+        self.assertEqual([i for i, on in enumerate(got) if on],
+                         [0, 2, 4, 6, 8, 10, 12, 14])
+
+    def test_the_offbeat_lean_AVOIDS_the_downbeat(self):
+        # The whole point of the profile: it is the part that syncopates, and
+        # it must not quietly write a four-to-the-floor.
+        got = tl.lean(16, 4, tl.LEAN_OFFBEAT)
+        self.assertFalse(got[0])
+        self.assertEqual(sum(got), 4)
+
+    def test_the_three_profiles_do_not_agree_with_each_other(self):
+        shapes = {p: tuple(tl.lean(16, 6, p)) for p in tl.LEANS[1:]}
+        self.assertEqual(len(set(shapes.values())), 3)
+
+    def test_a_lean_is_the_same_pattern_every_time_it_is_asked_for(self):
+        a = tl.lean(16, 5, tl.LEAN_EIGHTH)
+        b = tl.lean(16, 5, tl.LEAN_EIGHTH)
+        self.assertEqual(a, b)
+
+    def test_a_TRIPLET_division_leans_over_its_own_twelve_steps(self):
+        got = tl.lean(12, 3, tl.LEAN_BEAT)
+        self.assertEqual(len(got), 12)
+        self.assertEqual(sum(got), 3)
+        self.assertTrue(got[0])
+
+    def test_a_two_step_pattern_does_not_raise(self):
+        self.assertEqual(sum(tl.lean(2, 1, tl.LEAN_OFFBEAT)), 1)
+
+
+class TheLeanIsAVerbOnTheDrums(unittest.TestCase):
+
+    def test_a_drum_starts_on_euclid(self):
+        # The migration: OFF is bit for bit what every drum channel did before
+        # this generator existed.
+        self.assertEqual(tl.default_channel_state("drum")["lean"], tl.LEAN_OFF)
+
+    def test_an_older_snapshot_gains_the_verb_on_euclid(self):
+        old = tl.default_channel_state("drum")
+        del old["lean"]
+        self.assertEqual(tl.upgrade_state("drum", old, 16)["lean"], tl.LEAN_OFF)
+
+    def test_the_drum_GEN_page_carries_LEAN_in_column_two(self):
+        page = [d for d in tl.PAGE_RINGS[("STEP", "drum")]
+                if d["title"] == "GEN"][0]
+        self.assertEqual(page["verbs"][1], "lean")
+
+    def test_the_column_names_the_profile_and_says_EUCL_when_off(self):
+        state = tl.default_channel_state("drum")
+        page = [d for d in tl.PAGE_RINGS[("STEP", "drum")]
+                if d["title"] == "GEN"][0]
+        cols = tl.columns(page, "drum", state)
+        self.assertEqual(cols[1]["name"], "LEAN")
+        self.assertEqual(cols[1]["value"], "EUCL")
+        state["lean"] = tl.LEAN_OFFBEAT
+        self.assertEqual(tl.columns(page, "drum", state)[1]["value"], "OFFB")
+
+    def test_a_voice_has_no_lean_verb_and_the_page_does_not_offer_one(self):
+        # Placement on a voice is the rhythm register's job. A column that did
+        # nothing would be law L4's exact complaint.
+        self.assertNotIn("lean", tl.PAGE_RINGS[("STEP", "voice")][4]["verbs"])
+
+    def test_extra_hits_SPREAD_across_the_grid_rather_than_piling_up(self):
+        # Eight hits on the floor profile are a flam on each beat, not four
+        # hits crowded onto beat one. The round robin is the difference
+        # between a part that leans and a part that stumbles.
+        got = [i for i, on in enumerate(tl.lean(16, 8, tl.LEAN_BEAT)) if on]
+        self.assertEqual(got, [0, 1, 4, 5, 8, 9, 12, 13])
+
+    def test_a_lean_pushes_LATE_rather_than_early(self):
+        # A hit that arrives just after the beat is a push, which is what
+        # these parts do; the pickup before the beat comes second.
+        got = tl.lean(16, 5, tl.LEAN_BEAT)
+        self.assertTrue(got[1])
+        self.assertFalse(got[15])
+
+    def test_the_offbeat_lean_sits_on_the_ands(self):
+        got = [i for i, on in enumerate(tl.lean(16, 4, tl.LEAN_OFFBEAT)) if on]
+        self.assertEqual(got, [2, 6, 10, 14])
