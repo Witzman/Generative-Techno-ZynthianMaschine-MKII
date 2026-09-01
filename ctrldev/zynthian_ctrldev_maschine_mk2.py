@@ -8755,9 +8755,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         synth_ctrl says it is dead - so MOD bound a modulator there happily,
         mark_modulated() then correctly refused to mark a grey column, and the
         result was a modulator that swept an absent port, drew no tilde and no
-        span, was persisted into the snapshot and had mod_last pointing at it."""
+        span, was persisted into the snapshot and had mod_last pointing at it.
 
-        cols = self._page_columns(self._page())
+        A SPREAD ASKS ABOUT ONE CHANNEL, not eight. This runs on the MIDI
+        thread for every encoder report, and it used to run only under MOD;
+        since 2026-09-01 it gates EVERY turn, because the lens puts live and
+        dead columns side by side as an ordinary picture. Building all eight
+        columns to read one of them would mean eight state_view() copies -
+        each a dict copy plus four param_get calls - per encoder report, under
+        the lock. The single-column path asks techno_lib the same question
+        through the same two predicates, so the painter and this cannot
+        disagree; it is the same answer arrived at without the other seven."""
+
+        desc = self._page()
+        if desc["shape"] == tlib.SHAPE_SPREAD:
+            if not 0 <= column < len(tlib.CHANNELS):
+                return False
+            verb = desc["verb"]
+            view = self.state_view(column)
+            col = tlib.verb_col(verb, view, view.get("kind"))
+            return (col is None or bool(col.get("grey"))
+                    or tlib.verb_is_dead(verb, view.get("kind"), view))
+        cols = self._page_columns(desc)
         if not 0 <= column < len(cols):
             return False
         return bool(cols[column].get("grey"))

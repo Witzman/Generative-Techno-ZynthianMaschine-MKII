@@ -2417,6 +2417,81 @@ class TheArrowsSteerTheLens(unittest.TestCase):
                 self.assertEqual(tl.lens_verb(verb), verb, f"{key}: {verb}")
 
 
+class TheOneColumnAnswerMatchesTheEightColumnOne(unittest.TestCase):
+    """A spread's dead-column question, asked twice, must answer once.
+
+    The driver's `_column_dead` gates every encoder turn on the MIDI thread.
+    On a spread it asks about ONE channel through verb_col + verb_is_dead
+    rather than building all eight columns to read one of them - eight
+    state_view copies per encoder report, under the lock, would be a real
+    cost on a surface that has been thrown off the USB bus by load once.
+
+    That shortcut is only safe while the two paths agree, so this checks
+    them against each other rather than against a hand-written expectation.
+    If a third rule for deadness is ever added to spread_columns, this goes
+    red instead of the encoder quietly moving a channel the screen says is
+    dead - which is this project's whole catalogue of expensive bugs."""
+
+    def _views(self, verb, values, kinds):
+        out = []
+        for i, value in enumerate(values):
+            view = {"kind": kinds[i]}
+            if value is not None:
+                view[verb] = value
+            out.append((chr(ord("A") + i), tl.CHANNELS[i][1], view))
+        return out
+
+    def _one(self, verb, view):
+        """What the driver's single-column path computes."""
+        col = tl.verb_col(verb, view, view.get("kind"))
+        return (col is None or bool(col.get("grey"))
+                or tl.verb_is_dead(verb, view.get("kind"), view))
+
+    def _eight(self, verb, views):
+        """What the painter computes, for all eight."""
+        cols = tl.columns(tl.lens_desc(verb), None, views)
+        return [bool(c.get("grey")) for c in cols]
+
+    def _check(self, verb, values, kinds=None):
+        kinds = kinds or ["drum"] * 5 + ["voice"] * 3
+        views = self._views(verb, values, kinds)
+        painted = self._eight(verb, views)
+        for i, (_letter, _name, view) in enumerate(views):
+            self.assertEqual(self._one(verb, view), painted[i],
+                             f"{verb} column {i}: one says "
+                             f"{self._one(verb, view)}, eight say {painted[i]}")
+
+    def test_a_verb_every_channel_has(self):
+        self._check("chance", [0, 25, 50, 75, 100, 10, 20, 30])
+
+    def test_a_verb_only_the_voices_have(self):
+        self._check("cutoff", [None] * 5 + [64, 64, 64])
+
+    def test_a_verb_only_the_drums_have(self):
+        self._check("lane", [40] * 5 + [None] * 3)
+
+    def test_a_verb_nobody_has(self):
+        self._check("cutoff", [None] * 8)
+
+    def test_a_verb_whose_deadness_depends_on_another_value(self):
+        # SPAN is dead unless MODEL is on WALK. The one-column path has to
+        # reach verb_is_dead for this, not just verb_col.
+        views = [("A", "X", {"kind": "voice", "walk_span": 32,
+                             "model": tl.MODEL_REGISTER})] * 4
+        views += [("B", "Y", {"kind": "voice", "walk_span": 32,
+                              "model": tl.MODEL_WALK})] * 4
+        painted = [bool(c.get("grey"))
+                   for c in tl.columns(tl.lens_desc("walk_span"), None, views)]
+        self.assertEqual(painted, [True] * 4 + [False] * 4)
+        for i, (_l, _n, view) in enumerate(views):
+            self.assertEqual(self._one("walk_span", view), painted[i], i)
+
+    def test_a_verb_that_takes_its_default(self):
+        # A view that simply has not brought the key is an INCOMPLETE view,
+        # not a channel without the verb, so neither path may call it dead.
+        self._check("move", [None] * 8)
+
+
 
 if __name__ == "__main__":
     unittest.main()
