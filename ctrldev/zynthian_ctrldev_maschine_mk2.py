@@ -8287,6 +8287,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "mute": "mute",
         "navigate": "navigate",
         "lens": LED_LENS,
+        # `mod` is DELIBERATELY ABSENT and so is `freeze`. Both wear the same
+        # alphabet through tlib.state_light, but each has a renderer of its
+        # own that is called from edges this one is not - _act_mod repaints on
+        # both halves of its press so the legend takes the pads without a
+        # tick's delay, and _render_freeze is reached from the freeze handler.
+        # Two writers on one LED is a light that flickers between two
+        # opinions, so they own theirs and this owns the rest.
     }
 
     def _render_overlay_leds(self):
