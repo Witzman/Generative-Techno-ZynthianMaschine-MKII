@@ -2355,6 +2355,101 @@ class techno_lib:
             return tuple(bool(flag) for flag in flags)[:4]
         return (bool(state.get("has_synth_ctrl", True)),) * 4
 
+    # ------------------------------------------------------- the light alphabet
+    #
+    # 2026-09-01. Thirty-one of this panel's buttons are single-colour: report
+    # 0x82 carries one byte each and set_button_light discards the colour
+    # argument entirely. Under stage light that leaves THREE readable levels
+    # and TWO movements, and nothing more is invented.
+    #
+    # The levels were not free before this: four buttons (SHIFT, ERASE, the
+    # two display arrows) were lit permanently and carried no information at
+    # all, while four modifiers that TOOK THE PADS - SELECT, DUPLICATE, MUTE,
+    # NAVIGATE - showed nothing while they did it. That is the same mistake
+    # twice: a light that always means yes and a state that never says so.
+    #
+    # Blinking is FREE on this hardware and the screens are not. The LED write
+    # path is a dirty-gated flush of exactly three reports on a 16 ms timer,
+    # capped at 187 writes a second however many lights change; one changed
+    # screen costs 2120 bytes and that path has thrown the controller off the
+    # USB bus. So state belongs on a light, and only a number belongs on a
+    # screen.
+    LIGHT_OFF = 0.0          # does nothing right now, or is off
+    LIGHT_DIM = 0.35         # available, not acting
+    LIGHT_ON = 1.0           # acting, or held
+
+    # Half-period of the LATCHED blink, in seconds. 0.5 gives 1 Hz, which
+    # reads as deliberate rather than as a fault. One rate on the whole panel:
+    # a second would read as a second meaning.
+    BLINK_S = 0.5
+
+    @staticmethod
+    def blink_phase(now, period=None):
+        """Whether a 1 Hz blink is in its lit half.
+
+        From the clock rather than a counter, so every caller computes the
+        same phase and none of them has to carry one around."""
+
+        return int(now / (period or techno_lib.BLINK_S)) % 2 == 0
+
+    @staticmethod
+    def state_light(held, latched, now=0.0, available=True):
+        """The brightness for a button that carries a STATE.
+
+        ONE function for every one of them, which is the point: SHIFT, SELECT,
+        DUPLICATE, MUTE, NAVIGATE, SWING, PAD MODE and SOLO all obey the same
+        rule now, and a ninth inherits it.
+
+        The alphabet:
+            dark     off, or nothing to act on
+            dim      available
+            bright   HELD - a short decision, your finger is on it
+            blink    LATCHED - a standing decision, your finger has left
+
+        Held outranks latched: a player holding a button that is also latched
+        is making the short decision right now, and the steady light is the
+        one that says the release will change something."""
+
+        if held:
+            return techno_lib.LIGHT_ON
+        if latched:
+            return (techno_lib.LIGHT_ON if techno_lib.blink_phase(now)
+                    else techno_lib.LIGHT_OFF)
+        return techno_lib.LIGHT_DIM if available else techno_lib.LIGHT_OFF
+
+    @staticmethod
+    def action_light(available):
+        """The brightness for a button that FIRES rather than holding a state.
+
+        DIM or dark, never bright: bright is reserved for "acting now", and an
+        action is never acting - it happened and it is over. A flash on press
+        would need a timer on a surface that already repaints from three
+        threads, and it would compete with the one movement that means
+        something.
+
+        Dark when it would do nothing - law L4 wearing a button. That is the
+        whole reason the display arrows go dark on a one-page ring and
+        STEP-left is dark while it is unbound."""
+
+        return techno_lib.LIGHT_DIM if available else techno_lib.LIGHT_OFF
+
+    @staticmethod
+    def toggle_light(on, available=True):
+        """The brightness for a two-valued state with no held form.
+
+        PLAY, a muted channel, the latched SOLO row, the four mode buttons.
+        Bright when it is true, dim when it is false but reachable, dark when
+        there is nothing to be true about - a Group with no chain, a mode
+        button on a rig that has lost its rings.
+
+        Deliberately NOT blinking when true: blink means latched-and-your-hand-
+        has-left, and every one of these is a plain fact rather than a mode a
+        player could be trapped in."""
+
+        if not available:
+            return techno_lib.LIGHT_OFF
+        return techno_lib.LIGHT_ON if on else techno_lib.LIGHT_DIM
+
     # --------------------------------------------------------------------- FX
 
     # role -> (plugin symbol, lo, hi). Gates G1 and G3 between them left exactly
@@ -2393,9 +2488,26 @@ class techno_lib:
 
     # PAGES is the pass-one name and is kept so an older snapshot's saved page
     # string still validates in set_state(). MODES is what the surface uses.
-    PAGES = ("CONTROL", "STEP", "ALL")
+    PAGES = ("CONTROL", "STEP", "AUTO")
 
-    MODES = ("CONTROL", "STEP", "ALL", "MIXER", "FILTER")
+    # FOUR LEVELS, 2026-09-01, and the fifth mode button became the LENS.
+    #
+    # MIXER and FILTER are gone as modes. Their five pages were one verb
+    # across eight channels each - LEVEL, REVERB, DELAY, CUTOFF, RESO - and
+    # "one verb across eight channels" is a DIRECTION OF LOOKING, not a place.
+    # Holding ALL now spreads whichever channel verb the hand last moved, from
+    # any level, without losing the channel view. Eleven pages and two modes
+    # went with it.
+    #
+    # AUTO carries the generator, which is what the button is printed for:
+    # automation. It was the last page of the longest-used ring - priority
+    # three of the product order sitting at depth six - and is now one press
+    # from anywhere.
+    MODES = ("CONTROL", "STEP", "AUTO", "VOLUME")
+
+    # The fifth mode button. Not a mode: a held or latched lens over whatever
+    # verb the hand last moved. See lens_verb().
+    MODE_LENS = "ALL"
 
     # ------------------------------------------------- button dispatch tables
     #
@@ -2472,7 +2584,12 @@ class techno_lib:
     # 5 (TL, transport left-step) and 12 (the big encoder press). The test on
     # this set is what caught the double-claim the moment the binding landed,
     # which is the reason it is a test and not a comment.
-    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 12})
+    # 12 (the big encoder's press) was SPENT on 2026-09-01 by HOME. One left:
+    # 5, the transport's STEP-left arrow. The standing recommendation for it
+    # is a step stutter - the escalation rung below the beat repeat already on
+    # its neighbour CC 6 - and it is in new_features.md rather than here,
+    # because a new musical gesture is not a surface redesign.
+    CCS_MEASURED_AND_UNCLAIMED = frozenset({5})
 
     BUTTONS_STATEFUL = {
         2: "erase",
@@ -2487,8 +2604,6 @@ class techno_lib:
         # word for drums, SCENE for melody) and handler names that encode the
         # meaning would have had to be renamed with it - or, worse, would not
         # have been, and then lied.
-        25: "reroll_scene",
-        26: "reroll_pattern",
         3: "rec",
         49: "shift",
         31: "solo",
@@ -2559,6 +2674,18 @@ class techno_lib:
         # enters its own sequencer mode - so FREEZE must never be a SHIFT
         # chord on this button.
         27: "freeze",
+        # ALL. CC 38 MEASURED at G4 (both edges) and bound as a MODE since the
+        # prototype - it is the one CC on this panel that changed job rather
+        # than gaining one, 2026-09-01.
+        #
+        # It is the LENS now, not a mode: held or latched, the eight encoders
+        # stop being eight verbs of one channel and become one verb across all
+        # eight. That is what the button is printed for, and it replaced five
+        # spread pages and two whole modes.
+        #
+        # STATEFUL because both halves of law L1 apply: held is a glance,
+        # latched is a decision to work across the eight for a while.
+        38: "lens",
     }
 
     # Buttons that act on press only.
@@ -2575,6 +2702,37 @@ class techno_lib:
         10: "register_undo",
         47: "page_prev",
         48: "page_next",
+        # SCENE and PATTERN. They were STATEFUL and fired on a RELEASE past
+        # 250 ms - the fifth grammar for "do a thing" on this panel and the
+        # only one of its kind. The comment that justified it called
+        # hold-to-fire "already this instrument's law"; no other button did
+        # it, and no code backed the sentence.
+        #
+        # A press fires now. What the hold bought - a window to change your
+        # mind - the BAR buys instead and buys longer: the reroll lands at the
+        # wrap and a second press before then takes it back, which is the same
+        # second-press-cancels the bank grid and the mute queue already use.
+        25: "reroll_scene",
+        26: "reroll_pattern",
+        # THE BIG ENCODER'S PRESS. CC 12 measured at G4, unclaimed until
+        # 2026-09-01, and the last-but-one free number on the panel.
+        #
+        # It is HOME: back to the default performance state - STEP, page 1,
+        # every overlay off - with the selected channel and everything armed
+        # left exactly where they are. Navigation, never a deletion (law G4).
+        #
+        # This button and no other, for four reasons and the fourth decides
+        # it. The instrument had NO defined home, which is the widest hole in
+        # "recover safely" and the quiet cost of every ring: navigation is
+        # only cheap when it is reversible. The big encoder is the largest,
+        # most central, easiest-to-find-in-the-dark control on the panel,
+        # which is where the button you press when you are lost belongs. It
+        # needs no light, on a panel with none to spare. And the big encoder
+        # is ABSOLUTE with no wrap handling (daemon main.rs:911), so it yanks
+        # its target once per revolution - the press re-anchors the counter on
+        # the way past, which fixes a defect and a design hole with one
+        # binding.
+        12: "home",
     }
 
     # CCs that belong to something other than a named button. A named button
@@ -2583,7 +2741,11 @@ class techno_lib:
         list(range(16, 24))          # the eight encoders
         + list(range(39, 47))        # F1..F8
         + list(range(80, 88))        # Groups A..H
-        + [11, 32, 38, 51, 37])      # CONTROL, STEP, ALL, MIXER(VOLUME), FILTER(AUTO)
+        # CONTROL, STEP, VOLUME, AUTO. ALL (38) left this set on 2026-09-01
+        # when it stopped being a mode and became the lens - it is a stateful
+        # button now, and a CC in both places is the collision
+        # button_conflicts() exists to find.
+        + [11, 32, 51, 37])
 
     @staticmethod
     def button_conflicts():
@@ -2622,7 +2784,9 @@ class techno_lib:
     # even though its pages 2 and 3 are spread, because its page 1 is
     # channel-shaped and differs by kind: a mixed ring takes the keying its
     # page 1 requires.
-    KEYED_BY_KIND = frozenset({"CONTROL", "STEP"})
+    # AUTO joined 2026-09-01: a drum's generator and a voice's are different
+    # instruments, so the ring has to be keyed by kind like the other two.
+    KEYED_BY_KIND = frozenset({"CONTROL", "STEP", "AUTO"})
 
     @staticmethod
     def ring_key(mode, kind):
@@ -3890,23 +4054,90 @@ class techno_lib:
     @staticmethod
     def spread_columns(desc, views):
         """One verb across eight channels. `views` is eight
-        (letter, name, view) tuples in channel order."""
+        (letter, name, view) tuples in channel order.
+
+        THE SAME TABLE the channel pages read, since 2026-09-01. It used to
+        have a table of its own, SPREAD_SPECS, holding twelve of the forty-odd
+        verbs - which is why the lens could not exist before: it can only
+        spread what it can draw. One table, and every verb is spreadable.
+
+        The column's NAME is the channel, not the verb; the verb is in the
+        page title, and repeating it eight times would spend the row that
+        says which channel you are reading."""
+
         verb = desc["verb"]
-        spec = techno_lib.SPREAD_SPECS[verb]
-        kind, to_frac = spec[0], spec[1]
-        fmt = spec[2] if len(spec) > 2 else techno_lib._num
         out = []
         for letter, name, view in views:
             label = f"{letter} {name}"[:8]
-            value = view.get(verb)
-            if value is None:
-                # Law L4 again: a column whose source does not exist draws
-                # dead rather than drawing a lie.
+            col = techno_lib.verb_col(verb, view, view.get("kind"))
+            if col is None or col["grey"] or techno_lib.verb_is_dead(
+                    verb, view.get("kind"), view):
+                # Law L4 again: a channel that does not carry this verb draws
+                # dead rather than drawing a lie. The label stays the channel
+                # so the reader can still tell WHICH one is dead.
                 out.append(techno_lib._dead(label.lower()))
                 continue
-            out.append(techno_lib._col(label, fmt(value), kind,
-                                       to_frac(value)))
+            col["name"] = label
+            out.append(col)
         return out
+
+    # ------------------------------------------------------------- the lens
+    #
+    # ALL held or latched. The eight encoders stop being eight verbs of one
+    # channel and become ONE verb across all eight - whichever verb the hand
+    # last moved.
+    #
+    # It replaced five spread pages and two whole modes. The reason it can is
+    # that "one verb across eight channels" was never a place: it is a
+    # direction of looking, and building it as a page meant one page per verb
+    # forever. This costs nothing per verb.
+
+    # What the lens shows before a hand has moved anything. LEVEL is the one
+    # answer that is always useful and always live on all eight.
+    LENS_DEFAULT = "level"
+
+    @staticmethod
+    def lens_verb(last):
+        """Which verb the lens spreads, given the last verb a hand moved.
+
+        A GLOBAL verb (BPM, MASTER, ROOT) has nothing to spread - there is one
+        of it - and a NAME verb (KIT, PRESET) spreads to eight lists that
+        share no index. Both leave the lens where it was rather than emptying
+        it, because a lens that goes blank when you touch the wrong knob is a
+        lens nobody trusts."""
+
+        if not last:
+            return techno_lib.LENS_DEFAULT
+        if last in techno_lib.NAME_VERBS:
+            return None
+        if last.startswith(techno_lib.VERB_FX):
+            # A ganged insert is one control for all eight already.
+            return None
+        if last.startswith(techno_lib.VERB_LV2):
+            return last
+        if last not in techno_lib.VERB_COLS:
+            return None
+        if last in techno_lib.GLOBAL_VERBS:
+            return None
+        return last
+
+    # The verbs that belong to the instrument rather than to a channel. The
+    # lens refuses them; there is nothing to lay side by side.
+    GLOBAL_VERBS = frozenset(("root", "scale", "bpm", "master", "revsize",
+                              "revtype", "dlytime", "dlyfbk", "walk",
+                              "wspan"))
+
+    @staticmethod
+    def lens_desc(verb):
+        """The page descriptor the lens draws, built at the moment it opens.
+
+        A descriptor rather than a special shape: SHAPE_SPREAD already means
+        exactly this, and giving the lens a shape of its own would put a
+        second branch in every painter that reads one."""
+
+        label = techno_lib.VERB_COLS.get(verb, (verb.upper(),))[0]
+        return techno_lib.page_desc(techno_lib.SHAPE_SPREAD,
+                                    f"ALL {label}", verb=verb)
 
     @staticmethod
     def columns(desc, kind, state, mod=False, owned=False, frozen=False):
@@ -4259,6 +4490,70 @@ class techno_lib:
                     f"driver; adopting it and resyncing (drift {self.drifts}).")
 
 
+class latch:
+    """Held or latched, law L1 in one object.
+
+    THE DURATION RULE, 2026-09-01: **a tap latches, a hold is momentary.**
+    That is written in this project's oldest plan as law L1 and was true of
+    three buttons out of twenty. SHIFT, SELECT, DUPLICATE, MUTE and NAVIGATE
+    were hold-only, MOD was latch-only, and the two reroll buttons fired on a
+    release past the threshold - five grammars for "enter a state", on a panel
+    a player has to read in the dark.
+
+    One object now, and every modifier holds one. The player holds what they
+    will let go of and taps what should stay, and BOTH ROUTES REACH THE SAME
+    STATE, so they never have to decide which they meant before starting.
+
+    It lives here rather than in the driver for the reason everything else
+    does: the driver cannot be imported off the rig, and "did that tap latch"
+    is exactly the question that is expensive to answer with a controller in
+    your hands.
+    """
+
+    __slots__ = ("held", "latched", "_at")
+
+    def __init__(self):
+        self.held = False
+        self.latched = False
+        self._at = 0.0
+
+    @property
+    def down(self):
+        """Is the state on, by either route?"""
+        return self.held or self.latched
+
+    def edge(self, down, now, hold_s):
+        """Take a button edge. Returns True when the state CHANGED.
+
+        A press is always a press: the state goes on for as long as the finger
+        is there, whatever the latch said. The release decides what it meant -
+        under the threshold it was a tap and the latch flips, over it the
+        gesture is simply over.
+
+        A tap while latched therefore turns the latch OFF, which is what makes
+        the same button its own way out. There is no gesture on this panel
+        that enters a state and needs a different one to leave it."""
+
+        was = self.down
+        if down:
+            self.held = True
+            self._at = now
+        else:
+            self.held = False
+            if now - self._at < hold_s:
+                self.latched = not self.latched
+        return self.down != was
+
+    def clear(self):
+        """Drop the LATCH and leave the hold alone.
+
+        HOME calls this, and the asymmetry is the point: a finger still on the
+        button is a fact about the world, and clearing it here would leave the
+        driver's picture disagreeing with the hand until it let go."""
+
+        self.latched = False
+
+
 # The verb table is built after the class body for the same reason the rings
 # are: its entries call techno_lib's own helpers, which are not bound until the
 # class exists. It is read as techno_lib.VERB_COLS like everything else.
@@ -4427,114 +4722,79 @@ techno_lib.VERB_COLS = {
 # out of the class body is the only reason they are down here; they are read as
 # techno_lib.PAGE_RINGS like everything else.
 _d = techno_lib.page_desc
+# THE ELEVEN PAGES, 2026-09-01. It was twenty-four, and 74 of its 192 columns
+# were dead. Every page below is full or within two of it, and no ring is
+# longer than two.
+#
+# The cut is by QUESTION, not by implementation class:
+#   CONTROL  how does this channel SOUND
+#   STEP     what does this channel PLAY
+#   AUTO     what does the machine do to it BY ITSELF
+#   VOLUME   what holds for EVERYTHING
+# and ALL, held, asks any of those four questions of all eight channels at
+# once instead of one - which is why the five MIXER and FILTER spread pages
+# no longer exist.
 techno_lib.PAGE_RINGS = {
+    # RANGE arrives here 2026-09-01. The kit-walk window was reachable from no
+    # page at all - it is a sound parameter, and it takes one of the three
+    # slots a sampler could never fill. Two dead slots remain and they stay
+    # dead honestly: LinuxSampler publishes no controller for anything, and
+    # the SoundFont CC 74/71 route is a measured dead end - the kits ship with
+    # the filter wide open at 13500 cents, so there is no headroom to act in.
     ("CONTROL", "drum"): (
         _d(techno_lib.SHAPE_CHANNEL, "CTRL",
-           verbs=("kit", "sample", None, None, None, "level", "reverb", "delay")),
+           verbs=("kit", "sample", "range", None, None,
+                  "level", "reverb", "delay")),
     ),
     ("CONTROL", "voice"): (
         _d(techno_lib.SHAPE_CHANNEL, "CTRL",
            verbs=("preset", "cutoff", "reso", "env", "decay",
                   "level", "reverb", "delay")),
     ),
+    # SWING moved onto the channel page from the spread page it used to own.
+    # Two reasons and the second is the load-bearing one: the groove of ONE
+    # channel against the others is the commoner question, and the lens can
+    # only spread a verb that lives on a channel page - a verb reachable
+    # nowhere else would have had no way back once its spread page went.
     ("STEP", "drum"): (
-        # Encoder 7 carries RHYTHM rather than SWING, 2026-08-31 - the same
-        # trade the owner made on the voice page in 2026-08-16 and for the
-        # identical reason, written there as "it is the only slot on a full
-        # page whose verb has a second home, and swing is on the spread page
-        # below for every channel at once, which is where it is wanted in a
-        # jam". The drum page simply never got the same treatment.
         _d(techno_lib.SHAPE_CHANNEL, "STEP",
            verbs=("hits", "rotate", "div", "length", "velo", "chance",
-                  "rhythm", "ratchet")),
-        _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
-        _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
-        # GEN, 2026-09-01. The drum ring has been one page shorter than the
-        # voice ring since the GEN page shipped, and a new page in an existing
-        # ring costs no button, no capture and no overlay - the cheapest
-        # surface on this instrument. Column 1 only for now; the leaning
-        # generator has a named home in column 2 when it is built.
-        _d(techno_lib.SHAPE_CHANNEL, "GEN",
-           verbs=("rule", "lean", None, None, None, None, None, None)),
+                  "ratchet", "swing")),
     ),
-    # Encoder 7 carries DENSITY rather than SWING: it is the only slot on a
-    # full page whose verb has a second home, and swing is on the spread page
-    # below for every channel at once, which is where it is wanted in a jam.
     ("STEP", "voice"): (
         _d(techno_lib.SHAPE_CHANNEL, "STEP",
-           verbs=("div", "gate", "random", "rhythm", "length", "octave",
-                  "range", "velo")),
-        _d(techno_lib.SHAPE_SPREAD, "SWING", verb="swing"),
-        _d(techno_lib.SHAPE_SPREAD, "CHANCE", verb="chance"),
-        _d(techno_lib.SHAPE_SPREAD, "RHYTHM", verb="rhythm"),
-        # P1, 2026-08-31. Three features on one new page, which is the whole
-        # reason they were built together: a new page in an existing ring
-        # costs no button, no measurement and no pad overlay, and the free
-        # button budget for the whole instrument is three CCs.
-        _d(techno_lib.SHAPE_CHANNEL, "GEN",
-           # THE VERB NAMES ARE THE STATE KEYS. `walk_span`, not `wspan`:
-           # _verb looks the verb up in VERB_RANGES and param_get reads it
-           # straight out of the state dict, so a page verb that does not
-           # name a real key is a knob that silently does nothing. The
-           # GLOBAL walk page's `wspan` is a different value in a different
-           # table - the walker's span, not this voice's.
-           verbs=("rotate", "model", "walk_span", "walk_stride", "feed",
-                  # RULE is its own column and NOT a value on MODEL, 2026-09-01.
-                  # MODEL chooses where the pitch values come from; RULE
-                  # chooses how the rhythm register evolves. One knob showing
-                  # one word must not decide two axes.
-                  "amount", "rule", None)),
+           verbs=("div", "length", "gate", "octave", "range", "velo",
+                  "chance", "swing")),
     ),
-    ("ALL", None): (
+    # AUTO - everything the machine does without being asked. RHYTHM, LANE,
+    # MOVE, PHRASE, FILL and EXIT come from four different old pages and one
+    # spread each; they are one question asked six ways, and a player deciding
+    # how much rope to give a channel wants all six under one hand.
+    ("AUTO", "drum"): (
+        _d(techno_lib.SHAPE_CHANNEL, "AUTO",
+           verbs=("rule", "lean", "rhythm", "lane", "move", "phrase",
+                  "fill", "exit")),
+    ),
+    ("AUTO", "voice"): (
+        _d(techno_lib.SHAPE_CHANNEL, "AUTO",
+           verbs=("rule", "model", "random", "rhythm", "move", "phrase",
+                  "fill", "exit")),
+        # The walk's own controls, plus the line rotation. SPAN and STRIDE
+        # draw dead unless MODEL is on WALK, which is why they are not on the
+        # page above competing with verbs that are always live.
+        _d(techno_lib.SHAPE_CHANNEL, "WALK",
+           verbs=("rotate", "walk_span", "walk_stride", "feed", "amount",
+                  None, None, None)),
+    ),
+    ("VOLUME", None): (
+        # REVTYPE and DLYFBK left this page so WALK and SPAN could land on it,
+        # which is what emptied the old four-dead-column WALK page. They are
+        # not lost: every port GLOBAL does not name appears on the generated
+        # REV and DLY pages below, and those two now do.
         _d(techno_lib.SHAPE_GLOBAL, "GLOBAL",
-           verbs=("root", "scale", "bpm", "master", "revsize", "revtype",
-                  "dlytime", "dlyfbk")),
-        # The ALL ring held exactly ONE page until 2026-08-20, which meant the
-        # big encoder - the page ring since 2026-08-19 - did nothing at all on
-        # this mode. PENDING is its second stop and the encoder's first job
-        # here.
+           verbs=("root", "scale", "bpm", "walk", "wspan", "master",
+                  "revsize", "dlytime")),
         _d(techno_lib.SHAPE_PENDING, "PENDING"),
-        # The chord walker. ROOT and SCALE are repeated from the GLOBAL page
-        # deliberately - the walker moves the root, and a page that hid the
-        # thing it moves would make the player page back and forth to see the
-        # effect of the knob under their hand.
-        _d(techno_lib.SHAPE_GLOBAL, "WALK",
-           verbs=("root", "scale", "walk", "wspan", None, None, None, None)),
-        # MOVE, 2026-09-01. A SPREAD, because the question it answers is about
-        # all eight at once - "which of these may the machine touch tonight" -
-        # and a per-channel column on a channel page would make the player walk
-        # eight pages to read one answer. It is on the ALL ring rather than
-        # STEP because it governs every automatic gesture, not the generators
-        # alone: the four bar-rate macros and the chord walker are exactly the
-        # ones that never asked.
-        _d(techno_lib.SHAPE_SPREAD, "MOVE", verb="move"),
-        # LANE, 2026-09-01. A spread beside MOVE because it answers the
-        # neighbouring question - MOVE is how OFTEN the machine may touch a
-        # channel, LANE is how FAR it may go when it does - and both are read
-        # for all eight at once. The three voices draw dead here by law L4:
-        # the verb does not exist on them, and pretending otherwise would put
-        # a knob on the page that quietly undoes hand-tapped steps.
-        _d(techno_lib.SHAPE_SPREAD, "LANE", verb="lane"),
-        # EXIT, 2026-09-01. How a channel LEAVES. It belongs beside MOVE and
-        # LANE because the three are one question asked three ways - how
-        # often, how far, and how it goes - and because an arrangement gesture
-        # is read for all eight at once or it is not read at all.
-        _d(techno_lib.SHAPE_SPREAD, "EXIT", verb="exit"),
-        # A PHRASE, NOT A BAR, 2026-09-01. Two spreads rather than one page of
-        # pairs: the question "which channels are on a four-bar phrase" and the
-        # question "how full is the fill" are asked at different moments, and
-        # each is read across all eight at once.
-        _d(techno_lib.SHAPE_SPREAD, "PHRASE", verb="phrase"),
-        _d(techno_lib.SHAPE_SPREAD, "FILL", verb="fill"),
-    ),
-    ("MIXER", None): (
-        _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),
-        _d(techno_lib.SHAPE_SPREAD, "REVERB", verb="reverb"),
-        _d(techno_lib.SHAPE_SPREAD, "DELAY", verb="delay"),
-    ),
-    ("FILTER", None): (
-        _d(techno_lib.SHAPE_SPREAD, "CUTOFF", verb="cutoff"),
-        _d(techno_lib.SHAPE_SPREAD, "RESO", verb="reso"),
     ),
 }
 del _d

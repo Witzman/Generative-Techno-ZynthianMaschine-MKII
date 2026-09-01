@@ -6,6 +6,7 @@ from collections import deque
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from techno_lib import techno_lib as tl  # noqa: E402
+import techno_lib as tl_mod  # noqa: E402  - for the module's own classes
 
 
 class TestTuringRegister(unittest.TestCase):
@@ -165,12 +166,24 @@ def _desc(mode, kind):
     return tl.PAGE_RINGS[tl.ring_key(mode, kind)][0]
 
 
+def _page(mode, kind, title):
+    """A page by name, so a test survives a page moving in its ring."""
+    for desc in tl.PAGE_RINGS[tl.ring_key(mode, kind)]:
+        if desc["title"] == title:
+            return desc
+    raise AssertionError(f"no page {title!r} in {mode}/{kind}")
+
+
 class TestColumnModel(unittest.TestCase):
 
     def drum_state(self, **over):
+        # `range` joined the fixture 2026-09-01 with the page: the kit-walk
+        # window is a real drum verb, so a view without it is an INCOMPLETE
+        # drum rather than a drum that lacks the control, and leaving it out
+        # would have had law L4 draw a live column dead.
         s = dict(kit="T808", sample="KICK", level=82, reverb=24, delay=36,
-                 hits=4, rotate=0, div=1, length=16, velo=110, chance=100,
-                 swing=50, pending=set())
+                 range=2, hits=4, rotate=0, div=1, length=16, velo=110,
+                 chance=100, swing=50, pending=set())
         s.update(over)
         return s
 
@@ -183,7 +196,11 @@ class TestColumnModel(unittest.TestCase):
         return s
 
     def globals_state(self, **over):
-        s = dict(root=9, scale=0, bpm=132, master=88,
+        # WALK and SPAN joined the fixture 2026-09-01, when they landed on the
+        # GLOBAL page in place of REVTYPE and DLYFBK. Those two are kept in
+        # the fixture: they are still globals, they just draw on the generated
+        # REV and DLY pages now.
+        s = dict(root=9, scale=0, bpm=132, master=88, walk=0, wspan=2,
                  revsize=72, revtype=3, dlytime=2, dlyfbk=58, pending=set())
         s.update(over)
         return s
@@ -200,32 +217,39 @@ class TestColumnModel(unittest.TestCase):
             cols = tl.columns(_desc("CONTROL", kind), kind, st)
             self.assertEqual([c["name"] for c in cols[5:]], ["LEVEL", "REVERB", "DELAY"])
 
-    def test_rhythm_is_column_seven_on_the_drum_step_page(self):
-        # The DRUM traded its SWING column for RHYTHM on 2026-08-31, exactly as
-        # the voice traded its own for the second generator in 2026-08-16.
-        # Swing did not go away on either: it is the STEP ring's spread page,
-        # all eight channels at once, which is where it is wanted in a jam.
+    def test_rhythm_is_column_three_on_the_drum_auto_page(self):
+        # MOVED 2026-09-01: RHYTHM left the drum STEP page for AUTO, because
+        # AUTO is the one question "what does the machine do to this channel
+        # by itself" and RHYTHM is one of six answers to it. SWING took the
+        # slot it vacated on STEP - the spread page swing used to own is gone,
+        # and the lens can only spread a verb that lives on a channel page.
         st = self.drum_state()
-        self.assertEqual(tl.columns(_desc("STEP", "drum"), "drum", st)[6]["name"],
-                         "RHYTHM")
+        self.assertEqual(
+            tl.columns(_page("AUTO", "drum", "AUTO"), "drum", st)[2]["name"],
+            "RHYTHM")
 
-    def test_rhythm_is_column_four_on_the_voice_step_page(self):
-        # The voice traded its SWING column for DENSITY. Swing did not go
-        # away: it is the STEP ring's spread page, all eight channels at once.
+    def test_rhythm_is_column_four_on_the_voice_auto_page(self):
+        # MOVED 2026-09-01 with the drum's, and it kept its neighbour: MELODY
+        # is column three on the same page, so the owner's "the two generators
+        # are one idea, put them side by side" survived the collapse.
         st = self.voice_state()
-        # Encoder 4, beside MELODY on 3: the owner put the two generators
-        # side by side at the rig, because they are one idea.
-        self.assertEqual(tl.columns(_desc("STEP", "voice"), "voice", st)[3]["name"],
-                         "RHYTHM")
+        self.assertEqual(
+            tl.columns(_page("AUTO", "voice", "AUTO"), "voice", st)[3]["name"],
+            "RHYTHM")
 
-    def test_drum_control_has_three_greyed_columns(self):
+    def test_drum_control_has_two_greyed_columns(self):
         cols = tl.columns(_desc("CONTROL", "drum"), "drum", self.drum_state())
         grey = [c for c in cols if c["grey"]]
+        # Was three. RANGE landed on slot 3 on 2026-09-01 - the kit-walk
+        # window was reachable from no page at all, and it is a sound
+        # parameter, so it takes one of the three slots a sampler could never
+        # fill. The other two stay dead honestly.
+        #
         # The names are the page title plus the slot number since 2026-09-01.
         # A slot with no verb has nothing else to be called, and a made-up
         # instrument name ("tune", "filtr") on a control that does not exist
         # was a promise the sampler could never keep.
-        self.assertEqual([c["name"] for c in grey], ["ctrl3", "ctrl4", "ctrl5"])
+        self.assertEqual([c["name"] for c in grey], ["ctrl4", "ctrl5"])
         for c in grey:
             self.assertEqual(c["value"], "----")
             self.assertIsNone(c["bar"])
@@ -238,13 +262,18 @@ class TestColumnModel(unittest.TestCase):
         # CHANGED 2026-08-19, SP10 step 3. This column was the page's dead
         # eighth slot from the prototype onwards, drawn `----` and greyed
         # because nothing wrote it. RATCHET fills it.
-        col = tl.columns(_desc("STEP", "drum"), "drum", self.drum_state())[7]
+        # Column seven since 2026-09-01, was eight: RHYTHM left this page for
+        # AUTO and SWING came back onto it in the last slot.
+        col = tl.columns(_desc("STEP", "drum"), "drum", self.drum_state())[6]
         self.assertEqual(col["name"], "RATCH")
         self.assertFalse(col["grey"])
         self.assertEqual(col["value"], "OFF")
 
     def test_random_zero_reads_lock_not_a_number(self):
-        col = tl.columns(_desc("STEP", "voice"), "voice", self.voice_state(random=0))[2]
+        # MELODY moved to the AUTO page with the rest of the generator on
+        # 2026-09-01; it is column three there, still beside RHYTHM.
+        col = tl.columns(_page("AUTO", "voice", "AUTO"), "voice",
+                         self.voice_state(random=0))[2]
         self.assertEqual(col["value"], "LOCK")
         self.assertEqual(len(col["value"]), 4)
 
@@ -254,27 +283,36 @@ class TestColumnModel(unittest.TestCase):
         self.assertTrue(col["pending"])
         self.assertTrue(col["value"].startswith(">") and col["value"].endswith("<"))
 
-    def test_all_page_is_the_same_for_both_kinds(self):
+    def test_global_page_is_the_same_for_both_kinds(self):
+        # The ALL ring became the VOLUME ring on 2026-09-01 - ALL is no longer
+        # a mode, it is the held lens - and the GLOBAL page traded REVTYPE and
+        # DLYFBK for WALK and SPAN, which is what emptied the old WALK page.
+        # The point of the test is unchanged: a page with no channel must not
+        # vary by the kind of channel that happens to be selected.
         gl = self.globals_state()
-        a = [c["name"] for c in tl.columns(_desc("ALL", "drum"), "drum", gl)]
-        b = [c["name"] for c in tl.columns(_desc("ALL", "voice"), "voice", gl)]
+        a = [c["name"] for c in tl.columns(_desc("VOLUME", "drum"), "drum", gl)]
+        b = [c["name"] for c in tl.columns(_desc("VOLUME", "voice"), "voice", gl)]
         self.assertEqual(a, b)
-        self.assertEqual(a, ["ROOT", "SCALE", "BPM", "MASTER",
-                             "REVSIZE", "REVTYPE", "DLYTIME", "DLYFBK"])
+        self.assertEqual(a, ["ROOT", "SCALE", "BPM", "WALK", "SPAN",
+                             "MASTER", "REVSIZE", "DLYTIME"])
 
     def test_every_value_fits_the_cell(self):
         for page, kind, st in (("CONTROL", "drum", self.drum_state()),
                                ("CONTROL", "voice", self.voice_state()),
                                ("STEP", "drum", self.drum_state()),
                                ("STEP", "voice", self.voice_state()),
-                               ("ALL", "drum", self.globals_state())):
+                               ("AUTO", "drum", self.drum_state()),
+                               ("AUTO", "voice", self.voice_state()),
+                               ("VOLUME", "drum", self.globals_state())):
             for c in tl.columns(_desc(page, kind), kind, st):
                 self.assertLessEqual(len(c["value"].strip("><")), 4,
                                      f"{page}/{kind}/{c['name']}={c['value']}")
 
     def test_octave_draws_a_bipolar_bar(self):
-        # Encoder 6 since the 2026-08-16 reorder, was 5.
-        col = tl.columns(_desc("STEP", "voice"), "voice", self.voice_state())[5]
+        # Encoder 4 since the 2026-09-01 collapse, was 6: the two generator
+        # columns left the voice STEP page for AUTO and everything after them
+        # shifted left.
+        col = tl.columns(_desc("STEP", "voice"), "voice", self.voice_state())[3]
         self.assertEqual(col["name"], "OCTAVE")
         self.assertEqual(col["bar"], "bi")
 
@@ -289,13 +327,19 @@ class TestColumnModel(unittest.TestCase):
 class TestPageRings(unittest.TestCase):
 
     def test_ring_key_drops_kind_for_modes_not_keyed_by_kind(self):
-        self.assertEqual(tl.ring_key("MIXER", "drum"), ("MIXER", None))
-        self.assertEqual(tl.ring_key("FILTER", "voice"), ("FILTER", None))
-        self.assertEqual(tl.ring_key("ALL", "drum"), ("ALL", None))
+        # Was MIXER, FILTER and ALL. All three stopped being modes on
+        # 2026-09-01 - the two spread rings became the lens, and ALL became
+        # the lens button - so VOLUME is now the only ring that asks nothing
+        # about the selected channel.
+        self.assertEqual(tl.ring_key("VOLUME", "drum"), ("VOLUME", None))
+        self.assertEqual(tl.ring_key("VOLUME", "voice"), ("VOLUME", None))
 
-    def test_ring_key_keeps_kind_for_control_and_step(self):
+    def test_ring_key_keeps_kind_for_control_step_and_auto(self):
         self.assertEqual(tl.ring_key("CONTROL", "drum"), ("CONTROL", "drum"))
         self.assertEqual(tl.ring_key("STEP", "voice"), ("STEP", "voice"))
+        # AUTO joined the keyed set 2026-09-01: a drum's generator and a
+        # voice's are different instruments, so its pages differ by kind.
+        self.assertEqual(tl.ring_key("AUTO", "drum"), ("AUTO", "drum"))
 
     def test_every_mode_has_a_ring_for_every_kind(self):
         for mode in tl.MODES:
@@ -312,58 +356,93 @@ class TestPageRings(unittest.TestCase):
                     self.assertIsNone(desc["verb"])
 
     def test_spread_pages_carry_one_verb_and_no_verb_list(self):
+        # No ring holds a spread page any more - the lens builds them on
+        # demand - so the ring sweep alone would pass vacuously. The lens
+        # descriptors are checked beside it, which is where the shape now
+        # comes from.
         for key, ring in tl.PAGE_RINGS.items():
             for desc in ring:
                 if desc["shape"] == tl.SHAPE_SPREAD:
                     self.assertIsInstance(desc["verb"], str)
                     self.assertIsNone(desc["verbs"])
+        for verb in ("level", "reverb", "delay", "cutoff", "reso"):
+            desc = tl.lens_desc(verb)
+            self.assertEqual(desc["shape"], tl.SHAPE_SPREAD)
+            self.assertEqual(desc["verb"], verb)
+            self.assertIsNone(desc["verbs"])
 
-    def test_mixer_ring_is_level_reverb_delay(self):
-        ring = tl.PAGE_RINGS[("MIXER", None)]
-        self.assertEqual([d["verb"] for d in ring], ["level", "reverb", "delay"])
+    def test_the_lens_reaches_level_reverb_and_delay(self):
+        # WAS test_mixer_ring_is_level_reverb_delay. The MIXER ring's three
+        # pages were level, reverb and delay across eight channels; the ring
+        # went on 2026-09-01 because "one verb across eight channels" is a
+        # direction of looking, not a place. The same three views are still
+        # reachable - now from any level, by holding ALL after turning one of
+        # them - so the test checks the lens rather than the ring.
+        for verb, label in (("level", "LEVEL"), ("reverb", "REVERB"),
+                            ("delay", "DELAY")):
+            self.assertEqual(tl.lens_verb(verb), verb)
+            self.assertEqual(tl.lens_desc(verb)["title"], f"ALL {label}")
+        # And LEVEL is what the lens shows before a hand has moved anything,
+        # which is the page MIXER opened on.
+        self.assertEqual(tl.lens_verb(None), "level")
 
-    def test_filter_ring_is_cutoff_reso(self):
-        ring = tl.PAGE_RINGS[("FILTER", None)]
-        self.assertEqual([d["verb"] for d in ring], ["cutoff", "reso"])
+    def test_the_lens_reaches_cutoff_and_reso(self):
+        # WAS test_filter_ring_is_cutoff_reso, and gone for the same reason as
+        # the MIXER ring. Both verbs still spread across all eight channels.
+        for verb, label in (("cutoff", "CUTOFF"), ("reso", "RESO")):
+            self.assertEqual(tl.lens_verb(verb), verb)
+            self.assertEqual(tl.lens_desc(verb)["title"], f"ALL {label}")
 
-    def test_step_ring_keeps_its_channel_page_first(self):
+    def test_step_ring_is_one_channel_page_on_both_kinds(self):
+        # WAS test_step_ring_keeps_its_channel_page_first, which also asserted
+        # the SWING and CHANCE spread pages behind it. Those two became lens
+        # views on 2026-09-01, and both verbs moved onto the channel page so
+        # the lens has somewhere to read them from.
         for kind in ("drum", "voice"):
             ring = tl.PAGE_RINGS[("STEP", kind)]
             self.assertEqual(ring[0]["shape"], tl.SHAPE_CHANNEL)
-            self.assertEqual([d["verb"] for d in ring[1:3]], ["swing", "chance"])
+            self.assertEqual(len(ring), 1)
+            self.assertIn("swing", ring[0]["verbs"])
+            self.assertIn("chance", ring[0]["verbs"])
 
     def test_step_channel_page_verbs_match_the_shipped_layout(self):
+        # Reordered 2026-09-01 by the collapse from 24 pages to 9: the two
+        # generator columns went to AUTO, and SWING and CHANCE came back onto
+        # the page from the spread pages that no longer exist.
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "drum")][0]["verbs"],
-            ("hits", "rotate", "div", "length", "velo", "chance", "rhythm",
-             "ratchet"))
-        # Reordered by the owner at the rig, 2026-08-16: pattern time first,
-        # then the two generators SIDE BY SIDE, then pitch, then velocity.
-        # Encoder 3 is MELODY on the panel but keeps the key `random`.
-        # THIS ORDER MUST MATCH _columns_inner's list position for position -
-        # verbs decide what an encoder writes, that list what it draws, and
-        # nothing checks they agree at runtime.
+            ("hits", "rotate", "div", "length", "velo", "chance", "ratchet",
+             "swing"))
+        # The voice keeps the owner's 2026-08-16 principle - pattern time
+        # first, then how the note is played, then pitch - minus MELODY and
+        # RHYTHM, which now sit side by side on AUTO instead.
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"],
-            ("div", "gate", "random", "rhythm", "length", "octave",
-             "range", "velo"))
+            ("div", "length", "gate", "octave", "range", "velo",
+             "chance", "swing"))
 
     def test_control_channel_page_verbs_match_the_shipped_layout(self):
+        # RANGE took slot 3 on the drum page, 2026-09-01: the kit-walk window
+        # was reachable from no page at all, and it is a sound parameter, so
+        # it fills one of the three slots a sampler could never fill.
         self.assertEqual(
             tl.PAGE_RINGS[("CONTROL", "drum")][0]["verbs"],
-            ("kit", "sample", None, None, None, "level", "reverb", "delay"))
+            ("kit", "sample", "range", None, None, "level", "reverb", "delay"))
         self.assertEqual(
             tl.PAGE_RINGS[("CONTROL", "voice")][0]["verbs"],
             ("preset", "cutoff", "reso", "env", "decay", "level", "reverb", "delay"))
 
-    def test_all_page_one_keeps_every_shipped_global(self):
-        # The four FX globals stay here. dlytime is a musical division resolved
-        # against live tempo and revtype is a room index - neither is a raw
-        # plugin port, so neither can move to a generated page.
+    def test_global_page_one_keeps_every_shipped_global(self):
+        # The ALL ring became the VOLUME ring on 2026-09-01. REVTYPE and
+        # DLYFBK left this page so WALK and SPAN could land on it, which is
+        # what emptied the old four-dead-column WALK page; they are not lost,
+        # because every port GLOBAL does not name appears on the generated REV
+        # and DLY pages. DLYTIME stays: it is a musical division resolved
+        # against live tempo, not a raw plugin port.
         self.assertEqual(
-            tl.PAGE_RINGS[("ALL", None)][0]["verbs"],
-            ("root", "scale", "bpm", "master", "revsize", "revtype",
-             "dlytime", "dlyfbk"))
+            tl.PAGE_RINGS[("VOLUME", None)][0]["verbs"],
+            ("root", "scale", "bpm", "walk", "wspan", "master",
+             "revsize", "dlytime"))
 
 
 class TestPageIndexArithmetic(unittest.TestCase):
@@ -387,15 +466,18 @@ class TestPageIndexArithmetic(unittest.TestCase):
 
 
 def _drum_view(**over):
-    view = dict(hits=4, rotate=0, div=1, length=16, velo=110, chance=100,
-                swing=50, rhythm=0, level=19, reverb=0, delay=0, kit="909",
-                sample="BD", pending=set())
+    # `kind` joined both fixtures 2026-09-01: spread_columns takes the kind
+    # from the view now, one per channel, because the lens shows drums and
+    # voices side by side and there is no single kind to pass it.
+    view = dict(kind="drum", hits=4, rotate=0, div=1, length=16, velo=110,
+                chance=100, swing=50, rhythm=0, level=19, reverb=0, delay=0,
+                range=2, kit="909", sample="BD", pending=set())
     view.update(over)
     return view
 
 
 def _voice_view(**over):
-    view = dict(length=8, div=1, random=0, gate=40, octave=0, range=2,
+    view = dict(kind="voice", length=8, div=1, random=0, gate=40, octave=0, range=2,
                 swing=50, velo=110, level=19, reverb=0, delay=0, chance=100,
                 rhythm=0, rhythm_reg=0xFFFF, preset="SAW", cutoff=64, reso=32, env=64, decay=40,
                 pending=set())
@@ -408,23 +490,31 @@ class TestColumnsByShape(unittest.TestCase):
     def test_channel_shape_still_renders_the_shipped_step_page(self):
         desc = tl.PAGE_RINGS[("STEP", "drum")][0]
         cols = tl.columns(desc, "drum", _drum_view())
+        # RHYTHM left for AUTO and SWING came back off its spread page in the
+        # 2026-09-01 collapse, so RATCH moved from slot 8 to slot 7.
         self.assertEqual([c["name"] for c in cols],
                          ["HITS", "ROTATE", "DIVIDE", "LENGTH", "VELO",
-                          "CHANCE", "RHYTHM", "RATCH"])
+                          "CHANCE", "RATCH", "SWING"])
         # No longer greyed: SP10 step 3 gave the slot a verb, 2026-08-19.
-        self.assertFalse(cols[7]["grey"])
+        self.assertFalse(cols[6]["grey"])
 
-    def test_global_shape_still_renders_the_shipped_all_page(self):
-        desc = tl.PAGE_RINGS[("ALL", None)][0]
+    def test_global_shape_still_renders_the_shipped_global_page(self):
+        # The ALL ring became the VOLUME ring, and REVTYPE and DLYFBK gave up
+        # their slots to WALK and SPAN, 2026-09-01.
+        desc = tl.PAGE_RINGS[("VOLUME", None)][0]
         state = dict(root=9, scale=0, bpm=132, master=80, revsize=25,
-                     revtype=3, dlytime=1, dlyfbk=35, pending=set())
+                     walk=0, wspan=2, revtype=3, dlytime=1, dlyfbk=35,
+                     pending=set())
         cols = tl.columns(desc, "drum", state)
         self.assertEqual([c["name"] for c in cols],
-                         ["ROOT", "SCALE", "BPM", "MASTER", "REVSIZE",
-                          "REVTYPE", "DLYTIME", "DLYFBK"])
+                         ["ROOT", "SCALE", "BPM", "WALK", "SPAN",
+                          "MASTER", "REVSIZE", "DLYTIME"])
 
     def test_spread_shape_labels_each_column_with_its_channel(self):
-        desc = tl.PAGE_RINGS[("MIXER", None)][0]
+        # The MIXER ring's LEVEL page is a lens view since 2026-09-01. What is
+        # under test is unchanged: a spread column is named for its CHANNEL,
+        # because the verb is already in the page title.
+        desc = tl.lens_desc("level")
         views = [(chr(ord("A") + i), name, _drum_view(level=10 * i))
                  for i, name in enumerate(
                      ["KICK", "SNAR", "CLAP", "CHAT", "OHAT", "BASS", "LEAD", "PADS"])]
@@ -437,7 +527,8 @@ class TestColumnsByShape(unittest.TestCase):
     def test_spread_greys_a_channel_that_lacks_the_verb(self):
         # A drum has no cutoff: LinuxSampler publishes no controllers and the
         # SoundFont CC 74 route is a measured dead end. The column says so.
-        desc = tl.PAGE_RINGS[("FILTER", None)][0]
+        # Through the lens since 2026-09-01, where the FILTER ring used to be.
+        desc = tl.lens_desc("cutoff")
         views = [("A", "KICK", _drum_view()), ("F", "BASS", _voice_view())]
         views += [("X", "----", _drum_view())] * 6
         cols = tl.columns(desc, None, views)
@@ -448,13 +539,15 @@ class TestColumnsByShape(unittest.TestCase):
         self.assertEqual(cols[1]["value"], "0064")
 
     def test_spread_swing_uses_the_shipped_swing_fraction(self):
-        desc = tl.PAGE_RINGS[("STEP", "drum")][1]
+        # The STEP ring's SWING spread page became a lens view, 2026-09-01.
+        desc = tl.lens_desc("swing")
         views = [("A", "KICK", _drum_view(swing=75))] * 8
         cols = tl.columns(desc, "drum", views)
         self.assertAlmostEqual(cols[0]["frac"], 1.0)
 
     def test_spread_chance_reads_a_voice_too(self):
-        desc = tl.PAGE_RINGS[("STEP", "voice")][2]
+        # The STEP ring's CHANCE spread page became a lens view, 2026-09-01.
+        desc = tl.lens_desc("chance")
         views = [("F", "BASS", _voice_view(chance=0))] * 8
         cols = tl.columns(desc, "voice", views)
         self.assertEqual(cols[0]["value"], "0000")
@@ -682,57 +775,66 @@ class TestRhythmPage(unittest.TestCase):
     """Was TestDensityPage. DENSITY became RHYTHM on 2026-08-16 - same
     encoder, same spread page, a generator instead of a count."""
 
-    def test_the_voice_step_ring_gains_a_rhythm_page(self):
-        # [1:4], not [1:] - the ring gained a GEN page on 2026-08-31 and a
-        # channel-shaped page carries no single `verb`.
-        ring = tl.PAGE_RINGS[("STEP", "voice")]
-        self.assertEqual([d["verb"] for d in ring[1:4]],
-                         ["swing", "chance", "rhythm"])
+    def test_the_lens_spreads_rhythm(self):
+        # WAS test_the_voice_step_ring_gains_a_rhythm_page. The RHYTHM spread
+        # page went with every other one on 2026-09-01; the view it gave is
+        # now the lens over the RHYTHM verb, reachable from AUTO where the
+        # verb itself lives.
+        self.assertEqual(tl.lens_verb("rhythm"), "rhythm")
+        self.assertEqual(tl.lens_desc("rhythm")["title"], "ALL RHYTHM")
 
-    def test_the_drum_step_ring_keeps_its_two_spread_pages(self):
+    def test_the_drum_auto_page_carries_rhythm(self):
         # REVERSED BY THE OWNER, 2026-08-31. This test used to read "a drum's
         # rhythm is HITS and ROTATE, already exact - euclidean channels get no
         # second generator", and the drum rhythm register is exactly that
-        # second generator. The RING is still swing and chance; what changed is
-        # the CHANNEL page, where encoder 7 traded SWING for RHYTHM - the same
-        # trade the owner already made on the voice page, and for the same
-        # reason: swing is on the spread page below, reachable for all eight
-        # channels at once, which is where it is wanted in a jam.
-        ring = tl.PAGE_RINGS[("STEP", "drum")]
-        # The two spread pages, plus the GEN page added 2026-09-01, which is a
-        # channel page and carries no single `verb`.
-        self.assertEqual([d["verb"] for d in ring[1:3]], ["swing", "chance"])
-        self.assertEqual(ring[3]["title"], "GEN")
+        # second generator.
+        #
+        # RETARGETED 2026-09-01: it read the drum STEP ring's two spread pages
+        # and the GEN page behind them. The rings collapsed from 24 pages to
+        # 9, the spread pages became the lens, and the generative verbs moved
+        # to AUTO - so RHYTHM on a drum is now a column on the AUTO page.
+        self.assertIn("rhythm", _page("AUTO", "drum", "AUTO")["verbs"])
+        self.assertEqual(len(tl.PAGE_RINGS[("STEP", "drum")]), 1)
 
-    def test_rhythm_sits_beside_melody_on_the_voice_channel_page(self):
+    def test_rhythm_sits_beside_melody_on_the_voice_auto_page(self):
+        # The owner's "the two generators are one idea, put them side by side"
+        # survived the 2026-09-01 collapse: both moved from the voice STEP
+        # page to the voice AUTO page, still adjacent.
         self.assertEqual(
-            tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"],
-            ("div", "gate", "random", "rhythm", "length", "octave",
-             "range", "velo"))
+            _page("AUTO", "voice", "AUTO")["verbs"],
+            ("rule", "model", "random", "rhythm", "move", "phrase",
+             "fill", "exit"))
 
     def test_the_spread_spec_maps_the_full_range(self):
-        _, to_frac = tl.SPREAD_SPECS["rhythm"]
+        # Reads VERB_COLS, not SPREAD_SPECS: since 2026-09-01 a spread column
+        # comes from the same table the channel pages read, which is what let
+        # the lens spread every verb instead of the twelve SPREAD_SPECS held.
+        _, _, to_frac, _ = tl.VERB_COLS["rhythm"]
         self.assertEqual(to_frac(0), 0.0)
         self.assertEqual(to_frac(100), 1.0)
 
-    def test_the_rhythm_spread_page_now_reaches_a_drum_too(self):
+    def test_the_rhythm_lens_reaches_a_drum_too(self):
         # It used to grey a drum, because a drum view carried no `rhythm` key
         # and spread_columns draws dead where the source does not exist. The
-        # drum rhythm register puts the key on the drum state, so this page
+        # drum rhythm register puts the key on the drum state, so this view
         # lights up for all eight channels with NO change to the page itself -
         # the grey was never a rule, it was the absence of a value.
-        desc = tl.PAGE_RINGS[("STEP", "voice")][3]
+        desc = tl.lens_desc("rhythm")
         views = [("A", "KICK", _drum_view()), ("F", "BASS", _voice_view())]
         views += [("X", "----", _drum_view())] * 6
         cols = tl.columns(desc, None, views)
         self.assertFalse(cols[0]["grey"])
-        self.assertEqual(cols[0]["value"], "0000")
+        # The word, not 0000, since 2026-09-01: a spread column now comes from
+        # VERB_COLS, which has always formatted a frozen generator as LOCK on
+        # the channel pages. The old SPREAD_SPECS entry had no formatter, so
+        # the two surfaces disagreed about the same value.
+        self.assertEqual(cols[0]["value"], "LOCK")
         self.assertFalse(cols[1]["grey"])
         # 0 is LOCK: a voice starts with its rhythm frozen, where DENSITY
         # started at 100. The steps it sounds come from the register, which
         # starts with every bit set - so the SOUND is unchanged, only the
         # number on this page moves.
-        self.assertEqual(cols[1]["value"], "0000")
+        self.assertEqual(cols[1]["value"], "LOCK")
 
 
 class TestQuarterDivisionLabel(unittest.TestCase):
@@ -1342,10 +1444,21 @@ class TestButtonTables(unittest.TestCase):
             self.assertNotIn(cc, tl.CCS_MEASURED_AND_UNCLAIMED,
                              f"CC {cc} is spent and must not be offered again")
 
-    def test_the_reroll_buttons_are_bound_and_stateful(self):
-        # Stateful, not press-only: hold-to-fire needs the release.
-        self.assertEqual(tl.BUTTONS_STATEFUL[25], "reroll_scene")
-        self.assertEqual(tl.BUTTONS_STATEFUL[26], "reroll_pattern")
+    def test_the_reroll_buttons_fire_on_a_press(self):
+        # PRESS-ONLY since 2026-09-01. They were stateful and fired on a
+        # release past 250 ms - the fifth grammar for "do a thing" on a panel
+        # that already had four, and the only one of its kind here. The
+        # comment that justified it called hold-to-fire "already this
+        # instrument's law"; nothing else on the surface did it.
+        #
+        # The window the hold bought is now the BAR: the reroll lands at the
+        # wrap and a second press before then takes it back, which is longer
+        # than a finger could hold and is the same second-press-cancels the
+        # bank grid and the mute queue already use.
+        self.assertEqual(tl.BUTTONS_PRESS[25], "reroll_scene")
+        self.assertEqual(tl.BUTTONS_PRESS[26], "reroll_pattern")
+        self.assertNotIn(25, tl.BUTTONS_STATEFUL)
+        self.assertNotIn(26, tl.BUTTONS_STATEFUL)
 
     def test_coarse_lives_on_tempo_and_carries_both_edges(self):
         # TEMPO = CC 35, MEASURED 2026-08-16 by aseqdump on the daemon's Pads
@@ -1896,6 +2009,196 @@ def _drum_state():
             "delay": 0, "pending": set()}
 
 
+class TheDurationRule(unittest.TestCase):
+    """A tap latches, a hold is momentary - for EVERY modifier, 2026-09-01.
+
+    It is law L1 out of this project's oldest plan and it was true of three
+    buttons out of twenty. SHIFT, SELECT, DUPLICATE, MUTE and NAVIGATE were
+    hold-only; MOD was latch-only; SCENE and PATTERN fired on a release past
+    the threshold. Five grammars for entering a state, on a panel a player
+    has to read in the dark."""
+
+    HOLD = 0.25
+
+    def test_a_press_turns_it_on_immediately(self):
+        latch = tl_mod.latch()
+        latch.edge(True, 0.0, self.HOLD)
+        self.assertTrue(latch.down)
+        self.assertTrue(latch.held)
+
+    def test_a_tap_latches(self):
+        latch = tl_mod.latch()
+        latch.edge(True, 0.0, self.HOLD)
+        latch.edge(False, 0.1, self.HOLD)
+        self.assertTrue(latch.down)
+        self.assertTrue(latch.latched)
+        self.assertFalse(latch.held)
+
+    def test_a_hold_is_momentary(self):
+        latch = tl_mod.latch()
+        latch.edge(True, 0.0, self.HOLD)
+        latch.edge(False, 0.5, self.HOLD)
+        self.assertFalse(latch.down)
+        self.assertFalse(latch.latched)
+
+    def test_a_second_tap_is_the_way_out(self):
+        # No gesture on this panel enters a state and needs a different one to
+        # leave it.
+        latch = tl_mod.latch()
+        latch.edge(True, 0.0, self.HOLD)
+        latch.edge(False, 0.1, self.HOLD)
+        latch.edge(True, 1.0, self.HOLD)
+        latch.edge(False, 1.1, self.HOLD)
+        self.assertFalse(latch.down)
+
+    def test_holding_a_latched_modifier_leaves_the_latch_alone(self):
+        # The press is always a press; only the release decides what it meant,
+        # and a long one meant nothing but itself.
+        latch = tl_mod.latch()
+        latch.edge(True, 0.0, self.HOLD)
+        latch.edge(False, 0.1, self.HOLD)       # latched
+        latch.edge(True, 1.0, self.HOLD)
+        latch.edge(False, 1.9, self.HOLD)       # a long hold
+        self.assertTrue(latch.latched)
+
+    def test_the_edge_reports_whether_the_state_changed(self):
+        latch = tl_mod.latch()
+        self.assertTrue(latch.edge(True, 0.0, self.HOLD))
+        self.assertFalse(latch.edge(False, 0.1, self.HOLD))   # tap: still on
+        self.assertFalse(latch.edge(True, 1.0, self.HOLD))    # still on
+        self.assertTrue(latch.edge(False, 1.1, self.HOLD))    # tap: off
+
+    def test_clear_drops_the_latch_and_leaves_the_hold(self):
+        # HOME calls this. A finger still on the button is a fact about the
+        # world, and clearing it would leave the driver disagreeing with the
+        # hand until it let go.
+        latch = tl_mod.latch()
+        latch.edge(True, 0.0, self.HOLD)
+        latch.edge(False, 0.1, self.HOLD)
+        latch.edge(True, 1.0, self.HOLD)
+        latch.clear()
+        self.assertFalse(latch.latched)
+        self.assertTrue(latch.held)
+        self.assertTrue(latch.down)
+
+
+class TheLens(unittest.TestCase):
+    """ALL held or latched: one verb across all eight channels.
+
+    It replaced five spread pages and two whole modes. "One verb over eight
+    channels" was never a place - it is a direction of looking, and building
+    it as a page meant one page per verb forever."""
+
+    def _views(self, verb, values, kinds=None):
+        kinds = kinds or ["drum"] * 5 + ["voice"] * 3
+        out = []
+        for i, value in enumerate(values):
+            view = {"kind": kinds[i]}
+            if value is not None:
+                view[verb] = value
+            out.append((chr(ord("A") + i), tl.CHANNELS[i][1], view))
+        return out
+
+    def test_nothing_moved_yet_shows_level(self):
+        # The one answer that is always useful and always live on all eight.
+        self.assertEqual(tl.lens_verb(None), tl.LENS_DEFAULT)
+        self.assertEqual(tl.LENS_DEFAULT, "level")
+
+    def test_a_channel_verb_is_what_it_spreads(self):
+        self.assertEqual(tl.lens_verb("chance"), "chance")
+        self.assertEqual(tl.lens_verb("cutoff"), "cutoff")
+        self.assertEqual(tl.lens_verb("move"), "move")
+
+    def test_a_global_verb_is_refused(self):
+        # There is one BPM. Laying it side by side eight times says nothing.
+        for verb in ("bpm", "root", "scale", "master", "walk"):
+            self.assertIsNone(tl.lens_verb(verb), verb)
+
+    def test_a_name_verb_is_refused(self):
+        # Eight kit lists share no index, so a spread of them is eight
+        # unrelated words under one heading.
+        for verb in ("kit", "sample", "preset"):
+            self.assertIsNone(tl.lens_verb(verb), verb)
+
+    def test_a_ganged_effect_port_is_refused(self):
+        # An fx: port is already one control for all eight.
+        self.assertIsNone(tl.lens_verb("fx:reverb:decay"))
+
+    def test_a_plugin_port_is_per_channel_and_spreads(self):
+        self.assertEqual(tl.lens_verb("lv2:cutoff"), "lv2:cutoff")
+
+    def test_a_refusal_leaves_the_lens_where_it_was(self):
+        # None is the signal to KEEP the previous verb, not to blank the page.
+        # A lens that empties when you touch the wrong knob is one nobody
+        # trusts mid-bar.
+        self.assertIsNone(tl.lens_verb("bpm"))
+
+    def test_the_page_it_draws_is_a_spread(self):
+        desc = tl.lens_desc("chance")
+        self.assertEqual(desc["shape"], tl.SHAPE_SPREAD)
+        self.assertEqual(desc["verb"], "chance")
+
+    def test_the_title_names_the_verb(self):
+        # The label row is where G7 is satisfied: nothing about the lens is
+        # invisible, including which of forty verbs it happens to hold.
+        self.assertEqual(tl.lens_desc("chance")["title"], "ALL CHANCE")
+        self.assertEqual(tl.lens_desc("random")["title"], "ALL MELODY")
+
+    def test_it_draws_one_column_per_channel(self):
+        views = self._views("chance", [0, 25, 50, 75, 100, 10, 20, 30])
+        cols = tl.columns(tl.lens_desc("chance"), None, views)
+        self.assertEqual(len(cols), 8)
+        self.assertEqual(cols[0]["name"], "A KICK")
+        self.assertEqual(cols[7]["name"], "H PADS")
+
+    def test_a_channel_without_the_verb_draws_dead(self):
+        # Law L4, and the lens is the first page on which live and dead
+        # columns sit side by side as an ordinary picture rather than as a
+        # fault: CUTOFF over five drums and three voices is four of each.
+        views = self._views("cutoff", [None] * 5 + [64, 64, 64])
+        cols = tl.columns(tl.lens_desc("cutoff"), None, views)
+        for col in cols[:5]:
+            self.assertTrue(col["grey"])
+            self.assertEqual(col["value"], "----")
+            self.assertIsNone(col["bar"])
+        for col in cols[5:]:
+            self.assertFalse(col["grey"])
+
+    def test_lane_spreads_over_the_drums_and_draws_dead_on_the_voices(self):
+        views = self._views("lane", [40] * 5 + [None] * 3)
+        cols = tl.columns(tl.lens_desc("lane"), None, views)
+        self.assertFalse(cols[0]["grey"])
+        self.assertTrue(cols[5]["grey"])
+
+    def test_a_dead_channel_still_says_WHICH_one(self):
+        # The label stays the channel, lower-cased. A reader has to be able to
+        # tell which of the eight cannot take the verb.
+        views = self._views("cutoff", [None] * 8)
+        cols = tl.columns(tl.lens_desc("cutoff"), None, views)
+        self.assertEqual(cols[0]["name"], "a kick")
+
+    def test_every_verb_on_a_channel_page_is_one_the_lens_can_hold(self):
+        # THE CLOSING ARGUMENT for deleting the spread pages. Five of them
+        # went; every verb they carried has to be reachable through the lens,
+        # or the redesign lost a control.
+        for (mode, kind), ring in tl.PAGE_RINGS.items():
+            if mode == "VOLUME":
+                continue
+            for desc in ring:
+                for verb in desc["verbs"] or ():
+                    if verb is None or verb in tl.NAME_VERBS:
+                        continue
+                    self.assertEqual(tl.lens_verb(verb), verb,
+                                     f"{mode}/{kind} {desc['title']}: {verb}")
+
+    def test_the_five_deleted_spread_verbs_are_all_reachable(self):
+        for verb in ("level", "reverb", "delay", "cutoff", "reso",
+                     "swing", "chance", "rhythm", "move", "lane",
+                     "exit", "phrase", "fill"):
+            self.assertEqual(tl.lens_verb(verb), verb, verb)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -1981,26 +2284,32 @@ class TestDensityMigration(unittest.TestCase):
 
 
 class TestGeneratorSurface(unittest.TestCase):
-    """The two generators must read as one idea on the panel: MELODY on
-    encoder 3, RHYTHM on encoder 7, each with LOCK at zero."""
+    """The two generators must read as one idea on the panel: MELODY and
+    RHYTHM side by side, each with LOCK at zero. They sat on encoders 3 and 4
+    of the voice STEP page until 2026-09-01 and are on encoders 3 and 4 of the
+    voice AUTO page now - the pair moved together, which is the point."""
 
-    def test_the_voice_step_page_names_both_generators(self):
-        verbs = tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"]
+    def test_the_voice_auto_page_names_both_generators(self):
+        verbs = _page("AUTO", "voice", "AUTO")["verbs"]
         self.assertEqual(verbs[2], "random")     # MELODY keeps its state key
         self.assertEqual(verbs[3], "rhythm")     # right beside it
         self.assertNotIn("density", verbs)
 
     def test_the_columns_are_labelled_melody_and_rhythm(self):
-        desc = tl.PAGE_RINGS[("STEP", "voice")][0]
+        desc = _page("AUTO", "voice", "AUTO")
         cols = tl.columns(desc, "voice", _voice_view())
         self.assertEqual(cols[2]["name"], "MELODY")
         self.assertEqual(cols[3]["name"], "RHYTHM")
 
-    def test_the_density_spread_page_became_a_rhythm_page(self):
-        verbs = [d.get("verb") for d in tl.PAGE_RINGS[("STEP", "voice")][1:]]
-        self.assertEqual(verbs[:3], ["swing", "chance", "rhythm"])
-        self.assertIn("rhythm", tl.SPREAD_SPECS)
-        self.assertNotIn("density", tl.SPREAD_SPECS)
+    def test_the_density_spread_page_became_a_rhythm_lens(self):
+        # WAS test_the_density_spread_page_became_a_rhythm_page. The spread
+        # page itself went with all the others on 2026-09-01; what it showed
+        # is the lens over RHYTHM, and the verb it draws comes from VERB_COLS
+        # rather than the SPREAD_SPECS table the lens replaced.
+        self.assertEqual(tl.lens_verb("rhythm"), "rhythm")
+        self.assertEqual(tl.lens_desc("rhythm")["verb"], "rhythm")
+        self.assertIn("rhythm", tl.VERB_COLS)
+        self.assertNotIn("density", tl.VERB_COLS)
 
     def test_rhythm_hands_the_pattern_back_only_when_moved_off_lock(self):
         # Same rule RANDOM already has: turning it DOWN to LOCK must not be
@@ -2028,10 +2337,21 @@ class TestVerbColumnAlignment(unittest.TestCase):
     # verb -> the name its column must draw. Deliberately explicit: `random`
     # draws MELODY and `div` draws DIVIDE, so a mechanical comparison would
     # not catch a swap.
+    #
+    # Reordered 2026-09-01 by the collapse from 24 pages to 9: MELODY and
+    # RHYTHM left this page for AUTO, and CHANCE and SWING came back onto it
+    # off the spread pages that became the lens.
     VOICE_STEP = (
-        ("div", "DIVIDE"), ("gate", "GATE"), ("random", "MELODY"),
-        ("rhythm", "RHYTHM"), ("length", "LENGTH"), ("octave", "OCTAVE"),
-        ("range", "RANGE"), ("velo", "VELO"),
+        ("div", "DIVIDE"), ("length", "LENGTH"), ("gate", "GATE"),
+        ("octave", "OCTAVE"), ("range", "RANGE"), ("velo", "VELO"),
+        ("chance", "CHANCE"), ("swing", "SWING"),
+    )
+
+    # The same check on the page the two generators moved to.
+    VOICE_AUTO = (
+        ("rule", "RULE"), ("model", "MODEL"), ("random", "MELODY"),
+        ("rhythm", "RHYTHM"), ("move", "MOVE"), ("phrase", "PHRASE"),
+        ("fill", "FILL"), ("exit", "EXIT"),
     )
 
     def test_every_voice_step_column_draws_its_own_verb(self):
@@ -2041,10 +2361,19 @@ class TestVerbColumnAlignment(unittest.TestCase):
             self.assertEqual(desc["verbs"][index], verb, f"verb at {index}")
             self.assertEqual(cols[index]["name"], name, f"name at {index}")
 
+    def test_every_voice_auto_column_draws_its_own_verb(self):
+        desc = _page("AUTO", "voice", "AUTO")
+        cols = tl.columns(desc, "voice", _voice_view())
+        for index, (verb, name) in enumerate(self.VOICE_AUTO):
+            self.assertEqual(desc["verbs"][index], verb, f"verb at {index}")
+            self.assertEqual(cols[index]["name"], name, f"name at {index}")
+
     def test_the_two_generators_are_adjacent(self):
         # The owner's reason for the layout: they are one idea, so the hand
         # finds them together. A reorder that separates them is a regression.
-        verbs = tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"]
+        # They live on AUTO since 2026-09-01, together, which is what the
+        # collapse had to preserve.
+        verbs = _page("AUTO", "voice", "AUTO")["verbs"]
         self.assertEqual(abs(verbs.index("random") - verbs.index("rhythm")), 1)
 
 
@@ -2613,8 +2942,10 @@ class TestRatchet(unittest.TestCase):
     setStutterDur - a ratchet is what those fields are for."""
 
     def test_the_drum_step_page_has_a_ratchet_column(self):
+        # Slot 7 since 2026-09-01, was 8: RHYTHM left this page for AUTO and
+        # SWING came back off its spread page into the last slot.
         desc = tl.PAGE_RINGS[("STEP", "drum")][0]
-        self.assertEqual(desc["verbs"][7], "ratchet")
+        self.assertEqual(desc["verbs"][6], "ratchet")
 
     def test_one_is_off(self):
         self.assertEqual(tl.ratchet_stutter(1, clocks_per_step=24), (0, 0))
@@ -2644,13 +2975,13 @@ class TestRatchet(unittest.TestCase):
         state = _drum_step_state()
         state["ratchet"] = 1
         cols = tl.columns(tl.PAGE_RINGS[("STEP", "drum")][0], "drum", state)
-        self.assertEqual(cols[7]["value"], "OFF")
+        self.assertEqual(cols[6]["value"], "OFF")
 
     def test_a_ratchet_column_shows_its_count(self):
         state = _drum_step_state()
         state["ratchet"] = 3
         cols = tl.columns(tl.PAGE_RINGS[("STEP", "drum")][0], "drum", state)
-        self.assertIn("3", cols[7]["value"])
+        self.assertIn("3", cols[6]["value"])
 
     def test_a_drum_starts_with_ratchet_off(self):
         self.assertEqual(tl.default_channel_state("drum")["ratchet"], 1)
@@ -3557,7 +3888,9 @@ class TestFreezeGreysTheGenerativeColumns(unittest.TestCase):
         # The page that actually carries RANDOM and RHYTHM - found rather than
         # hard-coded, so a layout change moves the test with it instead of
         # breaking it.
-        for desc in tl.PAGE_RINGS[tl.ring_key("STEP", "voice")]:
+        # The AUTO ring since 2026-09-01 - the generative verbs moved there
+        # when the rings collapsed from 24 pages to 9.
+        for desc in tl.PAGE_RINGS[tl.ring_key("AUTO", "voice")]:
             if "random" in (desc.get("verbs") or ()):
                 return desc
         self.fail("no voice page carries RANDOM")
@@ -3635,12 +3968,14 @@ class TestPendingPage(unittest.TestCase):
         # PENDING is the first page whose columns are not verbs. The renderer
         # subscripted desc["verbs"] unconditionally and took the whole UI down
         # every render tick once this page was reached.
-        for desc in tl.PAGE_RINGS[tl.ring_key("ALL", None)]:
+        # On the VOLUME ring since 2026-09-01: ALL stopped being a mode when
+        # it became the lens button, and its global pages moved to VOLUME.
+        for desc in tl.PAGE_RINGS[tl.ring_key("VOLUME", None)]:
             if desc["shape"] == tl.SHAPE_PENDING:
                 self.assertIsNone(desc.get("verbs"))
                 break
         else:
-            self.fail("no PENDING page on the ALL ring")
+            self.fail("no PENDING page on the VOLUME ring")
 
     def test_soonest_first(self):
         cols = tl.pending_columns([("drop", 8, 8), ("chance", 2, 4)])
@@ -3665,11 +4000,13 @@ class TestPendingPage(unittest.TestCase):
         cols = tl.pending_columns([("drop", 99, 4)])
         self.assertAlmostEqual(cols[0]["frac"], 1.0)
 
-    def test_the_page_is_on_the_ALL_ring(self):
-        titles = [d["title"] for d in tl.PAGE_RINGS[tl.ring_key("ALL", None)]]
+    def test_the_page_is_on_the_VOLUME_ring(self):
+        # Was the ALL ring. ALL stopped being a mode on 2026-09-01 - it is the
+        # held lens now - and the global pages it carried are the VOLUME ring.
+        titles = [d["title"] for d in tl.PAGE_RINGS[tl.ring_key("VOLUME", None)]]
         self.assertIn("PENDING", titles)
         # The ring had exactly one page before this, so the big encoder did
-        # nothing at all on ALL.
+        # nothing at all on the globals.
         self.assertGreater(len(titles), 1)
 
 
@@ -4772,70 +5109,82 @@ class TestWalkLine(unittest.TestCase):
 
 
 class TestGenPage(unittest.TestCase):
-    """The GEN page: one new page in the voice STEP ring carrying three of
-    P1's five features. A new page in an existing ring is the cheapest surface
-    this instrument has - no button, no measurement, no overlay."""
+    """The GEN page carried three of P1's five features in the voice STEP
+    ring. It went in the 2026-09-01 collapse and its verbs did not: MODEL and
+    RULE are columns on the voice AUTO page, and the walk's own four numbers
+    plus the line rotation are the WALK page behind it on the same ring."""
 
     def _state(self, **over):
         st = tl.default_channel_state("voice")
         st.update(over)
         return st
 
-    def test_the_voice_step_ring_gains_a_gen_page(self):
-        titles = [d["title"] for d in tl.PAGE_RINGS[("STEP", "voice")]]
-        self.assertIn("GEN", titles)
+    def test_the_voice_auto_ring_carries_a_walk_page(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[("AUTO", "voice")]]
+        self.assertIn("WALK", titles)
 
-    def test_the_gen_page_verbs_match_what_it_draws(self):
+    def test_the_walk_page_verbs_match_what_it_draws(self):
         # verbs decide what an encoder WRITES, _columns_inner what it DRAWS,
         # and nothing checks they agree at runtime. This is that check.
-        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        desc = _page("AUTO", "voice", "WALK")
         self.assertEqual(desc["verbs"],
-                         ("rotate", "model", "walk_span", "walk_stride",
-                          # RULE joined in column 7, 2026-09-01, deliberately
-                          # NOT folded into MODEL.
-                          "feed", "amount", "rule", None))
-        # On the WALK model every one of the six is live. On the register
+                         ("rotate", "walk_span", "walk_stride", "feed",
+                          "amount", None, None, None))
+        # On the WALK model every one of the five is live. On the register
         # model SPAN and STRIDE draw dead - see the test below.
         cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
-        self.assertEqual([c["name"] for c in cols][:6],
-                         ["ROTATE", "MODEL", "SPAN", "STRIDE", "FEED", "AMT"])
+        self.assertEqual([c["name"] for c in cols][:5],
+                         ["ROTATE", "SPAN", "STRIDE", "FEED", "AMT"])
+        # MODEL and RULE moved to the AUTO page in front of this one, and are
+        # still two separate verbs: RULE was deliberately NOT folded into
+        # MODEL when it arrived on 2026-09-01.
+        auto = _page("AUTO", "voice", "AUTO")["verbs"]
+        self.assertEqual(auto[0], "rule")
+        self.assertEqual(auto[1], "model")
 
-    def test_the_LAST_unused_column_draws_dead(self):
+    def test_the_UNUSED_columns_draw_dead(self):
         # A lit column that does nothing is the fault this surface must never
         # commit - law L4, draw dead rather than a number the knob cannot move.
-        # Column 7 became RULE on 2026-09-01; column 8 is still honest.
-        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        # Three slots are spare on this page since the collapse, and all three
+        # are honest about it.
+        desc = _page("AUTO", "voice", "WALK")
         cols = tl.columns(desc, "voice", self._state())
-        self.assertFalse(cols[6]["grey"])
-        self.assertEqual(cols[6]["name"], "RULE")
-        self.assertTrue(cols[7]["grey"])
+        for index in (5, 6, 7):
+            self.assertTrue(cols[index]["grey"], f"column {index + 1}")
+        # RULE is live where it moved to, not merely gone from here.
+        auto = tl.columns(_page("AUTO", "voice", "AUTO"), "voice",
+                          self._state())
+        self.assertFalse(auto[0]["grey"])
+        self.assertEqual(auto[0]["name"], "RULE")
 
     def test_a_new_voice_reads_as_the_register_model(self):
-        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        # MODEL is column two of the AUTO page now, which is the index it had
+        # on the GEN page - the verb moved, its neighbour count did not.
+        desc = _page("AUTO", "voice", "AUTO")
         cols = tl.columns(desc, "voice", self._state())
         self.assertEqual(cols[1]["value"], "REG")
 
     def test_the_walk_model_says_so(self):
-        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        desc = _page("AUTO", "voice", "AUTO")
         cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
         self.assertEqual(cols[1]["value"], "WALK")
 
     def test_no_feed_reads_as_off(self):
         # A silent channel must say why - and so must a coupling that is not
-        # coupled to anything.
-        desc = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        # coupled to anything. FEED is column four of the WALK page since the
+        # collapse, was column five of GEN.
+        desc = _page("AUTO", "voice", "WALK")
         cols = tl.columns(desc, "voice", self._state())
-        self.assertEqual(cols[4]["value"], "OFF")
+        self.assertEqual(cols[3]["value"], "OFF")
 
 
 class TestWalkPage(unittest.TestCase):
-    """The WALK page: the chord walker's four numbers, in the ALL ring beside
-    the globals it moves."""
+    """The chord walker's two globals, beside the globals they move.
+
+    They had a page of their own on the ALL ring until 2026-09-01, four of
+    whose eight columns were dead. The collapse put WALK and SPAN straight
+    onto the GLOBAL page - which is what emptied that page and let it go -
+    and the ALL ring became the VOLUME ring when ALL became the lens."""
 
     def _globals(self, **over):
         g = dict(root=0, scale=0, bpm=125, master=80, revsize=50, revtype=0,
@@ -4843,36 +5192,41 @@ class TestWalkPage(unittest.TestCase):
         g.update(over)
         return g
 
-    def test_the_all_ring_gains_a_walk_page(self):
-        self.assertIn("WALK", [d["title"] for d in tl.PAGE_RINGS[("ALL", None)]])
+    def test_the_walker_is_on_the_global_page(self):
+        verbs = _page("VOLUME", None, "GLOBAL")["verbs"]
+        self.assertIn("walk", verbs)
+        self.assertIn("wspan", verbs)
 
-    def test_the_walk_page_draws_root_scale_and_the_walker(self):
-        desc = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "WALK"][0]
+    def test_the_global_page_draws_root_scale_and_the_walker(self):
+        desc = _page("VOLUME", None, "GLOBAL")
         cols = tl.columns(desc, None, self._globals())
-        self.assertEqual([c["name"] for c in cols][:4],
-                         ["ROOT", "SCALE", "WALK", "SPAN"])
+        # BPM sits between them now: the walker moved onto the shipped page
+        # rather than the page being rebuilt around it.
+        self.assertEqual([c["name"] for c in cols][:5],
+                         ["ROOT", "SCALE", "BPM", "WALK", "SPAN"])
 
     def test_a_locked_walker_says_lock_rather_than_a_number(self):
         # 0 is LOCK everywhere else on this instrument; reading "0000" here
         # would invite turning it down looking for off.
-        desc = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "WALK"][0]
+        desc = _page("VOLUME", None, "GLOBAL")
         cols = tl.columns(desc, None, self._globals())
-        self.assertEqual(cols[2]["value"], "LOCK")
+        self.assertEqual(cols[3]["value"], "LOCK")
 
     def test_a_running_walker_shows_its_bar_count(self):
-        desc = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "WALK"][0]
+        desc = _page("VOLUME", None, "GLOBAL")
         cols = tl.columns(desc, None, self._globals(walk=4))
-        self.assertEqual(cols[2]["value"], "4bar")
+        self.assertEqual(cols[3]["value"], "4bar")
 
-    def test_the_shipped_global_page_is_untouched(self):
-        desc = tl.PAGE_RINGS[("ALL", None)][0]
+    def test_the_global_page_made_room_for_the_walker(self):
+        # WAS test_the_shipped_global_page_is_untouched, which held while the
+        # walker had a page of its own. It does not now: REVTYPE and DLYFBK
+        # gave up these two slots on 2026-09-01. Neither is lost - every port
+        # GLOBAL does not name appears on the generated REV and DLY pages.
+        desc = tl.PAGE_RINGS[("VOLUME", None)][0]
         cols = tl.columns(desc, None, self._globals())
         self.assertEqual([c["name"] for c in cols],
-                         ["ROOT", "SCALE", "BPM", "MASTER", "REVSIZE",
-                          "REVTYPE", "DLYTIME", "DLYFBK"])
+                         ["ROOT", "SCALE", "BPM", "WALK", "SPAN",
+                          "MASTER", "REVSIZE", "DLYTIME"])
 
 
 class TestGenPageDeadColumns(unittest.TestCase):
@@ -4881,21 +5235,23 @@ class TestGenPageDeadColumns(unittest.TestCase):
     the knob cannot make audible."""
 
     def _desc(self):
-        return [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        # The WALK page of the voice AUTO ring since 2026-09-01, where the GEN
+        # page's walk verbs went. SPAN and STRIDE are columns 2 and 3 there,
+        # one left of where they sat on GEN because MODEL moved to AUTO.
+        return _page("AUTO", "voice", "WALK")
 
     def test_span_and_stride_are_dead_on_the_register_model(self):
         st = tl.default_channel_state("voice")
         cols = tl.columns(self._desc(), "voice", st)
+        self.assertTrue(cols[1]["grey"])
         self.assertTrue(cols[2]["grey"])
-        self.assertTrue(cols[3]["grey"])
 
     def test_they_come_alive_on_the_walk_model(self):
         st = tl.default_channel_state("voice")
         st["model"] = tl.MODEL_WALK
         cols = tl.columns(self._desc(), "voice", st)
+        self.assertFalse(cols[1]["grey"])
         self.assertFalse(cols[2]["grey"])
-        self.assertFalse(cols[3]["grey"])
 
 
 class TestGenStateKeys(unittest.TestCase):
@@ -5482,31 +5838,35 @@ class MoveIsOnTheSurfaceAndInTheSnapshot(unittest.TestCase):
         saved["move"] = 0
         self.assertEqual(tl.upgrade_state("voice", saved, 16)["move"], 0)
 
-    def test_the_ALL_ring_carries_a_MOVE_page(self):
-        titles = [d["title"] for d in tl.PAGE_RINGS[("ALL", None)]]
-        self.assertIn("MOVE", titles)
+    def test_MOVE_is_a_verb_on_the_AUTO_page_of_both_kinds(self):
+        # WAS test_the_ALL_ring_carries_a_MOVE_page. MOVE had a spread page of
+        # its own on the ALL ring; the rings collapsed from 24 pages to 9 on
+        # 2026-09-01 and every generative verb landed on AUTO, which is the
+        # one question it answers - what may the machine do to this channel.
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                self.assertIn("move", _page("AUTO", kind, "AUTO")["verbs"])
 
-    def test_the_MOVE_page_is_a_spread_over_all_eight_channels(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "MOVE"][0]
+    def test_the_MOVE_lens_is_a_spread_over_all_eight_channels(self):
+        # The spread page became the lens: hold ALL after turning MOVE and the
+        # same eight-channel view is there, from any level.
+        page = tl.lens_desc("move")
+        self.assertEqual(tl.lens_verb("move"), "move")
         self.assertEqual(page["shape"], tl.SHAPE_SPREAD)
         self.assertEqual(page["verb"], "move")
 
-    def test_zero_reads_LOCK_on_the_spread_page_not_a_bare_zero(self):
+    def test_zero_reads_LOCK_through_the_lens_not_a_bare_zero(self):
         # The LOCK grammar this instrument already uses for RANDOM, RHYTHM and
         # WALK. A channel the machine may not touch has to say so.
         views = [("A", "KICK", {"move": 0})] * 8
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "MOVE"][0]
-        cols = tl.spread_columns(page, views)
+        cols = tl.spread_columns(tl.lens_desc("move"), views)
         self.assertEqual(cols[0]["value"], "LOCK")
 
     def test_a_non_zero_move_still_reads_as_a_number(self):
         views = [("A", "KICK", {"move": 70})] * 8
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "MOVE"][0]
         # Four characters, zero padded - the shipped spread value format.
-        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "0070")
+        self.assertEqual(
+            tl.spread_columns(tl.lens_desc("move"), views)[0]["value"], "0070")
 
 
 class TheCellularAutomaton(unittest.TestCase):
@@ -5611,24 +5971,23 @@ class TheRuleIsAVerbOnBothKinds(unittest.TestCase):
         self.assertEqual(tl.upgrade_state("voice", old, 16)["rule"],
                          tl.RULE_RANDOM)
 
-    def test_the_voice_GEN_page_carries_RULE(self):
-        page = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
-        self.assertIn("rule", page["verbs"])
+    def test_the_voice_AUTO_page_carries_RULE(self):
+        # The GEN pages went in the 2026-09-01 collapse and RULE went to AUTO
+        # with the rest of the generator, on both kinds.
+        self.assertIn("rule", _page("AUTO", "voice", "AUTO")["verbs"])
 
-    def test_the_drum_ring_has_a_GEN_page_carrying_RULE(self):
-        titles = [d["title"] for d in tl.PAGE_RINGS[("STEP", "drum")]]
-        self.assertIn("GEN", titles)
-        page = [d for d in tl.PAGE_RINGS[("STEP", "drum")]
-                if d["title"] == "GEN"][0]
-        self.assertIn("rule", page["verbs"])
+    def test_the_drum_ring_has_an_AUTO_page_carrying_RULE(self):
+        titles = [d["title"] for d in tl.PAGE_RINGS[("AUTO", "drum")]]
+        self.assertIn("AUTO", titles)
+        self.assertIn("rule", _page("AUTO", "drum", "AUTO")["verbs"])
 
     def test_RULE_is_NOT_on_the_model_column(self):
         # The PM decision of 2026-09-01, and the reason it is worth a test:
         # MODEL chooses a voice's pitch source. A rule folded into it would
         # mean picking R110 silently also decides where the notes come from.
-        page = [d for d in tl.PAGE_RINGS[("STEP", "voice")]
-                if d["title"] == "GEN"][0]
+        # They are still two columns after the collapse, now side by side on
+        # the voice AUTO page.
+        page = _page("AUTO", "voice", "AUTO")
         self.assertIn("model", page["verbs"])
         self.assertNotEqual(page["verbs"].index("model"),
                             page["verbs"].index("rule"))
@@ -5636,13 +5995,13 @@ class TheRuleIsAVerbOnBothKinds(unittest.TestCase):
     def test_the_column_says_which_rule_is_running(self):
         state = tl.default_channel_state("voice")
         state["rule"] = "r110"
-        cols = tl.columns(tl.PAGE_RINGS[("STEP", "voice")][4], "voice", state)
+        cols = tl.columns(_page("AUTO", "voice", "AUTO"), "voice", state)
         rule_col = [c for c in cols if c["name"].startswith("RULE")][0]
         self.assertEqual(rule_col["value"], "R110")
 
     def test_the_shift_register_setting_says_RAND_not_a_blank(self):
         state = tl.default_channel_state("voice")
-        cols = tl.columns(tl.PAGE_RINGS[("STEP", "voice")][4], "voice", state)
+        cols = tl.columns(_page("AUTO", "voice", "AUTO"), "voice", state)
         rule_col = [c for c in cols if c["name"].startswith("RULE")][0]
         self.assertEqual(rule_col["value"], "RAND")
 
@@ -5728,15 +6087,14 @@ class TheLeanIsAVerbOnTheDrums(unittest.TestCase):
         del old["lean"]
         self.assertEqual(tl.upgrade_state("drum", old, 16)["lean"], tl.LEAN_OFF)
 
-    def test_the_drum_GEN_page_carries_LEAN_in_column_two(self):
-        page = [d for d in tl.PAGE_RINGS[("STEP", "drum")]
-                if d["title"] == "GEN"][0]
-        self.assertEqual(page["verbs"][1], "lean")
+    def test_the_drum_AUTO_page_carries_LEAN_in_column_two(self):
+        # It was column two of the drum GEN page; GEN went in the 2026-09-01
+        # collapse and LEAN kept the slot on AUTO, still beside RULE.
+        self.assertEqual(_page("AUTO", "drum", "AUTO")["verbs"][1], "lean")
 
     def test_the_column_names_the_profile_and_says_EUCL_when_off(self):
         state = tl.default_channel_state("drum")
-        page = [d for d in tl.PAGE_RINGS[("STEP", "drum")]
-                if d["title"] == "GEN"][0]
+        page = _page("AUTO", "drum", "AUTO")
         cols = tl.columns(page, "drum", state)
         self.assertEqual(cols[1]["name"], "LEAN")
         self.assertEqual(cols[1]["value"], "EUCL")
@@ -5745,8 +6103,11 @@ class TheLeanIsAVerbOnTheDrums(unittest.TestCase):
 
     def test_a_voice_has_no_lean_verb_and_the_page_does_not_offer_one(self):
         # Placement on a voice is the rhythm register's job. A column that did
-        # nothing would be law L4's exact complaint.
-        self.assertNotIn("lean", tl.PAGE_RINGS[("STEP", "voice")][4]["verbs"])
+        # nothing would be law L4's exact complaint. Checked on every page of
+        # the voice AUTO ring rather than one index into it, so the statement
+        # survives the next time a page moves.
+        for desc in tl.PAGE_RINGS[tl.ring_key("AUTO", "voice")]:
+            self.assertNotIn("lean", desc["verbs"] or ())
 
     def test_extra_hits_SPREAD_across_the_grid_rather_than_piling_up(self):
         # Eight hits on the floor profile are a flam on each beat, not four
@@ -5849,25 +6210,30 @@ class TheLaneIsOnTheDrumsOnly(unittest.TestCase):
         del old["lane"]
         self.assertEqual(tl.upgrade_state("drum", old, 16)["lane"], 0)
 
-    def test_the_ALL_ring_carries_a_LANE_spread(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "LANE"][0]
+    def test_LANE_is_a_verb_on_the_DRUM_auto_page_only(self):
+        # WAS test_the_ALL_ring_carries_a_LANE_spread. The spread page went
+        # with the rest on 2026-09-01; LANE is a column on the drum AUTO page
+        # now and is absent from the voice one, which is the same statement
+        # this class exists to make.
+        self.assertIn("lane", _page("AUTO", "drum", "AUTO")["verbs"])
+        self.assertNotIn("lane", _page("AUTO", "voice", "AUTO")["verbs"])
+
+    def test_the_LANE_lens_is_a_spread_over_all_eight_channels(self):
+        page = tl.lens_desc("lane")
+        self.assertEqual(tl.lens_verb("lane"), "lane")
         self.assertEqual(page["shape"], tl.SHAPE_SPREAD)
         self.assertEqual(page["verb"], "lane")
 
-    def test_a_voice_column_draws_DEAD_on_the_lane_page(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "LANE"][0]
+    def test_a_voice_column_draws_DEAD_through_the_lane_lens(self):
         views = [("A", "KICK", {"lane": 40})] * 7 + [("H", "LEAD", {})]
-        cols = tl.spread_columns(page, views)
+        cols = tl.spread_columns(tl.lens_desc("lane"), views)
         self.assertFalse(cols[0]["grey"])
         self.assertTrue(cols[7]["grey"])
 
     def test_zero_reads_RAW_rather_than_a_bare_number(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "LANE"][0]
         views = [("A", "KICK", {"lane": 0})] * 8
-        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "RAW")
+        self.assertEqual(
+            tl.spread_columns(tl.lens_desc("lane"), views)[0]["value"], "RAW")
 
 
 class ChannelsThatLeaveThroughAFilter(unittest.TestCase):
@@ -5921,23 +6287,30 @@ class ChannelsThatLeaveThroughAFilter(unittest.TestCase):
         del old["exit"]
         self.assertEqual(tl.upgrade_state("voice", old, 16)["exit"], 0)
 
-    def test_the_ALL_ring_carries_an_EXIT_spread(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "EXIT"][0]
+    def test_EXIT_is_a_verb_on_the_AUTO_page_of_both_kinds(self):
+        # WAS test_the_ALL_ring_carries_an_EXIT_spread. Its spread page went in
+        # the 2026-09-01 collapse and the verb landed on AUTO, in the last
+        # slot on both kinds.
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                self.assertEqual(_page("AUTO", kind, "AUTO")["verbs"][7],
+                                 "exit")
+
+    def test_the_EXIT_lens_is_a_spread_over_all_eight_channels(self):
+        page = tl.lens_desc("exit")
+        self.assertEqual(tl.lens_verb("exit"), "exit")
         self.assertEqual(page["shape"], tl.SHAPE_SPREAD)
         self.assertEqual(page["verb"], "exit")
 
     def test_zero_reads_HARD_rather_than_a_bare_number(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "EXIT"][0]
         views = [("A", "KICK", {"exit": 0})] * 8
-        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "HARD")
+        self.assertEqual(
+            tl.spread_columns(tl.lens_desc("exit"), views)[0]["value"], "HARD")
 
     def test_a_length_reads_in_BARS_because_that_is_what_it_is(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "EXIT"][0]
         views = [("A", "KICK", {"exit": 2})] * 8
-        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "2bar")
+        self.assertEqual(
+            tl.spread_columns(tl.lens_desc("exit"), views)[0]["value"], "2bar")
 
 
 class TheWatchdogSaysWhenTheMachineStopped(unittest.TestCase):
@@ -6136,15 +6509,105 @@ class APhraseNotABar(unittest.TestCase):
         got = tl.upgrade_state("drum", old, 16)
         self.assertEqual((got["phrase"], got["fill"]), (1, 0))
 
-    def test_the_ALL_ring_carries_a_PHRASE_spread(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "PHRASE"][0]
-        self.assertEqual(page["verb"], "phrase")
+    def test_PHRASE_is_a_verb_on_the_AUTO_page_of_both_kinds(self):
+        # WAS test_the_ALL_ring_carries_a_PHRASE_spread. Its spread page went
+        # in the 2026-09-01 collapse; the verb is on AUTO beside FILL, which
+        # is the bar it decides the shape of.
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                verbs = _page("AUTO", kind, "AUTO")["verbs"]
+                self.assertIn("phrase", verbs)
+                self.assertEqual(abs(verbs.index("phrase")
+                                     - verbs.index("fill")), 1)
 
     def test_a_phrase_of_one_reads_BAR_rather_than_a_bare_one(self):
-        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
-                if d["title"] == "PHRASE"][0]
+        page = tl.lens_desc("phrase")
+        self.assertEqual(page["verb"], "phrase")
         views = [("A", "KICK", {"phrase": 1})] * 8
         self.assertEqual(tl.spread_columns(page, views)[0]["value"], "BAR")
         views = [("A", "KICK", {"phrase": 4})] * 8
         self.assertEqual(tl.spread_columns(page, views)[0]["value"], "4bar")
+
+
+class TheLightAlphabet(unittest.TestCase):
+    """Three levels and two movements, and nothing else is invented.
+
+    Thirty-one of this panel's buttons are single-colour - report 0x82 is one
+    byte each and the daemon discards the colour argument - so the whole
+    vocabulary is brightness plus time. Before 2026-09-01 it was neither: four
+    buttons were lit permanently and said nothing, while four modifiers that
+    took the sixteen pads showed nothing while they did it."""
+
+    def test_the_three_levels_are_distinct_and_ordered(self):
+        self.assertLess(tl.LIGHT_OFF, tl.LIGHT_DIM)
+        self.assertLess(tl.LIGHT_DIM, tl.LIGHT_ON)
+        self.assertEqual(tl.LIGHT_OFF, 0.0)
+        self.assertEqual(tl.LIGHT_ON, 1.0)
+
+    def test_brightness_never_exceeds_one(self):
+        # set_button_light clamps at 1.0 (daemon mikro.rs:960), so a 2.0 sent
+        # for "more than full" is INDISTINGUISHABLE from 1.0 on the hardware.
+        # Two shipped states relied on exactly that and were invisible: the
+        # deep FREEZE hold, and REC while an audio capture ran under an
+        # overdub. Nothing in this alphabet may ask for more than the panel
+        # can draw.
+        for value in (tl.LIGHT_OFF, tl.LIGHT_DIM, tl.LIGHT_ON):
+            self.assertLessEqual(value, 1.0)
+
+    def test_a_state_button_is_dim_when_it_is_merely_available(self):
+        self.assertEqual(tl.state_light(False, False), tl.LIGHT_DIM)
+
+    def test_held_is_bright(self):
+        self.assertEqual(tl.state_light(True, False), tl.LIGHT_ON)
+
+    def test_latched_blinks(self):
+        lit = tl.state_light(False, True, now=0.0)
+        dark = tl.state_light(False, True, now=tl.BLINK_S)
+        self.assertEqual(lit, tl.LIGHT_ON)
+        self.assertEqual(dark, tl.LIGHT_OFF)
+
+    def test_held_outranks_latched(self):
+        # A player holding a button that is also latched is making the short
+        # decision NOW, and a steady light is what says the release will
+        # change something. A blink there would advertise the standing state
+        # while the hand is busy overriding it.
+        for now in (0.0, tl.BLINK_S):
+            self.assertEqual(tl.state_light(True, True, now=now), tl.LIGHT_ON)
+
+    def test_a_state_button_with_nothing_to_act_on_is_dark(self):
+        self.assertEqual(tl.state_light(False, False, available=False),
+                         tl.LIGHT_OFF)
+
+    def test_the_blink_phase_comes_from_the_clock(self):
+        self.assertTrue(tl.blink_phase(0.0))
+        self.assertFalse(tl.blink_phase(tl.BLINK_S))
+        self.assertTrue(tl.blink_phase(2 * tl.BLINK_S))
+
+    def test_one_blink_rate_for_the_whole_panel(self):
+        # A second rate would read as a second meaning. The panel already had
+        # two, and the older one - SELECT's countdown - is driven by the BAR
+        # rather than by a timer, so it is a different thing entirely and is
+        # allowed to look different.
+        self.assertEqual(tl.BLINK_S, 0.5)
+
+    def test_an_action_is_dim_or_dark_and_never_bright(self):
+        # Bright is reserved for "acting now", and an action is never acting -
+        # it happened and it is over.
+        self.assertEqual(tl.action_light(True), tl.LIGHT_DIM)
+        self.assertEqual(tl.action_light(False), tl.LIGHT_OFF)
+
+    def test_a_toggle_is_bright_when_true_and_dim_when_reachable(self):
+        self.assertEqual(tl.toggle_light(True), tl.LIGHT_ON)
+        self.assertEqual(tl.toggle_light(False), tl.LIGHT_DIM)
+
+    def test_a_toggle_with_nothing_behind_it_is_dark(self):
+        self.assertEqual(tl.toggle_light(True, available=False), tl.LIGHT_OFF)
+
+    def test_a_toggle_never_blinks(self):
+        # Blink means latched-and-your-hand-has-left. PLAY, a mute and a mode
+        # are plain facts, not modes a player could be trapped in.
+        self.assertEqual(tl.toggle_light(True, True),
+                         tl.toggle_light(True, True))
+        for now in (0.0, tl.BLINK_S, 2 * tl.BLINK_S):
+            self.assertEqual(tl.toggle_light(True), tl.LIGHT_ON)
+
