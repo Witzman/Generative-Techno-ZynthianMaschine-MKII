@@ -305,7 +305,13 @@ pub struct Mikro {
     // reader and trips the hidraw watchdog - that is a measured failure, not a
     // precaution.
     disp_fb: [[u8; display::HEIGHT * display::STRIDE]; 2],
-    disp_fb_dirty: bool,
+    // One dirty-rectangle list PER SCREEN, replacing the single shared bool
+    // this had until 2026-09-01. That bool meant touching one pixel on the
+    // left screen repainted the right one as well - 16 reports of 265 bytes
+    // for a change that had already happened in eight of them. The panel was
+    // measured to honour a rectangle header on 2026-08-31, so the flush can
+    // now send only what moved.
+    disp_dirty: [display::DirtyList; 2],
     // Diagnostic: skip the logical->transfer row mapping so a probe can write
     // transfer rows directly. Off in normal use.
     disp_raw: bool,
@@ -397,7 +403,7 @@ impl Mikro {
             calib_prev: [-1; 4],
             calib_dirty: false,
             disp_fb: [[0u8; display::HEIGHT * display::STRIDE]; 2],
-            disp_fb_dirty: false,
+            disp_dirty: [display::DirtyList::default(); 2],
             disp_raw: false,
             lights_dirty: true,
 
@@ -514,27 +520,65 @@ impl Mikro {
         self.send_display_bits(0xE1, &bits);
     }
 
-    fn send_display_bits(&mut self, report_id: u8, bits: &[u8]) {
+    /// Push one rectangle of a framebuffer to one screen.
+    ///
+    /// The header is a dirty-rectangle blit descriptor, proven on the rig
+    /// 2026-08-31: byte 1 the left edge in BYTES, byte 3 the top row, byte 5
+    /// the bytes per row, byte 7 the row count. This project hardcoded bytes 5
+    /// and 7 for the daemon's whole life and only ever varied byte 3.
+    ///
+    /// A rectangle wider than one report's payload is split by ROWS, never by
+    /// columns: `rows_per_report` is what keeps every report inside the
+    /// 256-byte payload the panel has always accepted. For a full-width
+    /// region that works out at 32 bytes x 8 rows - byte for byte the transfer
+    /// this function performed before it took a region at all.
+    ///
+    /// A free function taking the fd, the stats and the framing as arguments
+    /// for the same reason `hid_write` is: a `&mut self` method could not be
+    /// handed `&self.disp_fb[n]`, and copying 2 KB per flush to get around
+    /// that is exactly the cost this change exists to remove.
+    fn send_display_region(
+        fd: io::RawFd, stats: &mut WriteStats, report_id: u8, bits: &[u8],
+        region: display::Region, col: u8, reverse: bool,
+    ) {
+        if region.is_empty() { return; }
         debug_assert_eq!(bits.len(), display::HEIGHT * display::STRIDE);
-        // A 256x64 screen is 8 reports, each a full-width band of 8 rows:
-        // header byte 5 = 0x20 bytes per row, byte 7 = 0x08 rows, byte 3 =
-        // chunk*8, byte 1 = 0. Payload is 256 bytes and the report is exactly
-        // 9 + 256 long - this is cabl's working transfer, byte for byte.
+        // A region's y IS a transfer row. That holds only while the logical
+        // canvas maps 1:1 onto the panel, and display.rs keeps `logical_row`
+        // as an identity hook with a test pinning it - because a non-identity
+        // mapping cannot be expressed by ONE rectangle header at all, so it
+        // would have to be caught here rather than drawn wrong.
+        debug_assert!(region.y + region.h <= display::LOGICAL_H);
+        debug_assert_eq!(display::logical_row(region.y), region.y);
         let mut buf = [0u8; 1 + 8 + display::CHUNK_BYTES];
-        buf[0] = report_id;
-        buf[1] = self.disp_col;
-        buf[5] = display::HDR_ROW_BYTES;
-        buf[7] = display::HDR_ROWS;
 
-        for chunk in 0..display::CHUNKS {
-            buf[3] = (chunk * display::CHUNK_ROWS) as u8;
-            let src = chunk * display::CHUNK_BYTES;
-            for i in 0..display::CHUNK_BYTES {
-                let byte = bits[src + i];
-                buf[9 + i] = if self.disp_reverse { byte.reverse_bits() } else { byte };
+        let rows_per = display::rows_per_report(region.w);
+        let mut row = region.y;
+        while row < region.y + region.h {
+            let rows = rows_per.min(region.y + region.h - row);
+            buf[..9].copy_from_slice(&display::blit_prefix(report_id, region, row, rows, col));
+            for r in 0..rows {
+                let src = (row + r) * display::STRIDE + region.x;
+                for i in 0..region.w {
+                    let byte = bits[src + i];
+                    buf[9 + r * region.w + i] =
+                        if reverse { byte.reverse_bits() } else { byte };
+                }
             }
-            Self::hid_write(self.dev, &mut self.wstats, &buf, "display/chunk");
+            let len = 9 + rows * region.w;
+            Self::hid_write(fd, stats, &buf[..len], "display/blit");
+            row += rows;
         }
+    }
+
+    /// Whole-screen push. Kept for the diagnostic paths - calibration, the
+    /// built-in test patterns, clear_screen - which have no notion of a
+    /// region and want the panel wholly rewritten.
+    fn send_display_bits(&mut self, report_id: u8, bits: &[u8]) {
+        Self::send_display_region(
+            self.dev, &mut self.wstats, report_id, bits,
+            display::Region::full(), self.disp_col, self.disp_reverse,
+        );
     }
 }
 
@@ -1159,13 +1203,18 @@ impl Maschine for Mikro {
 
     fn display_fb_raw(&mut self, on: bool) {
         self.disp_raw = on;
-        self.disp_fb_dirty = true;
+        // The mapping changes under both screens, so both are wholly stale.
+        for d in self.disp_dirty.iter_mut() { d.add_full(); }
     }
 
     fn display_fb_clear(&mut self, screen: usize) {
         if screen > 1 { return; }
         for b in self.disp_fb[screen].iter_mut() { *b = 0; }
-        self.disp_fb_dirty = true;
+        // A clear is the one draw that really does dirty everything, and it
+        // discards whatever finer regions were pending. It is also how the
+        // driver starts every screen repaint, which is why THIS screen still
+        // costs its 8 reports and the other one now costs nothing.
+        self.disp_dirty[screen].add_full();
     }
 
     /// Text at `scale` (1 = 5x8, 2 = 10x16). `invert` swaps the box behind it,
@@ -1176,14 +1225,19 @@ impl Maschine for Mikro {
         if screen > 1 { return; }
         let fb = &mut self.disp_fb[screen];
         display::draw_text_scaled(fb, x, y, text, scale);
+        let s = scale.max(1);
+        // draw_text_scaled stops before it would run off the right edge, so
+        // the ink never reaches past text_w; from_pixels clips the rest.
+        let mut dirty = display::Region::from_pixels(x, y, display::text_w(text, s), 8 * s);
         if invert {
-            let s = scale.max(1);
             let pad = 1;
             let w = display::text_w(text, s) + pad * 2;
             let h = 8 * s + pad * 2;
-            display::invert_rect(fb, x.saturating_sub(pad), y.saturating_sub(pad), w, h);
+            let (ix, iy) = (x.saturating_sub(pad), y.saturating_sub(pad));
+            display::invert_rect(fb, ix, iy, w, h);
+            dirty = dirty.union(&display::Region::from_pixels(ix, iy, w, h));
         }
-        self.disp_fb_dirty = true;
+        self.disp_dirty[screen].add(dirty);
     }
 
     /// style: 0 outline, 1 filled, 2 dashed outline, 3 dotted horizontal rule,
@@ -1200,46 +1254,52 @@ impl Maschine for Mikro {
             4 => display::invert_rect(fb, x, y, w, h),
             _ => display::rect(fb, x, y, w, h),
         }
-        self.disp_fb_dirty = true;
+        // Style 3 is a rule, one row tall whatever h says. Marking h rows
+        // would still be correct, just wasteful; marking one is exact.
+        let rows = if style == 3 { 1 } else { h };
+        self.disp_dirty[screen].add(display::Region::from_pixels(x, y, w, rows));
     }
 
-    /// Push both framebuffers if anything changed. Called from the 100 ms
-    /// display timer, never from the input path.
+    /// Push WHAT CHANGED on each screen. Called from the 100 ms display timer,
+    /// never from the input path.
     ///
-    /// The framebuffer is addressed as the LOGICAL canvas - 512x32, each row
-    /// two physical pixels tall - and expanded here. Measured on the hardware
-    /// 2026-08-08 by drawing single rows and blocks and reading the panel:
+    /// Until 2026-09-01 this pushed BOTH screens whole whenever a single
+    /// shared `disp_fb_dirty` bool was set - 16 reports of 265 bytes, 2120 of
+    /// them for a screen nothing had touched. Each screen now carries its own
+    /// dirty-rectangle list and only its own regions are sent. Against the
+    /// driver as it stands, which opens every screen repaint with a clear,
+    /// that halves the display path outright: one screen's 8 reports instead
+    /// of two screens' 16. A widget that does not clear first costs one 73-byte
+    /// report for 64x8.
     ///
-    ///   logical 0-15  -> transfer rows 0-15  -> physical rows 0-31
-    ///   logical 16-31 -> transfer rows 32-47 -> physical rows 32-63
+    /// FLAGGED, NOT FIXED (working rule 3): this function's docstring used to
+    /// describe a 512x32 logical canvas expanded to transfer rows here, with
+    /// transfer rows 16-31 and 48-63 discarded by the panel. `LOGICAL_H` is
+    /// `HEIGHT` and `logical_row` is the identity, so the code has not done
+    /// that for a long time, and the expansion loop it described was copying
+    /// each row onto itself. The two have been out of step since before this
+    /// change; reconciling what the panel really does with rows belongs with
+    /// somebody at the rig, not here.
     ///
-    /// Transfer rows 16-31 and 48-63 are discarded by the panel; a 1-row line
-    /// always comes back 2 px thick. That hole is why the earlier layout mock
-    /// fell apart below the top line: an 8-px glyph at y=12 needed rows 12-19
-    /// and lost everything from 16 up. Anything drawn at logical y >= 32 is
-    /// off-panel and dropped here rather than silently vanishing later.
+    /// `disp_raw` is likewise vestigial for the same reason: with the mapping
+    /// an identity there is nothing for a "raw" mode to bypass, so it now only
+    /// forces a full repaint of both screens. The OSC verb is unchanged.
     fn display_fb_flush(&mut self) {
-        if !self.disp_fb_dirty { return; }
-        self.disp_fb_dirty = false;
-        if self.disp_raw {
-            // Probing mode: the buffer IS the transfer buffer, no row mapping,
-            // so a test can address transfer rows directly.
-            let left = self.disp_fb[0];
-            let right = self.disp_fb[1];
-            self.send_display_bits(0xE0, &left);
-            self.send_display_bits(0xE1, &right);
-            return;
-        }
         for screen in 0..2 {
-            let mut out = [0u8; display::HEIGHT * display::STRIDE];
-            for lrow in 0..display::LOGICAL_H {
-                let prow = display::logical_row(lrow);
-                let (src, dst) = (lrow * display::STRIDE, prow * display::STRIDE);
-                out[dst..dst + display::STRIDE]
-                    .copy_from_slice(&self.disp_fb[screen][src..src + display::STRIDE]);
-            }
+            if self.disp_dirty[screen].is_empty() { continue; }
             let id = if screen == 0 { 0xE0 } else { 0xE1 };
-            self.send_display_bits(id, &out);
+            // The list is copied out because `send_display_region` needs
+            // `&mut self.wstats` while `&self.disp_fb[screen]` is borrowed.
+            // DirtyList is Copy and sixteen words wide; the 2 KB framebuffer
+            // copy this used to make on every flush is gone.
+            let dirty = self.disp_dirty[screen];
+            let (fd, col, reverse) = (self.dev, self.disp_col, self.disp_reverse);
+            for r in dirty.regions() {
+                Self::send_display_region(
+                    fd, &mut self.wstats, id, &self.disp_fb[screen], *r, col, reverse,
+                );
+            }
+            self.disp_dirty[screen].clear();
         }
     }
 
