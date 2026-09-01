@@ -701,3 +701,52 @@ class TestQuarterNoteDivision(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheScreensDrawTheCurve(unittest.TestCase):
+    """2026-09-01. The pads say how fast a modulator moves; the screens now say
+    what SHAPE it is. A width-1 filled rect is a vertical line, and the rect
+    primitive has shipped since the displays did - so this needed no daemon
+    change at all, which is what took it from M to S."""
+
+    def test_every_modulator_shape_has_a_glyph(self):
+        for shape in ("tri", "ramp", "squ", "s&h"):
+            with self.subTest(shape=shape):
+                self.assertTrue(lib.glyph_packets(0, 0, shape))
+
+    def test_an_unknown_shape_draws_NOTHING_rather_than_a_lie(self):
+        self.assertEqual(lib.glyph_packets(0, 0, "spiral"), [])
+        self.assertEqual(lib.glyph_packets(0, 0, None), [])
+
+    def test_a_glyph_stays_inside_its_own_box(self):
+        for shape in ("tri", "ramp", "squ", "s&h"):
+            for packet in lib.glyph_packets(0, 0, shape):
+                # /maschine/display/rect: screen, x, y, w, h, style
+                self.assertGreaterEqual(packet.count(b"rect"), 1)
+
+    def test_a_glyph_is_CHEAP_because_the_write_budget_is_the_hazard(self):
+        # Six rects a shape, not twenty-four. Every one is a message, and
+        # display traffic is the prime suspect for every wedge this
+        # controller has had.
+        for shape in ("tri", "ramp", "squ", "s&h"):
+            with self.subTest(shape=shape):
+                self.assertLessEqual(len(lib.glyph_packets(0, 0, shape)), 8)
+
+    def test_the_glyph_is_drawn_where_the_column_asks(self):
+        a = lib.glyph_packets(0, 0, "ramp")
+        b = lib.glyph_packets(0, 40, "ramp")
+        self.assertNotEqual(a, b)
+        self.assertEqual(len(a), len(b))
+
+    def test_a_modulated_column_carries_its_glyph_into_the_packets(self):
+        plain = lib.screen_packets(0, [], [("CUTOFF", "0064", "u", 0.5)])
+        moded = lib.screen_packets(
+            0, [], [("CUTOFF~", "0064", "u", 0.5, (0.2, 0.8), None, False,
+                     "tri")])
+        self.assertGreater(len(moded), len(plain))
+
+    def test_an_UNmodulated_column_draws_no_glyph_at_all(self):
+        cols = [("CUTOFF", "0064", "u", 0.5, None, None, False, None)]
+        with_none = lib.screen_packets(0, [], cols)
+        without = lib.screen_packets(0, [], [("CUTOFF", "0064", "u", 0.5)])
+        self.assertEqual(len(with_none), len(without))

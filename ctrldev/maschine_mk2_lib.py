@@ -398,6 +398,52 @@ class maschine_mk2_lib:
             "/maschine/display/rect",
             [int(screen), int(x), int(y), int(w), int(h), int(style)])
 
+    # THE SHAPE GLYPHS, 2026-09-01. Each is a list of (dx, dy, dw, dh) filled
+    # rects inside a 24x8 box: a width-1 filled rect IS a vertical line, and
+    # the rect primitive has shipped since the displays did, so drawing a
+    # waveform needed no daemon change at all.
+    #
+    # SIX RECTS EACH, NOT TWENTY-FOUR. Every rect is an OSC message, and
+    # display traffic is the prime suspect for every wedge this controller has
+    # had. A silhouette that says "ramp, not square" at a glance is the whole
+    # requirement; a faithful plot of the wave is not.
+    #
+    # STATIC. It is redrawn only when the shape changes, never on a tick - the
+    # law that came out of two accidental experiments in one evening is never
+    # animate a value on the screens.
+    GLYPH_W = 24
+    GLYPH_H = 8
+    SHAPE_GLYPHS = {
+        # Up in three steps, down in three.
+        "tri": ((0, 6, 4, 2), (4, 4, 4, 2), (8, 2, 4, 2),
+                (12, 2, 4, 2), (16, 4, 4, 2), (20, 6, 4, 2)),
+        # One rise, twice, so the reset edge is visible - which is the thing
+        # that distinguishes a ramp from a triangle at this size.
+        "ramp": ((0, 6, 3, 2), (3, 4, 3, 2), (6, 2, 3, 2), (9, 0, 3, 2),
+                 (12, 6, 6, 2), (18, 1, 6, 2)),
+        # Two levels and the vertical edge between them.
+        "squ": ((0, 1, 11, 2), (11, 1, 2, 6), (13, 6, 11, 2),
+                (0, 1, 2, 6)),
+        # Four held levels, deliberately unequal and deliberately fixed: this
+        # is a picture of the shape, not a sample of the wave.
+        "s&h": ((0, 4, 6, 2), (6, 1, 6, 2), (12, 6, 6, 2), (18, 2, 6, 2)),
+    }
+
+    @staticmethod
+    def glyph_packets(screen, x, shape):
+        """A modulator's shape as a small static picture.
+
+        Nothing is drawn for a shape with no glyph - an unknown name gets no
+        picture rather than a wrong one."""
+
+        cls = maschine_mk2_lib
+        boxes = cls.SHAPE_GLYPHS.get(shape)
+        if not boxes:
+            return []
+        return [cls.display_rect_osc(screen, x + dx, cls.NAME_Y + dy,
+                                     dw, dh, cls.RECT_FILL)
+                for dx, dy, dw, dh in boxes]
+
     @staticmethod
     def bar_packets(screen, x, w, kind, frac, mod=None, tick=None):
         """Indicator bar under one encoder column.
@@ -527,9 +573,17 @@ class maschine_mk2_lib:
             mod = col[4] if len(col) > 4 else None
             tick = col[5] if len(col) > 5 else None
             small = col[6] if len(col) > 6 else False
+            shape = col[7] if len(col) > 7 else None
             x = i * cls.SCREEN_COL + 3
             if name:
                 out.append(cls.display_text_osc(screen, x, cls.NAME_Y, 1, False, name))
+            if shape:
+                # Right-aligned in the name row, where the tilde already says
+                # "modulated" and where every modulatable verb's name is short
+                # enough to leave the space. It answers the question the pads
+                # cannot: they say how FAST, this says what SHAPE.
+                out.extend(cls.glyph_packets(
+                    screen, x + (cls.SCREEN_COL - 8) - cls.GLYPH_W, shape))
             if value:
                 # A name draws small so more of it fits; a number keeps the
                 # double height that reads at a glance while playing.

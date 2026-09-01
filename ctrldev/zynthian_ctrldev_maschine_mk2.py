@@ -7971,8 +7971,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # the thing the tick never did, which is HOW FAR the value
                 # will travel.
                 tick = None
+            # THE SHAPE, 2026-09-01. The pads say how FAST a modulator moves;
+            # this says what shape it is, as a small static picture in the name
+            # row. Read from the modulator itself rather than from the column,
+            # because the column has never needed to know what a modulator is -
+            # mark_modulated stamps it from outside for the same reason.
+            #
+            # STATIC. It changes when the shape changes and at no other time:
+            # the law out of two accidental experiments in one evening is never
+            # animate a value on the screens.
+            # NOT `shape` - that name is the PAGE's shape a few lines above,
+            # and shadowing it here would make every column after the first
+            # resolve its verb as though the page were not a spread.
+            mod_shape = None
+            if mod is not None:
+                entry = self.mod.get(self._mod_key(channel, verb))
+                if entry is not None:
+                    mod_shape = entry.get("shape")
             out.append((col["name"], col["value"], bar, round(float(frac), 3),
-                       mod, tick, bool(col.get("small"))))
+                       mod, tick, bool(col.get("small")), mod_shape))
         return tuple(out)
 
     def _generated_view(self, desc):
