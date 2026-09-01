@@ -7216,6 +7216,24 @@ class TheLightAlphabet(unittest.TestCase):
         self.assertEqual(tl.LIGHT_OFF, 0.0)
         self.assertEqual(tl.LIGHT_ON, 1.0)
 
+    def test_dim_is_low_enough_to_be_seen_as_dim(self):
+        """MEASURED ON THE PANEL, and the first value was wrong by a factor
+        of ten.
+
+        These LEDs saturate early: on the rig 0.30 and 0.35 are
+        indistinguishable from full and 0.12 is still nearly full. The
+        alphabet shipped with DIM at 0.35, which made a held button and an
+        idle one look identical - three levels collapsed into two, and the
+        whole vocabulary with them.
+
+        The ceiling here is not a style rule. Anything above it is a value a
+        person cannot tell from full, which means it is not a level."""
+
+        self.assertLessEqual(tl.LIGHT_DIM, 0.08,
+                             "dim above 0.08 reads as full on this hardware")
+        self.assertGreater(tl.LIGHT_DIM, 0.0,
+                           "dim has to actually light")
+
     def test_brightness_never_exceeds_one(self):
         # set_button_light clamps at 1.0 (daemon mikro.rs:960), so a 2.0 sent
         # for "more than full" is INDISTINGUISHABLE from 1.0 on the hardware.

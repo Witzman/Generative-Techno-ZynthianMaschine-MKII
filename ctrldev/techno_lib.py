@@ -2416,8 +2416,29 @@ class techno_lib:
     # screen costs 2120 bytes and that path has thrown the controller off the
     # USB bus. So state belongs on a light, and only a number belongs on a
     # screen.
+    # MEASURED ON THE PANEL, 2026-09-01, by the owner's eyes rather than by
+    # arithmetic - and the arithmetic was wrong by a factor of ten.
+    #
+    # These LEDs do not respond linearly and they saturate early. On the rig:
+    # 0.30 and 0.35 are INDISTINGUISHABLE FROM FULL, 0.12 is still nearly
+    # full, 0.08 reads as half, and 0.03 is the value that reads as "on but
+    # clearly not full". The first version of this alphabet used 0.35 for dim,
+    # which meant a held button and an idle one looked the same - the whole
+    # vocabulary collapsed into two levels, and the owner's first words on
+    # seeing it were "they all look nearly the same".
+    #
+    # Probable mechanism, and it is only probable: the HID descriptor declares
+    # every LED byte 7-bit (Logical Maximum 127) while the daemon writes
+    # `brightness * 255`. If the device masks the top bit, 0.35 lands at 89
+    # and 1.0 at 127 - a ratio of 1.4, which no eye reads as a difference.
+    # NOT VERIFIED, and it does not need to be: the numbers below are measured
+    # against the only instrument that matters, which is somebody looking at
+    # the panel.
+    #
+    # THE PADS ARE A DIFFERENT SCALE and are not affected - they go through
+    # set_rgb_light, which halves first, so 2.0 is full there.
     LIGHT_OFF = 0.0          # does nothing right now, or is off
-    LIGHT_DIM = 0.35         # available, not acting
+    LIGHT_DIM = 0.03         # available, not acting - MEASURED, see above
     LIGHT_ON = 1.0           # acting, or held
 
     # Half-period of the LATCHED blink, in seconds. 0.5 gives 1 Hz, which
