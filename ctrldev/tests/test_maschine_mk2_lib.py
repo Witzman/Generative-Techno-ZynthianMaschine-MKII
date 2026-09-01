@@ -750,3 +750,84 @@ class TheScreensDrawTheCurve(unittest.TestCase):
         with_none = lib.screen_packets(0, [], cols)
         without = lib.screen_packets(0, [], [("CUTOFF", "0064", "u", 0.5)])
         self.assertEqual(len(with_none), len(without))
+
+
+class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
+    """The FREEZE indicator never lit, and nothing said so.
+
+    `LED_FREEZE` was "padmode" from the day FREEZE shipped until 2026-09-01.
+    The daemon's `osc_button_to_btn_map` accepts "pad_mode" alone, returns None
+    for anything else, and drops the message - so the light was dead, in
+    silence, while the published guide told the reader a frozen instrument says
+    so three times.
+
+    A comment could not have caught it. This can: it reads the names the driver
+    puts on the wire out of the driver's own source, reads the names the daemon
+    answers to out of the daemon's own source, and fails on any that is not in
+    both. The driver cannot be imported on WSL, so both sides are read as text -
+    which is exactly why this belongs here rather than in a hardware gate."""
+
+    ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+    DAEMON = os.path.join(ROOT, "daemon", "src", "main.rs")
+
+    def _daemon_names(self):
+        """Every string osc_button_to_btn_map answers to."""
+
+        import re
+        src = open(self.DAEMON, encoding="utf-8").read()
+        start = src.index("fn osc_button_to_btn_map")
+        end = src.index("\n}", start)
+        return set(re.findall(r'"([a-z0-9_]+)"\s*=>', src[start:end]))
+
+    def _driver_names(self):
+        """Every literal LED name the driver sends, from its own source.
+
+        Two shapes: a bare string constant assigned to an LED_* name, and the
+        tuples/dicts of names the render helpers walk. Both are literals in the
+        source, which is the point - a name computed at runtime could not be
+        checked here and must not exist."""
+
+        import ast
+        tree = ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        names = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                target = node.targets[0]
+                label = getattr(target, "id", None) or getattr(target, "attr", "")
+                if not (label.startswith("LED_")
+                        or label in ("STATIC_LEDS", "MODE_LED_NAMES",
+                                     "F_BUTTON_NAMES")):
+                    continue
+                # A dict's KEYS are the driver's own vocabulary
+                # (MODE_LED_NAMES maps "CONTROL" -> "control"); only the
+                # values go on the wire.
+                sources = (node.value.values if isinstance(node.value, ast.Dict)
+                           else [node.value])
+                for source in sources:
+                    for leaf in ast.walk(source):
+                        if isinstance(leaf, ast.Constant) and isinstance(leaf.value, str):
+                            names.add(leaf.value)
+        return names
+
+    def test_the_daemon_map_is_readable(self):
+        found = self._daemon_names()
+        self.assertIn("pad_mode", found)
+        self.assertIn("select", found)
+        self.assertGreater(len(found), 20, found)
+
+    def test_pad_mode_carries_the_underscore(self):
+        src = open(self.DRIVER, encoding="utf-8").read()
+        self.assertIn('LED_FREEZE = "pad_mode"', src)
+        self.assertNotIn('LED_FREEZE = "padmode"', src)
+
+    def test_no_driver_led_name_is_unknown_to_the_daemon(self):
+        accepted = self._daemon_names()
+        unknown = sorted(n for n in self._driver_names() if n not in accepted)
+        self.assertEqual(unknown, [],
+                         f"driver writes LED names the daemon drops: {unknown}")
+
+
+if __name__ == "__main__":
+    unittest.main()

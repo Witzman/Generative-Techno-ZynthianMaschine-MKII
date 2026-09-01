@@ -249,7 +249,14 @@ CC_NAVIGATE = 34         # NAVIGATE. Measured at G4; LED index 20, measured.
 CC_FREEZE = 27           # PAD MODE. Measured at G4; LED index 19, measured.
 LED_ARM = "select"       # the daemon's own name for index 22, corrected in
                          # c141d70 - light a button by ITS OWN name now.
-LED_FREEZE = "padmode"   # index 19
+# PAD MODE, index 19. THE NAME IS "pad_mode" WITH THE UNDERSCORE, and it
+# was "padmode" from the day FREEZE shipped until 2026-09-01. The daemon's
+# osc_button_to_btn_map (main.rs:444) accepts "pad_mode" alone, returns None
+# for anything else and drops the message at main.rs:739 - so the FREEZE
+# indicator had NEVER lit, silently, while docs/the-surface.html told the
+# reader a frozen instrument says so three times. It said so twice.
+# A name is not a measurement: grep the daemon's own map before writing one.
+LED_FREEZE = "pad_mode"  # index 19
 
 # REC's LED, one row per state tlib.rec_led_state can return. RED means a file
 # is being written and nothing else on this panel is red for any other reason -
