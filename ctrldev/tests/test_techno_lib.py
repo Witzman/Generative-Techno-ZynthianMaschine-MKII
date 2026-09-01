@@ -1450,7 +1450,7 @@ class TestButtonTables(unittest.TestCase):
             self.assertNotIn(cc, tl.CCS_MEASURED_AND_UNCLAIMED,
                              f"CC {cc} is spent and must not be offered again")
 
-    def test_the_reroll_buttons_fire_on_a_press(self):
+    def test_the_reroll_button_fires_on_a_press(self):
         # PRESS-ONLY since 2026-09-01. They were stateful and fired on a
         # release past 250 ms - the fifth grammar for "do a thing" on a panel
         # that already had four, and the only one of its kind here. The
@@ -1461,10 +1461,18 @@ class TestButtonTables(unittest.TestCase):
         # wrap and a second press before then takes it back, which is longer
         # than a finger could hold and is the same second-press-cancels the
         # bank grid and the mute queue already use.
-        self.assertEqual(tl.BUTTONS_PRESS[25], "reroll_scene")
-        self.assertEqual(tl.BUTTONS_PRESS[26], "reroll_pattern")
-        self.assertNotIn(25, tl.BUTTONS_STATEFUL)
+        self.assertEqual(tl.BUTTONS_PRESS[26], "reroll")
         self.assertNotIn(26, tl.BUTTONS_STATEFUL)
+
+    def test_one_button_regenerates_and_scene_is_free(self):
+        # ONE BUTTON, both kinds, 2026-09-01. A bare press already ignored
+        # which of the two you pressed - reroll_scope takes the selected
+        # channel either way - so the pair differed in exactly one situation,
+        # SHIFT. The selected channel names its own engine type now.
+        self.assertNotIn(25, tl.BUTTONS_PRESS)
+        self.assertNotIn(25, tl.BUTTONS_STATEFUL)
+        self.assertIn(25, tl.CCS_MEASURED_AND_UNCLAIMED)
+        self.assertIn(25, tl.CCS_MEASURED)
 
     def test_coarse_lives_on_tempo_and_carries_both_edges(self):
         # TEMPO = CC 35, MEASURED 2026-08-16 by aseqdump on the daemon's Pads
@@ -2353,7 +2361,8 @@ class NoFeatureLostItsWayIn(unittest.TestCase):
         # to emit, both edges. Each is a whole control - a button, both edges,
         # and an LED index the daemon accepts and the driver has never
         # written.
-        self.assertEqual(tl.CCS_MEASURED_AND_UNCLAIMED, frozenset({5, 8, 9, 36}))
+        self.assertEqual(tl.CCS_MEASURED_AND_UNCLAIMED,
+                         frozenset({5, 8, 9, 25, 36}))
 
     def test_nothing_binds_a_cc_that_is_offered_as_free(self):
         # The direction that actually costs something. An offered CC that is
@@ -3136,6 +3145,89 @@ class AKindSwitchMustNotResetTheChannel(unittest.TestCase):
         back = tl.carry_channel_scoped(there, tl.default_channel_state("drum"))
         for key in tl.CHANNEL_SCOPED:
             self.assertEqual(back[key], start[key], key)
+
+
+class OneButtonRegenerates(unittest.TestCase):
+    """PATTERN does both kinds and the selected channel decides which.
+
+    The owner proposed it at the rig; reading reroll_scope made the case
+    stronger than the argument. **A bare press already ignored which of the
+    two buttons you pressed** - it takes the selected channel either way,
+    because refusing with "this is the drum button and you are on a voice"
+    would be a rule to remember for no benefit. The pair differed in exactly
+    one situation, SHIFT, where the word chose samplers or synths.
+
+    So one button loses one thing and nothing else: rerolling every drum while
+    a voice is selected now needs you to select a drum first."""
+
+    SAMPLERS = {0: True, 1: True, 2: True, 3: True, 4: True,
+                5: False, 6: False, 7: False}
+    MACHINE = {ch: "gen" for ch in range(8)}
+
+    def _which(self, channel):
+        """What the driver derives: the selected channel's ENGINE type."""
+        return "pattern" if self.SAMPLERS[channel] else "scene"
+
+    def test_a_bare_press_takes_the_selected_channel_whatever_it_is(self):
+        for channel in range(8):
+            got = tl.reroll_scope(self._which(channel), self.SAMPLERS,
+                                  self.MACHINE, channel, False)
+            self.assertEqual(got, (channel,), f"channel {channel}")
+
+    def test_that_was_already_true_of_both_old_buttons(self):
+        # The finding that justified the merge: with no SHIFT, the word does
+        # not enter into it. Both spellings give the same answer.
+        for channel in (0, 6):
+            drum_word = tl.reroll_scope("pattern", self.SAMPLERS,
+                                        self.MACHINE, channel, False)
+            synth_word = tl.reroll_scope("scene", self.SAMPLERS,
+                                         self.MACHINE, channel, False)
+            self.assertEqual(drum_word, synth_word)
+
+    def test_shift_takes_the_selected_channel_s_own_engine_type(self):
+        on_a_drum = tl.reroll_scope(self._which(0), self.SAMPLERS,
+                                    self.MACHINE, 0, True)
+        self.assertEqual(on_a_drum, (0, 1, 2, 3, 4))
+        on_a_voice = tl.reroll_scope(self._which(6), self.SAMPLERS,
+                                     self.MACHINE, 6, True)
+        self.assertEqual(on_a_voice, (5, 6, 7))
+
+    def test_the_one_thing_it_costs(self):
+        # Stated as a test rather than buried in a comment: from a voice, a
+        # SHIFT press can no longer reach the drums. Select one first.
+        from_a_voice = tl.reroll_scope(self._which(6), self.SAMPLERS,
+                                       self.MACHINE, 6, True)
+        for drum in range(5):
+            self.assertNotIn(drum, from_a_voice)
+
+    def test_engine_not_kind(self):
+        # A sampler driven by the Turing register is still a sampler. The
+        # scope is keyed on the engine, so SHIFT on it reaches the drums.
+        got = tl.reroll_scope("pattern", self.SAMPLERS, self.MACHINE, 4, True)
+        self.assertEqual(got, (0, 1, 2, 3, 4))
+
+    def test_a_channel_you_have_played_is_skipped(self):
+        owners = dict(self.MACHINE)
+        owners[2] = "player"
+        alone = tl.reroll_scope("pattern", self.SAMPLERS, owners, 2, False)
+        self.assertEqual(alone, ())
+        wide = tl.reroll_scope("pattern", self.SAMPLERS, owners, 0, True)
+        self.assertEqual(wide, (0, 1, 3, 4))
+
+    def test_the_light_can_say_a_press_would_do_nothing(self):
+        """The refusal above was SILENT until 2026-09-01, and the owner hit it
+        at the rig: pressed the button, watched nothing happen, had to be told
+        why. This surface's one law is that a silent channel says why, and a
+        refused gesture that says nothing is the same failure in other
+        clothes. The driver lights the button from exactly this predicate."""
+
+        owners = dict(self.MACHINE)
+        owners[2] = "player"
+        would_act = tl.reroll_scope("pattern", self.SAMPLERS, owners, 2, False)
+        self.assertEqual(tl.action_light(bool(would_act)), tl.LIGHT_OFF)
+        # ...and SHIFT widens the scope, so the same button lights again.
+        wider = tl.reroll_scope("pattern", self.SAMPLERS, owners, 2, True)
+        self.assertEqual(tl.action_light(bool(wider)), tl.LIGHT_DIM)
 
 
 

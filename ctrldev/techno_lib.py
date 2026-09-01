@@ -1861,8 +1861,12 @@ class techno_lib:
         "this is the drum button and you are on a voice" would be a rule to
         remember for no benefit.
 
-        SHIFT takes every channel of that button's ENGINE type: PATTERN the
-        samplers, SCENE the synths. **Engine, not kind** - owner, 2026-08-19.
+        SHIFT takes every channel of THE SELECTED CHANNEL'S engine type -
+        every sampler, or every synth. It used to be the engine type of the
+        BUTTON, back when there were two of them; since 2026-09-01 there is
+        one button and the selected channel names the type, which is the same
+        answer for every case except "reroll all the drums while looking at a
+        voice". **Engine, not kind** - owner, 2026-08-19.
         A drum sampler running in Turing mode is still a sampler, so it answers
         to PATTERN; asking for a global synth sequence change must not hand you
         a new drum pattern with it. Kind still decides WHAT is rerolled on each
@@ -2738,7 +2742,9 @@ class techno_lib:
     # Before binding any of them, grep daemon/src/main.rs for its token: PAD
     # MODE emits its CC *and* runs the daemon's own sequencer mode, and
     # SHIFT + PAD MODE never reaches the driver at all.
-    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 8, 9, 36})
+    #   25 SCENE. Freed 2026-09-01 when PATTERN took both kinds. Its LED is
+    #      index 17, measured 2026-08-15.
+    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 8, 9, 25, 36})
 
     BUTTONS_STATEFUL = {
         2: "erase",
@@ -2856,18 +2862,32 @@ class techno_lib:
         10: "register_undo",
         47: "page_prev",
         48: "page_next",
-        # SCENE and PATTERN. They were STATEFUL and fired on a RELEASE past
-        # 250 ms - the fifth grammar for "do a thing" on this panel and the
-        # only one of its kind. The comment that justified it called
-        # hold-to-fire "already this instrument's law"; no other button did
-        # it, and no code backed the sentence.
+        # PATTERN. ONE BUTTON FOR REGENERATE, both kinds, 2026-09-01 at the
+        # rig - the owner's proposal, and reading reroll_scope made the case
+        # stronger than the argument for it. **A bare press already ignored
+        # which button you pressed**: it takes the selected channel either
+        # way, because refusing with "this is the drum button and you are on a
+        # voice" would be a rule to remember for no benefit. The two buttons
+        # differed in exactly one situation, SHIFT, where the word picked
+        # samplers or synths.
         #
-        # A press fires now. What the hold bought - a window to change your
-        # mind - the BAR buys instead and buys longer: the reroll lands at the
-        # wrap and a second press before then takes it back, which is the same
-        # second-press-cancels the bank grid and the mute queue already use.
-        25: "reroll_scene",
-        26: "reroll_pattern",
+        # So the selected channel decides. It always did for the common case;
+        # now it does for the other one too, and the instrument stops asking
+        # the player to state something it already knows. That is the argument
+        # that removed eleven spread pages the same morning.
+        #
+        # WHAT IT COSTS, stated rather than buried: rerolling every drum while
+        # a voice is selected now needs you to select a drum first. One press.
+        #
+        # SCENE (CC 25) is free surface again - measured at G4, LED index 17
+        # measured 2026-08-15.
+        #
+        # A press fires it. It used to fire on a RELEASE past 250 ms, the
+        # fifth grammar for "do a thing" on this panel and the only one of its
+        # kind; what the hold bought - a window to change your mind - the BAR
+        # buys instead and buys longer, because the reroll lands at the wrap
+        # and a second press before then takes it back.
+        26: "reroll",
         # THE BIG ENCODER'S PRESS. CC 12 measured at G4, unclaimed until
         # 2026-09-01, and the last-but-one free number on the panel.
         #

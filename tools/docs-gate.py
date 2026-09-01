@@ -484,7 +484,9 @@ PANEL_NAMES = {
     12: ("big encoder", "HOME"),
     13: ("beside the big encoder", "master"),
     14: ("beside the big encoder", "master"),
-    25: ("SCENE",),
+    # 25 (SCENE) left this table on 2026-09-01 when PATTERN took both kinds.
+    # It is free surface, and G6 must not ask the guide to document a button
+    # that does nothing.
     26: ("PATTERN",),
     27: ("PAD MODE", "FREEZE"),
     29: ("DUPLICATE",),

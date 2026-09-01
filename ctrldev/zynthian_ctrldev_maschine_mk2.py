@@ -2351,18 +2351,46 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._render_all()
             self._render_display()
 
-    def _act_reroll_scene(self):
-        self._act_reroll("scene", True)
+    def _reroll_which(self):
+        """Which half of the instrument a reroll would touch.
 
-    def _act_reroll_pattern(self):
-        self._act_reroll("pattern", True)
+        THE SELECTED CHANNEL DECIDES, since 2026-09-01. There were two buttons
+        and the word came from whichever you pressed; there is one now, and
+        the channel under the cursor names its own engine type. `_is_sampler`
+        rather than channel_kind on purpose - a drum sampler driven by the
+        Turing register is still a sampler, so it answers with the drums."""
 
-    def _act_reroll(self, which, down):
-        """SCENE rerolls the drum channels, PATTERN the voices.
+        return "pattern" if self._is_sampler(self.group) else "scene"
 
-        A PRESS FIRES IT, since 2026-09-01. It used to fire on a RELEASE past
-        250 ms - the fifth grammar for "do a thing" on a panel that already
-        had four, and the only one of its kind here. The comment that
+    def _reroll_targets(self):
+        """The channels a reroll would touch right now, live.
+
+        Asked by the handler AND by the light, so the button cannot say one
+        thing and do another - the same reason _pad_owner and _column_dead
+        each exist exactly once."""
+
+        samplers = {ch: self._is_sampler(ch) for ch in range(8)}
+        return tlib.reroll_scope(self._reroll_which(), samplers, self.owner,
+                                 self.group, self.shift_down)
+
+    def _act_reroll(self):
+        """PATTERN. One button, both kinds - the selected channel decides."""
+        self._reroll_press(self._reroll_which())
+
+    def _reroll_press(self, which):
+        """One press regenerates, and the SELECTED CHANNEL decides which half.
+
+        ONE BUTTON, both kinds, 2026-09-01. There were two - SCENE for the
+        synths and PATTERN for the samplers - and reading reroll_scope made
+        the case for merging them stronger than the argument had been: **a
+        bare press already ignored which one you pressed.** It takes the
+        selected channel either way. The two differed in exactly one
+        situation, SHIFT, where the word chose samplers or synths; now the
+        selected channel names its own type and SCENE is free surface again.
+
+        A PRESS FIRES IT, since the same day. It used to fire on a RELEASE
+        past 250 ms - the fifth grammar for "do a thing" on a panel that
+        already had four, and the only one of its kind here. The comment that
         justified it called hold-to-fire "already this instrument's law";
         there was no code behind that sentence, and no other button on the
         surface did it.
@@ -2379,8 +2407,6 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         DUPLICATE's four-deep ring holds registers only, per channel, so it
         neither undoes a reroll nor is flushed by one."""
 
-        if not down:
-            return
         if self.erase_down:
             # UNDO moved here from SHIFT, 2026-08-19: SHIFT now means "every
             # channel of this engine type". ERASE is already this
@@ -2400,9 +2426,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             with self.lock:
                 self._render_all()
             return
-        samplers = {ch: self._is_sampler(ch) for ch in range(8)}
-        targets = tlib.reroll_scope(which, samplers, self.owner,
-                                    self.group, self.shift_down)
+        targets = self._reroll_targets()
         if not targets:
             # Everything this button owns is player-owned. Say nothing rather
             # than arm an empty gesture; the tabs already show why.
@@ -8343,12 +8367,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         # ENGINE, not kind - the same rule the reroll itself follows. A drum
         # sampler in Turing mode is still a sampler, so PATTERN stays lit on it.
-        sampler = self._is_sampler(self.group)
-        for led, lit in (("pattern", sampler), ("scene", not sampler)):
-            # ACTION LIGHTS: dim on the button that would act, dark on the one
-            # that would not. They were both full brightness, which put them
-            # at the level a HELD modifier now uses, and full-versus-dark said
-            # "this one is active" about a button that latches nothing.
+        # ONE BUTTON since 2026-09-01, and its light answers the only question
+        # left: WOULD A PRESS DO ANYTHING RIGHT NOW.
+        #
+        # That is not decoration. A reroll refuses on a channel you have
+        # played - it would throw your take away - and the refusal was
+        # SILENT. The owner hit it at the rig, pressed PATTERN, watched
+        # nothing happen and had to be told why. This surface's one law is
+        # that a silent channel says why; a refused gesture that says nothing
+        # is the same failure wearing different clothes.
+        #
+        # Asked through the same predicate the handler uses, so the light and
+        # the button cannot disagree - and it follows SHIFT live, because
+        # SHIFT widens the scope and can make a dark button lit.
+        #
+        # SCENE is dark: free surface, bound to nothing, and a lit button that
+        # does nothing is the object law G5 forbids.
+        acts = bool(self._reroll_targets())
+        for led, lit in (("pattern", acts), ("scene", False)):
             state = (COLOR_PAGE, tlib.action_light(lit))
             if self.leds.changed(f"reroll_{led}", state):
                 self._send_osc(lib.button_osc(led, state[0], state[1]))
