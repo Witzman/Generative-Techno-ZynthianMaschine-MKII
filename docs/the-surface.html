@@ -209,6 +209,20 @@
 <p><strong>Play</strong> starts or stops all eight channels together. The decision is taken once and applied to all eight, so they cannot drift into opposite states. <strong>Restart</strong> jumps every playhead to step 0 without stopping — for pulling channels back onto the one after a length change has phased them apart.</p>
 <p>Press Play once after loading a snapshot: loop mode is re-asserted on every transport start, and a fresh load is the one moment it may need it.</p>
 <hr>
+<h2 id="bank-grid">The bank grid &mdash; sixteen arrangements under one button</h2>
+<p>The sequencer has sixty-four banks and this instrument has always used one. A bank is a complete eight-channel pattern set, so a bank is a <em>scene</em>: every channel&rsquo;s pattern at once.</p>
+<p><strong>Hold DUPLICATE.</strong> The pads become sixteen banks, and the big encoder walks the four pages of them while you hold it &mdash; the label reads <code>BANK 1/4</code> and then which bank you are in. Let go and the pads go back to what they were.</p>
+<p>What the colours mean:</p>
+<ul>
+<li><strong>One bright pad</strong> &mdash; the bank you are playing.</li>
+<li><strong>Dimmer pads of the same colour</strong> &mdash; banks that exist and hold something.</li>
+<li><strong>A green pad</strong> &mdash; a bank you have asked for. It arrives at the bar.</li>
+<li><strong>Dark</strong> &mdash; nothing there yet.</li>
+</ul>
+<p><strong>A press lands on the bar, never under your finger.</strong> A whole arrangement arriving mid-bar is the one gesture on this instrument that could not possibly be in time. Press the queued bank again to cancel it, which is what a second press means everywhere else here.</p>
+<p><strong>Pressing a dark pad makes that bank.</strong> It arrives blank &mdash; eight empty channels laid out the way this instrument expects &mdash; and you build it from there. This is deliberate: left to itself the sequencer would have invented a sixteen-pad grid on the wrong MIDI channels and written it into your snapshot.</p>
+<p>Two limits worth knowing. <strong>DUPLICATE&rsquo;s own light stays dark</strong> while you hold it &mdash; the button works, its light has simply never been proven, and this project does not light a button it has not measured. And a snapshot saves the registers of the bank you are <em>in</em>: the patterns of every bank are saved, but the generator settings of the ones you are not currently playing are not, so a reloaded snapshot gives fresh settings on the other banks rather than the ones they had.</p>
+
 <h2 id="when-it-goes-quiet">When it goes quiet</h2>
 <p>Work down this list before suspecting the rig. Most of it is things you did.</p>
 <table><thead><tr><th>Check</th><th>What it looks like</th></tr></thead><tbody>
@@ -220,6 +234,7 @@
 <tr><td>Did a drop run?</td><td>it mutes every channel you did not nominate; F1&ndash;F8 lift a mute by hand</td></tr>
 <tr><td>GATE at its floor on a voice</td><td>a slow-attack patch never gets far enough to sound</td></tr>
 </tbody></table>
+<p><strong>If the machine itself has stopped, the page indicator says so.</strong> Instead of the usual page name you will see <code>GEN STOPPED</code> and a count of seconds. That means generation has stopped moving &mdash; not that a channel is muted, and not that the pattern is empty. <strong>The pads keep playing while it says that</strong>: the instrument drops to what it can still do rather than going quietly dead, so you can carry on hitting drums while the generator is stuck. It clears itself the moment things move again.</p>
 <p>A voice that is <strong>locked is not silent</strong> — <code>LOCK</code> freezes the pattern, it does not mute it. If a whole channel is dead while its tab looks healthy, the fault is below the instrument: see <a href="05-internals.html">Internals</a> for how the chain is wired, and <a href="04-manual-installation.html">Manual installation</a> for the checks that catch a stale MIDI route.</p>
 <hr>
 <h2 id="when-the-surface-goes-dead">When the surface goes dead</h2>

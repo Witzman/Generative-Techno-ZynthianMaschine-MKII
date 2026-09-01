@@ -190,7 +190,16 @@ BASELINE = {
     # - which also had to explain that SWING moved off encoder 7 - and the
     # chord walker with its measured numbers. Rule 11: a feature is done when a
     # reader can find out about it.
-    "generating-patterns.html":    (3505,  "2026-08-31"),
+    # +1289, 2026-09-01: five more generative features, and this page is now
+    # the long one on purpose - it is where a player goes to find out what the
+    # machine is allowed to invent. RULE (the cellular automaton as a second
+    # way a register evolves), LEAN (a third placement generator beside
+    # euclid), LANE (how far the generators may stray, and why the voices draw
+    # dead there), MOVE (how often the machine may touch a channel at all) and
+    # PHRASE/FILL. Each one needs its "and here is what it does NOT do"
+    # paragraph, which is most of the words: a generative instrument earns its
+    # complaints from the gestures nobody documented the limits of.
+    "generating-patterns.html":    (4794,  "2026-09-01"),
     # +132, 2026-08-20: audio capture on SHIFT + REC, and what REC's light
     # means now that it carries two facts. The red-while-recording rule is
     # here so a capture running on a page where overdub is impossible is
@@ -265,7 +274,12 @@ BASELINE = {
     # that does not exist. "Every page is one or the other" was false of
     # STEP, which carries both shapes. And ALL's generated REV/DLY pages
     # were undocumented.
-    "mixing-and-effects.html":     (1579, "2026-08-22"),
+    # +306, 2026-09-01: EXIT, a part that leaves through its filter rather
+    # than stopping. Most of the words are the asymmetry - the three voices
+    # close through a filter and the five drums close on level alone, because
+    # the drum chains have no filter to close. A reader who is not told that
+    # hears the difference and reports it as a bug.
+    "mixing-and-effects.html":     (1885, "2026-09-01"),
     # +92, 2026-08-16: TEMPO gains a row in the light table and an entry in
     # the button list. Same reason as above - it was 24 words under.
     # +163, 2026-08-19: the F row means switches in CONTROL. One row of the
@@ -298,7 +312,12 @@ BASELINE = {
     # and the generated tab row being CONTROL-only. Four things were
     # missing: the ARM picker's label, the ten PENDING tokens, latched solo
     # mode with its LED, and three rows of the light table.
-    "the-surface.html":            (3186, "2026-08-22"),
+    # +670, 2026-09-01: the bank grid on DUPLICATE - sixteen arrangements,
+    # what the four pad colours mean, why a press lands on the bar and why a
+    # dark pad AUTHORS a bank rather than switching to somebody else's default
+    # - plus the GEN STOPPED banner in "when it goes quiet", which is the one
+    # message on this surface that must never be the one that gets truncated.
+    "the-surface.html":            (3856, "2026-09-01"),
     # +69, 2026-08-20: what the new gestures do NOT survive - the phrase count,
     # anything armed, and a modulator's one-shot flag - plus the one that cuts
     # the other way, that a set saved mid-drop saves those mutes because mixer

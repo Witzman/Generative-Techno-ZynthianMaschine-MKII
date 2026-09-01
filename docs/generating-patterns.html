@@ -220,6 +220,48 @@
 <p>Every WALK bars the root steps to a new degree <em>of the scale you are already in</em> &mdash; never chromatically, because three voices sharing a scale should not be walked out of it. It reflects at the edge of its span rather than parking against it, and a walk that returns to zero returns to exactly the key you dialled in, not near it.</p>
 <p>Measured on the instrument: at four bars and 121 BPM the root moved every 7.9 seconds, which is four bars to within a twentieth of a second, and every root it visited belonged to the same minor key.</p>
 
+<h2 id="rule">RULE &mdash; a second way a register evolves</h2>
+<p>Everything that evolves on this instrument has done it the same way: a bit flips at random, and RANDOM or RHYTHM is how often. <strong>RULE</strong> offers the other kind of change. Instead of rolling dice per step, it looks at each step&rsquo;s <em>neighbours</em> and applies a rule &mdash; so a shape can travel along the bar, collide with another, and come out the far side.</p>
+<p>It is on the GEN page of both kinds: column 7 on a voice, column 1 on the drums. Four settings, and the first is what you already have.</p>
+<ul>
+<li><strong>RAND</strong> &mdash; the shift register, unchanged. This is where every channel starts.</li>
+<li><strong>R30</strong> &mdash; scatters. Busy and rarely repeating.</li>
+<li><strong>R90</strong> &mdash; diagonals. Shapes drift across the bar and cancel where they meet.</li>
+<li><strong>R110</strong> &mdash; the interesting one. Structures form, survive for bars, and are disturbed by whatever passes.</li>
+</ul>
+<p><strong>RANDOM and RHYTHM still mean the same thing.</strong> On the shift register they are how likely the fed-back bit is to flip; on a rule they are how likely the rule is to be applied to each step, with the rest held. So LOCK is still exactly LOCK on either, and a channel at the top of the knob is the pure automaton.</p>
+<p>These rules are deterministic: the same bar leads to the same next bar. That is what makes a shape survive long enough to be heard rather than dissolving into noise. One consequence is worth knowing &mdash; <strong>if the pattern ever empties completely, a single step is put back</strong>. Every rule of this kind maps an empty bar to an empty bar, so without that the channel would go silent for good with the knob still reading a number.</p>
+
+<h2 id="lean">LEAN &mdash; a generator that leans</h2>
+<p>Euclid spaces hits evenly. That is its virtue and its limit: it cannot write a hat line that leans on the eighths, or a percussion part that lives on the offbeat, because it has no opinion about where the beat is.</p>
+<p><strong>LEAN</strong> is a second placement generator, on encoder 2 of the drum GEN page. It weighs the positions by what the part is <em>for</em>.</p>
+<ul>
+<li><strong>EUCL</strong> &mdash; euclid, exactly as before. Every existing channel is here.</li>
+<li><strong>BEAT</strong> &mdash; the floor. Hits land on the quarters, and extras flam just after them.</li>
+<li><strong>8TH</strong> &mdash; hats. The eighths first, then the sixteenths between.</li>
+<li><strong>OFFB</strong> &mdash; syncopation. The &ldquo;and&rdquo; of each beat, and the downbeat last of all.</li>
+</ul>
+<p>Ask for more hits than the grid has room for and they <em>spread</em>: eight on BEAT is a flam on each beat, not four hits crowded onto beat one. The late one comes before the early one, because that is what these parts do.</p>
+<p><strong>ROTATE still rotates a leaning channel</strong>, and that is deliberate. Turning the line moves its accents off the grid they were built against, which is a real musical consequence &mdash; but the alternative was to make ROTATE do nothing here, and a knob that quietly does nothing is the worst thing this surface could offer. The pads show you where the hits went.</p>
+
+<h2 id="lane">LANE &mdash; how far the generators may stray</h2>
+<p>In ALL mode, page to <strong>LANE</strong>. One number per drum channel: how narrow the danceable lane is.</p>
+<p>At <strong>RAW</strong> you get the raw field &mdash; whatever the generators wrote, which is what the instrument has always played. Turn it up and each bar is measured before it is allowed out: the hits furthest from the beat are removed until what is left holds together. At the top only what lands on the beat survives.</p>
+<p>It replaces fiddling with six controls at once when a channel gets away from you. It only ever <em>removes</em> &mdash; it will not invent a hit, so HITS goes on meaning the number of hits the generator was asked for &mdash; and <strong>it will never empty a channel</strong>: the last hit survives whatever the knob says.</p>
+<p><strong>The three voices read <code>----</code> here and their knobs do nothing.</strong> That is not an oversight. A voice&rsquo;s placement <em>is</em> its rhythm register, and a tap on a voice pad writes into that same register &mdash; so a lane on a voice would quietly undo steps you put in by hand.</p>
+
+<h2 id="move">MOVE &mdash; how much the machine may move a channel</h2>
+<p>Page to <strong>MOVE</strong>, beside LANE. One number per channel, and it answers the question LANE does not: not how far the machine may go, but how often it may touch this channel at all.</p>
+<p>At <strong>LOCK</strong> the channel holds its pattern bar to bar and every automatic gesture leaves it alone &mdash; the tops can move while the kick stays exactly where you put it. At 100, which is where every channel starts, everything behaves as it always has.</p>
+<p>In between it is a <em>probability</em>, not a switch. At 50 the machine touches the channel about half the time it would have, which is a different instrument from a channel that is simply frozen: it still surprises you, just less often. If you want the hard version, FREEZE is the button for it.</p>
+<p>It gates the bar-rate gestures too &mdash; the ratchet and chance ramps, HALF and DOUBLE, the drop. Those used to walk every channel whether or not you had an opinion about that one.</p>
+
+<h2 id="phrase-fill">PHRASE and FILL &mdash; the fourth bar answers the first</h2>
+<p>Two more pages on the ALL ring. <strong>PHRASE</strong> is how long a channel&rsquo;s phrase is &mdash; <code>BAR</code>, <code>2bar</code> or <code>4bar</code> &mdash; and <strong>FILL</strong> is how full its last bar gets.</p>
+<p>Set a channel to <code>4bar</code> and raise its FILL, and every fourth bar comes back busier before the plain pattern returns. The added steps go to the <em>offbeats</em> first, because a fill that added hits on the beats would just be a louder version of the bar it is supposed to answer.</p>
+<p>A fill only ever adds. Taking hits away is a breakdown, and there are knobs for that.</p>
+<p>At <code>BAR</code> and <code>OFF</code>, which is where everything starts, no bar is ever a fill.</p>
+
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="modulation.html">Modulation</a> — how to make these values move on their own, and why the generator's own knobs refuse it</li>
