@@ -776,7 +776,8 @@ class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
         """Every string osc_button_to_btn_map answers to."""
 
         import re
-        src = open(self.DAEMON, encoding="utf-8").read()
+        with open(self.DAEMON, encoding="utf-8") as fh:
+            src = fh.read()
         start = src.index("fn osc_button_to_btn_map")
         end = src.index("\n}", start)
         return set(re.findall(r'"([a-z0-9_]+)"\s*=>', src[start:end]))
@@ -790,7 +791,8 @@ class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
         checked here and must not exist."""
 
         import ast
-        tree = ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
         names = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
@@ -818,7 +820,8 @@ class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
         self.assertGreater(len(found), 20, found)
 
     def test_pad_mode_carries_the_underscore(self):
-        src = open(self.DRIVER, encoding="utf-8").read()
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            src = fh.read()
         self.assertIn('LED_FREEZE = "pad_mode"', src)
         self.assertNotIn('LED_FREEZE = "padmode"', src)
 
@@ -855,7 +858,8 @@ class TheDriverIsParsableEvenWhereItIsNotImportable(unittest.TestCase):
 
     def _classes(self):
         import ast
-        tree = ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
         return [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
 
     def test_no_name_is_defined_twice_in_a_class_body(self):
@@ -886,7 +890,8 @@ class TheDriverIsParsableEvenWhereItIsNotImportable(unittest.TestCase):
         also sets - which is exactly the `lens_held` case."""
 
         import ast
-        tree = ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
         assigned, methods, read = set(), set(), {}
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -979,7 +984,8 @@ class TheDocsGateKnowsEveryButton(unittest.TestCase):
 
     def _gate_ccs(self):
         import ast
-        tree = ast.parse(open(self.GATE, encoding="utf-8").read())
+        with open(self.GATE, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
         for node in ast.walk(tree):
             if (isinstance(node, ast.Assign)
                     and any(getattr(t, "id", None) == "PANEL_NAMES"
@@ -1039,7 +1045,8 @@ class NoPropertyIsEverAssignedTo(unittest.TestCase):
 
     def _tree(self):
         import ast
-        return ast.parse(open(self.DRIVER, encoding="utf-8").read())
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            return ast.parse(fh.read())
 
     def _properties(self):
         """Every name defined with @property in the driver's classes."""
