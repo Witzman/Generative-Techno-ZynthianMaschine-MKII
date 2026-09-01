@@ -655,6 +655,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # attributes so "is a ramp running" is one truth, not four that can
         # disagree.
         self._chance_ramp = None
+        # Channels closing or opening through their filter and level, keyed by
+        # channel. One dict per channel rather than four parallel maps, for the
+        # reason the chance ramp above gives: "is a ramp running" must be one
+        # truth, not four that can disagree.
+        self._exit_ramps = {}
         # A running HALF/DOUBLE-time move: channel -> the (div, beats, hits,
         # rot) tuple captured before it, plus what the macro managed. The
         # CAPTURE is restored, never the computed inverse - drift, reroll and
@@ -837,6 +842,95 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if rule in tlib.CA_RULES:
             return tlib.ca_step(register, steps, rule, rhythm / 100.0)
         return tlib.mutate(register, steps, rhythm / 100.0)
+
+    def _exit_bars(self, channel):
+        """This channel's EXIT length in bars, through param_get."""
+
+        return int(self.param_get(channel, "exit") or 0)
+
+    def _exit_ticks_per_bar(self):
+        """How many 200 ms writes fit in a bar at the current tempo.
+
+        Measured rather than assumed: at 125 BPM a bar is 1920 ms and the
+        shipped sub-rate is ~198 ms, so a one-bar close is nine or ten steps.
+        zynmixer interpolates every level change across the JACK period, so
+        that is click-free - it steps, it does not zipper."""
+
+        bpm = float(self.globals.get("bpm", 125) or 125)
+        bar_s = 4.0 * 60.0 / max(1.0, bpm)
+        tick_s = PLAYHEAD_POLL_S * VOLUME_POLL_TICKS
+        return max(1, int(round(bar_s / tick_s)))
+
+    def _exit_start(self, channel, muting):
+        """Begin a close or an open. False means "not this channel" and the
+        caller mutes hard, which is the 0-bar default.
+
+        CAPTURE AND RESTORE, the same bookkeeping _drop_fire uses: what is put
+        back is what was there, never a nominal full level. A channel the
+        player had at 40 comes back at 40."""
+
+        bars = self._exit_bars(channel)
+        if bars <= 0:
+            return False
+        chan = self._mixer_chan(channel)
+        if chan is None:
+            return False
+        level = int(self.param_get(channel, "level"))
+        cutoff = (int(self.param_get(channel, "cutoff"))
+                  if self.channel_kind(channel) == "voice" else None)
+        running = self._exit_ramps.get(channel)
+        if running:
+            # A reversal mid-flight keeps the ORIGINAL captured values. Reading
+            # them again here would capture the half-closed ones and the
+            # channel would never come back to where it started.
+            level = running["level"]
+            cutoff = running["cutoff"]
+        self._exit_ramps[channel] = {
+            "steps": bars * self._exit_ticks_per_bar(),
+            "step": 0,
+            "closing": bool(muting),
+            "level": level,
+            "cutoff": cutoff,
+        }
+        if not muting:
+            # An OPEN unmutes first and comes up from silence. Unmuting at the
+            # end instead would put the whole rise behind a muted strip and the
+            # gesture would be inaudible.
+            self._set_muted(channel, False)
+        return True
+
+    def _exit_write(self):
+        """Advance every running exit one step. Poll thread, ~200 ms, beside
+        the modulators - the same writer, the same rate, the same reason."""
+
+        if not self._exit_ramps:
+            return
+        for channel in list(self._exit_ramps):
+            ramp = self._exit_ramps[channel]
+            ramp["step"] += 1
+            factor = tlib.exit_factor(ramp["step"], ramp["steps"],
+                                      closing=ramp["closing"])
+            self._apply_mix(channel, "level",
+                            int(round(ramp["level"] * factor)))
+            if ramp["cutoff"] is not None:
+                self._set_voice_ctrl(
+                    channel, self.VOICE_CTRL_COLUMNS["cutoff"],
+                    int(round(ramp["cutoff"] * tlib.exit_cutoff(factor))))
+            if ramp["step"] < ramp["steps"]:
+                continue
+            del self._exit_ramps[channel]
+            # LANDED. Put the captured values back on the strip BEFORE muting,
+            # so the channel that comes back later is the channel that left -
+            # and mute last, so nothing is heard between the two writes.
+            self._apply_mix(channel, "level", ramp["level"])
+            if ramp["cutoff"] is not None:
+                self._set_voice_ctrl(channel,
+                                     self.VOICE_CTRL_COLUMNS["cutoff"],
+                                     ramp["cutoff"])
+            if ramp["closing"]:
+                self._set_muted(channel, True)
+            with self.lock:
+                self._render_mutes()
 
     def _move_of(self, channel):
         """This channel's MOVE, for the gate. Read through param_get, never
@@ -2689,6 +2783,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # channel whose state predates the verb saves `rand`,
                     # which is what it was doing anyway.
                     "rule": self.state[i].get("rule", tlib.RULE_RANDOM),
+                    # MOVE and EXIT, 2026-09-01. Both are the player's
+                    # arrangement decisions about this channel - how much the
+                    # machine may touch it, and how it leaves - and a snapshot
+                    # that lost them would come back with the machine free to
+                    # move a channel that had been locked.
+                    "move": self.state[i].get("move", 100),
+                    "exit": self.state[i].get("exit", 0),
                     "walk_span": self.state[i].get("walk_span", 32),
                     "walk_stride": self.state[i].get("walk_stride", 4),
                     # The walked line IS this number - it is the walk's
@@ -2737,6 +2838,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # doing anyway.
                     "lean": self.state[i].get("lean", tlib.LEAN_OFF),
                     "lane": self.state[i].get("lane", 0),
+                    "move": self.state[i].get("move", 100),
+                    "exit": self.state[i].get("exit", 0),
                     "rule": self.state[i].get("rule", tlib.RULE_RANDOM),
                 }
                 for i, ch in enumerate(tlib.CHANNELS)
@@ -2929,7 +3032,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             for field in ("register", "length", "random", "gate", "octave",
                           "range", "kit_range", "velo", "rhythm", "rhythm_reg",
                           "model", "rule", "walk_span", "walk_stride",
-                          "walk_seed", "feed", "amount"):
+                          "walk_seed", "feed", "amount", "move", "exit"):
                 if field in saved:
                     st[field] = saved[field]
             if "rotate" in saved:
@@ -2991,6 +3094,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # ABSENT IS THE RAW FIELD - a snapshot written before the lane
             # existed was played without one.
             self.state[channel]["lane"] = saved.get("lane", 0)
+            # ABSENT IS THE OLD BEHAVIOUR on both: the machine could move any
+            # channel, and a queued mute landed hard.
+            self.state[channel]["move"] = saved.get("move", 100)
+            self.state[channel]["exit"] = saved.get("exit", 0)
             self.state[channel]["rule"] = saved.get("rule", tlib.RULE_RANDOM)
             if "hits" in saved:
                 self.hits[channel] = int(saved["hits"])
@@ -4586,6 +4693,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # LANE, 2026-09-01. 0 is the raw field, 100 keeps only what lands on
         # the beat.
         "lane": (0, 100, None),
+        # EXIT, 2026-09-01. In BARS, and four is the longest close this
+        # instrument has a use for - past that the part has left before the
+        # gesture finishes. Discrete, or a nudge would change a bar count.
+        "exit": (0, 4, ENC_UNITS_DISCRETE),
         # 5-800, widened from 5-100 for the 8-step note length. The old
         # 5-100 range is now a sliver of the sweep, so gate moves in jumps
         # of roughly 6-24 per encoder report - a deliberate resolution
@@ -7014,7 +7125,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # is applied so a raise cannot leave it queued forever, drawing a
             # half-lit pad for a change that will never happen.
             want = self._mute_pending.pop(channel)
-            self._set_muted(channel, want)
+            # EXIT, 2026-09-01. THE QUEUED ROW IS THE MUSICAL ONE and the
+            # instant row stays hard, so the two halves of the MUTE grid
+            # finally mean different things and no new gesture was invented.
+            # At 0 bars this is exactly what it always did.
+            if not self._exit_start(channel, want):
+                self._set_muted(channel, want)
             with self.lock:
                 self._render_mutes()
                 self._render_groups()
@@ -7186,6 +7302,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # After _mod_write, so a channel whose verb a modulator
                     # owns has already had this tick's swept value folded in.
                     self._pressure_write()
+                    # And after both: a channel on its way out overrides
+                    # whatever a modulator was doing to its level, because it
+                    # is leaving.
+                    self._exit_write()
                 with self.lock:
                     # Before anything else this tick: if the controller has
                     # been replugged, everything below would be written into

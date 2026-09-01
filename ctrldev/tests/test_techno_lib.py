@@ -5861,3 +5861,73 @@ class TheLaneIsOnTheDrumsOnly(unittest.TestCase):
                 if d["title"] == "LANE"][0]
         views = [("A", "KICK", {"lane": 0})] * 8
         self.assertEqual(tl.spread_columns(page, views)[0]["value"], "RAW")
+
+
+class ChannelsThatLeaveThroughAFilter(unittest.TestCase):
+    """EXIT, 2026-09-01. A part that stops does not vanish - it closes. The
+    MUTE grid's QUEUED row becomes the closing exit and its instant row stays
+    hard, so the gesture is the one that already ships and the two rows finally
+    mean different things.
+
+    Without it, an arrangement the machine makes sounds exactly like somebody
+    pressing mute buttons, which is the thing that gives a machine away."""
+
+    def test_a_close_starts_open_and_ends_shut(self):
+        self.assertEqual(tl.exit_factor(0, 8, closing=True), 1.0)
+        self.assertEqual(tl.exit_factor(8, 8, closing=True), 0.0)
+
+    def test_an_open_starts_shut_and_ends_open(self):
+        self.assertEqual(tl.exit_factor(0, 8, closing=False), 0.0)
+        self.assertEqual(tl.exit_factor(8, 8, closing=False), 1.0)
+
+    def test_it_moves_monotonically(self):
+        seen = [tl.exit_factor(i, 8, closing=True) for i in range(9)]
+        self.assertEqual(seen, sorted(seen, reverse=True))
+
+    def test_past_the_end_it_STAYS_landed_rather_than_overshooting(self):
+        self.assertEqual(tl.exit_factor(99, 8, closing=True), 0.0)
+        self.assertEqual(tl.exit_factor(99, 8, closing=False), 1.0)
+
+    def test_a_zero_length_close_is_INSTANT_and_does_not_divide_by_zero(self):
+        self.assertEqual(tl.exit_factor(0, 0, closing=True), 0.0)
+        self.assertEqual(tl.exit_factor(0, 0, closing=False), 1.0)
+
+    def test_the_cutoff_closes_FURTHER_than_the_level_does(self):
+        # A filter close is heard as the part getting darker before it gets
+        # quieter. Both reach zero, but the filter leads.
+        mid = tl.exit_factor(4, 8, closing=True)
+        self.assertLess(tl.exit_cutoff(mid), mid)
+
+    def test_the_cutoff_curve_still_reaches_both_ends(self):
+        self.assertEqual(tl.exit_cutoff(1.0), 1.0)
+        self.assertEqual(tl.exit_cutoff(0.0), 0.0)
+
+    def test_both_kinds_carry_the_verb_and_start_HARD(self):
+        # 0 bars is exactly today's behaviour: the mute lands the moment the
+        # wrap arrives, so an existing snapshot mutes as it always did.
+        for kind in ("drum", "voice"):
+            with self.subTest(kind=kind):
+                self.assertEqual(tl.default_channel_state(kind)["exit"], 0)
+
+    def test_an_older_snapshot_gains_the_verb_HARD(self):
+        old = tl.default_channel_state("voice")
+        del old["exit"]
+        self.assertEqual(tl.upgrade_state("voice", old, 16)["exit"], 0)
+
+    def test_the_ALL_ring_carries_an_EXIT_spread(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "EXIT"][0]
+        self.assertEqual(page["shape"], tl.SHAPE_SPREAD)
+        self.assertEqual(page["verb"], "exit")
+
+    def test_zero_reads_HARD_rather_than_a_bare_number(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "EXIT"][0]
+        views = [("A", "KICK", {"exit": 0})] * 8
+        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "HARD")
+
+    def test_a_length_reads_in_BARS_because_that_is_what_it_is(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "EXIT"][0]
+        views = [("A", "KICK", {"exit": 2})] * 8
+        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "2bar")

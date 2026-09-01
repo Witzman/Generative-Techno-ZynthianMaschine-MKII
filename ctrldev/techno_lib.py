@@ -146,6 +146,43 @@ class techno_lib:
             offset += 1
         return tuple(i in taken for i in range(steps))
 
+    # A close is heard as the part getting DARKER before it gets quieter, so
+    # the filter leads the level. Squaring the factor is enough: at half way
+    # the level is at 50% and the cutoff at 25%, and both still reach the ends
+    # exactly, which is what keeps an opened channel identical to one that
+    # never closed.
+    EXIT_CUTOFF_CURVE = 2
+
+    @staticmethod
+    def exit_factor(step, steps, closing=True):
+        """Where a close or an open has got to, 1.0 open and 0.0 shut.
+
+        Linear, and past the end it STAYS landed rather than overshooting: the
+        writer runs on a poll tick, so it may be asked one tick after it has
+        finished, and a ramp that kept going would drive the level negative.
+
+        A zero-length exit is INSTANT - the landed value, immediately - which
+        is what makes 0 bars exactly the behaviour that shipped before this
+        existed."""
+
+        steps = max(0, int(steps))
+        if steps <= 0:
+            return 0.0 if closing else 1.0
+        frac = min(1.0, max(0.0, step / float(steps)))
+        return (1.0 - frac) if closing else frac
+
+    @staticmethod
+    def exit_cutoff(factor):
+        """The filter's share of a close, given the level's.
+
+        Both ends are exact - 0 stays 0 and 1 stays 1 - so a channel that has
+        opened fully is bit for bit one that never closed, and a channel that
+        has closed fully is silent by BOTH routes rather than by a rounding
+        error in one."""
+
+        f = min(1.0, max(0.0, float(factor)))
+        return f ** techno_lib.EXIT_CUTOFF_CURVE
+
     @staticmethod
     def beat_grid(steps):
         """The quarter-note positions of a bar of `steps`. Derived by dividing
@@ -858,6 +895,11 @@ class techno_lib:
         property and kind-agnostic, so STEP's spread page reaches a voice too."""
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
                      chance=100, pending=set(),
+                     # EXIT, 2026-09-01. How long a QUEUED mute takes to close
+                     # the channel, in bars. 0 IS THE MIGRATION - hard, the
+                     # instant the wrap arrives, exactly as a queued mute has
+                     # always landed.
+                     exit=0,
                      # RULE, 2026-09-01. How the rhythm register EVOLVES:
                      # the shift register as always, or an elementary cellular
                      # automaton. `rand` IS THE MIGRATION - it is bit for bit
@@ -2640,6 +2682,8 @@ class techno_lib:
                    lambda v: "LOCK" if v <= 0 else techno_lib._num(v)),
         "lane":   ("uni", lambda v: v / 100.0,
                    lambda v: "RAW" if v <= 0 else techno_lib._num(v)),
+        "exit":   ("seg", lambda v: v / 4.0,
+                   lambda v: "HARD" if v <= 0 else "%dbar" % v),
     }
 
     @staticmethod
@@ -4119,6 +4163,11 @@ techno_lib.PAGE_RINGS = {
         # the verb does not exist on them, and pretending otherwise would put
         # a knob on the page that quietly undoes hand-tapped steps.
         _d(techno_lib.SHAPE_SPREAD, "LANE", verb="lane"),
+        # EXIT, 2026-09-01. How a channel LEAVES. It belongs beside MOVE and
+        # LANE because the three are one question asked three ways - how
+        # often, how far, and how it goes - and because an arrangement gesture
+        # is read for all eight at once or it is not read at all.
+        _d(techno_lib.SHAPE_SPREAD, "EXIT", verb="exit"),
     ),
     ("MIXER", None): (
         _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),
