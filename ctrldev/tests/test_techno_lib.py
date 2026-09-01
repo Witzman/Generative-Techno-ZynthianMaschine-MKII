@@ -2992,6 +2992,54 @@ class EveryPageCanActuallyBeDrawn(unittest.TestCase):
                     self.assertIsInstance(col["frac"], float, at)
 
 
+class RangeIsLiveOnlyWhereTheKitWalkRuns(unittest.TestCase):
+    """RANGE edits the kit-walk window, and the kit walk only runs on a
+    channel driven by the Turing register.
+
+    Two defects in one afternoon, both at the rig, both about this column.
+    First it was LIVE on a euclidean drum, where nothing reads it - a knob
+    showing a number it cannot move. Then the refusal was keyed on the wrong
+    kind and it stayed dead on a drum switched to VOICE behaviour, which is
+    the one case where it is the live control.
+
+    The trap underneath both: **CONTROL passes the ENGINE kind, every other
+    mode passes the BEHAVIOUR.** That is deliberate - a sampler has kits and
+    samples however it is played - and it means `kind` on the drum CONTROL
+    page is always "drum". The behaviour travels in the view instead."""
+
+    def test_dead_on_a_drum_behaving_as_a_drum(self):
+        self.assertTrue(tl.verb_is_dead(
+            "range", "drum", {"kind": "drum", "range": 4}))
+
+    def test_live_on_a_drum_behaving_as_a_voice(self):
+        # The case CONTROL's engine-kind hid. SHIFT + GRID puts a sampler on
+        # the Turing register, and then the kit walk is what draws the line.
+        self.assertFalse(tl.verb_is_dead(
+            "range", "drum", {"kind": "voice", "range": 4}))
+
+    def test_live_on_a_voice(self):
+        self.assertFalse(tl.verb_is_dead(
+            "range", "voice", {"kind": "voice", "range": 2}))
+
+    def test_the_argument_is_the_fallback_when_a_view_omits_the_kind(self):
+        # Callers that build a partial state - every test written before the
+        # lens needed the behaviour in the view - must keep their meaning.
+        self.assertFalse(tl.verb_is_dead("range", "voice", {"range": 2}))
+        self.assertTrue(tl.verb_is_dead("range", "drum", {"range": 4}))
+
+    def test_the_column_says_so_either_way(self):
+        drum = tl.columns(_page("CONTROL", "drum", "CTRL"), "drum",
+                          dict(tl.default_channel_state("drum"),
+                               kind="drum", kit="909", sample="BD"))
+        self.assertTrue(drum[2]["grey"])
+        self.assertEqual(drum[2]["value"], "----")
+        switched = tl.columns(_page("CONTROL", "drum", "CTRL"), "drum",
+                              dict(tl.default_channel_state("drum"),
+                                   kind="voice", kit="909", sample="BD"))
+        self.assertFalse(switched[2]["grey"])
+        self.assertEqual(switched[2]["name"], "RANGE")
+
+
 
 if __name__ == "__main__":
     unittest.main()

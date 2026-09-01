@@ -3260,7 +3260,18 @@ class techno_lib:
         if verb in ("walk_span", "walk_stride"):
             return state.get("model", techno_lib.MODEL_REGISTER) != \
                 techno_lib.MODEL_WALK
-        if verb == "range" and kind == "drum":
+        # BEHAVIOUR, NOT ENGINE, and the difference is the whole bug. The
+        # CONTROL page passes the ENGINE kind on purpose - a sampler always
+        # has kits and samples however it is being played - so `kind` is
+        # "drum" there even on a channel switched to voice behaviour. Keying
+        # the refusal on it left RANGE dead in exactly the case where it is
+        # the live control. Found at the rig, one deploy after the first half
+        # of this fix.
+        #
+        # The view carries the behaviour; the argument is the fallback for
+        # callers that build a partial state.
+        behaviour = state.get("kind") or kind
+        if verb == "range" and behaviour != "voice":
             # RANGE on a sampler is the KIT-WALK WINDOW, and the kit walk only
             # runs when the channel is driven by the Turing register - a drum
             # in VOICE behaviour. On a euclidean drum nothing reads it, so the
