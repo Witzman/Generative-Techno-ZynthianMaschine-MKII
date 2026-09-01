@@ -45,6 +45,7 @@ mod base;
 mod cc_math;
 mod devices;
 mod display;
+mod hid_feature;
 mod font;
 mod ws_types;
 mod ws_server;
@@ -228,6 +229,8 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                             encoder_ccs: mhandler.encoder_ccs,
                             external_pad_leds: mhandler.external_pad_leds,
                             send_aftertouch: mhandler.send_aftertouch_cfg,
+                            screen_brightness: mhandler.screen_brightness_cfg,
+                            screen_contrast: mhandler.screen_contrast_cfg,
                         }.save();
                     }
                 }
@@ -239,6 +242,8 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                             encoder_ccs: mhandler.encoder_ccs,
                             external_pad_leds: mhandler.external_pad_leds,
                             send_aftertouch: mhandler.send_aftertouch_cfg,
+                            screen_brightness: mhandler.screen_brightness_cfg,
+                            screen_contrast: mhandler.screen_contrast_cfg,
                         }.save();
                     }
                 }
@@ -378,6 +383,12 @@ struct MHandler<'a> {
     encoder_ccs: [u16; 8],
     external_pad_leds: bool,
     send_aftertouch_cfg: bool,
+    /// Carried purely so the WS config-save path can round-trip them. The
+    /// panel settings are applied once at start-up and never from here - a
+    /// live control could blank the very screen you need to see it on, and the
+    /// device stores them non-volatile.
+    screen_brightness_cfg: Option<u8>,
+    screen_contrast_cfg: Option<u8>,
 
     /// Last aftertouch value sent per pad, and when. Both are needed: the
     /// change gate alone still lets a slowly-moving finger send at the report
@@ -1678,10 +1689,18 @@ fn main() {
         encoder_ccs: cfg.encoder_ccs,
         external_pad_leds: cfg.external_pad_leds,
         send_aftertouch_cfg: cfg.send_aftertouch,
+        screen_brightness_cfg: cfg.screen_brightness,
+        screen_contrast_cfg: cfg.screen_contrast,
 
         at_last_val: [0; 16],
         at_last_sent: [None; 16],
     };
+
+    // Panel brightness and contrast, once, before anything else touches the
+    // device. A no-op unless maschine.json carries both keys; see
+    // hid_feature.rs for why the read comes first and why the write is
+    // skipped when the device already agrees.
+    dev.apply_screen_settings(cfg.screen_brightness, cfg.screen_contrast);
 
     // Display disabled, see write_display() above.
     // dev.clear_screen();

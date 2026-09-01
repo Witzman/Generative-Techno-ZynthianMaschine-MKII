@@ -27,5 +27,7 @@
     22,
     23
   ],
-  "external_pad_leds": true
+  "external_pad_leds": true,
+  "screen_brightness": 72,
+  "screen_contrast": 50
 }

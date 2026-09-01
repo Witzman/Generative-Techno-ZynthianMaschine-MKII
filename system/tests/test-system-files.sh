@@ -105,6 +105,8 @@ print("pads_perm", sorted(pads) == list(range(16)))
 print("pads_first", pads[0])
 print("ccs", ",".join(str(c) for c in ccs))
 print("ext_leds", d["external_pad_leds"])
+print("bright", d["screen_brightness"])
+print("contrast", d["screen_contrast"])
 PY
 )   || { bad "maschine.json parses as JSON" "$out"; out=""; }
     if [ -n "$out" ]; then
@@ -118,6 +120,16 @@ PY
         # Without this the daemon repaints pads on press and release in its own
         # colour, and the first touch destroys the per-channel picture.
         assert_eq "external_pad_leds is true" True      "$(awk '/^ext_leds/{print $2}'  <<<"$out")"
+        # The panel's factory values, measured off the hardware 2026-08-31 via
+        # GET_FEATURE 0xF8/0xF9. These are the RECOVERY values, and they are in
+        # the template so a dark panel is fixed by restoring this file and
+        # restarting the daemon - not by finding a number in a note somewhere.
+        # The daemon skips the write when the device already holds them, so a
+        # rig on the factory settings issues no HID feature write at all.
+        # These fields are Non-volatile on the device: a bad write survives a
+        # power cycle, which is why the shipped pair must stay the factory pair.
+        assert_eq "screen_brightness is the factory 72" 72 "$(awk '/^bright/{print $2}'   <<<"$out")"
+        assert_eq "screen_contrast is the factory 50"   50 "$(awk '/^contrast/{print $2}' <<<"$out")"
     fi
 else
     skip "maschine.json checks (no python3)"

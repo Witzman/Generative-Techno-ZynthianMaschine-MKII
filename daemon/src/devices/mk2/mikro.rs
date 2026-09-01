@@ -15,6 +15,7 @@
 //  License along with this program.  If not, see
 //  <http://www.gnu.org/licenses/>.
 
+use crate::hid_feature;
 use crate::hid_stats::{self, WriteStats};
 use std::fs::File;
 use std::mem::transmute;
@@ -1239,6 +1240,88 @@ impl Maschine for Mikro {
             }
             let id = if screen == 0 { 0xE0 } else { 0xE1 };
             self.send_display_bits(id, &out);
+        }
+    }
+
+    /// Read, echo, write - in that order, and the order IS the safety.
+    ///
+    /// Nothing happens at all unless both keys are present in maschine.json.
+    /// When they are, each screen's 11-byte feature report is READ first, the
+    /// read is checked against the panel geometry the device declares in it,
+    /// and only then are two of its eleven bytes replaced. Everything else -
+    /// the report id, the seven constant bytes, the eight unidentified flag
+    /// bits - is echoed back exactly as it came off the device.
+    ///
+    /// The write is skipped when the device already holds the requested pair,
+    /// so a rig running the shipped defaults issues no write at all. That is
+    /// not an optimisation: these fields are Non-volatile, and a write per boot
+    /// is a flash cycle per boot for no gain.
+    ///
+    /// Every branch prints. The failure this guards against is a dark panel,
+    /// and a dark panel cannot explain itself.
+    fn apply_screen_settings(&mut self, brightness: Option<u8>, contrast: Option<u8>) {
+        let (b, c) = match (brightness, contrast) {
+            (Some(b), Some(c)) => (b, c),
+            (None, None) => return,
+            _ => {
+                println!(
+                    "screen settings: ignored - screen_brightness and screen_contrast \
+                     must BOTH be set in maschine.json (a SET sends the whole report, \
+                     so half a pair is not writable)"
+                );
+                return;
+            }
+        };
+
+        for (screen, &id) in hid_feature::SCREEN_REPORT_IDS.iter().enumerate() {
+            let mut buf = [0u8; hid_feature::SCREEN_REPORT_LEN];
+            buf[0] = id;
+            match hid_feature::get_feature(self.dev, &mut buf) {
+                Ok(n) if n >= hid_feature::SCREEN_REPORT_LEN => {}
+                Ok(n) => {
+                    println!(
+                        "screen {}: short GET_FEATURE 0x{:02X} ({} of {} bytes) - not writing",
+                        screen, id, n, hid_feature::SCREEN_REPORT_LEN
+                    );
+                    continue;
+                }
+                Err(e) => {
+                    println!("screen {}: GET_FEATURE 0x{:02X} failed: {} - not writing", screen, id, e);
+                    continue;
+                }
+            }
+
+            if !hid_feature::looks_like_screen_report(id, &buf) {
+                // Bytes 1-4 did not decode as this panel's width and height,
+                // so whatever came back is not the report we think it is.
+                // Refusing here is the difference between a settings write and
+                // a blind one.
+                println!(
+                    "screen {}: 0x{:02X} does not carry the panel geometry ({}) - REFUSING to write",
+                    screen, id, hex::encode(&buf[..])
+                );
+                continue;
+            }
+
+            println!("screen {}: 0x{:02X} reads {}", screen, id, hex::encode(&buf[..]));
+
+            if hid_feature::already_set(&buf, b, c) {
+                println!("screen {}: already at brightness {} contrast {} - no write", screen, b, c);
+                continue;
+            }
+
+            let out = hid_feature::patch(&buf, b, c);
+            match hid_feature::set_feature(self.dev, &out) {
+                Ok(_) => println!(
+                    "screen {}: SET_FEATURE 0x{:02X} -> {} (brightness {} contrast {}; \
+                     was {} / {}. Restore with screen_brightness {} and screen_contrast {})",
+                    screen, id, hex::encode(&out[..]),
+                    out[hid_feature::BRIGHTNESS_BYTE], out[hid_feature::CONTRAST_BYTE],
+                    buf[hid_feature::BRIGHTNESS_BYTE], buf[hid_feature::CONTRAST_BYTE],
+                    hid_feature::FACTORY_BRIGHTNESS, hid_feature::FACTORY_CONTRAST,
+                ),
+                Err(e) => println!("screen {}: SET_FEATURE 0x{:02X} failed: {}", screen, id, e),
+            }
         }
     }
 

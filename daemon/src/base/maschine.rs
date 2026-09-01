@@ -361,6 +361,13 @@ pub trait Maschine {
     /// which starved the reader and set the watchdog off.
     fn calib_flush(&mut self) {}
 
+    /// Apply the panel's brightness and contrast from maschine.json, once, at
+    /// start-up. Reaches the device through HID FEATURE reports, which no other
+    /// path in this daemon uses - see hid_feature.rs for why that is careful
+    /// rather than routine. Called nowhere else: the values are Non-volatile on
+    /// this hardware, so this must never run on a timer or per frame.
+    fn apply_screen_settings(&mut self, _brightness: Option<u8>, _contrast: Option<u8>) {}
+
     /// Diagnostic: change how display data is framed, without a rebuild.
     /// col = header byte 1 (column offset), reverse = mirror each byte's bits,
     /// bands = how many 32-row reports to send per screen (1 or 2).
