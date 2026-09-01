@@ -5259,3 +5259,111 @@ class PressureDoesNotAnimateTheDisplay(unittest.TestCase):
         # which is exactly where a filter sweep is most audible.
         got = tl.pressure_display({"cutoff": 40}, "cutoff", 0)
         self.assertEqual(got["cutoff"], 0)
+
+
+class TheBankIsPinnedNotFollowed(unittest.TestCase):
+    """The driver used to READ `zynseq.bank` at ten call sites and assert it
+    nowhere, so an external bank change - the touchscreen, a snapshot, a CUIA -
+    repointed every zynseq call while every Python-side cache still described
+    the old bank, with no log and no symptom until something sounded wrong.
+    `todo.md` carried it as a latent defect and as the hard prerequisite for
+    banks-as-scenes.
+
+    BankPin holds the bank the driver is working in and reports a drift instead
+    of absorbing it."""
+
+    def test_a_fresh_pin_holds_the_bank_it_was_given(self):
+        pin = tl.BankPin()
+        pin.pin(1)
+        self.assertEqual(pin.bank, 1)
+
+    def test_observing_the_same_bank_says_nothing(self):
+        pin = tl.BankPin()
+        pin.pin(1)
+        self.assertIsNone(pin.observe(1))
+        self.assertEqual(pin.drifts, 0)
+
+    def test_a_drift_is_ADOPTED_not_refused(self):
+        # Refusing would be worse than following: the driver would keep
+        # writing into a bank the sequencer is no longer playing, which is
+        # silence with no explanation - the one law this surface cannot break.
+        pin = tl.BankPin()
+        pin.pin(1)
+        pin.observe(3)
+        self.assertEqual(pin.bank, 3)
+
+    def test_a_drift_RETURNS_a_message_naming_both_banks(self):
+        pin = tl.BankPin()
+        pin.pin(1)
+        msg = pin.observe(3)
+        self.assertIsNotNone(msg)
+        self.assertIn("1", msg)
+        self.assertIn("3", msg)
+
+    def test_a_drift_is_reported_ONCE_not_on_every_tick(self):
+        # The check runs once a second forever. A message per tick would bury
+        # the journal and teach the next reader to ignore it.
+        pin = tl.BankPin()
+        pin.pin(1)
+        self.assertIsNotNone(pin.observe(3))
+        self.assertIsNone(pin.observe(3))
+        self.assertIsNone(pin.observe(3))
+
+    def test_drifting_BACK_is_reported_again(self):
+        pin = tl.BankPin()
+        pin.pin(1)
+        pin.observe(3)
+        self.assertIsNotNone(pin.observe(1))
+
+    def test_drifts_are_COUNTED_so_a_flapping_bank_is_visible(self):
+        pin = tl.BankPin()
+        pin.pin(1)
+        pin.observe(3)
+        pin.observe(1)
+        pin.observe(3)
+        self.assertEqual(pin.drifts, 3)
+
+    def test_an_explicit_pin_is_SILENT_even_when_it_moves_the_bank(self):
+        # A snapshot load pins deliberately and resyncs everything anyway.
+        # That is not a drift and must not read like one.
+        pin = tl.BankPin()
+        pin.pin(1)
+        pin.pin(4)
+        self.assertEqual(pin.bank, 4)
+        self.assertEqual(pin.drifts, 0)
+        self.assertIsNone(pin.observe(4))
+
+    def test_a_bank_outside_1_to_64_is_REFUSED_and_reported(self):
+        # zynseq's own select_bank refuses anything outside 1..64. A zero or a
+        # None here means something upstream is unset, and adopting it would
+        # address a bank that cannot exist.
+        pin = tl.BankPin()
+        pin.pin(1)
+        for bad in (0, 65, -1, None):
+            with self.subTest(bad=bad):
+                msg = pin.observe(bad)
+                self.assertIsNotNone(msg)
+                self.assertEqual(pin.bank, 1)
+
+    def test_an_unpinned_pin_has_no_bank_and_adopts_the_first_it_is_given(self):
+        # init() pins from zynseq once it is wired up; before that there is no
+        # answer, and guessing 1 would be a fact this class does not have.
+        pin = tl.BankPin()
+        self.assertIsNone(pin.bank)
+        self.assertIsNone(pin.observe(2))
+        self.assertEqual(pin.bank, 2)
+        self.assertEqual(pin.drifts, 0)
+
+    def test_pinning_a_bank_that_cannot_EXIST_is_taken_and_reported(self):
+        # It is still taken: refusing leaves the driver with no bank at all.
+        # But a rig that pins a 0 has something wrong upstream, and finding
+        # that out a second later as a "drift" would name the wrong fault.
+        pin = tl.BankPin()
+        msg = pin.pin(0)
+        self.assertIsNotNone(msg)
+        self.assertEqual(pin.bank, 0)
+        self.assertEqual(pin.drifts, 0)
+
+    def test_pinning_a_normal_bank_is_silent(self):
+        pin = tl.BankPin()
+        self.assertIsNone(pin.pin(1))

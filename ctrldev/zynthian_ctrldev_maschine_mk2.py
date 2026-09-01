@@ -430,6 +430,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # subclass, so this driver wires it up itself.
         self.zynseq = state_manager.zynseq
         self.libseq = self.zynseq.libseq
+        # The bank this driver addresses, held rather than followed. Pinned in
+        # init() once zynseq is up, re-pinned by a snapshot, and checked once a
+        # second against what zynseq actually has. See tlib.BankPin.
+        self.bankpin = tlib.BankPin()
         self.group = 0                       # selected group, 0 = A
         self.note_cache = [None] * 8         # per-group drum note, discovered lazily
         self.hits = [0] * 8                  # euclid hit count per group
@@ -772,17 +776,52 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         except OSError as e:
             logging.error(f"Maschine OSC send failed: {e}")
 
+    @property
+    def bank(self):
+        """The zynseq bank this driver addresses.
+
+        Read this, never `self.zynseq.bank`. Ten sites used to read zynseq
+        directly and nothing ever asserted a bank, so an external change
+        repointed every call while every cache still described the old bank -
+        no log, no symptom, until something sounded wrong."""
+
+        return self.bankpin.bank
+
+    def _pin_bank(self):
+        """Take zynseq's current bank deliberately. Init, and any restore that
+        resyncs the caches anyway. Silent: this is not a drift."""
+
+        said = self.bankpin.pin(self.zynseq.bank)
+        if said is not None:
+            logging.warning(f"Maschine: {said}")
+
+    def _check_bank(self):
+        """Once a second, from the poll thread. A bank that moved from outside
+        this driver is adopted, said out loud, and everything cached against
+        the old one is re-read - which is the whole point: the caches are what
+        made this silent."""
+
+        said = self.bankpin.observe(self.zynseq.bank)
+        if said is None:
+            return
+        logging.warning(f"Maschine: {said}")
+        self._slog("bank", event="drift", bank=self.bankpin.bank,
+                   drifts=self.bankpin.drifts)
+        with self.lock:
+            self._resync_all()
+            self._render_all()
+
     def _seq_addr(self, group):
         """Sequence address for a group, as the installed libzynseq expects:
         (bank, sequence, track). Every zynseq call routes through here."""
 
-        return (self.zynseq.bank, group, 0)
+        return (self.bank, group, 0)
 
     def _pattern_of(self, group):
         """Pattern id backing a group, read from zynseq (not cached).
         Installed signature: getPattern(bank, sequence, track, position)"""
 
-        return self.libseq.getPattern(self.zynseq.bank, group, 0, 0)
+        return self.libseq.getPattern(self.bank, group, 0, 0)
 
     def _select_pattern(self, group):
         """Select a group's pattern and return its id. The installed API is
@@ -2314,6 +2353,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def init(self):
         self._slog("session", event="init", path=SESSION_LOG_PATH)
         super().init()
+        # Before any zynseq call: take the bank rather than follow it.
+        self._pin_bank()
+        self._slog("bank", event="pin", bank=self.bank)
         zynsigman.register_queued(
             zynsigman.S_STEPSEQ, self.zynseq.SS_SEQ_PROGRESS, self._on_progress)
         # Progress signals stop arriving the moment a sequence stops, so the
@@ -2416,8 +2458,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         transport start, which is where a wrong mode would be heard."""
 
         for grp in (range(8) if group is None else (group,)):
-            if self.libseq.getPlayMode(self.zynseq.bank, grp) != zynseq_lib.SEQ_LOOP:
-                self.libseq.setPlayMode(self.zynseq.bank, grp, zynseq_lib.SEQ_LOOP)
+            if self.libseq.getPlayMode(self.bank, grp) != zynseq_lib.SEQ_LOOP:
+                self.libseq.setPlayMode(self.bank, grp, zynseq_lib.SEQ_LOOP)
 
     def light_off(self):
         self._release_all()
@@ -3754,7 +3796,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         for group in range(8):
             # Installed signature: setPlayPosition(bank, sequence, clock)
-            self.libseq.setPlayPosition(self.zynseq.bank, group, 0)
+            self.libseq.setPlayPosition(self.bank, group, 0)
         # RESTART re-zeros the phrase with the playheads. Without this the
         # count keeps running while every pattern jumps to its start, which is
         # precisely the disagreement this clock exists to prevent.
@@ -5493,7 +5535,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         if self._play_state(channel) == zynseq_lib.SEQ_STOPPED:
             return None
-        pos = self.libseq.getPlayPosition(self.zynseq.bank, channel)
+        pos = self.libseq.getPlayPosition(self.bank, channel)
         return None if pos < 0 else pos
 
     def _pad_down(self, pad, velocity):
@@ -5690,7 +5732,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         getPlayState() in zynseq.py, so ctypes hands back a full int for a
         uint8_t return - mask it."""
 
-        return self.libseq.getPlayState(self.zynseq.bank, group) & 0xFF
+        return self.libseq.getPlayState(self.bank, group) & 0xFF
 
     def _any_playing(self):
         return any(self._play_state(g) != zynseq_lib.SEQ_STOPPED for g in range(8))
@@ -5722,7 +5764,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                    anchor=self._phrase_anchor, bar=self._phrase_bar,
                    pending=self._pending_macros.pending())
         for group in range(8):
-            self.libseq.setPlayState(self.zynseq.bank, group, target)
+            self.libseq.setPlayState(self.bank, group, target)
         self._render_pads()
         self._render_transport()
 
@@ -6087,7 +6129,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         cps = self.cps[group]
         if cps <= 0:
             return None
-        playpos = self.libseq.getPlayPosition(self.zynseq.bank, group)
+        playpos = self.libseq.getPlayPosition(self.bank, group)
         if playpos < 0:
             return None
         return playpos // cps
@@ -6793,7 +6835,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         self.state[channel]["pending"] |= pending
                         raise
                 return
-            position = self.libseq.getPlayPosition(self.zynseq.bank, channel)
+            position = self.libseq.getPlayPosition(self.bank, channel)
         previous = self._voice_pos.get(channel)
         self._voice_pos[channel] = position
         wrapped = previous is not None and position < previous
@@ -6975,6 +7017,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # thread: the scan takes the lock for a whole pattern.
                 while self._rebuild_due:
                     self._rebuild_notes(self._rebuild_due.pop())
+                if tick % NOTE_BASE_HEARTBEAT_TICKS == 0:
+                    # Once a second: has the bank moved under us? Cheap - an
+                    # attribute compare - and it does real work only on a
+                    # drift, which nothing in this instrument produces today.
+                    self._check_bank()
                 self._voice_wraps()
                 self._phrase_tick()
                 if tick % VOLUME_POLL_TICKS == 0:
@@ -7982,6 +8029,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         before the load, while the mixer had already moved on."""
 
         self._invalidate_gen_cache()
+        # A snapshot brings its own bank. Take it deliberately, here, where
+        # every cache is about to be re-read anyway - so the once-a-second
+        # check does not then report a restore as a drift.
+        self._pin_bank()
         with self.lock:
             self._resync_all()
             self._render_all()

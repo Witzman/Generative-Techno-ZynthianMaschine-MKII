@@ -3600,6 +3600,92 @@ class techno_lib:
         def clear(self):
             self._due.clear()
 
+    class BankPin:
+        """The zynseq bank the driver is working in, HELD rather than followed.
+
+        NESTED for the same reason as PendingQueue: the driver imports the
+        CLASS, so a module-level class here would be unreachable through
+        `tlib` and would raise AttributeError on the rig, where nothing
+        catches it early.
+
+        The defect this closes: ten driver sites READ `zynseq.bank` and
+        nothing ever asserted it, so an external bank change - the
+        touchscreen, a snapshot, a CUIA - repointed every zynseq call while
+        every Python-side cache still described the old bank. No log, no
+        symptom, until something sounded wrong. Latent while one bank exists;
+        live the moment banks-as-scenes does.
+
+        A drift is ADOPTED, not refused. Refusing looks safer and is worse:
+        the driver would keep writing into a bank the sequencer is no longer
+        playing, which is silence with nothing explaining it. Adopting and
+        SAYING SO leaves the caller a place to resync from.
+
+        No zynseq, no driver, no logging of its own - which is what makes it
+        testable on WSL, where the driver cannot be imported."""
+
+        BANKS = (1, 64)          # zynseq.select_bank refuses anything outside
+
+        def __init__(self):
+            self.bank = None
+            self.drifts = 0
+            self._said = None    # the bank a drift was last reported ABOUT
+
+        def pin(self, bank):
+            """Take a bank deliberately: init, or a snapshot that has already
+            resynced everything. Not a drift, so it never counts as one.
+
+            Returns a message when the bank being pinned is not one zynseq
+            could address. It is still taken - refusing would leave the driver
+            with no bank at all - but a rig that pins a 0 has something wrong
+            upstream and must not find that out later, from the once-a-second
+            check, as a drift it is not."""
+
+            self.bank = bank
+            self._said = None
+            lo, hi = self.BANKS
+            if not isinstance(bank, int) or isinstance(bank, bool) \
+                    or not lo <= bank <= hi:
+                return (f"pinned zynseq bank {bank!r}, outside {lo}-{hi}. "
+                        f"Every sequence address this driver builds uses it.")
+            return None
+
+        def observe(self, bank):
+            """Compare what zynseq says against what is held. Returns a
+            message when the caller must act, None when there is nothing to
+            say.
+
+            Reported ONCE per drift, not once per tick: this is called about
+            once a second forever, and a message per tick would bury the
+            journal and teach the next reader to skip it. Drifting back is a
+            second drift and is reported again."""
+
+            lo, hi = self.BANKS
+            if not isinstance(bank, int) or isinstance(bank, bool) \
+                    or not lo <= bank <= hi:
+                # Out of range means something upstream is unset. Adopting it
+                # would address a bank that cannot exist, so hold what we have
+                # and say so - once.
+                if self._said == bank:
+                    return None
+                self._said = bank
+                return (f"zynseq bank reads {bank!r}, outside {lo}-{hi}. "
+                        f"Holding bank {self.bank}.")
+            if self.bank is None:
+                # Nothing has been pinned yet - init has not run. The first
+                # answer is the answer, not a drift.
+                self.bank = bank
+                return None
+            if bank == self.bank:
+                self._said = None
+                return None
+            was, self.bank = self.bank, bank
+            self.drifts += 1
+            if self._said == bank:
+                return None
+            self._said = bank
+            return (f"zynseq bank moved {was} -> {bank} from outside this "
+                    f"driver; adopting it and resyncing (drift {self.drifts}).")
+
 
 # Rings are built after the class body so page_desc() is callable. Keeping them
 # out of the class body is the only reason they are down here; they are read as
