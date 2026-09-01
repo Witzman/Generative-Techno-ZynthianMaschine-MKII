@@ -77,16 +77,17 @@
 <hr>
 <h2 id="try-it">Try it</h2>
 <ol>
-<li><strong>Press VOLUME.</strong> That is MIXER mode: one control across all eight channels at once, rather than eight controls on one channel.</li>
-<li><strong>Turn any encoder.</strong> Each one is a channel's LEVEL. This is the page for balancing.</li>
-<li><strong>Press the right arrow beside the display.</strong> The ring steps to REVERB, then DELAY — the same eight channels, a different send.</li>
-<li><strong>Press VOLUME again</strong> to jump back to page 1 rather than paging round.</li>
-<li><strong>Press AUTO.</strong> That is FILTER: CUTOFF and RESO across the row. Notice the five drum columns are drawn dead — see below.</li>
-<li><strong>Press ALL.</strong> Now the eight encoders are the machine's globals: ROOT, SCALE, BPM, MASTER, REVSIZE, REVTYPE, DLYTIME, DLYFBK.</li>
+<li><strong>Press CONTROL.</strong> Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel, whatever it plays.</li>
+<li><strong>Hold ALL and turn encoder 6.</strong> The row becomes eight LEVELs, one per channel, and the page indicator reads <code>ALL LEVEL</code>. That is the page for balancing, and it is a hold rather than a place.</li>
+<li><strong>Let go, put your hand on encoder 7, then hold ALL again.</strong> Now it is eight REVERB sends. Encoder 8 gives you eight DELAYs the same way.</li>
+<li><strong>Tap ALL instead of holding it</strong> and the lens latches. Tap it again to drop it.</li>
+<li><strong>Move CUTOFF on a voice and hold ALL.</strong> Three columns answer and five draw dead — the drums have no filter to reach. See below.</li>
+<li><strong>Press VOLUME.</strong> Now the eight encoders are the machine's globals: ROOT, SCALE, BPM, WALK, SPAN, MASTER, REVSIZE, DLYTIME.</li>
 </ol>
 <hr>
 <h2 id="how-it-works">How it works</h2>
-<p><strong>A spread page is one verb across eight channels.</strong> MIXER and FILTER are spreads throughout; CONTROL is the other shape, eight verbs on one channel. That is the whole grammar of the surface, and every page is one or the other &mdash; <strong>STEP is the mode that holds both</strong>: its first page is eight verbs on the selected channel, and the pages after it are spreads. Page on with the arrows or the big encoder and you get <strong>SWING</strong> and <strong>CHANCE</strong> across all eight channels, and on a voice <strong>RHYTHM</strong> as well. That is where a voice&rsquo;s play chance lives, because its own STEP page has no room for it.</p>
+<p><strong>A page is eight verbs on one channel. The lens is one verb on eight channels.</strong> That is the whole grammar of the surface, and it is why there are no mixer pages to go looking for: hold ALL and whichever verb your hand last moved lays itself out across the eight channels, then let go and you are back where you were. Every channel verb can be looked at that way &mdash; the sends, the filter, swing, play chance, how much rope a channel is given &mdash; without the instrument growing a page for each.</p>
+<p><strong>A channel that does not carry that verb draws dead</strong>, in the usual way: <code>----</code>, a lower-case name and no bar. So CUTOFF across the eight is three live columns and five dead ones, and LANE is the other way round. Turning a global &mdash; BPM, ROOT, MASTER &mdash; or a name like KIT or PRESET does not move the lens, because there is nothing to lay side by side; it stays on whatever it last held, and before you have moved anything at all it shows LEVEL.</p>
 <p><strong>ROOT and SCALE wait for the bar</strong>, like everything else that changes what the pattern is. The rest of the globals land instantly.</p>
 <p><strong>Group button brightness tracks each channel's level</strong>, so the row shows the balance without reading anything — and the peak meters on the display run live.</p>
 <hr>
@@ -97,7 +98,7 @@
 <p><strong>On the landing bar every channel you did not nominate is muted.</strong> It is the mixer strip, not the sequencer &mdash; the same mute F1&ndash;F8 set &mdash; so it takes each channel's reverb and delay tail with it, and the tabs of the silenced channels draw dashed for as long as it runs. A silent channel still says why, even in the middle of a performance.</p>
 <p><strong>The length is both numbers.</strong> Arm a drop over four bars and it fires four bars from now and lasts four bars. There is no second gesture for the duration.</p>
 <p><strong>What comes back is exactly what was there.</strong> The mute picture is captured the instant the drop fires and restored unchanged &mdash; never "everything on". A channel you had muted by hand before the drop is still muted after it.</p>
-<p><strong>Cancelling during a drop leaves the mutes where they are.</strong> The return is itself pending, and a bare ARM tap cancels everything pending &mdash; so cancel mid-drop and the room stays quiet. Lift the mutes with F1&ndash;F8.</p>
+<p><strong>Cancelling during a drop leaves the mutes where they are.</strong> The return is itself pending, and ERASE + SELECT cancels everything pending &mdash; so cancel mid-drop and the room stays quiet. Lift the mutes with F1&ndash;F8.</p>
 <hr>
 <h2 id="break">BREAK &mdash; fall out now, come back on the bar</h2>
 <p><strong>BREAK is DROP with its two ends swapped.</strong> Arm it and the channels you did <em>not</em> nominate fall silent immediately; they come back on the bar the length names. It is the breakdown you fall into rather than build to, with the drums returning exactly on the one, counted for you.</p>
@@ -105,13 +106,13 @@
 <p><strong>Only one of DROP and BREAK can be armed at a time.</strong> They share one snapshot of the mutes, so arming either drops the other.</p>
 <hr>
 <h2 id="master-insert">The master insert &mdash; one filter across the whole mix</h2>
-<p><strong>Put a filter on the Main chain and ALL &rarr; MAIN reaches it.</strong> It sits between the mixer and the card, so it hears everything: all eight channels, their reverb and delay, the drop, the ramp, everything.</p>
+<p><strong>Put a filter on the Main chain and VOLUME &rarr; MAIN reaches it.</strong> It sits between the mixer and the card, so it hears everything: all eight channels, their reverb and delay, the drop, the ramp, everything.</p>
 <p><strong>The factory snapshot ships with it.</strong> <code>018-generative-techno-main-insert</code> is what a fresh install boots into, and it carries an MDA RezFilter on the Main chain &mdash; so the MAIN page is there from the first power-on, with no plugin to add and nothing to load. That changed on 2026-08-22; before it, the factory snapshot left the Main chain empty and the page was not built at all.</p>
-<p><strong><code>017-generative-techno</code> is installed beside it, and it is the same instrument without the filter.</strong> Load it and the MAIN page simply is not there &mdash; ALL&rsquo;s ring has one page fewer rather than a page of dead columns. That is the way back if the master filter ever gets in your way, and it is the reason shipping the filter by default is safe rather than a trap.</p>
+<p><strong><code>017-generative-techno</code> is installed beside it, and it is the same instrument without the filter.</strong> Load it and the MAIN page simply is not there &mdash; VOLUME&rsquo;s ring has one page fewer rather than a page of dead columns. That is the way back if the master filter ever gets in your way, and it is the reason shipping the filter by default is safe rather than a trap.</p>
 <p>In <code>018</code> the filter loads <strong>wide open and inaudible</strong>. That is deliberate rather than incidental &mdash; at the plugin&rsquo;s own factory settings the cutoff sits below the point where it stops passing audio at all, so the snapshot writes every one of its controls explicitly instead of trusting a default. A plugin you add by hand does not get that treatment, so check its cutoff before you decide the rig is broken.</p>
 <p><strong>If the instrument ever goes completely silent with every channel looking healthy, look here first</strong> and open the cutoff. It is the one control on the rig that can silence all eight channels at once, and below roughly a third of its range it is genuinely silent rather than just dark.</p>
 <p>One instance, not eight &mdash; which is why it is affordable at all. The per-channel reverb and delay sit on every chain, so an effect there costs eight times what it looks like.</p>
-<p><strong>The reverb and the delay have pages of their own on ALL, and they are built the same way.</strong> Beyond the four globals above, ALL&rsquo;s ring carries a generated page per shared effect &mdash; <code>REV</code> for the reverb, <code>DLY</code> for the delay, <code>MAIN</code> for the master insert when there is one &mdash; reaching every remaining port the plugin publishes, with the tab row carrying parameter names instead of channels. One turn moves that port on <strong>all eight chains at once</strong>, which is the only way a ganged effect can be steered from eight knobs.</p>
+<p><strong>The reverb and the delay have pages of their own on VOLUME, and they are built the same way.</strong> Past GLOBAL and PENDING, VOLUME&rsquo;s ring carries a generated page per shared effect &mdash; <code>REV</code> for the reverb, <code>DLY</code> for the delay, <code>MAIN</code> for the master insert when there is one &mdash; reaching every port the plugin publishes that GLOBAL does not name, with the tab row carrying parameter names instead of channels. <strong>REVTYPE and DLYFBK live there</strong> rather than on GLOBAL: one is the reverb&rsquo;s own list of rooms and the other is the delay&rsquo;s feedback, and each belongs beside the rest of its plugin. One turn moves that port on <strong>all eight chains at once</strong>, which is the only way a ganged effect can be steered from eight knobs.</p>
 <hr>
 <h2 id="effects-proven">The effects this is proven on</h2>
 <p><strong>The same insert pair sits on all eight chains, so an effect costs eight times what it looks like.</strong> That is where this Pi runs out of headroom &mdash; not on the synths. Every plugin below is in a shipped snapshot and has been measured running.</p>
@@ -161,18 +162,18 @@
 <p><strong>Watch what a plugin calls a wet control.</strong> Several well-known reverbs turn out to crossfade dry against wet rather than offering a send, so turning the mix up takes the dry signal away with it. The factory pair was chosen by measuring that with an impulse, one plugin at a time. If you swap in your own, check it the same way before trusting the REVERB and DELAY encoders.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
-<p><strong>FILTER's five drum columns draw dead.</strong> Only the three voices answer it. The drum channels run a sampler, and there is no filter in that chain to reach — so rather than offering a knob that would do nothing, the columns grey out.</p>
+<p><strong>Five of the eight columns draw dead under the CUTOFF lens.</strong> Only the three voices answer it. The drum channels run a sampler, and there is no filter in that chain to reach — so rather than offering a knob that would do nothing, the columns grey out.</p>
 <p><strong>There is no drum filter in this version.</strong> That is worth saying plainly so you do not go hunting for one: filtering drums needs a filter plugin per channel, which costs eight more plugin hosts, and it has not been built.</p>
 <hr>
 <h2 id="exit">EXIT &mdash; a part that leaves rather than stops</h2>
 <p>A mute is a switch. It is also the sound that gives a machine away: an arrangement made of mutes announces that somebody pressed a button, because nothing in music stops that abruptly except a fault.</p>
-<p>In ALL mode, page to <strong>EXIT</strong>. One setting per channel, in bars. At <strong>HARD</strong> &mdash; where everything starts &mdash; a mute is the mute you already know. Set it to <code>1bar</code> or more and that channel <em>closes</em> instead: over the bars you asked for it gets darker and then quieter, and the part is gone by the end of the bar rather than at the instant you pressed.</p>
+<p><strong>EXIT</strong> is encoder 8 of the AUTO page, on both kinds of channel. One setting per channel, in bars. At <strong>HARD</strong> &mdash; where everything starts &mdash; a mute is the mute you already know. Set it to <code>1bar</code> or more and that channel <em>closes</em> instead: over the bars you asked for it gets darker and then quieter, and the part is gone by the end of the bar rather than at the instant you pressed.</p>
 <p>The gesture is one you already have. <strong>Hold MUTE and press the pad on the bottom row</strong> &mdash; the queued row, the one that has always waited for the wrap. The top row stays instant, so the grid now offers both: cut it now, or let it leave. Bringing it back works the same way and opens it again.</p>
 <p><strong>The five drum channels close on level alone.</strong> They have no filter to close &mdash; their chains are the sampler, the echo and the reverb, and the only filter on the instrument sits on the main bus. The three voices get both, and the difference is audible: a voice closing sounds like a door, a drum closing sounds like a fade. That is what the instrument can honestly do today rather than a setting somebody forgot.</p>
 
 <h2 id="see-also">See also</h2>
 <ul>
-<li><a href="modulation.html">Modulation</a> — a spread page is the best place to bind eight modulators at once</li>
+<li><a href="modulation.html">Modulation</a> — the lens is the best place to bind eight modulators at once</li>
 <li><a href="sound-and-presets.html">Sound and presets</a> — LEVEL, REVERB and DELAY per channel</li>
 <li><a href="the-surface.html">The surface</a> — modes, pages, how the ring works, and the ARM gesture DROP rides on</li>
 </ul>

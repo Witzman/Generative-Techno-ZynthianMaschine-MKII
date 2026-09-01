@@ -317,7 +317,15 @@ BASELINE = {
     # dark pad AUTHORS a bank rather than switching to somebody else's default
     # - plus the GEN STOPPED banner in "when it goes quiet", which is the one
     # message on this surface that must never be the one that gets truncated.
-    "the-surface.html":            (3856, "2026-09-01"),
+    # +1131, 2026-09-01 evening: the surface redesign, and this is the page it
+    # is about. Four things are genuinely new rather than reworded - the LENS
+    # on ALL and what it does to the eight encoders; the DURATION RULE, which
+    # is one paragraph that replaces five grammars; the LIGHT ALPHABET, which
+    # is five signals and takes a table because a player has to be able to
+    # look one up mid-bar; and HOME, which the instrument did not have. The
+    # light table itself grew because every modifier lights now: four of them
+    # took the sixteen pads and said nothing while they did it.
+    "the-surface.html":            (4987, "2026-09-01"),
     # +69, 2026-08-20: what the new gestures do NOT survive - the phrase count,
     # anything armed, and a modulator's one-shot flag - plus the one that cuts
     # the other way, that a set saved mid-drop saves those mutes because mixer

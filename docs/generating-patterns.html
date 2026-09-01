@@ -90,12 +90,12 @@
 </ol>
 <p><strong>The voices.</strong></p>
 <ol start="5">
-<li><strong>Press Group F</strong> for BASS, still in STEP.</li>
+<li><strong>Press Group F</strong> for BASS, then <strong>AUTO</strong> &mdash; a voice&rsquo;s generators live there.</li>
 <li><strong>Turn encoder 3 (MELODY) to about 30.</strong> The bassline starts fishing: every pass mutates one bit, so the line keeps turning into a neighbouring line.</li>
 <li><strong>When a phrase goes past that you want, snap MELODY back to 0.</strong> The cell reads <code>LOCK</code> and that line is frozen, bit for bit, until you move the knob again.</li>
 <li><strong>Missed it?</strong> Press <strong>NOTE REPEAT</strong>. It gives the previous line back and sets both knobs to 0 so it holds.</li>
 <li><strong>Now put MELODY at LOCK and turn encoder 4 (RHYTHM) to about 30.</strong> The opposite: the notes hold still while steps appear and disappear underneath them.</li>
-<li><strong>Both at LOCK, then tap pads in STEP mode.</strong> Each tap turns a step on or off, and it stays &mdash; tap step 1 and step 9, then turn MELODY up, and you have two notes evolving on the beat you chose.</li>
+<li><strong>Both at LOCK, then press STEP and tap pads.</strong> Each tap turns a step on or off, and it stays &mdash; tap step 1 and step 9, then turn MELODY up, and you have two notes evolving on the beat you chose.</li>
 </ol>
 <figure class="lcdfig">
   <div class="lcd">
@@ -113,10 +113,10 @@
 </figure>
 <hr>
 <h2 id="how-it-works">How it works</h2>
-<p><strong>The drum STEP page</strong> is HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, SWING, RATCHET. HITS and ROTATE are the two you play with; the rest set the frame. CHANCE is how often a hit actually fires — drop it and the pattern starts breathing rather than repeating.</p>
-<p><strong>The voice STEP page</strong> is DIVIDE, GATE, MELODY, RHYTHM, LENGTH, OCTAVE, RANGE, VELO. The two generators sit side by side because they are one idea. LENGTH here is the pitch register&rsquo;s length in bits, not a bar count. GATE is how long each note holds &mdash; up to eight steps, so a pad can be a drone. The pitch value is quantised to ROOT and SCALE from the ALL page, then placed by OCTAVE and RANGE.</p>
-<p><strong>STEP has more pages than that one, and they are spreads.</strong> Page on with the arrows or the big encoder and the eight knobs stop being eight verbs on one channel and become <em>one</em> verb across all eight: <strong>SWING</strong>, then <strong>CHANCE</strong>, and on a voice <strong>RHYTHM</strong> as well. It is the fastest way to swing or thin the whole kit without walking the channels one at a time.</p>
-<p><strong>That is also where a voice&rsquo;s play chance lives.</strong> The voice STEP page has eight verbs already and no room for CHANCE, so if a voice is quiet and its tab is dashed with steps still in the register, page on to the CHANCE spread and look at its column &mdash; a voice at chance 0 is silent and nothing on its own page will say so.</p>
+<p><strong>The drum STEP page</strong> is HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, RATCH, SWING. HITS and ROTATE are the two you play with; the rest set the frame. CHANCE is how often a hit actually fires — drop it and the pattern starts breathing rather than repeating.</p>
+<p><strong>The voice STEP page</strong> is DIVIDE, LENGTH, GATE, OCTAVE, RANGE, VELO, CHANCE, SWING. LENGTH here is the pitch register&rsquo;s length in bits, not a bar count. GATE is how long each note holds &mdash; up to eight steps, so a pad can be a drone. The pitch value is quantised to ROOT and SCALE from VOLUME&rsquo;s GLOBAL page, then placed by OCTAVE and RANGE.</p>
+<p><strong>The two generators are not on STEP. They are on AUTO.</strong> STEP is what a channel plays; AUTO is what the machine does to it by itself, and MELODY and RHYTHM are the second question rather than the first. A drum&rsquo;s RHYTHM is there for the same reason. Nothing about them changed &mdash; they are one press away rather than one page.</p>
+<p><strong>One verb across all eight is a hold, not a page.</strong> Put your hand on CHANCE or SWING, hold <strong>ALL</strong>, and the eight encoders become that one verb on every channel at once &mdash; the page indicator reads <code>ALL CHANCE</code> so you know which one you are looking at. It is the fastest way to swing or thin the whole kit without walking the channels one at a time, and it is how you find a voice that has gone quiet: a voice at chance 0 is silent, and nothing but its own column will say so.</p>
 <p><strong>MELODY is the instrument&rsquo;s main gesture.</strong> Set it to 20&ndash;40 and the voice fishes. Snap it to 0 the moment you hear something worth keeping. The cell reads <code>LOCK</code> rather than a number, deliberately: a number could be a coincidence, while <code>LOCK</code> means nothing will rewrite that pattern at all.</p>
 <p><strong>Both ends of MELODY are periodic, and only the middle is unpredictable.</strong> This surprises everyone once, so it is worth knowing before it happens to you:</p>
 <table><thead><tr><th>MELODY</th><th>What you get</th></tr></thead><tbody>
@@ -166,7 +166,7 @@
 <p><strong>It is safe on a take you have recorded.</strong> Setting the odds does not rewrite the pattern: no step is moved, added or removed, so unlike turning HITS or ROTATE it cannot hand your take back to the generator. It costs nothing to try mid-jam, and the odds are saved in the snapshot with everything else.</p>
 <hr>
 <h2 id="ratchet">RATCHET — a step that fires more than once</h2>
-<p><strong>Encoder 8 on a drum's STEP page was empty. It is RATCHET now.</strong> Turn it up and every step of that channel fires two, three or four times inside its own slot &mdash; a roll rather than a hit. It reads <code>OFF</code> at the bottom, because one hit is not a ratchet.</p>
+<p><strong>RATCHET is encoder 7 on a drum's STEP page.</strong> Turn it up and every step of that channel fires two, three or four times inside its own slot &mdash; a roll rather than a hit. It reads <code>OFF</code> at the bottom, because one hit is not a ratchet.</p>
 <p>It applies to the whole channel, not one step, which is what makes it a knob rather than an edit: turn it up for a bar of rolls and back down again without touching the pattern you wrote.</p>
 <hr>
 <h2 id="chance-ramp">The CHANCE ramp &mdash; the kit thins out and re-forms</h2>
@@ -192,39 +192,38 @@
 <p><strong>The page indicator says how many channels it took</strong> &mdash; <code>ROLL 3/8</code> means three of the eight are rolling and five are not. Three drums and five voices is a normal reading, not a fault; so is a lower number when you have recorded onto a drum.</p>
 <hr>
 <h2 id="reroll">Reroll — two buttons that ask for a different bar</h2>
-<p><strong>Hold PATTERN or SCENE to reroll the channel you are on.</strong> Hold, do not tap &mdash; let go early and nothing happens. A drum channel gets a new hit count and rotation; a channel played by the Turing register gets a new rhythm and a new play chance, and its MELODY is left at <code>LOCK</code> so you hear the new line held rather than already drifting.</p>
-<p><strong>Hold SHIFT with them to reroll a whole family at once.</strong> SHIFT + PATTERN rerolls every sampler channel, SHIFT + SCENE every synth. That split follows the <em>engine</em>, not how the channel is being played &mdash; a drum sampler switched to Turing is still a sampler, so asking for new synth lines never hands you a new drum pattern as well. The two buttons light to show which family you are standing in.</p>
-<p><strong>It lands on the bar, and the wait is the point.</strong> While it is pending the display reads <code>REROLL&gt;</code> and <strong>the tabs of the channels it will hit are drawn dotted</strong>, so you see what is about to change before it does. Press the same button again before it lands and it is cancelled.</p>
+<p><strong>Press PATTERN or SCENE to reroll the channel you are on.</strong> A drum channel gets a new hit count and rotation; a channel played by the Turing register gets a new rhythm and a new play chance, and its MELODY is left at <code>LOCK</code> so you hear the new line held rather than already drifting.</p>
+<p><strong>Hold SHIFT with them to reroll a whole family at once.</strong> SHIFT + PATTERN rerolls every sampler channel, SHIFT + SCENE every synth. That split follows the <em>engine</em>, not how the channel is being played &mdash; a drum sampler switched to Turing is still a sampler, so asking for new synth lines never hands you a new drum pattern as well. Each of the two is lit when it would act and dark when it would not, so the pair tells you which family you are standing in.</p>
+<p><strong>It lands on the bar, and the wait is the point.</strong> The press arms it: the display reads <code>REROLL&gt;</code> straight away and <strong>the tabs of the channels it will hit are drawn dotted</strong>, so you see what is about to change before it does. Press the same button again before it lands and it is cancelled.</p>
 <p><strong>It never touches a channel you have recorded on.</strong> Those channels are simply left out, and their tabs stay undotted &mdash; the drums have no undo, so a reroll that included them would be a data-loss button. If you want a recorded channel rerolled, hand it back first with ERASE + Group.</p>
 <p><strong>It cannot leave a channel silent.</strong> A drum always keeps at least one hit, a voice always keeps some steps and a play chance above a floor. Silence with nothing to explain it is the one thing this instrument refuses to produce, and a reroll that muted a channel by accident would be exactly that.</p>
 <p><strong>ERASE and the same button puts it back</strong> &mdash; one deep. ERASE is the take-it-back gesture everywhere on this instrument, and SHIFT is spoken for here.</p>
 <hr>
-<h2 id="the-gen-page">The GEN page &mdash; how a voice invents its line</h2>
-<p>The three voices have a page of their own. Page past STEP, SWING, CHANCE and RHYTHM and you reach <strong>GEN</strong>, which holds six controls that change <em>how</em> a voice makes up its melody rather than what that melody currently is.</p>
-<p><strong>ROTATE</strong> turns the whole line around the bar, the way it always has on the drums. The notes keep their order and their shape; they simply start somewhere else. Like every other parameter knob it stops at each end rather than wrapping round &mdash; only the big encoder cycles.</p>
-<p><strong>MODEL</strong> chooses which generator the voice uses. Turn it right for a <strong>wandering voice</strong> and left for the shift register it has always had. The register flips bits at random, so its line jumps about; the walk moves by steps, so its line strolls. They sound like different instruments rather than different settings. <strong>SPAN</strong> is how far the walk may stray from where it started, and <strong>STRIDE</strong> is how big each step is. Switching between the two models does not teleport the line: the register is the walk&rsquo;s starting point.</p>
-<p><strong>FEED</strong> and <strong>AMOUNT</strong> make one voice listen to another. Point FEED at a different voice and raise AMOUNT, and this voice&rsquo;s register drifts toward that one&rsquo;s over the following bars &mdash; related, never identical. It is a slow effect and it only acts at the bar. Two things to know: it rides the register&rsquo;s own mutation, so <strong>MELODY has to be off LOCK or nothing happens at all</strong>; and a voice cannot be fed to itself. The wheel steps over its own channel, because a control that appears to do nothing is worse than one that refuses.</p>
-<p>All six are held by FREEZE and refused on a channel you have taken over by playing it, exactly like everything else that rewrites a pattern.</p>
+<h2 id="the-auto-page">The voice AUTO page &mdash; how a voice invents its line</h2>
+<p>Press <strong>AUTO</strong> on a voice and you get everything the machine does to it without being asked: the two generators, and the controls that change <em>how</em> it makes up a melody rather than what that melody currently is. Page on once and you reach <strong>WALK</strong>, which holds the line rotation and the walk&rsquo;s own settings.</p>
+<p><strong>ROTATE</strong>, on the WALK page, turns the whole line around the bar, the way it always has on the drums. The notes keep their order and their shape; they simply start somewhere else. Like every other parameter knob it stops at each end rather than wrapping round &mdash; only the big encoder cycles.</p>
+<p><strong>MODEL</strong>, on the AUTO page beside MELODY, chooses which generator the voice uses. Turn it right for a <strong>wandering voice</strong> and left for the shift register it has always had. The register flips bits at random, so its line jumps about; the walk moves by steps, so its line strolls. They sound like different instruments rather than different settings. <strong>SPAN</strong> is how far the walk may stray from where it started, and <strong>STRIDE</strong> is how big each step is; both are on the WALK page, and both draw dead until MODEL is on the walk, because until then there is no walk for them to shape.</p>
+<p><strong>FEED</strong> and <strong>AMT</strong>, also on the WALK page, make one voice listen to another. Point FEED at a different voice and raise AMOUNT, and this voice&rsquo;s register drifts toward that one&rsquo;s over the following bars &mdash; related, never identical. It is a slow effect and it only acts at the bar. Two things to know: it rides the register&rsquo;s own mutation, so <strong>MELODY has to be off LOCK or nothing happens at all</strong>; and a voice cannot be fed to itself. The wheel steps over its own channel, because a control that appears to do nothing is worse than one that refuses.</p>
+<p>All of them are held by FREEZE and refused on a channel you have taken over by playing it, exactly like everything else that rewrites a pattern.</p>
 
 <h2 id="drum-rhythm">The drum rhythm register &mdash; the soft randomiser</h2>
-<p>The voices have always had a generator that evolves. The drums now have the same one. On a drum&rsquo;s STEP page, <strong>encoder 7 is RHYTHM</strong>, and turning it up lets steps appear and disappear from bar to bar instead of the euclid line repeating exactly.</p>
+<p>The voices have always had a generator that evolves. The drums have the same one. On a drum&rsquo;s AUTO page, <strong>encoder 3 is RHYTHM</strong>, and turning it up lets steps appear and disappear from bar to bar instead of the euclid line repeating exactly.</p>
 <p>Watch what it does and does not do: steps come and go, and <strong>the pattern never slides sideways</strong>. Sliding is rotation, that is a separate control, and this one must not quietly consume it.</p>
 <p>At zero it reads <strong>LOCK</strong>, the same word MELODY uses, and holds the line still.</p>
 <p><strong>Tapping a step now goes into the same register.</strong> Tap a lit pad and that hit stops sounding; tap it again and it comes back. What you tapped is part of what the generator knows, not an edit sitting on top of it &mdash; so it survives ROTATE and RHYTHM, and it is saved with the snapshot for nothing. Turning the line round keeps your hits removed: you took out a <em>hit</em>, not a position on the grid, and it stays out wherever the line is turned to.</p>
 <p><strong>HITS, DIVIDE and LENGTH are the start-again knobs.</strong> Move any of them and every step goes back into the register, so the plain euclid line returns. That is the way back &mdash; without it, a pattern you had tapped holes in could only be restored by tapping every hole shut again. The three of them go together because they all decide how many steps exist, and a hole in step 15 means something else the moment the pattern is twelve steps long.</p>
 <p>One limit worth knowing, and it follows from the register being <em>subtractive</em>: a tap can silence a hit the generator placed, or bring back one it had removed, but it cannot put a hit where the generator placed none. If you want more hits, that is what HITS is for.</p>
 <p>A tap is always honoured, including on a channel you have taken over by playing it. The generator still stands off such a channel &mdash; that is what taking it over means &mdash; but your own hand is not refused on the grounds that your hand was there first.</p>
-<p><strong>This moved a knob you may know.</strong> SWING used to sit on encoder 7 of the drum STEP page. It has not gone anywhere &mdash; it is on the SWING spread page, one page along, where it applies to every channel at once, which is where it is wanted in a jam. The RHYTHM spread page now reaches the drums for the same reason.</p>
 
 <h2 id="chord-walker">The chord walker &mdash; three voices, one progression</h2>
 <p>ROOT and SCALE are shared: all three voices pick their notes from the same key, and a key change lands on the bar. The walker moves that root for you.</p>
-<p>In ALL mode, page to <strong>WALK</strong>. <strong>WALK</strong> is how often it moves, in bars, and <strong>SPAN</strong> is how far it may wander. At zero WALK reads <strong>LOCK</strong> and the key stands still.</p>
+<p>Press <strong>VOLUME</strong> for the GLOBAL page. <strong>WALK</strong> is how often the root moves, in bars, and <strong>SPAN</strong> is how far it may wander. At zero WALK reads <strong>LOCK</strong> and the key stands still.</p>
 <p>Every WALK bars the root steps to a new degree <em>of the scale you are already in</em> &mdash; never chromatically, because three voices sharing a scale should not be walked out of it. It reflects at the edge of its span rather than parking against it, and a walk that returns to zero returns to exactly the key you dialled in, not near it.</p>
 <p>Measured on the instrument: at four bars and 121 BPM the root moved every 7.9 seconds, which is four bars to within a twentieth of a second, and every root it visited belonged to the same minor key.</p>
 
 <h2 id="rule">RULE &mdash; a second way a register evolves</h2>
 <p>Everything that evolves on this instrument has done it the same way: a bit flips at random, and RANDOM or RHYTHM is how often. <strong>RULE</strong> offers the other kind of change. Instead of rolling dice per step, it looks at each step&rsquo;s <em>neighbours</em> and applies a rule &mdash; so a shape can travel along the bar, collide with another, and come out the far side.</p>
-<p>It is on the GEN page of both kinds: column 7 on a voice, column 1 on the drums. Four settings, and the first is what you already have.</p>
+<p>It is encoder 1 of the AUTO page, on both kinds. Four settings, and the first is what you already have.</p>
 <ul>
 <li><strong>RAND</strong> &mdash; the shift register, unchanged. This is where every channel starts.</li>
 <li><strong>R30</strong> &mdash; scatters. Busy and rarely repeating.</li>
@@ -236,7 +235,7 @@
 
 <h2 id="lean">LEAN &mdash; a generator that leans</h2>
 <p>Euclid spaces hits evenly. That is its virtue and its limit: it cannot write a hat line that leans on the eighths, or a percussion part that lives on the offbeat, because it has no opinion about where the beat is.</p>
-<p><strong>LEAN</strong> is a second placement generator, on encoder 2 of the drum GEN page. It weighs the positions by what the part is <em>for</em>.</p>
+<p><strong>LEAN</strong> is a second placement generator, on encoder 2 of the drum AUTO page. It weighs the positions by what the part is <em>for</em>.</p>
 <ul>
 <li><strong>EUCL</strong> &mdash; euclid, exactly as before. Every existing channel is here.</li>
 <li><strong>BEAT</strong> &mdash; the floor. Hits land on the quarters, and extras flam just after them.</li>
@@ -247,19 +246,19 @@
 <p><strong>ROTATE still rotates a leaning channel</strong>, and that is deliberate. Turning the line moves its accents off the grid they were built against, which is a real musical consequence &mdash; but the alternative was to make ROTATE do nothing here, and a knob that quietly does nothing is the worst thing this surface could offer. The pads show you where the hits went.</p>
 
 <h2 id="lane">LANE &mdash; how far the generators may stray</h2>
-<p>In ALL mode, page to <strong>LANE</strong>. One number per drum channel: how narrow the danceable lane is.</p>
+<p><strong>LANE</strong> is encoder 4 of the drum AUTO page. One number per drum channel: how narrow the danceable lane is.</p>
 <p>At <strong>RAW</strong> you get the raw field &mdash; whatever the generators wrote, which is what the instrument has always played. Turn it up and each bar is measured before it is allowed out: the hits furthest from the beat are removed until what is left holds together. At the top only what lands on the beat survives.</p>
 <p>It replaces fiddling with six controls at once when a channel gets away from you. It only ever <em>removes</em> &mdash; it will not invent a hit, so HITS goes on meaning the number of hits the generator was asked for &mdash; and <strong>it will never empty a channel</strong>: the last hit survives whatever the knob says.</p>
-<p><strong>The three voices read <code>----</code> here and their knobs do nothing.</strong> That is not an oversight. A voice&rsquo;s placement <em>is</em> its rhythm register, and a tap on a voice pad writes into that same register &mdash; so a lane on a voice would quietly undo steps you put in by hand.</p>
+<p><strong>The three voices have no LANE at all</strong> &mdash; hold ALL with your hand on it and their three columns draw dead. That is not an oversight. A voice&rsquo;s placement <em>is</em> its rhythm register, and a tap on a voice pad writes into that same register &mdash; so a lane on a voice would quietly undo steps you put in by hand.</p>
 
 <h2 id="move">MOVE &mdash; how much the machine may move a channel</h2>
-<p>Page to <strong>MOVE</strong>, beside LANE. One number per channel, and it answers the question LANE does not: not how far the machine may go, but how often it may touch this channel at all.</p>
+<p><strong>MOVE</strong> is encoder 5 of the AUTO page, on both kinds. One number per channel, and it answers the question LANE does not: not how far the machine may go, but how often it may touch this channel at all.</p>
 <p>At <strong>LOCK</strong> the channel holds its pattern bar to bar and every automatic gesture leaves it alone &mdash; the tops can move while the kick stays exactly where you put it. At 100, which is where every channel starts, everything behaves as it always has.</p>
 <p>In between it is a <em>probability</em>, not a switch. At 50 the machine touches the channel about half the time it would have, which is a different instrument from a channel that is simply frozen: it still surprises you, just less often. If you want the hard version, FREEZE is the button for it.</p>
 <p>It gates the bar-rate gestures too &mdash; the ratchet and chance ramps, HALF and DOUBLE, the drop. Those used to walk every channel whether or not you had an opinion about that one.</p>
 
 <h2 id="phrase-fill">PHRASE and FILL &mdash; the fourth bar answers the first</h2>
-<p>Two more pages on the ALL ring. <strong>PHRASE</strong> is how long a channel&rsquo;s phrase is &mdash; <code>BAR</code>, <code>2bar</code> or <code>4bar</code> &mdash; and <strong>FILL</strong> is how full its last bar gets.</p>
+<p>Encoders 6 and 7 of the AUTO page. <strong>PHRASE</strong> is how long a channel&rsquo;s phrase is &mdash; <code>BAR</code>, <code>2bar</code> or <code>4bar</code> &mdash; and <strong>FILL</strong> is how full its last bar gets.</p>
 <p>Set a channel to <code>4bar</code> and raise its FILL, and every fourth bar comes back busier before the plain pattern returns. The added steps go to the <em>offbeats</em> first, because a fill that added hits on the beats would just be a louder version of the bar it is supposed to answer.</p>
 <p>A fill only ever adds. Taking hits away is a breakdown, and there are knobs for that.</p>
 <p>At <code>BAR</code> and <code>OFF</code>, which is where everything starts, no bar is ever a fill.</p>

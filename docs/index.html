@@ -698,7 +698,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
           publishes, down to a synth's fortieth parameter.
         </p>
         <p>
-          Each one runs on its own clock, so binding eight across the mixer makes the row breathe
+          Each one runs on its own clock, so binding eight across the levels makes the row breathe
           rather than pump. They are written into the snapshot with their depth, rate, shape and
           position — load the set tomorrow and they are still running, from the value you set rather
           than wherever the sweep happened to stop.
@@ -735,7 +735,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   <div class="wrap">
     <div class="sec-head">
       <span class="sec-mark"><span class="v">CHANS</span></span>
-      <h2>Eight channels,<br><em>five modes, no song mode</em></h2>
+      <h2>Eight channels,<br><em>four modes, no song mode</em></h2>
     </div>
     <p>
       Drums are warm colours and voices are cool, so the seam between the halves is visible on the
@@ -757,12 +757,14 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       <table>
         <thead><tr><th>Mode</th><th>What the eight encoders do</th></tr></thead>
         <tbody>
-          <tr><td>CONTROL · drum</td><td>KIT, SAMPLE, then LEVEL, REVERB, DELAY</td></tr>
+          <tr><td>CONTROL · drum</td><td>KIT, SAMPLE, RANGE, then LEVEL, REVERB, DELAY</td></tr>
           <tr><td>CONTROL · voice</td><td>PRESET, CUTOFF, RESO, ENV, DECAY, LEVEL, REVERB, DELAY</td></tr>
-          <tr><td>STEP · drum</td><td>HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, SWING, RATCHET</td></tr>
-          <tr><td>STEP · voice</td><td>DIVIDE, GATE, MELODY, RHYTHM, LENGTH, OCTAVE, RANGE, VELO</td></tr>
-          <tr><td>ALL</td><td>ROOT, SCALE, BPM, MASTER, REVSIZE, REVTYPE, DLYTIME, DLYFBK</td></tr>
-          <tr><td>MIXER · FILTER</td><td>one control across all eight channels at once</td></tr>
+          <tr><td>STEP · drum</td><td>HITS, ROTATE, DIVIDE, LENGTH, VELO, CHANCE, RATCH, SWING</td></tr>
+          <tr><td>STEP · voice</td><td>DIVIDE, LENGTH, GATE, OCTAVE, RANGE, VELO, CHANCE, SWING</td></tr>
+          <tr><td>AUTO · drum</td><td>RULE, LEAN, RHYTHM, LANE, MOVE, PHRASE, FILL, EXIT</td></tr>
+          <tr><td>AUTO · voice</td><td>RULE, MODEL, MELODY, RHYTHM, MOVE, PHRASE, FILL, EXIT</td></tr>
+          <tr><td>VOLUME</td><td>ROOT, SCALE, BPM, WALK, SPAN, MASTER, REVSIZE, DLYTIME</td></tr>
+          <tr><td>ALL, held</td><td>whichever verb your hand last moved, across all eight channels at once</td></tr>
         </tbody>
       </table>
     </div>
@@ -848,7 +850,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     <div class="pads">
       <a class="pad" href="00-start.html" style="--cc:var(--ch-a)"><span class="no">00</span><span class="ti">Requirements</span><span class="de">The hardware and software you need before you begin.</span></a>
       <a class="pad" href="01-fast-installation.html" style="--cc:var(--ch-b)"><span class="no">01</span><span class="ti">Fast installation</span><span class="de">The forty minutes, one command at a time.</span></a>
-      <a class="pad" href="02-features.html" style="--cc:var(--ch-c)"><span class="no">02</span><span class="ti">Features</span><span class="de">Eight channels, five modes, live capture.</span></a>
+      <a class="pad" href="02-features.html" style="--cc:var(--ch-c)"><span class="no">02</span><span class="ti">Features</span><span class="de">Eight channels, four modes, live capture.</span></a>
       <a class="pad" href="03-playing.html" style="--cc:var(--ch-d)"><span class="no">03</span><span class="ti">Playing</span><span class="de">How the surface is operated, control by control.</span></a>
       <a class="pad" href="04-manual-installation.html" style="--cc:var(--ch-e)"><span class="no">04</span><span class="ti">Manual installation</span><span class="de">By hand, and how to debug an install that went wrong.</span></a>
       <a class="pad" href="05-internals.html" style="--cc:var(--ch-f)"><span class="no">05</span><span class="ti">Internals</span><span class="de">The driver, the daemon, the sequencer underneath.</span></a>

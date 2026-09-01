@@ -92,24 +92,20 @@
 <p><strong>Discreteness is respected.</strong> A port with a handful of positions steps in whole units; a continuous one moves by percentage with the remainder carried, so slow turns still move it. <strong>A port with named positions steps between those names</strong> and never lands between two of them.</p>
 <p><strong>TEMPO changes how far a turn goes, never what it sets.</strong> A speed, not a mode: nothing latches, and the same knob reaches the same values either way. It applies to every encoder on the instrument, not only these.</p>
 <hr>
-<h2 id="switches">Switches: the eight buttons above the knobs</h2>
-<p>A plugin does not publish one kind of control, it publishes three. <strong>Continuous</strong> ones are knobs — cutoff, resonance. <strong>Switches</strong> are not: a filter type is <code>LP24</code> or <code>BP</code>, an oscillator is <code>saw</code> or <code>square</code>, a section is on or off. Turning a knob between two words is the wrong gesture for it, and it used to show you a number where the plugin had a name.</p>
-<p><strong>In CONTROL, F1&ndash;F8 are that page's switches</strong> — each button directly above the knob that owns the same column. Press it and the switch advances to its next position, wrapping round at the end. The column shows the plugin's own word, and the bar under it fills left to right to say where in the list you are — empty or full on a two-position switch.</p>
-<p><strong>The knob still works.</strong> It walks the same positions one at a time and stops at each end instead of wrapping. Use the button to cycle, the knob to arrive.</p>
+<h2 id="switches">Switches: a knob that steps between words</h2>
+<p>A plugin does not publish one kind of control, it publishes three. <strong>Continuous</strong> ones are knobs &mdash; cutoff, resonance. <strong>Switches</strong> are not: a filter type is <code>LP24</code> or <code>BP</code>, an oscillator is <code>saw</code> or <code>square</code>, a section is on or off.</p>
+<p><strong>A switch column shows the plugin's own word</strong>, and the bar under it fills left to right to say where in the list you are &mdash; empty or full on a two-position switch.</p>
+<p><strong>Its own encoder steps it.</strong> One position per detent, stopping at each end rather than wrapping, so you can walk the list and arrive where you meant to rather than round it. That is the whole gesture: the column that owns the switch already has a knob under it, so nothing else on the surface has to be spent on this.</p>
+<p><strong>F1&ndash;F8 stay the eight channels' mutes here, as they are in every mode.</strong> A row you hit without looking may only mean one thing.</p>
 <h3 id="switches-try-it">Try it</h3>
 <ol>
-<li><strong>Select a synth channel</strong> — F, G or H — and press <strong>CONTROL</strong>.</li>
+<li><strong>Select a synth channel</strong> &mdash; F, G or H &mdash; and press <strong>CONTROL</strong>.</li>
 <li><strong>Page right</strong> until a column shows a word rather than a four-digit number.</li>
-<li><strong>Press the F button above that column</strong>, and keep pressing. The word changes and comes back round to where it started; the button lights whenever the switch is off its first position.</li>
-<li><strong>Turn the knob below it.</strong> Same positions, one per detent, stopping at each end.</li>
+<li><strong>Turn the knob below it.</strong> The word changes, one position per detent, and stops at each end of the list.</li>
 </ol>
-<h3 id="switches-mute">What this costs, and where mute went</h3>
-<p>F1&ndash;F8 are the mutes everywhere else, and in CONTROL they are not. <strong>Hold SHIFT and they mute again</strong>, in CONTROL only; <strong>SOLO + F</strong> still solos there as it does in every other mode. No other mode is touched.</p>
-<p><strong>A dark F button in CONTROL means that column carries no switch</strong> — and the button does nothing, rather than doing something you did not ask for. On a drum channel, and on CONTROL page 1, that is the whole row.</p>
-<p><strong>While MOD is held or latched the row is dark and inert.</strong> MOD already makes the pads inert and turns every knob into a modulation depth, and that gesture is supposed to change nothing.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
-<p><strong>A one-shot trigger is not offered as a switch.</strong> Some plugins publish a port with a single named position — a panic or a re-init. Firing one off a button that used to be a mute is not a thing to discover by accident, so those are left alone.</p>
+<p><strong>A one-shot trigger is not offered as a switch.</strong> Some plugins publish a port with a single named position — a panic or a re-init. Firing one off a knob you may brush past is not a thing to discover by accident, so those are left alone.</p>
 <p><strong>A role the plugin has no port for draws dead.</strong> If a loaded synth publishes no resonance, the RESO column greys out and its encoder does nothing at all.</p>
 <p>That is the same law the whole surface follows: <strong>a knob with no source is drawn dead rather than showing a number it cannot move.</strong> A knob that silently does nothing is the worst object on a control surface, because you cannot tell it apart from a broken one.</p>
 <hr>

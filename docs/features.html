@@ -86,9 +86,9 @@
 <tr><td>Ratchets</td><td>RATCHET fires one step several times inside its own slot.</td><td><a href="generating-patterns.html#ratchet">RATCHET</a></td></tr>
 <tr><td>Reroll</td><td>Two buttons ask for a different bar from the same settings, with a one-deep undo.</td><td><a href="generating-patterns.html#reroll">Reroll</a></td></tr>
 <tr><td>The drum rhythm register</td><td>Steps appear and disappear bar to bar without the line sliding sideways. A pad tap goes into the same register and survives ROTATE.</td><td><a href="generating-patterns.html#drum-rhythm">The drum rhythm register</a></td></tr>
-<tr><td>A wandering voice</td><td>MODEL switches a voice between its shift register and a bounded walk, with SPAN and STRIDE.</td><td><a href="generating-patterns.html#the-gen-page">The GEN page</a></td></tr>
-<tr><td>Voices that listen to each other</td><td>FEED and AMOUNT drift one voice&rsquo;s register toward another&rsquo;s &mdash; related, never identical.</td><td><a href="generating-patterns.html#the-gen-page">The GEN page</a></td></tr>
-<tr><td>ROTATE on a melody</td><td>The whole line turns around the bar, notes and rests together.</td><td><a href="generating-patterns.html#the-gen-page">The GEN page</a></td></tr>
+<tr><td>A wandering voice</td><td>MODEL switches a voice between its shift register and a bounded walk, with SPAN and STRIDE.</td><td><a href="generating-patterns.html#the-auto-page">The voice AUTO page</a></td></tr>
+<tr><td>Voices that listen to each other</td><td>FEED and AMOUNT drift one voice&rsquo;s register toward another&rsquo;s &mdash; related, never identical.</td><td><a href="generating-patterns.html#the-auto-page">The voice AUTO page</a></td></tr>
+<tr><td>ROTATE on a melody</td><td>The whole line turns around the bar, notes and rests together.</td><td><a href="generating-patterns.html#the-auto-page">The voice AUTO page</a></td></tr>
 <tr><td>A cellular automaton</td><td>RULE evolves a register by looking at each step&rsquo;s neighbours instead of rolling dice, so shapes travel and collide.</td><td><a href="generating-patterns.html#rule">RULE</a></td></tr>
 <tr><td>A generator that leans</td><td>LEAN weights hit positions by what the part is for &mdash; the floor, the eighths, or the offbeat.</td><td><a href="generating-patterns.html#lean">LEAN</a></td></tr>
 <tr><td>A constraint on the generators</td><td>LANE measures a bar and removes the hits furthest from the beat until it holds together.</td><td><a href="generating-patterns.html#lane">LANE</a></td></tr>
@@ -123,7 +123,7 @@
 <tr><td>HALF and DOUBLE</td><td>The same rhythm at another speed, landing on a boundary.</td><td><a href="generating-patterns.html#half-double">HALF and DOUBLE</a></td></tr>
 <tr><td>The CHANCE ramp</td><td>The kit thins out over the bars you choose and re-forms.</td><td><a href="generating-patterns.html#chance-ramp">The CHANCE ramp</a></td></tr>
 <tr><td>The ratchet ramp</td><td>The roll into the drop, climbing RATCHET as it goes.</td><td><a href="generating-patterns.html#ratchet-ramp">The ratchet ramp</a></td></tr>
-<tr><td>Banks as scenes</td><td>Hold DUPLICATE: sixteen pads are sixteen whole arrangements, and a press lands on the bar.</td><td><a href="the-surface.html#bank-grid">The bank grid</a></td></tr>
+<tr><td>Banks as scenes</td><td>Hold or tap DUPLICATE: sixteen pads are sixteen whole arrangements, and a press lands on the bar.</td><td><a href="the-surface.html#bank-grid">The bank grid</a></td></tr>
 <tr><td>Parts that leave rather than stop</td><td>EXIT closes a channel through its filter and level over a bar or four instead of muting it.</td><td><a href="mixing-and-effects.html#exit">EXIT</a></td></tr>
 </table>
 
@@ -140,8 +140,8 @@
 <tr><td>Engine presets</td><td>Walk a synth&rsquo;s own patches from the panel.</td><td><a href="sound-and-presets.html#what-it-is">Sound and presets</a></td></tr>
 <tr><td>Switching what a channel IS</td><td>A drum channel can behave as a voice, and back, without swapping its engine.</td><td><a href="sound-and-presets.html#how-it-works">How switching a kind works</a></td></tr>
 <tr><td>Deep parameter pages</td><td>Eight knobs reaching a plugin&rsquo;s fortieth parameter, on pages built from what it publishes.</td><td><a href="deep-parameters.html#what-it-is">Deep parameter control</a></td></tr>
-<tr><td>Plugin switches</td><td>The eight buttons above the knobs carry a plugin&rsquo;s on/off and enum controls.</td><td><a href="deep-parameters.html#switches">Switches</a></td></tr>
-<tr><td>One control across eight channels</td><td>Spread pages: level, reverb, delay, cutoff, resonance, swing, chance and the rest, for all eight at once.</td><td><a href="mixing-and-effects.html#what-it-is">Mixing and effects</a></td></tr>
+<tr><td>Plugin switches</td><td>A port with named positions steps between the plugin&rsquo;s own words on its own encoder, never landing between two.</td><td><a href="deep-parameters.html#switches">Switches</a></td></tr>
+<tr><td>The lens &mdash; one verb across eight channels</td><td>Hold ALL and the eight encoders become whichever channel verb your hand last moved, on all eight channels at once. Level, the sends, cutoff, swing, chance, anything a channel carries.</td><td><a href="mixing-and-effects.html#how-it-works">How it works</a></td></tr>
 <tr><td>Two inserts per channel</td><td>A post-fader echo and reverb on every one of the eight.</td><td><a href="mixing-and-effects.html#how-it-works">How it works</a></td></tr>
 <tr><td>A master insert</td><td>One filter across the whole mix.</td><td><a href="mixing-and-effects.html#master-insert">The master insert</a></td></tr>
 </table>
@@ -149,9 +149,12 @@
 <h2 id="surface-and-saving">The surface, and keeping what you made</h2>
 <table>
 <tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
-<tr><td>Five modes, and page rings</td><td>The big encoder walks a ring of pages within whichever mode you are in.</td><td><a href="the-surface.html#modes-and-pages">Modes and pages</a></td></tr>
+<tr><td>Four modes, and page rings</td><td>CONTROL, STEP, AUTO and VOLUME &mdash; how it sounds, what it plays, what the machine does by itself, and what holds for everything. The big encoder walks the ring of pages within the one you are in.</td><td><a href="the-surface.html#modes-and-pages">Modes and pages</a></td></tr>
+<tr><td>HOME</td><td>Press the big encoder and you are back at the default performance state: STEP, page 1, every latch dropped. Nothing armed is cancelled.</td><td><a href="the-surface.html#modes-and-pages">Modes and pages</a></td></tr>
+<tr><td>One duration rule for every modifier</td><td>A tap latches and a hold is momentary, on all of them &mdash; SHIFT, ARM, MUTE, MOD, FREEZE, the bank grid, NAVIGATE, SOLO and the F row.</td><td><a href="the-surface.html#what-the-lights-mean">What the lights mean</a></td></tr>
 <tr><td>Two displays that say what the knobs are</td><td>Eight columns, each with a name, a value and a bar, plus the page indicator above them.</td><td><a href="the-surface.html#reading-the-displays">Reading the displays</a></td></tr>
 <tr><td>Colour-coded channels</td><td>Every channel has a hue, and it is the same hue on the pads, the tabs and the Group buttons.</td><td><a href="the-surface.html#what-the-lights-mean">What the lights mean</a></td></tr>
+<tr><td>One alphabet for the lights</td><td>Dark does nothing, dim is available, bright is acting or held, a slow blink is latched, and a pulse on the bar is counting down. Every modifier lights.</td><td><a href="the-surface.html#what-the-lights-mean">What the lights mean</a></td></tr>
 <tr><td>It says when it has stopped</td><td>If generation stops, the indicator reads GEN STOPPED and the pads keep playing.</td><td><a href="the-surface.html#when-it-goes-quiet">When it goes quiet</a></td></tr>
 <tr><td>Snapshots</td><td>The whole state saved and recalled, including the generators&rsquo; own registers and any running modulators.</td><td><a href="saving.html#what-persists">What a snapshot carries</a></td></tr>
 <tr><td>Seventy-three starting points</td><td>A genre pack and a drone/ambient pack, ready to load.</td><td><a href="sound-and-presets.html#genre-pack">Fifty-one starting points</a></td></tr>

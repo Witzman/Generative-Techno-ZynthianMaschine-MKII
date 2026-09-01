@@ -72,7 +72,7 @@
 <p>What each channel sounds like, how to change it while the rig plays, and how to make a channel behave as something its engine is not.</p>
 <hr>
 <h2 id="what-it-is">What it is</h2>
-<p><strong>CONTROL is the sound page, and it follows the engine.</strong> A drum engine gives you KIT and SAMPLE; a synth engine gives you PRESET, CUTOFF, RESO, ENV and DECAY. Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel — the same three controls in the same place, always.</p>
+<p><strong>CONTROL is the sound page, and it follows the engine.</strong> A drum engine gives you KIT, SAMPLE and RANGE; a synth engine gives you PRESET, CUTOFF, RESO, ENV and DECAY. Encoders 6, 7 and 8 are LEVEL, REVERB and DELAY on every channel — the same three controls in the same place, always.</p>
 <p><strong>The engine decides, not the behaviour.</strong> A sampler played by the Turing register still has a kit and a sample, so it still shows them. Switching a channel's kind changes how it is played, never what it is.</p>
 <p>Every channel keeps its engine for the life of the snapshot. Nothing is created or destroyed while you play, because building a plugin rebuilds the audio graph and that is a hole in the sound.</p>
 <hr>
@@ -150,9 +150,9 @@
 <p>Any other LV2 synth Zynthian can load will work with the surface &mdash; the four page-1 knobs rebind by name and the generated pages are built from whatever it publishes. Untested means untested, not unsupported.</p>
 <hr>
 <h2 id="kit-window">RANGE narrows the kit walk</h2>
-<p><strong>When a drum channel is played by the Turing register, RANGE decides how much of the kit it may reach.</strong> It arrives at <strong>1, which is one note</strong>: the channel keeps playing its own drum and the register decides only <em>which steps sound</em>. That is the useful thing most of the time &mdash; you get rhythm you could not have programmed, on the drum you chose.</p>
+<p><strong>When a drum channel is played by the Turing register, RANGE decides how much of the kit it may reach.</strong> It is encoder 3 of that channel's CONTROL page, because how wide the walk is belongs to the sound rather than to the pattern. It arrives at <strong>1, which is one note</strong>: the channel keeps playing its own drum and the register decides only <em>which steps sound</em>. That is the useful thing most of the time &mdash; you get rhythm you could not have programmed, on the drum you chose.</p>
 <p><strong>Turn it up and the walk widens outward from that drum</strong>, taking in its neighbours in the kit, until at 4 it may use the whole thing. That is where a hats channel starts hitting kicks, which is occasionally what you want and usually not.</p>
-<p>On a synth channel the same encoder still means octave spread; the column follows the engine, as the sound page always has.</p>
+<p>On a synth channel RANGE means octave spread instead, and it sits on that channel's STEP page. The column follows the engine, as the sound page always has &mdash; a kit walk only exists where there is a kit.</p>
 <hr>
 <h2 id="see-also">See also</h2>
 <ul>
