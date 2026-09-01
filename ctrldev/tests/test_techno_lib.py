@@ -2198,6 +2198,135 @@ class TheLens(unittest.TestCase):
             self.assertEqual(tl.lens_verb(verb), verb, verb)
 
 
+class NoFeatureLostItsWayIn(unittest.TestCase):
+    """THE COVERAGE PROOF, as a test rather than as a table in a document.
+
+    The 2026-09-01 redesign moved almost every page. A table in a spec that
+    says "nothing was lost" is a claim; this is the check, and it fails the
+    moment a verb loses its last route to a knob.
+
+    It exists because this project has been burned twice by the opposite -
+    a document describing the code, believed, and wrong: `apply()` was
+    documented as the single write path and had no branch for HITS or ROTATE,
+    and a library slot was costed at zero because a spec said a button already
+    reached it when no button did."""
+
+    # Every key in default_channel_state that is NOT a parameter: registers,
+    # bookkeeping and history. Each is here with the reason it can never be a
+    # knob, because "why is this one exempt" is exactly the question a future
+    # reader will ask.
+    NOT_PARAMETERS = {
+        "pending",       # law L2's bookkeeping set
+        "rhythm_reg",    # the register itself; `rhythm` is its evolve rate
+        "register",      # the Turing register; `random` is its evolve rate
+        "ring",          # the four-deep undo history behind NOTE REPEAT
+        "kit_range",     # reached through the `range` alias on a sampler
+        "walk_seed",     # bumped by a reroll, never dialled
+    }
+
+    def _page_verbs(self):
+        out = set()
+        for ring in tl.PAGE_RINGS.values():
+            for desc in ring:
+                for verb in desc["verbs"] or ():
+                    if verb is not None:
+                        out.add(verb)
+                if desc["verb"]:
+                    out.add(desc["verb"])
+        return out
+
+    def test_every_channel_parameter_has_a_knob(self):
+        reachable = self._page_verbs()
+        for kind in ("drum", "voice"):
+            state = tl.default_channel_state(kind)
+            missing = sorted(key for key in state
+                             if key not in self.NOT_PARAMETERS
+                             and key not in reachable)
+            self.assertEqual(missing, [],
+                             f"{kind}: state nothing can reach: {missing}")
+
+    def test_the_kit_walk_window_is_reachable_through_range(self):
+        # It was reachable from NO page before 2026-09-01 - a value in every
+        # snapshot with no way to set it. RANGE on CONTROL/drum is that knob,
+        # aliased to kit_range on a sampler by param_get and apply together.
+        drum = tl.PAGE_RINGS[("CONTROL", "drum")][0]
+        self.assertIn("range", drum["verbs"])
+
+    def test_every_verb_a_page_names_is_one_the_column_table_can_draw(self):
+        # The other direction, and the cheaper bug: a page naming a verb that
+        # VERB_COLS has never heard of draws a dead column forever, silently.
+        for (mode, kind), ring in tl.PAGE_RINGS.items():
+            for desc in ring:
+                for verb in desc["verbs"] or ():
+                    if verb is None:
+                        continue
+                    self.assertIn(verb, tl.VERB_COLS,
+                                  f"{mode}/{kind} {desc['title']}: {verb}")
+
+    def test_page_one_of_every_ring_is_full_or_nearly(self):
+        """Law G5's second half, 2026-09-01, and it is about PAGE ONE.
+
+        Drawing a dead column honestly is the right answer to a control that
+        cannot exist. Three of them on the page you land on without turning
+        anything is a LAYOUT error that the honest drawing was hiding - which
+        is what CONTROL/drum (three dead) and GEN/drum (six) were.
+
+        Page one is what the mode button shows, so it is the one that has to
+        earn its eight slots. A second page is an extension and may be
+        emptier: the voice's thirteen generative verbs do not divide into
+        sixteen slots, and pretending they do would mean padding page one
+        with something that belongs elsewhere."""
+
+        for (mode, kind), ring in tl.PAGE_RINGS.items():
+            verbs = ring[0]["verbs"]
+            if not verbs:
+                continue
+            dead = sum(1 for verb in verbs if verb is None)
+            self.assertLessEqual(dead, 2,
+                                 f"{mode}/{kind} page 1 "
+                                 f"({ring[0]['title']}): {dead} empty slots")
+
+    def test_a_later_page_still_earns_most_of_its_slots(self):
+        # An extension page may be emptier than page one, but a page that is
+        # half empty is two pages' worth of turning for four knobs.
+        for (mode, kind), ring in tl.PAGE_RINGS.items():
+            for desc in ring[1:]:
+                verbs = desc["verbs"]
+                if not verbs:
+                    continue
+                dead = sum(1 for verb in verbs if verb is None)
+                self.assertLessEqual(dead, 3,
+                                     f"{mode}/{kind} {desc['title']}: "
+                                     f"{dead} empty slots")
+
+    def test_no_ring_is_longer_than_two_static_pages(self):
+        # The rings were 24 pages, five of them one-verb spreads, and the
+        # generative page sat at depth six of the longest one. Generated LV2
+        # and FX pages are appended at runtime and are not counted here -
+        # they are as long as the plugin is.
+        for key, ring in tl.PAGE_RINGS.items():
+            self.assertLessEqual(len(ring), 2, f"{key}: {len(ring)} pages")
+
+    def test_every_mode_still_has_a_ring_for_every_kind(self):
+        for mode in tl.MODES:
+            for kind in ("drum", "voice"):
+                key = tl.ring_key(mode, kind)
+                self.assertIn(key, tl.PAGE_RINGS, f"no ring for {key}")
+                self.assertGreater(len(tl.PAGE_RINGS[key]), 0)
+
+    def test_the_lens_is_not_a_mode(self):
+        # It is a stateful button, and a CC in both places is exactly the
+        # collision button_conflicts() exists to find.
+        self.assertNotIn(tl.MODE_LENS, tl.MODES)
+        self.assertEqual(tl.BUTTONS_STATEFUL[38], "lens")
+        self.assertEqual(tl.button_conflicts(), [])
+
+    def test_home_is_bound_and_the_last_free_cc_is_still_offered(self):
+        self.assertEqual(tl.BUTTONS_PRESS[12], "home")
+        self.assertNotIn(12, tl.CCS_MEASURED_AND_UNCLAIMED)
+        self.assertEqual(tl.CCS_MEASURED_AND_UNCLAIMED, frozenset({5}))
+
+
 
 if __name__ == "__main__":
     unittest.main()
