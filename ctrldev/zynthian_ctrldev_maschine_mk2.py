@@ -686,6 +686,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # nothing - the capture is what makes the macro reversible at all.
         self._gate_ramp = None
         self.mute_down = False
+        # BANKS AS SCENES, 2026-09-01. The overlay, the page the big encoder
+        # is showing while it is held, and the bank waiting for the bar.
+        self.bank_down = False
+        self._bank_page = 0
+        self._bank_pending = None
+        # Everything PYTHON owns about a channel, per bank. zynseq carries the
+        # patterns; the registers, the rotation, the ownership and the
+        # generator settings live here and are keyed by CHANNEL only - so
+        # without this a bank switch would swap the patterns and leave all
+        # three voices playing the same line over a different pattern set,
+        # which is not a scene.
+        self._bank_state = {}
         # Queued mute changes: channel -> the mute state to take at that
         # channel's next wrap. DELIBERATELY NOT state[ch]["pending"] - that
         # set holds only "div" and "length", and _wrap_channel treats any
@@ -2234,6 +2246,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         steps, self._big_carry = tlib.big_detents(self._big_carry + units)
         if not steps:
             return
+        if self.bank_down:
+            # WHILE THE BANK OVERLAY IS HELD the big encoder walks the four
+            # pages of sixteen banks - which is the job it does everywhere
+            # else on this surface, so nothing new is learned. Clamped, not
+            # wrapped: the same law the switch columns follow.
+            page = tlib.switch_step(self._bank_page, tlib.BANK_PAGES, steps)
+            if page != self._bank_page:
+                self._bank_page = page
+                with self.lock:
+                    self._render_pads()
+                    self._render_display()
+            return
         if self.mod_down:
             # WHILE MOD IS LATCHED THE BIG ENCODER IS NOT THE PAGE RING. It
             # scales every live modulator's depth at once instead. This is an
@@ -3182,6 +3206,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # hands them back on release (owner, 2026-08-19).
                 self._shift_pad(step)
                 return True
+            if self._pad_owner() == "bank":
+                # Above MUTE, which is OVERLAY_PRIORITY's order: launching a
+                # whole arrangement outranks muting one channel.
+                self._bank_pad(step)
+                return True
             if self._pad_owner() == "mute":
                 self._mute_pad(step)
                 return True
@@ -3564,6 +3593,121 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._repeat_restore = {}
         with self.lock:
             self._render_all()
+
+    def _act_bank(self, down):
+        """DUPLICATE holds the sixteen-bank arrangement picker on the pads."""
+
+        self.bank_down = down
+        if down:
+            # Always open on the page the live bank is on, so the pad under
+            # the finger is the arrangement being heard.
+            self._bank_page = max(0, (self.bank - 1) // tlib.BANKS_PER_PAGE)
+        with self.lock:
+            self._render_pads()
+            self._render_display()
+
+    def _stocked_banks(self):
+        """Which banks actually exist, read WITHOUT allocating one.
+
+        getSequence creates on any index it is handed, silently and
+        permanently into the riff - so drawing a grid of 64 pads with the
+        wrong reader would grow the snapshot by 64 banks. getSequencesInBank
+        only counts."""
+
+        out = []
+        for bank in range(1, tlib.BANKS_PER_PAGE * tlib.BANK_PAGES + 1):
+            try:
+                if self.libseq.getSequencesInBank(bank) > 0:
+                    out.append(bank)
+            except Exception:
+                break
+        return tuple(out)
+
+    def _paint_bank_grid(self):
+        """Sixteen banks, one page of four. Static: it repaints when the live
+        or queued bank changes, which is at most once a bar."""
+
+        stocked = self._stocked_banks()
+        for pad in range(16):
+            bank = tlib.bank_of_pad(pad, self._bank_page)
+            look = tlib.bank_pad_look(bank, self.bank, self._bank_pending,
+                                      stocked)
+            self._paint_pad(pad, look)
+
+    def _bank_pad(self, pad):
+        """A pad while DUPLICATE is held: queue that bank for the next bar.
+
+        LANDS ON THE BAR, never under the finger. A whole arrangement
+        arriving mid-bar is the one gesture on this instrument that could not
+        possibly be in time, and the phrase machinery that lands everything
+        else already ships.
+
+        Pressing the queued bank again CANCELS, which is what the second press
+        of a gesture means everywhere else on this surface."""
+
+        bank = tlib.bank_of_pad(pad, self._bank_page)
+        if bank is None or bank == self.bank:
+            return
+        if bank == self._bank_pending:
+            self._bank_pending = None
+        else:
+            self._bank_pending = bank
+        with self.lock:
+            self._render_pads()
+            self._render_display()
+
+    def _author_bank(self, bank):
+        """Lay down THIS instrument's eight channels in an empty bank.
+
+        zynseq builds a missing bank ITSELF on select_bank, as sixteen
+        sequences in a 4x4 grid on MIDI channels 0-3 - somebody else's
+        default, written into the riff. So an empty bank is authored here
+        first, in the layout the driver's eight channels actually use, and
+        select_bank then finds a bank that already exists and leaves it alone.
+
+        Called only from a deliberate press on a dark pad. The GRID never
+        authors anything: a picture that allocated what it drew would grow the
+        snapshot by 64 banks the first time the overlay was held."""
+
+        self.libseq.setSequencesInBank(bank, 0)
+        self.libseq.setSequencesInBank(bank, len(tlib.CHANNELS))
+        for group, ch in enumerate(tlib.CHANNELS):
+            midi = ch[5]
+            self.libseq.setGroup(bank, group, group)
+            self.libseq.setChannel(bank, group, 0, midi)
+
+    def _bank_switch(self, bank):
+        """Take a bank. Poll thread, on the bar, under the lock.
+
+        STASH THEN RESTORE. What Python owns about a channel is keyed by
+        channel and not by bank, so the outgoing bank's registers are put away
+        and the incoming bank's are brought back - or built fresh, which is
+        what makes a never-used bank a blank scene rather than a copy of the
+        one it was launched from."""
+
+        old = self.bank
+        self._bank_state[old] = {ch: dict(self.state[ch])
+                                 for ch in range(len(tlib.CHANNELS))}
+        if self.libseq.getSequencesInBank(bank) == 0:
+            self._author_bank(bank)
+        self.zynseq.select_bank(bank, force=True)
+        self.bankpin.pin(self.zynseq.bank)
+        saved = self._bank_state.get(bank)
+        for ch in range(len(tlib.CHANNELS)):
+            kind = tlib.CHANNELS[ch][2]
+            if saved is not None and ch in saved:
+                self.state[ch] = tlib.upgrade_state(kind, saved[ch],
+                                                    self._steps(ch))
+            else:
+                self.state[ch] = tlib.default_channel_state(kind)
+        # A bank switch is snapshot-shaped: it rewrites every play mode and
+        # every cached value the driver holds. Both of those already have a
+        # single answer each, and this reuses them rather than inventing a
+        # third.
+        self._resync_all()
+        self._force_loop_mode()
+        self._render_all()
+        self._slog("bank", event="switch", bank=bank, was=old)
 
     def _act_mute(self, down):
         """MUTE holds the eight-channel mute grid on the pads."""
@@ -4362,7 +4506,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return tlib.pad_owner(shift=self.shift_down, mod=self.mod_down,
                               arm=self.arm_down,
                               navigate=self.navigate_down,
-                              mute=self.mute_down)
+                              mute=self.mute_down,
+                              bank=self.bank_down)
 
     def _mod_clear(self, key):
         """Drop a modulator and restore its base, so the parameter is left
@@ -6549,6 +6694,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._render_display()
                 self._render_transport()
             return
+        if self._bank_pending is not None:
+            # THE BANK LANDS ON THE BAR, and after the freeze gate above: a
+            # whole arrangement is the largest change this instrument makes,
+            # and FREEZE promises nothing changes under you.
+            #
+            # Popped before it is taken, so a raise cannot leave a bank queued
+            # forever with a green pad advertising a switch that will never
+            # happen.
+            want, self._bank_pending = self._bank_pending, None
+            try:
+                with self.lock:
+                    self._bank_switch(want)
+            except Exception as e:
+                self._log_poll_error(f"bank switch to {want}", e)
         if self._note_expires is not None and bar >= self._note_expires:
             # A refusal note lives exactly as long as the macro would have.
             self._note_expires = None
@@ -7546,6 +7705,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # overlay does not have to suppress or special-case it, which is the
         # whole reason white is reserved for it.
         owner = self._pad_owner()
+        if owner == "bank":
+            self._paint_bank_grid()
+            return
         if owner == "mute":
             self._paint_mute_grid()
             return
@@ -8326,6 +8488,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         label = tlib.phrase_label(label, self._phrase_bar)
         # And FREEZE says the machine is being held, which is the difference
         # between held and broken.
+        if self.bank_down:
+            label = tlib.bank_label(self._bank_page, self.bank)
         label = tlib.arm_label(label, self.arm_down, self._arm_picked)
         label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
         label = tlib.repeat_label(label, bool(self._repeat_restore),

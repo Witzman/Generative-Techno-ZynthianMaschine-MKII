@@ -5982,3 +5982,66 @@ class TheWatchdogSaysWhenTheMachineStopped(unittest.TestCase):
         # the label would repaint both screens ten times a second, which is
         # how this controller has been wedged before.
         self.assertEqual(tl.stall_label(103.9, 100.0), "GEN STOPPED 3s")
+
+
+class BanksAsScenes(unittest.TestCase):
+    """2026-09-01. The sequencer has 64 banks and this instrument has always
+    used one. A bank is a complete eight-channel pattern set, so sixteen pads
+    are sixteen whole arrangements.
+
+    The published entry said they are "all already in the snapshot". THEY ARE
+    NOT: every shipped .zss carries exactly one bank block, and asking zynseq
+    for a missing one makes it invent a sixteen-pad grid on MIDI channels 0-3.
+    So a bank this instrument uses has to be AUTHORED in this instrument's
+    layout, and the picture must never be drawn from a read that allocates."""
+
+    def test_the_overlay_sits_under_ARM_and_over_MUTE(self):
+        pri = list(tl.OVERLAY_PRIORITY)
+        self.assertIn("bank", pri)
+        self.assertLess(pri.index("arm"), pri.index("bank"))
+        self.assertLess(pri.index("bank"), pri.index("mute"))
+
+    def test_holding_the_bank_button_owns_the_pads(self):
+        self.assertEqual(tl.pad_owner(bank=True), "bank")
+
+    def test_ARM_still_wins_because_its_countdown_must_stay_readable(self):
+        self.assertEqual(tl.pad_owner(bank=True, arm=True), "arm")
+
+    def test_the_bank_pads_are_NOT_steps(self):
+        # No playhead sweep over an arrangement picker.
+        self.assertFalse(tl.overlay_is_stepwise("bank"))
+
+    def test_sixteen_pads_are_sixteen_banks_on_page_one(self):
+        self.assertEqual(tl.bank_of_pad(0, 0), 1)
+        self.assertEqual(tl.bank_of_pad(15, 0), 16)
+
+    def test_the_big_encoder_walks_four_pages_of_sixteen(self):
+        self.assertEqual(tl.bank_of_pad(0, 1), 17)
+        self.assertEqual(tl.bank_of_pad(15, 3), 64)
+
+    def test_a_page_outside_the_four_is_refused_rather_than_wrapped(self):
+        self.assertIsNone(tl.bank_of_pad(0, 4))
+        self.assertIsNone(tl.bank_of_pad(16, 0))
+
+    def test_the_live_bank_is_the_one_bright_pad(self):
+        colour, level = tl.bank_pad_look(3, live=3, queued=None, stocked=(1, 3))
+        self.assertEqual(level, tl.PAD_FULL)
+
+    def test_a_queued_bank_is_GREEN_because_green_already_means_soon(self):
+        colour, _ = tl.bank_pad_look(5, live=3, queued=5, stocked=(1, 3, 5))
+        self.assertEqual(colour, tl.COLOR_ARM_LENGTH)
+
+    def test_a_stocked_bank_is_the_same_hue_DIMMER_not_a_new_colour(self):
+        live, _ = tl.bank_pad_look(3, live=3, queued=None, stocked=(1, 3))
+        stocked, level = tl.bank_pad_look(1, live=3, queued=None,
+                                          stocked=(1, 3))
+        self.assertEqual(stocked, live)
+        self.assertLess(level, tl.PAD_FULL)
+
+    def test_an_empty_bank_is_DARK_so_a_press_claims_nothing(self):
+        _, level = tl.bank_pad_look(9, live=3, queued=None, stocked=(1, 3))
+        self.assertEqual(level, 0.0)
+
+    def test_the_label_says_which_page_of_banks_is_showing(self):
+        self.assertEqual(tl.bank_label(0, 3), "BANK 1/4 . 3")
+        self.assertEqual(tl.bank_label(2, 17), "BANK 3/4 . 17")

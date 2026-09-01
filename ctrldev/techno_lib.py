@@ -1056,15 +1056,19 @@ class techno_lib:
     # ARM sits above MOD and below SHIFT. SHIFT is the oldest and most-used
     # binding and must not move; a player holding ARM has committed to
     # scheduling, so it outranks the timbre overlay underneath it.
-    OVERLAY_PRIORITY = ("shift", "arm", "mute", "mod", "navigate")
+    # BANK sits under ARM and over MUTE, 2026-09-01. Under ARM because ARM's
+    # countdown is already running and has to stay readable; over MUTE because
+    # launching a whole arrangement is a larger commitment than muting one
+    # channel, and the larger commitment should not be the one that loses.
+    OVERLAY_PRIORITY = ("shift", "arm", "bank", "mute", "mod", "navigate")
 
     # Whether an overlay's pads still MEAN steps. The playhead is drawn over
     # the top only where they do: under SHIFT pad 3 is step 3 carrying a
     # probability, so the sweep helps; under MOD pad 3 is a RATE and a playhead
     # marker on it would point at nothing. Under ARM a pad is a macro or a bar
     # count, which is the same story again.
-    OVERLAY_STEPWISE = {"shift": True, "arm": False, "mute": False,
-                        "mod": False, "navigate": False}
+    OVERLAY_STEPWISE = {"shift": True, "arm": False, "bank": False,
+                        "mute": False, "mod": False, "navigate": False}
 
     @staticmethod
     def overlay_is_stepwise(owner):
@@ -1098,7 +1102,7 @@ class techno_lib:
 
     @staticmethod
     def pad_owner(shift=False, mod=False, arm=False, navigate=False,
-                  mute=False):
+                  mute=False, bank=False):
         """Which overlay the PADS obey, chord exceptions included.
 
         THE SINGLE PREDICATE for the pad dispatcher, the pad painter and the
@@ -1124,16 +1128,17 @@ class techno_lib:
         if mod and arm and not shift:
             return "mod"
         return techno_lib.overlay_owner(shift=shift, mod=mod, arm=arm,
-                                        navigate=navigate, mute=mute)
+                                        navigate=navigate, mute=mute,
+                                        bank=bank)
 
     @staticmethod
     def overlay_owner(shift=False, mod=False, navigate=False, arm=False,
-                      mute=False):
+                      mute=False, bank=False):
         """Which modifier owns the pads, or None for the ordinary step picture.
 
         `arm` defaults False so every existing caller keeps its meaning."""
-        held = {"shift": shift, "arm": arm, "mute": mute, "mod": mod,
-                "navigate": navigate}
+        held = {"shift": shift, "arm": arm, "bank": bank, "mute": mute,
+                "mod": mod, "navigate": navigate}
         for name in techno_lib.OVERLAY_PRIORITY:
             if held[name]:
                 return name
@@ -1149,6 +1154,59 @@ class techno_lib:
     # at: the hand is already on the pads, so the third level has a gesture to
     # explain it.
     MUTE_QUEUED = 0.6
+
+    BANKS_PER_PAGE = 16
+    BANK_PAGES = 4
+    # The live and stocked banks share ONE hue and differ only in brightness,
+    # which is legitimate here for the ARM picker's own reason: exactly one pad
+    # is full, so it is a POSITION read and not a magnitude read. The queued
+    # bank gets a different hue because "not yet, but soon" already has one on
+    # this surface.
+    COLOR_BANK = 0xFFE000
+
+    @staticmethod
+    def bank_of_pad(pad, page):
+        """Which zynseq bank a pad stands for, or None.
+
+        64 banks, sixteen pads, four pages walked by the big encoder while the
+        overlay is held - the same job that encoder does everywhere else.
+        Banks are 1-based because zynseq's own select_bank refuses anything
+        outside 1..64."""
+
+        pad, page = int(pad), int(page)
+        if not 0 <= pad < techno_lib.BANKS_PER_PAGE:
+            return None
+        if not 0 <= page < techno_lib.BANK_PAGES:
+            return None
+        return page * techno_lib.BANKS_PER_PAGE + pad + 1
+
+    @staticmethod
+    def bank_pad_look(bank, live, queued, stocked):
+        """(colour, brightness) for one bank pad.
+
+        FOUR STATES AND EACH IS A HUE OR A POSITION, never brightness alone
+        across two meanings: the live bank is the one bright pad, the queued
+        bank is the one green pad, a stocked bank is the live hue dimmed, and
+        an EMPTY bank is dark - a press there claims nothing and, more
+        importantly, the picture that says so was built from a read that does
+        not allocate. `getSequence` creates on any index it is handed,
+        silently and permanently into the riff, so drawing the grid with the
+        wrong reader would grow the snapshot by 64 banks."""
+
+        if bank == queued:
+            return (techno_lib.COLOR_ARM_LENGTH, techno_lib.PAD_FULL)
+        if bank == live:
+            return (techno_lib.COLOR_BANK, techno_lib.PAD_FULL)
+        if bank in stocked:
+            return (techno_lib.COLOR_BANK, techno_lib.ARM_DIM)
+        return (techno_lib.COLOR_BANK, 0.0)
+
+    @staticmethod
+    def bank_label(page, live):
+        """What the indicator row says while the overlay is held."""
+
+        return "BANK %d/%d . %d" % (int(page) + 1, techno_lib.BANK_PAGES,
+                                    int(live))
 
     @staticmethod
     def mute_pad_channel(pad, count=8):
@@ -2349,7 +2407,11 @@ class techno_lib:
     # MEASURED-AND-FREE in its own table, three lines above a note saying beat
     # repeat took it. That contradiction sat in the definitive audit for a day
     # and was caught the moment the list became a test instead of prose.
-    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 12, 29})
+    # 29 (DUPLICATE) was SPENT on 2026-09-01 by the bank overlay. Two left:
+    # 5 (TL, transport left-step) and 12 (the big encoder press). The test on
+    # this set is what caught the double-claim the moment the binding landed,
+    # which is the reason it is a test and not a comment.
+    CCS_MEASURED_AND_UNCLAIMED = frozenset({5, 12})
 
     BUTTONS_STATEFUL = {
         2: "erase",
@@ -2396,6 +2458,19 @@ class techno_lib:
         # away from, and the pads would stop being the step picture until they
         # noticed.
         33: "mute",
+        # DUPLICATE. CC 29 is one of the three in CCS_MEASURED_AND_UNCLAIMED -
+        # measured in the G4 capture, and `grep duplicate daemon/src/main.rs`
+        # shows a plain CC forward with no side effect. LED index 21 MEASURED
+        # 2026-08-15. Both halves of working rule 7 are satisfied and neither
+        # was read off a token name.
+        #
+        # HELD, never latched, exactly like MUTE: a latched arrangement picker
+        # is state a player can walk away from, and the pads would stop being
+        # the step picture until they noticed.
+        #
+        # DUPLICATE sits in the same physical row as SELECT (ARM), SOLO and
+        # MUTE - the row this surface already spends on pad overlays.
+        29: "bank",
         # SELECT. CC 30 MEASURED in notes/findings/2026-08-11-g4-capture.log,
         # LED index 22 MEASURED 2026-08-15 - both halves of working rule 7 are
         # satisfied, and neither was read off the daemon's token name.
