@@ -146,6 +146,78 @@ class techno_lib:
             offset += 1
         return tuple(i in taken for i in range(steps))
 
+    @staticmethod
+    def beat_grid(steps):
+        """The quarter-note positions of a bar of `steps`. Derived by dividing
+        the bar, so a 12-step triplet division gets 0, 3, 6, 9."""
+
+        steps = max(1, int(steps))
+        return {(k * steps) // 4 % steps for k in range(4)}
+
+    @staticmethod
+    def syncopation(pattern):
+        """What share of a bar's hits are OFF the beat, 0-100.
+
+        A proportion rather than a weighted distance, and that is deliberate:
+        the question a constraint has to answer is "how much of this part is
+        not on the beat", and a hit is either on one or it is not. The distance
+        still matters, but it decides the ORDER hits are dropped in rather than
+        the score - see lane_filter.
+
+        An EMPTY bar scores 0 rather than dividing by zero. A bar with nothing
+        in it has not strayed anywhere.
+
+        Deliberately crude. It ranks the hits of one bar against each other so
+        the weakest can go; it is not a musicological claim."""
+
+        steps = len(pattern)
+        on = [i for i, hit in enumerate(pattern) if hit]
+        if not on:
+            return 0
+        grid = techno_lib.beat_grid(steps)
+        off = sum(1 for i in on if i not in grid)
+        return int(round(100.0 * off / len(on)))
+
+    @staticmethod
+    def lane_filter(pattern, lane):
+        """Drop the weakest hits until the bar is inside the lane.
+
+        `lane` is how NARROW the lane is: 0 is the raw field - the pattern is
+        returned untouched, which is exactly what shipped before this existed -
+        and 100 allows only what lands on the beat.
+
+        THE DROP ORDER IS FURTHEST-FROM-THE-BEAT FIRST, then latest in the bar.
+        So the stray sixteenth goes before the eighth, and the answer is the
+        same every time it is asked for - a constraint that pruned differently
+        on each rewrite would be a fourth generator, not a limit.
+
+        It only ever REMOVES. A constraint that added a step would be inventing
+        a part, and HITS would stop meaning the number of hits.
+
+        A CHANNEL IS NEVER EMPTIED. The last hit survives whatever the lane
+        says: a silence whose explanation lives on another page is the one law
+        this surface cannot break."""
+
+        lane = max(0, min(100, int(lane)))
+        if lane <= 0:
+            return tuple(pattern)
+        steps = len(pattern)
+        out = list(pattern)
+        budget = 100 - lane
+        grid = techno_lib.beat_grid(steps)
+
+        def distance(i):
+            return min(min((i - g) % steps, (g - i) % steps) for g in grid)
+
+        # Weakest LAST, so pop() takes the next one to go.
+        order = sorted((i for i, hit in enumerate(out) if hit),
+                       key=lambda i: (distance(i), i))
+        while order and techno_lib.syncopation(out) > budget:
+            if sum(out) <= 1:
+                break
+            out[order.pop()] = False
+        return tuple(out)
+
     RULE_RANDOM = "rand"         # the shift register, as it always was
     CA_RULES = ("r30", "r90", "r110")
     RULES = (RULE_RANDOM,) + CA_RULES
@@ -824,7 +896,14 @@ class techno_lib:
                          # the line. `off` is euclid and IS the migration: a
                          # drum channel out of any existing snapshot is placed
                          # exactly as it was before this generator existed.
-                         lean=techno_lib.LEAN_OFF)
+                         lean=techno_lib.LEAN_OFF,
+                         # LANE, 2026-09-01. How narrow the danceable lane is.
+                         # 0 IS THE MIGRATION - the raw field, which is what
+                         # every drum channel has always played. Drums only:
+                         # a voice's placement IS its rhythm register, and a
+                         # pad tap writes into that register, so pruning it
+                         # would silently undo a hand-tapped step.
+                         lane=0)
         else:
             state.update(
                 preset="----", cutoff=64, reso=32, env=64, decay=40,
@@ -2559,6 +2638,8 @@ class techno_lib:
         "reso":   ("uni", lambda v: v / 127.0),
         "move":   ("uni", lambda v: v / 100.0,
                    lambda v: "LOCK" if v <= 0 else techno_lib._num(v)),
+        "lane":   ("uni", lambda v: v / 100.0,
+                   lambda v: "RAW" if v <= 0 else techno_lib._num(v)),
     }
 
     @staticmethod
@@ -4031,6 +4112,13 @@ techno_lib.PAGE_RINGS = {
         # alone: the four bar-rate macros and the chord walker are exactly the
         # ones that never asked.
         _d(techno_lib.SHAPE_SPREAD, "MOVE", verb="move"),
+        # LANE, 2026-09-01. A spread beside MOVE because it answers the
+        # neighbouring question - MOVE is how OFTEN the machine may touch a
+        # channel, LANE is how FAR it may go when it does - and both are read
+        # for all eight at once. The three voices draw dead here by law L4:
+        # the verb does not exist on them, and pretending otherwise would put
+        # a knob on the page that quietly undoes hand-tapped steps.
+        _d(techno_lib.SHAPE_SPREAD, "LANE", verb="lane"),
     ),
     ("MIXER", None): (
         _d(techno_lib.SHAPE_SPREAD, "LEVEL", verb="level"),

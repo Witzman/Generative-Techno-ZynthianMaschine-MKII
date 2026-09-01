@@ -553,7 +553,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.GENERATOR_PARAMS = {"hits", "rotate", "div", "length", "chance",
                                  "velo", "swing", "random", "gate", "octave",
                                  "range", "kit_range", "register", "rhythm",
-                                 "rhythm_reg", "ratchet",
+                                 "rhythm_reg", "ratchet", "lane",
                                  # P1, 2026-08-31. Membership here is what
                                  # makes apply() the write path for them: a
                                  # verb missing from this set is stored and
@@ -1768,6 +1768,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._write_voice_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "voice":
             self._write_voice_pattern(channel)
+        elif param == "lane" and self.channel_kind(channel) == "drum":
+            # A constraint that took a bar to be heard would read as a knob
+            # that did not work. HITS and the lean rewrite immediately for the
+            # same reason.
+            with self.lock:
+                self._write_pattern(channel)
         elif param == "ratchet" and self.channel_kind(channel) == "drum":
             # The stutter is written into the notes, so it only becomes audible
             # once the pattern is rewritten - exactly like drum VELO below.
@@ -2730,6 +2736,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # predates the verb saves euclid, which is what it was
                     # doing anyway.
                     "lean": self.state[i].get("lean", tlib.LEAN_OFF),
+                    "lane": self.state[i].get("lane", 0),
                     "rule": self.state[i].get("rule", tlib.RULE_RANDOM),
                 }
                 for i, ch in enumerate(tlib.CHANNELS)
@@ -2981,6 +2988,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # argument as the line above. A snapshot written before these
             # generators existed was played by the ones they default to.
             self.state[channel]["lean"] = saved.get("lean", tlib.LEAN_OFF)
+            # ABSENT IS THE RAW FIELD - a snapshot written before the lane
+            # existed was played without one.
+            self.state[channel]["lane"] = saved.get("lane", 0)
             self.state[channel]["rule"] = saved.get("rule", tlib.RULE_RANDOM)
             if "hits" in saved:
                 self.hits[channel] = int(saved["hits"])
@@ -4573,6 +4583,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # MOVE, 2026-09-01. 0 is LOCK - the machine may not touch the channel -
         # and 100 is what shipped before the verb existed.
         "move": (0, 100, None),
+        # LANE, 2026-09-01. 0 is the raw field, 100 keeps only what lands on
+        # the beat.
+        "lane": (0, 100, None),
         # 5-800, widened from 5-100 for the 8-step note length. The old
         # 5-100 range is now a sliver of the sweep, so gate moves in jumps
         # of roughly 6-24 per encoder report - a deliberate resolution
@@ -4651,6 +4664,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
 
         voice = self.channel_kind(channel) == "voice"
+
+        if verb == "lane" and voice:
+            # The LANE column draws dead on a voice (law L4) and the knob must
+            # agree with the picture. A voice's placement IS its rhythm
+            # register, and a pad tap writes into that register - pruning it
+            # here would silently undo a hand-tapped step.
+            return
 
         if verb == "length" and voice:
             # LENGTH on a voice is the shift register, not the pattern. Sent
@@ -5137,6 +5157,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         line = (lib.rotate(list(leaned), self.rot[group]) if leaned is not None
                 else lib.build_pattern_steps(steps, self.hits[group],
                                              self.rot[group]))
+        # THE LANE, 2026-09-01. It prunes the GENERATED line and never the
+        # hand register: drum_steps below is subtractive, so a step the player
+        # tapped OUT stays out, and a constraint that ran after it could not
+        # put one back. On a voice this verb does not exist at all - a voice's
+        # placement IS its rhythm register, which is where a tap lands.
+        line = tlib.lane_filter(line, self.state[group].get("lane", 0))
         pattern = tlib.drum_steps(
             line,
             tlib.rotate(int(self.state[group].get("rhythm_reg", 0xFFFF)),

@@ -5758,3 +5758,106 @@ class TheLeanIsAVerbOnTheDrums(unittest.TestCase):
     def test_the_offbeat_lean_sits_on_the_ands(self):
         got = [i for i, on in enumerate(tl.lean(16, 4, tl.LEAN_OFFBEAT)) if on]
         self.assertEqual(got, [2, 6, 10, 14])
+
+
+class HowFarTheGeneratorsMayStray(unittest.TestCase):
+    """LANE, 2026-09-01. One number per channel for how narrow the danceable
+    lane is: at the top a bar is measured before it is allowed out and the
+    weakest hits are removed until it holds together; at 0 you get the raw
+    field, which is exactly what shipped before this existed."""
+
+    def test_syncopation_is_zero_when_every_hit_is_on_a_strong_position(self):
+        four_floor = tuple(i % 4 == 0 for i in range(16))
+        self.assertEqual(tl.syncopation(four_floor), 0)
+
+    def test_syncopation_is_high_when_every_hit_is_off_the_grid(self):
+        offs = tuple(i % 4 == 1 for i in range(16))
+        self.assertGreater(tl.syncopation(offs), 60)
+
+    def test_an_empty_bar_has_no_syncopation_rather_than_dividing_by_zero(self):
+        self.assertEqual(tl.syncopation((False,) * 16), 0)
+
+    def test_lane_zero_is_the_RAW_field_and_changes_nothing(self):
+        wild = tuple(i % 4 == 1 for i in range(16))
+        self.assertEqual(tl.lane_filter(wild, 0), wild)
+
+    def test_a_narrow_lane_removes_the_weakest_hits(self):
+        pattern = [i % 4 == 0 for i in range(16)]
+        pattern[3] = True
+        pattern[13] = True
+        got = tl.lane_filter(tuple(pattern), 100)
+        self.assertEqual([i for i, on in enumerate(got) if on], [0, 4, 8, 12])
+
+    def test_a_narrow_lane_leaves_a_pattern_that_ALREADY_holds_together(self):
+        four_floor = tuple(i % 4 == 0 for i in range(16))
+        self.assertEqual(tl.lane_filter(four_floor, 100), four_floor)
+
+    def test_a_middling_lane_removes_SOME_of_the_strays_not_all(self):
+        pattern = [i % 4 == 0 for i in range(16)]
+        for i in (1, 3, 5, 7):
+            pattern[i] = True
+        got = tl.lane_filter(tuple(pattern), 60)
+        self.assertLess(sum(got), 8)
+        self.assertGreater(sum(got), 4)
+
+    def test_A_CHANNEL_IS_NEVER_EMPTIED(self):
+        # The one law this surface cannot break. A constraint that silenced a
+        # channel would be a silence whose explanation is on another page.
+        wild = tuple(i % 8 == 3 for i in range(16))
+        self.assertGreaterEqual(sum(tl.lane_filter(wild, 100)), 1)
+
+    def test_it_is_deterministic(self):
+        wild = tuple(i % 3 == 1 for i in range(16))
+        self.assertEqual(tl.lane_filter(wild, 70), tl.lane_filter(wild, 70))
+
+    def test_a_triplet_length_is_measured_over_its_own_twelve_steps(self):
+        pattern = tuple(i % 3 == 0 for i in range(12))
+        self.assertEqual(tl.lane_filter(pattern, 100), pattern)
+
+    def test_it_never_ADDS_a_step(self):
+        for lane in (0, 25, 50, 75, 100):
+            wild = tuple(i % 5 == 2 for i in range(16))
+            got = tl.lane_filter(wild, lane)
+            with self.subTest(lane=lane):
+                for i, on in enumerate(got):
+                    if on:
+                        self.assertTrue(wild[i])
+
+
+class TheLaneIsOnTheDrumsOnly(unittest.TestCase):
+    """A voice's placement IS the rhythm register, and a pad tap on a voice
+    writes into that register. A constraint that pruned it would silently undo
+    a hand-tapped step - the defect the engineering review named before this
+    was built. So the verb exists on drums, where it prunes the GENERATED line
+    before the hand register subtracts from it, and the voices draw dead."""
+
+    def test_a_drum_starts_on_the_raw_field(self):
+        self.assertEqual(tl.default_channel_state("drum")["lane"], 0)
+
+    def test_a_voice_has_NO_lane_at_all(self):
+        self.assertNotIn("lane", tl.default_channel_state("voice"))
+
+    def test_an_older_snapshot_gains_the_verb_at_raw(self):
+        old = tl.default_channel_state("drum")
+        del old["lane"]
+        self.assertEqual(tl.upgrade_state("drum", old, 16)["lane"], 0)
+
+    def test_the_ALL_ring_carries_a_LANE_spread(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "LANE"][0]
+        self.assertEqual(page["shape"], tl.SHAPE_SPREAD)
+        self.assertEqual(page["verb"], "lane")
+
+    def test_a_voice_column_draws_DEAD_on_the_lane_page(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "LANE"][0]
+        views = [("A", "KICK", {"lane": 40})] * 7 + [("H", "LEAD", {})]
+        cols = tl.spread_columns(page, views)
+        self.assertFalse(cols[0]["grey"])
+        self.assertTrue(cols[7]["grey"])
+
+    def test_zero_reads_RAW_rather_than_a_bare_number(self):
+        page = [d for d in tl.PAGE_RINGS[("ALL", None)]
+                if d["title"] == "LANE"][0]
+        views = [("A", "KICK", {"lane": 0})] * 8
+        self.assertEqual(tl.spread_columns(page, views)[0]["value"], "RAW")
