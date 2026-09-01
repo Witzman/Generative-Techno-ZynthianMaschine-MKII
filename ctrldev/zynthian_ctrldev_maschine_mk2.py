@@ -4175,6 +4175,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         self.erase_down = down
         self._render_erase()
+        # The Group row becomes the warning while ERASE is held - which
+        # channels would LOSE a take - so it has to follow both edges of it.
+        with self.lock:
+            self._render_groups()
 
     def _act_freeze(self, down):
         """FREEZE: tap latches pattern generation, hold parks the LFOs too.
@@ -6015,6 +6019,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if chan is None:
             return BRIGHT_GROUP_NO_CHAIN
         mixer = self.state_manager.zynmixer
+        if self.erase_down:
+            # WHILE ERASE IS HELD the row answers the question that gesture is
+            # about to ask: which of these would LOSE something. ERASE + Group
+            # is the one irreversible action on this panel - on a channel you
+            # have played, it throws your take away and lets the machine
+            # refill - and it had no warning at all, because a take on a
+            # channel you are not looking at is invisible.
+            #
+            # Full for a channel that owns a take, the floor for one where the
+            # gesture only silences (hits to 0, chance to 0 - both of which
+            # you can simply turn back). Same shape as ARM's nomination row
+            # above, and for the same reason: while a modifier is down this
+            # LED answers exactly one question.
+            return (BRIGHT_GROUP_MAX
+                    if self.owner.get(group) == tlib.OWNER_PLAYER
+                    else BRIGHT_GROUP_MIN)
         if self.arm_down:
             # While ARM is held the Group row stops reporting the mix and
             # starts reporting the NOMINATION - who survives the drop. It is
@@ -8230,7 +8250,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Rounded so tiny zctrl wobbles don't push a fresh OSC write past
             # the LED cache on every render.
             bright = round(self._group_brightness(group), 2)
-            state = (GROUP_COLORS[group], bright)
+            # THE HUE ANSWERS THE SAME QUESTION THE BRIGHTNESS DOES. While
+            # ERASE is held the row is about what would be lost, so a channel
+            # holding a take wears the colour a played step already wears
+            # everywhere on this surface - amber - rather than its own
+            # identity. Hue is identity every other moment; here it would be
+            # the one fact nobody needs.
+            colour = GROUP_COLORS[group]
+            if (self.erase_down
+                    and self.owner.get(group) == tlib.OWNER_PLAYER):
+                colour = COLOR_PLAYER
+            state = (colour, bright)
             key = f"group{group}"
             if self.leds.changed(key, state):
                 self._send_osc(lib.button_osc(
@@ -9084,6 +9114,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.bank_down:
             label = tlib.bank_label(self._bank_page, self.bank)
         label = tlib.arm_label(label, self.arm_down, self._arm_picked)
+        # WHICH OVERLAY OWNS THE PADS, while it is latched. Six of them
+        # compete for the same sixteen pads and the colours cannot tell them
+        # apart - the eight channel hues leave two gaps wider than fifty
+        # degrees and both are spent, measured rather than assumed. Since the
+        # duration rule an overlay can be latched, which means the hand that
+        # set it has left the button, so the one surface that can say which is
+        # this row.
+        #
+        # Asked through _pad_owner(), the same predicate the pads and the pad
+        # dispatcher use, so the word and the behaviour cannot disagree - and
+        # it therefore respects the MOD+ARM chord for free.
+        owner = self._pad_owner()
+        label = tlib.overlay_label(
+            label, owner,
+            bool(owner) and self.latches[owner].latched)
         label = tlib.freeze_label(label, self.frozen, self.freeze_deep)
         label = tlib.repeat_label(label, bool(self._repeat_restore),
                                   len(self._repeat_restore))

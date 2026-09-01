@@ -2492,6 +2492,137 @@ class TheOneColumnAnswerMatchesTheEightColumnOne(unittest.TestCase):
         self._check("move", [None] * 8)
 
 
+class AutoIsAPageAndNotADrawer(unittest.TestCase):
+    """AUTO carries eight verbs off four old pages. That is the shape a
+    drawer has, and the thing that stops it being one is a seam you can see.
+
+    LEFT SCREEN: what the machine draws - which generator, how fast it changes
+    its mind, how far out it may go. RIGHT SCREEN: when and for how long - how
+    often it may act at all, how the phrase is built, how the part leaves. Two
+    questions on two time bases, and the hardware already puts a physical gap
+    between columns 4 and 5.
+
+    The seam holds today by accident of the order somebody typed. These tests
+    are what make it a rule, because the next verb added to this page will be
+    dropped into the first empty slot unless something objects."""
+
+    def _auto(self, kind):
+        return _page("AUTO", kind, "AUTO")["verbs"]
+
+    def test_the_left_screen_is_what_the_machine_draws(self):
+        for kind in ("drum", "voice"):
+            for verb in self._auto(kind)[:4]:
+                self.assertIn(verb, tl.AUTO_DRAWS,
+                              f"AUTO/{kind}: {verb} is on the left screen "
+                              "but is not a drawing verb")
+
+    def test_the_right_screen_is_when_and_for_how_long(self):
+        for kind in ("drum", "voice"):
+            for verb in self._auto(kind)[4:]:
+                self.assertIn(verb, tl.AUTO_TIMES,
+                              f"AUTO/{kind}: {verb} is on the right screen "
+                              "but is not an arrangement verb")
+
+    def test_both_kinds_put_the_same_four_on_the_right(self):
+        # The arrangement half is kind-agnostic - a phrase is a phrase - so a
+        # player who learns the right-hand screen on the drums has learnt it
+        # on the voices too.
+        self.assertEqual(self._auto("drum")[4:], self._auto("voice")[4:])
+        self.assertEqual(set(self._auto("drum")[4:]), tl.AUTO_TIMES)
+
+    def test_the_two_halves_do_not_overlap(self):
+        self.assertEqual(tl.AUTO_DRAWS & tl.AUTO_TIMES, frozenset())
+
+    def test_page_two_is_generative_only(self):
+        # A second page exists to hold generator verbs that would otherwise
+        # crowd page one - never to hold arrangement, which would put the same
+        # question on two pages and make the seam meaningless.
+        for kind in ("drum", "voice"):
+            for desc in tl.PAGE_RINGS[tl.ring_key("AUTO", kind)][1:]:
+                for verb in desc["verbs"] or ():
+                    if verb is None:
+                        continue
+                    self.assertIn(verb, tl.AUTO_DRAWS,
+                                  f"AUTO/{kind} {desc['title']}: {verb}")
+
+    def test_every_auto_verb_is_claimed_by_one_half_or_the_other(self):
+        # A verb in neither set is one nobody decided about. That is exactly
+        # how the old GEN page ended up with six dead columns.
+        for kind in ("drum", "voice"):
+            for desc in tl.PAGE_RINGS[tl.ring_key("AUTO", kind)]:
+                for verb in desc["verbs"] or ():
+                    if verb is None:
+                        continue
+                    self.assertTrue(verb in tl.AUTO_DRAWS
+                                    or verb in tl.AUTO_TIMES, verb)
+
+    def test_no_arrangement_verb_leaks_onto_step(self):
+        # STEP is what the channel plays. The moment MOVE or PHRASE appears
+        # there, AUTO stops being the answer to "what does it do by itself".
+        for kind in ("drum", "voice"):
+            for verb in _page("STEP", kind, "STEP")["verbs"]:
+                self.assertNotIn(verb, tl.AUTO_TIMES, f"STEP/{kind}: {verb}")
+
+
+class ALatchedOverlaySaysWhoseThePadsAre(unittest.TestCase):
+    """Six overlays compete for the same sixteen pads, and the obvious fix -
+    one colour family each - DOES NOT FIT THIS HARDWARE.
+
+    Measured rather than assumed: the eight channel hues sit at 0, 23, 45, 75,
+    120, 187, 225 and 270 degrees, which leaves exactly two gaps wider than
+    fifty degrees, and both are already spent (ARM's length ring at 143, the
+    top chance rung at 313). There is no room for six disjoint families, so
+    the pads cannot say whose they are by colour alone.
+
+    Since the duration rule an overlay can be LATCHED, which means the hand
+    that set it has left the button. The indicator is then the one surface
+    that can say which one is up."""
+
+    def test_a_latched_overlay_names_itself(self):
+        self.assertEqual(tl.overlay_label("STEP", "bank", True), "STEP BANK")
+        self.assertEqual(tl.overlay_label("STEP", "mute", True), "STEP MUTE")
+
+    def test_a_held_overlay_says_nothing(self):
+        # Your finger is on the button. The indicator would be telling you
+        # what your own hand already says, on a row that truncates silently.
+        self.assertEqual(tl.overlay_label("STEP", "bank", False), "STEP")
+
+    def test_no_overlay_at_all_says_nothing(self):
+        self.assertEqual(tl.overlay_label("STEP", None, True), "STEP")
+        self.assertEqual(tl.overlay_label("STEP", "", True), "STEP")
+
+    def test_it_uses_the_word_a_player_can_find_on_the_panel(self):
+        # BANK is printed DUPLICATE and MOD is printed SWING, so the word has
+        # to be the one that leads back to the right button rather than the
+        # driver's internal name.
+        self.assertEqual(tl.OVERLAY_WORDS["bank"], "BANK")
+        self.assertEqual(tl.OVERLAY_WORDS["mod"], "MOD")
+        self.assertEqual(tl.OVERLAY_WORDS["shift"], "ODDS")
+
+    def test_every_pad_overlay_has_a_word(self):
+        # A latched overlay with no word is one the player cannot name, which
+        # is the whole failure this exists to prevent.
+        for owner in tl.OVERLAY_PRIORITY:
+            self.assertIn(owner, tl.OVERLAY_WORDS, owner)
+
+    def test_the_lens_is_deliberately_absent(self):
+        # It takes the ENCODERS, not the pads, and already renames the page -
+        # a latched lens reads ALL CHANCE where the page name goes.
+        self.assertNotIn("lens", tl.OVERLAY_WORDS)
+        self.assertNotIn("lens", tl.OVERLAY_PRIORITY)
+
+    def test_it_composes_like_every_other_suffix(self):
+        label = tl.overlay_label("STEP 2/2", "mod", True)
+        label = tl.freeze_label(label, True, False)
+        self.assertEqual(label, "STEP 2/2 MOD FRZ")
+
+    def test_the_words_are_short_enough_to_stack(self):
+        # The indicator is 42 characters and eleven composers can append to
+        # it. A long word here is one that pushes something else off the end.
+        for word in tl.OVERLAY_WORDS.values():
+            self.assertLessEqual(len(word), 6, word)
+
+
 
 if __name__ == "__main__":
     unittest.main()

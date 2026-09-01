@@ -2242,6 +2242,48 @@ class techno_lib:
         word = techno_lib.rate_word(rate_bars)
         return f"{label} MOD {word}" if word else f"{label} MOD"
 
+    # What a latched overlay adds to the indicator. THE NAME THE PANEL USES,
+    # not the internal one - a player looking for the button reads BANK off
+    # DUPLICATE, and MOD off SWING.
+    OVERLAY_WORDS = {
+        "shift": "ODDS",        # SHIFT's pads are each step's play chance
+        "arm": "ARM",
+        "bank": "BANK",
+        "mute": "MUTE",
+        "mod": "MOD",
+        "navigate": "PHRASE",
+        # THE LENS IS NOT HERE, and its absence is the rule working. It takes
+        # the ENCODERS, not the pads, and it already renames the whole page -
+        # a latched lens reads `ALL CHANCE` where the page name goes. A second
+        # word for it would be the indicator saying the same thing twice on a
+        # row that truncates silently at 42 characters.
+    }
+
+    @staticmethod
+    def overlay_label(label, owner, latched):
+        """Say which overlay owns the pads, while it is LATCHED.
+
+        THE ANSWER TO A PROBLEM THE COLOURS CANNOT SOLVE. Six overlays
+        compete for the same sixteen pads, and the obvious fix - one colour
+        family each - does not fit this hardware: the eight channel hues leave
+        exactly two gaps wider than fifty degrees of hue, and both are already
+        spent. Measured, not assumed. So the pads cannot say whose they are by
+        colour alone, and since the duration rule they can be latched, which
+        means the hand that set them is no longer on the button.
+
+        LATCHED ONLY, and that is the whole point. While you hold a modifier
+        you know which one you are holding; the indicator would be telling you
+        what your own finger already says, and this row truncates silently at
+        42 characters. A latch is the state you can walk away from.
+
+        Composed like every other suffix, so it stacks with the rest and
+        carries no state of its own."""
+
+        if not latched or not owner:
+            return label
+        word = techno_lib.OVERLAY_WORDS.get(owner)
+        return f"{label} {word}" if word else label
+
     @staticmethod
     def owner_label(label, owner, recording, playing):
         """The page indicator also carries who owns the channel and whether a
@@ -2508,6 +2550,20 @@ class techno_lib:
     # The fifth mode button. Not a mode: a held or latched lens over whatever
     # verb the hand last moved. See lens_verb().
     MODE_LENS = "ALL"
+
+    # AUTO's two halves, and the rule that keeps the page from becoming a
+    # drawer. LEFT SCREEN: what the machine draws. RIGHT SCREEN: when, and for
+    # how long. The seam falls in the physical gap between the two panels.
+    #
+    # A NEW GENERATIVE VERB GOES LEFT OR ONTO PAGE 2. A new arrangement verb
+    # goes right. Anything that fits neither is not an AUTO verb, and the next
+    # round has to say so out loud rather than dropping it in the first empty
+    # slot - which is how the old GEN page ended up with six dead columns and
+    # how this one would become the thing it replaced.
+    AUTO_DRAWS = frozenset(("rule", "lean", "model", "random", "rhythm",
+                            "lane", "rotate", "walk_span", "walk_stride",
+                            "feed", "amount"))
+    AUTO_TIMES = frozenset(("move", "phrase", "fill", "exit"))
 
     # ------------------------------------------------- button dispatch tables
     #
@@ -4817,6 +4873,19 @@ techno_lib.PAGE_RINGS = {
     # MOVE, PHRASE, FILL and EXIT come from four different old pages and one
     # spread each; they are one question asked six ways, and a player deciding
     # how much rope to give a channel wants all six under one hand.
+    #
+    # THE SEAM IS BETWEEN COLUMNS 4 AND 5, WHICH IS BETWEEN THE TWO SCREENS.
+    # That is not a coincidence and it must not be lost: the left screen is
+    # what the machine DRAWS - which generator, how fast it changes its mind,
+    # how far out it may go - and the right screen is WHEN AND FOR HOW LONG -
+    # how often it may act at all, how the phrase is built, how the part
+    # leaves. Two questions on two different time bases, and the hardware
+    # already puts a physical gap between them.
+    #
+    # A page whose eight columns need one abstract heading to cover them is a
+    # drawer. This one has two concrete halves and a gap you can see, which is
+    # what stops it becoming one. tests/test_techno_lib.py pins the seam;
+    # AUTO_DRAWS and AUTO_TIMES below are the two halves.
     ("AUTO", "drum"): (
         _d(techno_lib.SHAPE_CHANNEL, "AUTO",
            verbs=("rule", "lean", "rhythm", "lane", "move", "phrase",
