@@ -1,0 +1,70 @@
+[
+  {
+    "file": "900-style-house",
+    "title": "House, as odds",
+    "genre": "house",
+    "notes": "The same region 031-house-classic sits inside, written as odds rather than as one point. Ships nothing: it is the worked example for tools/style-sampler.py, not a pack manifest.",
+    "variants": 4,
+    "tempo": { "odds": { "choice": [120, 124, 125, 126], "weights": [2, 1, 4, 1] } },
+    "root": { "odds": { "choice": [0, 2, 5, 9] } },
+    "scale": 0,
+    "drums": {
+      "kits": [
+        { "odds": { "choice": ["Roland TR909", "Roland TR808"] } },
+        { "odds": { "choice": ["Roland TR909", "Roland TR808"] } },
+        "Roland TR909",
+        "Roland TR909",
+        "Roland TR909"
+      ],
+      "steps": [
+        { "odds": { "pick": [0, 4, 8, 12], "count": 4 } },
+        { "odds": { "pick": [4, 12, 14], "count": { "odds": { "range": [2, 3] } } } },
+        { "odds": { "pick": [4, 12], "count": 2 } },
+        { "odds": { "pick": [0, 2, 4, 6, 8, 10, 12, 14],
+                    "count": { "odds": { "range": [4, 8], "mode": 8 } } } },
+        { "odds": { "pick": [2, 6, 10, 14], "count": { "odds": { "range": [1, 2] } } } }
+      ],
+      "velo": [
+        { "odds": { "range": [106, 118] } },
+        { "odds": { "range": [90, 102] } },
+        { "odds": { "range": [94, 106] } },
+        { "odds": { "range": [78, 90] } },
+        { "odds": { "range": [82, 94] } }
+      ],
+      "gate": [40, 40, 40, 25, 70]
+    },
+    "voices": {
+      "engines": [
+        { "odds": { "choice": ["JV/JC303", "JV/synthv1"], "weights": [3, 1] } },
+        "JV/Obxd",
+        "JV/padthv1"
+      ],
+      "rhythm_reg": [
+        { "odds": { "choice": [65535, 43690, 52428] } },
+        { "odds": { "choice": [17476, 4369] } },
+        1
+      ],
+      "register": [
+        { "odds": { "range": [1, 65535] } },
+        { "odds": { "choice": [24222, 9974, 4354] } },
+        { "odds": { "choice": [9974, 219] } }
+      ],
+      "length": [16, 16, { "odds": { "choice": [8, 16] } }],
+      "octave": [-1, 0, { "odds": { "range": [0, 1] } }],
+      "range": [1, { "odds": { "range": [1, 2] } }, 1],
+      "velo": [
+        { "odds": { "range": [104, 116] } },
+        { "odds": { "range": [90, 102] } },
+        { "odds": { "range": [74, 86] } }
+      ],
+      "gate": [{ "odds": { "range": [30, 45] } }, 45, 800]
+    },
+    "fx": ["JV/TAP Stereo Echo", "JV/TAP Reverberator"],
+    "rules": [
+      { "path": "drums.steps.0", "require": [0] },
+      { "path": "drums.steps.1", "require": [4, 12] },
+      { "path": "drums.steps.3", "forbid": [0] },
+      { "path": "drums.velo.0", "clamp": [100, 120] }
+    ]
+  }
+]

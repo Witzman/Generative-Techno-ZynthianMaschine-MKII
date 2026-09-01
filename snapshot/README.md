@@ -382,3 +382,45 @@ runs **18.9% to 38.6% with zero xruns**.
 **Load-testing is not cost-testing.** All four affected genre-pack presets had
 already been loaded successfully on the rig, and one of them was glitching at
 43.4% with 8 xruns. Loading without error is not running without glitching.
+
+---
+
+# `example-style.json` — a style as odds, and it ships nothing
+
+Every manifest here is a list of **points**: one entry, one snapshot, every
+field a single value. `example-style.json` is the same thing written as a
+**region** — a field may carry odds instead of a value, and a `rules` block says
+what the odds may never break.
+
+```json
+"tempo": { "odds": { "choice": [120, 124, 125, 126], "weights": [2, 1, 4, 1] } },
+"rules": [ { "path": "drums.steps.0", "require": [0] } ]
+```
+
+`tools/style-sampler.py` draws concrete entries from it, seeded, and blends two
+existing entries into a third. **Its output is an ordinary manifest**, which
+`build-genre-snapshots.py` turns into `.zss` files with no change to that
+script:
+
+```bash
+python3 tools/style-sampler.py sample --style snapshot/example-style.json \
+    --variants 4 --seed 1234 --out /tmp/style-manifest.json
+python3 tools/build-genre-snapshots.py --manifest /tmp/style-manifest.json \
+    --out /tmp/style-pack
+```
+
+**No snapshot in this directory comes from it.** It is a worked example and a
+test fixture; the shipped packs are still authored as points, by hand.
+
+Two things about it are load-bearing and are covered by
+`tools/tests/test_style_sampler.py`:
+
+- **A plain value still means what it means today.** Odds are marked by a
+  wrapper key, `{"odds": {...}}`, and nothing else. Both shipped manifests pass
+  through the sampler byte-identical, at every seed.
+- **A blend never invents a value it cannot average.** `root`, `scale`,
+  `register`, `rhythm_reg`, `steps`, `kits`, `engines` and the insert pair are
+  taken **whole from one parent**; only ordered scalars interpolate. The insert
+  pair in particular is taken as a PAIR, because it lands on all eight chains
+  and a per-slot mix could assemble a banned combination out of two legal
+  parents — see the cost table above.
