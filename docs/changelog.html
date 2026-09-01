@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="changelog.html" aria-current="page"><strong>Changelog</strong></a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="features.html">Features</a></li>
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="whats-next.html">What could come next</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="02-features.html">What it is</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="changelog">Changelog</h1>
+<p>What arrived, and when. Dates are the day the work landed on the instrument, not the day it was thought of &mdash; nothing appears here until it has been played on the hardware.</p>
+<p>Entries are written for a player: what you can now do that you could not do before. Fixes appear only where they changed what you would see or hear.</p>
+<hr>
+
+<h2 id="unreleased">Unreleased &mdash; awaiting its hardware gate</h2>
+<p>Built, deployed and written up, but <strong>not yet played through</strong>. It is listed here rather than above so nobody reads it as shipped.</p>
+<ul>
+<li><strong>RULE</strong> &mdash; a cellular automaton as a second way a register evolves, on both kinds. <a href="generating-patterns.html#rule">Read</a></li>
+<li><strong>LEAN</strong> &mdash; a third placement generator beside euclid, weighting hits toward the beat, the eighths or the offbeat. <a href="generating-patterns.html#lean">Read</a></li>
+<li><strong>LANE</strong> &mdash; how far the generators may stray, pruning the strays until a bar holds together. <a href="generating-patterns.html#lane">Read</a></li>
+<li><strong>MOVE</strong> &mdash; how often the machine may touch a channel at all, as a probability rather than a switch. <a href="generating-patterns.html#move">Read</a></li>
+<li><strong>PHRASE and FILL</strong> &mdash; the fourth bar answers the first. <a href="generating-patterns.html#phrase-fill">Read</a></li>
+<li><strong>EXIT</strong> &mdash; a part leaves through its filter over a bar or four instead of stopping dead. <a href="mixing-and-effects.html#exit">Read</a></li>
+<li><strong>The bank grid</strong> &mdash; hold DUPLICATE and sixteen pads are sixteen whole arrangements. <a href="the-surface.html#bank-grid">Read</a></li>
+<li><strong>A modulator&rsquo;s shape, on the screen</strong> &mdash; a bound column draws a small picture of its wave. <a href="modulation.html#shape-on-the-screen">Read</a></li>
+<li><strong>It says when it has stopped</strong> &mdash; if generation stops, the indicator says so and the pads keep playing. <a href="the-surface.html#when-it-goes-quiet">Read</a></li>
+<li><strong>Per-screen brightness and contrast</strong> &mdash; two settings the daemon applies at start-up. Absent, nothing is read and nothing is written.</li>
+<li><strong>Half the display traffic</strong> &mdash; the two screens became independent, so a change on one no longer repaints the other.</li>
+<li><strong>A style as odds</strong> &mdash; an offline tool that expresses a snapshot pack as distributions and hard rules, and blends two styles without inventing values for the fields that cannot be averaged.</li>
+</ul>
+
+<h2 id="2026-08-31">31 August 2026 &mdash; eight features, gated the same evening</h2>
+<ul>
+<li><strong>The GEN page</strong> for the three voices: ROTATE a melody, MODEL between the shift register and a bounded walk with SPAN and STRIDE, and FEED/AMOUNT so one voice drifts toward another.</li>
+<li><strong>The drum rhythm register</strong> on encoder 7 of the drum STEP page &mdash; steps appear and disappear without the line sliding. SWING moved one page along to its spread, where it reaches all eight.</li>
+<li><strong>A pad tap now flips a bit in the rhythm register</strong> on both kinds, so a hand-chosen step survives ROTATE and RHYTHM. HITS, DIVIDE and LENGTH are the way back.</li>
+<li><strong>The chord walker</strong>: the shared root steps along the scale every few bars.</li>
+<li><strong>The pump</strong> &mdash; MOD + RESTART snaps every modulator into the same phase.</li>
+<li><strong>Gate collapse</strong> on ARM: every note shortens into the landing and returns.</li>
+<li><strong>Pad pressure</strong> reaches the voices: squeeze a held pad and the filter opens.</li>
+<li><strong>MIDI export</strong>: a tool writes a snapshot&rsquo;s eight patterns as a standard MIDI file.</li>
+<li>Seven defects were found during that evening&rsquo;s gate and six fixed the same night &mdash; among them ROTATE on a voice, which counted correctly on the display and never changed the sound.</li>
+</ul>
+
+<h2 id="2026-08-30">30 August 2026</h2>
+<ul>
+<li><strong>The surface repaints itself after a replug.</strong> Before this, everything but the pads came back dark.</li>
+<li>The pads stopped sticking, and a slow press sounds.</li>
+</ul>
+
+<h2 id="2026-08-22">22 August 2026</h2>
+<ul>
+<li><strong>A new factory snapshot</strong>, with the previous one kept beside it as the way back.</li>
+<li>A dropped pad light no longer stays wrong forever.</li>
+</ul>
+
+<h2 id="2026-08-21">21 August 2026</h2>
+<ul>
+<li><strong>The factory snapshot ships at 125 BPM</strong>, which the sequencer can keep exactly &mdash; 124 drifts by a bar every eight minutes.</li>
+<li><strong>The phrase clock corrects itself</strong> against the sequencer, which took its drift from 3,896 parts per million to seven.</li>
+<li>A held countdown says <code>HELD</code>, and a DROP with nobody nominated refuses out loud instead of muting all eight.</li>
+<li>A drone and ambient snapshot pack.</li>
+</ul>
+
+<h2 id="2026-08-20">20 August 2026 &mdash; the performance package</h2>
+<ul>
+<li><strong>The phrase clock and ARM</strong>: one bar count for the whole instrument, and gestures that land on a boundary.</li>
+<li><strong>DROP</strong>, <strong>BREAK</strong>, <strong>HALF and DOUBLE</strong>, <strong>the CHANCE ramp</strong> and <strong>the ratchet ramp</strong>.</li>
+<li><strong>The mute grid</strong> on MUTE, and <strong>beat repeat</strong> on the transport arrow.</li>
+<li><strong>The PENDING page</strong>, which says what is armed and how long it has left.</li>
+<li><strong>A master insert</strong> &mdash; one filter across the whole mix.</li>
+<li>The moving sweep marker was <em>removed</em>: redrawing it was rebuilding both screens six times a second and taking the controller off the USB bus. What it said &mdash; how fast this is moving &mdash; became a word on the label instead.</li>
+</ul>
+
+<h2 id="2026-08-19">19 August 2026</h2>
+<ul>
+<li><strong>Drift</strong> &mdash; the pattern itself moves at the wrap, and refuses on any channel you have taken over.</li>
+<li><strong>The big encoder became the page ring</strong>, so every mode can hold more than one page.</li>
+<li><strong>RATCHET</strong>, <strong>REROLL</strong> and the kit window.</li>
+<li>A plugin&rsquo;s switches reached the F row.</li>
+<li>HITS and ROTATE were being stored and displayed without reaching the pattern. Fixed at the single write path rather than at the callers.</li>
+</ul>
+
+<h2 id="2026-08-18">18 August 2026</h2>
+<ul>
+<li><strong>The genre pack</strong>: fifty ready-made arrangements.</li>
+<li>A failing wrap was isolated to its own channel, so one bad channel can no longer take the instrument silent.</li>
+</ul>
+
+<h2 id="2026-08-16">16 August 2026</h2>
+<ul>
+<li><strong>The voice generator split in two</strong>: MELODY and RHYTHM, so a line&rsquo;s notes and its rests evolve separately.</li>
+<li>Played steps on a voice draw amber, so you can see what is yours.</li>
+<li>Encoder sensitivity halved, with TEMPO held restoring the old speed.</li>
+</ul>
+
+<h2 id="2026-08-15">15 August 2026</h2>
+<ul>
+<li>Navigation buttons stay lit, and the mode buttons go home.</li>
+<li>REC lights only where recording is possible.</li>
+</ul>
+
+<h2 id="2026-08-14">14 August 2026</h2>
+<ul>
+<li><strong>Modulation</strong>: hold MOD and an encoder sets how a value moves rather than what it is. Rates, shapes, depth, and MOD + ERASE to clear.</li>
+</ul>
+
+<h2 id="2026-08-13">13 August 2026 &mdash; the instrument becomes its own project</h2>
+<ul>
+<li>The driver, the daemon, the installer and the guide moved into one repository, self-contained, with the eight-channel instrument already playing: five euclidean drum channels and three Turing-machine voices.</li>
+</ul>
+
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="features.html">Features</a> &mdash; the whole instrument in one list</li>
+<li><a href="whats-next.html">What could come next</a> &mdash; the idea list, and what was refused</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Features — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="changelog.html">Changelog</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="features.html" aria-current="page"><strong>Features</strong></a></li>
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="whats-next.html">What could come next</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="02-features.html">What it is</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="features">Every feature, and where it is written up</h1>
+<p>This is the whole instrument in one list. Each row says what a feature does in a sentence and links to the page that walks you through it on the real hardware.</p>
+<p>It exists because the guide is organised by <em>what you are doing</em> &mdash; generating, playing, mixing, saving &mdash; which is the right shape for learning and the wrong shape for the question &ldquo;does it do X?&rdquo;. This page answers that question and nothing else.</p>
+<p>If something you expected is missing, it may be deliberate: <a href="whats-next.html">What could come next</a> carries the idea list and, at the end of it, what was considered and <strong>refused</strong>, with the reason.</p>
+<hr>
+
+<h2 id="generating">Generating patterns</h2>
+<p>The generator owns the pattern. You set the odds and the shape; it writes the notes into the sequencer at every wrap.</p>
+<table>
+<tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
+<tr><td>Euclidean drums</td><td>Five drum channels, always alive. HITS, ROTATE, DIVIDE and LENGTH; the generator writes the notes.</td><td><a href="generating-patterns.html#what-it-is">Generating patterns</a></td></tr>
+<tr><td>Turing-machine voices</td><td>Three voices, each evolving its own shift register into a melody.</td><td><a href="generating-patterns.html#how-it-works">How it works</a></td></tr>
+<tr><td>A pattern rebuilt every cycle</td><td>The bar is regenerated rather than looped, so it does not come back around identical.</td><td><a href="generating-patterns.html#how-it-works">How it works</a></td></tr>
+<tr><td>Polymeter</td><td>LENGTH reaches three, five and seven beats against a four-to-the-floor kick.</td><td><a href="generating-patterns.html#polymeter">Lengths that do not agree</a></td></tr>
+<tr><td>Probability per channel</td><td>CHANCE, read live while the pattern plays, so a step sounds only sometimes.</td><td><a href="generating-patterns.html#probability">A step that sounds sometimes</a></td></tr>
+<tr><td>Ratchets</td><td>RATCHET fires one step several times inside its own slot.</td><td><a href="generating-patterns.html#ratchet">RATCHET</a></td></tr>
+<tr><td>Reroll</td><td>Two buttons ask for a different bar from the same settings, with a one-deep undo.</td><td><a href="generating-patterns.html#reroll">Reroll</a></td></tr>
+<tr><td>The drum rhythm register</td><td>Steps appear and disappear bar to bar without the line sliding sideways. A pad tap goes into the same register and survives ROTATE.</td><td><a href="generating-patterns.html#drum-rhythm">The drum rhythm register</a></td></tr>
+<tr><td>A wandering voice</td><td>MODEL switches a voice between its shift register and a bounded walk, with SPAN and STRIDE.</td><td><a href="generating-patterns.html#the-gen-page">The GEN page</a></td></tr>
+<tr><td>Voices that listen to each other</td><td>FEED and AMOUNT drift one voice&rsquo;s register toward another&rsquo;s &mdash; related, never identical.</td><td><a href="generating-patterns.html#the-gen-page">The GEN page</a></td></tr>
+<tr><td>ROTATE on a melody</td><td>The whole line turns around the bar, notes and rests together.</td><td><a href="generating-patterns.html#the-gen-page">The GEN page</a></td></tr>
+<tr><td>A cellular automaton</td><td>RULE evolves a register by looking at each step&rsquo;s neighbours instead of rolling dice, so shapes travel and collide.</td><td><a href="generating-patterns.html#rule">RULE</a></td></tr>
+<tr><td>A generator that leans</td><td>LEAN weights hit positions by what the part is for &mdash; the floor, the eighths, or the offbeat.</td><td><a href="generating-patterns.html#lean">LEAN</a></td></tr>
+<tr><td>A constraint on the generators</td><td>LANE measures a bar and removes the hits furthest from the beat until it holds together.</td><td><a href="generating-patterns.html#lane">LANE</a></td></tr>
+<tr><td>Per-channel automation depth</td><td>MOVE is how often the machine may touch a channel at all. At LOCK it holds while everything else moves.</td><td><a href="generating-patterns.html#move">MOVE</a></td></tr>
+<tr><td>A phrase with a fill</td><td>PHRASE and FILL make every second or fourth bar answer the ones before it.</td><td><a href="generating-patterns.html#phrase-fill">PHRASE and FILL</a></td></tr>
+<tr><td>Key and scale, shared</td><td>ROOT and SCALE are global and land on the bar, so three voices cannot drift out of key.</td><td><a href="generating-patterns.html#chord-walker">The chord walker</a></td></tr>
+<tr><td>A chord walker</td><td>The shared root steps along the scale every few bars, reflecting at the edge of its span.</td><td><a href="generating-patterns.html#chord-walker">The chord walker</a></td></tr>
+</table>
+
+<h2 id="playing">Playing and recording</h2>
+<table>
+<tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
+<tr><td>The pads play</td><td>Sixteen pads, the selected channel&rsquo;s sound, over whatever the generator is doing.</td><td><a href="playing-and-recording.html#what-it-is">Playing and recording</a></td></tr>
+<tr><td>Pressure</td><td>Squeeze a held pad on a voice and the filter opens, proportionally, easing back as you let go.</td><td><a href="playing-and-recording.html#pad-pressure">Pressing harder</a></td></tr>
+<tr><td>Overdub</td><td>Hold REC and what you play is written into the pattern.</td><td><a href="playing-and-recording.html#what-it-is">Playing and recording</a></td></tr>
+<tr><td>Ownership</td><td>A channel you have played is yours: the generator stands off it until you hand it back.</td><td><a href="playing-and-recording.html#who-owns-it">Who owns the pattern</a></td></tr>
+<tr><td>Audio capture</td><td>The jam is recorded to a file on the instrument.</td><td><a href="playing-and-recording.html#audio-capture">Capturing the jam</a></td></tr>
+</table>
+
+<h2 id="structure">Structure and performance</h2>
+<table>
+<tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
+<tr><td>One phrase clock</td><td>A single bar count for the whole instrument, which every timed gesture resolves against.</td><td><a href="the-surface.html#phrase">The phrase</a></td></tr>
+<tr><td>ARM &mdash; land it on a bar</td><td>Choose a gesture and a length; it fires at the boundary rather than under your finger.</td><td><a href="the-surface.html#arm">ARM</a></td></tr>
+<tr><td>PENDING</td><td>A page showing what is armed and how long it has left, and how to cancel one.</td><td><a href="the-surface.html#pending">PENDING</a></td></tr>
+<tr><td>FREEZE</td><td>Two stages on one button: hold the generators, or hold the modulators as well.</td><td><a href="the-surface.html#freeze">FREEZE</a></td></tr>
+<tr><td>The mute grid</td><td>One pad per channel, instant on the top row and queued to the bar on the bottom.</td><td><a href="the-surface.html#mute-grid">The mute grid</a></td></tr>
+<tr><td>Beat repeat</td><td>Hold a button and the whole machine squeezes down to one beat, then lets go.</td><td><a href="the-surface.html#beat-repeat">Beat repeat</a></td></tr>
+<tr><td>Gate collapse</td><td>Every note shortens across the bars you choose, then returns.</td><td><a href="the-surface.html#gate-collapse">Gate collapse</a></td></tr>
+<tr><td>DROP</td><td>Everything falls away except the channels you nominated, and comes back on the bar.</td><td><a href="mixing-and-effects.html#drop">DROP</a></td></tr>
+<tr><td>BREAK</td><td>Fall out now, come back on the bar.</td><td><a href="mixing-and-effects.html#break">BREAK</a></td></tr>
+<tr><td>HALF and DOUBLE</td><td>The same rhythm at another speed, landing on a boundary.</td><td><a href="generating-patterns.html#half-double">HALF and DOUBLE</a></td></tr>
+<tr><td>The CHANCE ramp</td><td>The kit thins out over the bars you choose and re-forms.</td><td><a href="generating-patterns.html#chance-ramp">The CHANCE ramp</a></td></tr>
+<tr><td>The ratchet ramp</td><td>The roll into the drop, climbing RATCHET as it goes.</td><td><a href="generating-patterns.html#ratchet-ramp">The ratchet ramp</a></td></tr>
+<tr><td>Banks as scenes</td><td>Hold DUPLICATE: sixteen pads are sixteen whole arrangements, and a press lands on the bar.</td><td><a href="the-surface.html#bank-grid">The bank grid</a></td></tr>
+<tr><td>Parts that leave rather than stop</td><td>EXIT closes a channel through its filter and level over a bar or four instead of muting it.</td><td><a href="mixing-and-effects.html#exit">EXIT</a></td></tr>
+</table>
+
+<h2 id="sound">Sound, mixing and modulation</h2>
+<table>
+<tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
+<tr><td>Modulators on any timbre control</td><td>Hold MOD and an encoder stops setting a value and starts setting how that value moves.</td><td><a href="modulation.html#what-it-is">Modulation</a></td></tr>
+<tr><td>Bar-synced rates and four shapes</td><td>The pads become the menu: twelve rates, four shapes, all locked to the phrase.</td><td><a href="modulation.html#pad-legend">The pads become the menu</a></td></tr>
+<tr><td>The shape, on the screen</td><td>A bound column draws a small picture of its wave, so you can see what it is without remembering.</td><td><a href="modulation.html#shape-on-the-screen">The shape, on the screen</a></td></tr>
+<tr><td>RISE</td><td>A sweep that happens once and does not come back.</td><td><a href="modulation.html#rise">RISE</a></td></tr>
+<tr><td>The pump</td><td>A negative-depth modulator on LEVEL, with MOD + RESTART snapping every one into phase.</td><td><a href="modulation.html#pump">The pump</a></td></tr>
+<tr><td>Drift</td><td>The pattern itself moves at the wrap, and refuses on any channel you have taken over.</td><td><a href="modulation.html#drift">Drift</a></td></tr>
+<tr><td>Kits and samples</td><td>Change a drum kit or a single sample while the rig plays.</td><td><a href="sound-and-presets.html#what-it-is">Sound and presets</a></td></tr>
+<tr><td>Engine presets</td><td>Walk a synth&rsquo;s own patches from the panel.</td><td><a href="sound-and-presets.html#what-it-is">Sound and presets</a></td></tr>
+<tr><td>Switching what a channel IS</td><td>A drum channel can behave as a voice, and back, without swapping its engine.</td><td><a href="sound-and-presets.html#how-it-works">How switching a kind works</a></td></tr>
+<tr><td>Deep parameter pages</td><td>Eight knobs reaching a plugin&rsquo;s fortieth parameter, on pages built from what it publishes.</td><td><a href="deep-parameters.html#what-it-is">Deep parameter control</a></td></tr>
+<tr><td>Plugin switches</td><td>The eight buttons above the knobs carry a plugin&rsquo;s on/off and enum controls.</td><td><a href="deep-parameters.html#switches">Switches</a></td></tr>
+<tr><td>One control across eight channels</td><td>Spread pages: level, reverb, delay, cutoff, resonance, swing, chance and the rest, for all eight at once.</td><td><a href="mixing-and-effects.html#what-it-is">Mixing and effects</a></td></tr>
+<tr><td>Two inserts per channel</td><td>A post-fader echo and reverb on every one of the eight.</td><td><a href="mixing-and-effects.html#how-it-works">How it works</a></td></tr>
+<tr><td>A master insert</td><td>One filter across the whole mix.</td><td><a href="mixing-and-effects.html#master-insert">The master insert</a></td></tr>
+</table>
+
+<h2 id="surface-and-saving">The surface, and keeping what you made</h2>
+<table>
+<tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
+<tr><td>Five modes, and page rings</td><td>The big encoder walks a ring of pages within whichever mode you are in.</td><td><a href="the-surface.html#modes-and-pages">Modes and pages</a></td></tr>
+<tr><td>Two displays that say what the knobs are</td><td>Eight columns, each with a name, a value and a bar, plus the page indicator above them.</td><td><a href="the-surface.html#reading-the-displays">Reading the displays</a></td></tr>
+<tr><td>Colour-coded channels</td><td>Every channel has a hue, and it is the same hue on the pads, the tabs and the Group buttons.</td><td><a href="the-surface.html#what-the-lights-mean">What the lights mean</a></td></tr>
+<tr><td>It says when it has stopped</td><td>If generation stops, the indicator reads GEN STOPPED and the pads keep playing.</td><td><a href="the-surface.html#when-it-goes-quiet">When it goes quiet</a></td></tr>
+<tr><td>Snapshots</td><td>The whole state saved and recalled, including the generators&rsquo; own registers and any running modulators.</td><td><a href="saving.html#what-persists">What a snapshot carries</a></td></tr>
+<tr><td>Seventy-three starting points</td><td>A genre pack and a drone/ambient pack, ready to load.</td><td><a href="sound-and-presets.html#genre-pack">Fifty-one starting points</a></td></tr>
+<tr><td>MIDI export</td><td>A tool writes the eight patterns as an ordinary MIDI file, read from the saved snapshot.</td><td><a href="saving.html#taking-patterns-elsewhere">Taking your patterns elsewhere</a></td></tr>
+</table>
+
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="03-playing.html">Quick start</a> &mdash; the first two minutes, if you have not played it yet</li>
+<li><a href="changelog.html">Changelog</a> &mdash; when each of these arrived</li>
+<li><a href="whats-next.html">What could come next</a> &mdash; the idea list, and what was refused</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

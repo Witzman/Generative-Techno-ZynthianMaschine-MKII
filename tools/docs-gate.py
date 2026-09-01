@@ -371,6 +371,19 @@ BASELINE = {
     # between them a reader learns what is answered, what is open, and what
     # will not happen.
     "whats-next.html":             (1716, "2026-08-31"),
+    # NEW 2026-09-01, owner-requested: the whole instrument in one list, first
+    # page of "Going deeper". The guide is organised by what you are DOING,
+    # which is right for learning and wrong for "does it do X?" - this page
+    # answers only that. Almost all of it is table, which the budget does not
+    # count, so the number is small on purpose: the prose here is the four
+    # section leads and the note that a missing feature may have been refused
+    # on purpose.
+    "features.html":               (250,  "2026-09-01"),
+    # NEW 2026-09-01, owner-requested: a changelog under Fast installation.
+    # Player-facing - what you can now do that you could not before - with an
+    # "Unreleased" section at the top so nothing reads as shipped before it has
+    # been played. Bullet lists rather than tables, so this one really is prose.
+    "changelog.html":              (1200, "2026-09-01"),
 }
 SKIP_BUDGET = {"index.html"}
 
