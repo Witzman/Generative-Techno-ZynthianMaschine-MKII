@@ -3304,6 +3304,58 @@ class techno_lib:
         "rule": "rand", "lean": "off", "model": "reg",
     }
 
+    # WHICH KINDS EACH VERB EXISTS ON. A verb absent here belongs to both.
+    #
+    # THE HOLE THIS PLUGS, and it was mine: VERB_DEFAULTS gives a value to a
+    # verb whose channel has no key for it, so `verb_col` drew RATCHET and
+    # LEAN live on a voice and MODEL, FEED and AMOUNT live on a drum. The
+    # comment above VERB_DEFAULTS states the rule they broke - "give any of
+    # them a default here and law L4 stops working for it" - and five of them
+    # did exactly that.
+    #
+    # THREE OF THE FIVE WERE WORSE THAN SILENT. `ratchet`, `lean` and `amount`
+    # are in VERB_RANGES or SWITCH_VERBS, so apply() stored them and THE
+    # NUMBER ON SCREEN MOVED, while _apply_generator's arm for each is gated
+    # on the kind and did nothing. A knob that moves a value and changes no
+    # sound is the worst object this surface can produce.
+    #
+    # It went unnoticed until the lens, because before it a kind-specific verb
+    # only ever appeared on a page of its own kind. The lens spreads one verb
+    # across all eight channels, so every one of these now sits next to five
+    # channels that cannot answer.
+    #
+    # `rotate` is deliberately absent: BOTH kinds have it and they mean
+    # different things - the euclid field on a drum, the rendered line on a
+    # voice - which is a different problem, and not this one.
+    VERB_KINDS = {
+        "hits": frozenset({"drum"}),
+        "ratchet": frozenset({"drum"}),
+        "lean": frozenset({"drum"}),
+        "lane": frozenset({"drum"}),
+        "kit": frozenset({"drum"}),
+        "sample": frozenset({"drum"}),
+        "model": frozenset({"voice"}),
+        "feed": frozenset({"voice"}),
+        "amount": frozenset({"voice"}),
+        "walk_span": frozenset({"voice"}),
+        "walk_stride": frozenset({"voice"}),
+        "gate": frozenset({"voice"}),
+        "octave": frozenset({"voice"}),
+        "random": frozenset({"voice"}),
+        "preset": frozenset({"voice"}),
+        # The four synth roles. They already drew dead on a drum, but only by
+        # ACCIDENT - the key is simply absent from a drum's state, and nothing
+        # said so on purpose. A second mechanism decides them on a VOICE
+        # (synth_ctrl_flags, per column, from what the plugin publishes), and
+        # leaning on an accident for the other half is how the five verbs
+        # above went wrong: they had the same accident until VERB_DEFAULTS
+        # took it away. Found by the drift test below, which is what it is for.
+        "cutoff": frozenset({"voice"}),
+        "reso": frozenset({"voice"}),
+        "env": frozenset({"voice"}),
+        "decay": frozenset({"voice"}),
+    }
+
     # The four CONTROL columns that exist only where the running plugin
     # publishes a symbol for that role, and their position in the flags tuple
     # synth_ctrl_flags returns.
@@ -3324,6 +3376,12 @@ class techno_lib:
         behaving as a voice publishes none of the four, and a synth the
         measured table has never seen may publish three."""
 
+        # THE KIND THE CHANNEL IS BEHAVING AS, first, because a verb that does
+        # not exist on this kind cannot act however it is dialled.
+        behaving = state.get("kind") or kind
+        kinds = techno_lib.VERB_KINDS.get(verb)
+        if kinds is not None and behaving is not None and behaving not in kinds:
+            return True
         if verb in ("walk_span", "walk_stride"):
             return state.get("model", techno_lib.MODEL_REGISTER) != \
                 techno_lib.MODEL_WALK

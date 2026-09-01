@@ -3295,6 +3295,94 @@ class ANameColumnWithNothingToStepDrawsDead(unittest.TestCase):
         self.assertFalse(live["grey"])
 
 
+class AVerbDrawsDeadOnAKindThatDoesNotHaveIt(unittest.TestCase):
+    """Law L4 across kinds, which the LENS made reachable and VERB_DEFAULTS
+    had quietly broken.
+
+    Before the lens a kind-specific verb only ever appeared on a page of its
+    own kind, so nothing tested this. The lens spreads one verb across all
+    eight channels, and five verbs then drew LIVE on channels that have no key
+    for them: RATCHET and LEAN on the voices, MODEL, FEED and AMOUNT on the
+    drums. The cause was VERB_DEFAULTS handing them a value, which is exactly
+    what its own comment warns against.
+
+    **Three of the five were worse than silent.** `ratchet`, `lean` and
+    `amount` are in VERB_RANGES or SWITCH_VERBS, so apply() stored them and
+    the number on screen MOVED, while _apply_generator's arm for each is gated
+    on the kind and did nothing. A knob that moves a value and changes no
+    sound is the worst object this surface can produce."""
+
+    def _views(self):
+        drum = dict(tl.default_channel_state("drum"))
+        drum.update(kind="drum", hits=4, kit="909", sample="BD")
+        voice = dict(tl.default_channel_state("voice"))
+        voice.update(kind="voice", hits=4, preset="SAW",
+                     synth_ctrl=(1, 1, 1, 1))
+        return [(chr(65 + i), tl.CHANNELS[i][1], drum if i < 5 else voice)
+                for i in range(8)]
+
+    def _picture(self, verb):
+        cols = tl.columns(tl.lens_desc(verb), None, self._views())
+        return "".join("." if c["grey"] else "#" for c in cols)
+
+    def test_a_drum_only_verb_is_dead_on_the_voices(self):
+        for verb in ("hits", "ratchet", "lean", "lane"):
+            self.assertEqual(self._picture(verb), "#####...", verb)
+
+    def test_a_voice_only_verb_is_dead_on_the_drums(self):
+        for verb in ("model", "feed", "amount"):
+            self.assertEqual(self._picture(verb), ".....###", verb)
+
+    def test_a_shared_verb_is_live_on_all_eight(self):
+        for verb in ("chance", "level", "swing", "move", "velo"):
+            self.assertEqual(self._picture(verb), "########", verb)
+
+    def test_the_table_agrees_with_the_state_it_describes(self):
+        """The guard against drift, and the reason this is a table rather than
+        a list of special cases.
+
+        A verb that lives in one kind's default state and not the other's IS
+        kind-specific, whatever anybody wrote down. Where the two disagree the
+        table is wrong - either a verb moved and nobody told it, or somebody
+        added an entry that is not true.
+
+        The exemptions are named with their reasons rather than skipped
+        silently: the four legacy verbs do not live in the state dict at all,
+        and `range` is decided by BEHAVIOUR rather than by which dict holds
+        it."""
+
+        drum = tl.default_channel_state("drum")
+        voice = tl.default_channel_state("voice")
+        LEGACY = {"hits", "rotate", "div", "length"}   # per-group arrays
+        BY_BEHAVIOUR = {"range"}                       # see verb_is_dead
+        INTERNAL = {"register", "ring", "rhythm_reg", "kit_range", "pending"}
+        for verb in set(drum) | set(voice):
+            if verb in LEGACY | BY_BEHAVIOUR | INTERNAL:
+                continue
+            on_drum, on_voice = verb in drum, verb in voice
+            if on_drum and on_voice:
+                self.assertNotIn(verb, tl.VERB_KINDS,
+                                 f"{verb} is on both kinds but the table "
+                                 "calls it specific")
+                continue
+            expected = frozenset({"drum"} if on_drum else {"voice"})
+            self.assertEqual(tl.VERB_KINDS.get(verb), expected,
+                             f"{verb} lives only on "
+                             f"{'drum' if on_drum else 'voice'}")
+
+    def test_a_dead_column_refuses_its_encoder(self):
+        # The half that stops it being a lie rather than merely a silence.
+        # The painter and _column_dead read the same flag.
+        drum = dict(tl.default_channel_state("drum"))
+        drum["kind"] = "drum"
+        self.assertTrue(tl.verb_is_dead("model", "drum", drum))
+        self.assertTrue(tl.verb_is_dead("amount", "drum", drum))
+        voice = dict(tl.default_channel_state("voice"))
+        voice["kind"] = "voice"
+        self.assertTrue(tl.verb_is_dead("ratchet", "voice", voice))
+        self.assertTrue(tl.verb_is_dead("lean", "voice", voice))
+
+
 
 if __name__ == "__main__":
     unittest.main()

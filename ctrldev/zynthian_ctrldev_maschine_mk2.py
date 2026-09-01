@@ -2556,11 +2556,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         if self.lens_down and not self.bank_down and not self.mod_down:
             # THE LENS IS ONE PAGE by construction, so there is no ring to
-            # walk and the arrows beside the display are dark for the same
-            # reason. Turning the big encoder here used to move the page index
+            # walk. Turning the big encoder here used to move the page index
             # of the level UNDERNEATH the lens - invisible while you turned,
             # and a different page waiting when you let go. Law G5 wearing a
             # knob: a control that would do nothing you can see does nothing.
+            #
+            # THE ARROWS ARE NOT DARK HERE, whatever this comment said until
+            # 2026-09-01 - they step the lens's VERB, so they are lit and they
+            # act. This knob is the only inert control inside the lens and it
+            # has no light to say so, which is a known gap rather than a
+            # claim: the big encoder has no LED at all.
             return
         if self.bank_down:
             # WHILE THE BANK OVERLAY IS HELD the big encoder walks the four
@@ -6727,6 +6732,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # other way to reach the bit behind it. A drum only: a voice's rotation
         # is applied to the rendered line rather than to the mask.
         bit = step if voice else (step - self.rot[channel]) % steps
+        was_kept = bool(st["rhythm_reg"] >> bit & 1)
         st["rhythm_reg"] = tlib.rhythm_toggle(st["rhythm_reg"], bit)
         if voice:
             # BY HAND: a tap is honoured even on a channel the player owns.
@@ -6740,12 +6746,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # rewrite exactly as a turn of RHYTHM would.
             with self.lock:
                 self._write_pattern(channel)
-            # A DRUM TAP HAS ALWAYS MADE A SOUND, and it must keep doing so.
-            # The old drum path previewed the note it had just written; this
-            # one writes no note, so the preview has to be explicit or tapping
-            # a pad in STEP mode goes silent - a feel regression that would
-            # read as the tap being ignored.
-            self._preview(self._group_note(channel))
+            # THE PREVIEW ONLY WHERE THE TAP PUT A STEP BACK, 2026-09-01.
+            #
+            # The register is SUBTRACTIVE: a bit may take a euclid hit away
+            # and may never invent one. So a tap on a step euclid never placed
+            # flips a bit that changes nothing at all - and the preview fired
+            # anyway, which is worse than silence. The pad stayed dark, the
+            # pattern was identical, and the instrument made a sound that said
+            # it had worked. Found by sweeping for silent refusals.
+            #
+            # Going from kept to removed is a REMOVAL, and previewing a step
+            # you have just taken out was always contradictory - the pad going
+            # dark is the feedback there, and it is the same feedback every
+            # other dark pad on this surface gives.
+            #
+            # Going from removed to kept is the only case that adds anything,
+            # and it can only happen where euclid HAS a hit: the mask is reset
+            # to all-ones whenever HITS, DIV or LENGTH move, and ROTATE turns
+            # the mask with the line, so a zero bit and a hit stay aligned.
+            if not was_kept:
+                self._preview(self._group_note(channel))
         with self.lock:
             self._render_pads()
 
@@ -8162,8 +8182,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # everything else here; the LED cache still swallows
                         # every repeat, so a steady GRID costs nothing.
                         self._render_grid()
-                        # SCENE / PATTERN follow the selected channel's kind.
+                        # PATTERN goes dark when a press would do nothing, and
+                        # what it would do changes without a button being
+                        # touched - a take recorded, a channel selected.
                         self._render_reroll()
+                        # NOTE REPEAT likewise: its ring fills at a WRAP, on
+                        # this thread, with no gesture involved. Without a
+                        # periodic writer the button would stay dark through
+                        # the first pass that gave it something to undo.
+                        self._render_register_undo()
+                                        # REC promises a take only while the pads can make
+                        # one, and an overlay can be latched with no button
+                        # touched since.
+                        self._render_rec()
                         # SWING blinks while MOD is LATCHED, so it needs the
                         # same periodic writer GRID does. The LED cache
                         # swallows every unchanged repeat, so a steady or dark
@@ -8670,9 +8701,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         end with - so it follows a change of channel and a change of kind
         without either of them knowing about this button."""
 
-        lit = self.channel_kind(self.group) == "voice"
-        # An ACTION: dim where it would act, dark where it would not. On a
-        # euclidean channel there is no shift register to give back.
+        # BOTH QUESTIONS THE BUTTON ASKS, not one of them. _duplicate refuses
+        # twice: on a channel that is not a voice, and on a voice whose ring
+        # is empty. The light asked only the first, so it sat dim on every
+        # voice - and a fresh voice's ring is empty FOREVER until MELODY or
+        # RHYTHM goes above LOCK, because that is the only thing that pushes
+        # to it. A player on a locked voice pressed a lit button and got
+        # nothing, which is the reroll defect of the same evening in a
+        # different costume.
+        #
+        # Asked from the same state _duplicate reads, so the light and the
+        # button cannot disagree.
+        channel = self.group
+        lit = (self.channel_kind(channel) == "voice"
+               and bool(self.state[channel].get("ring")))
         state = (COLOR_PAGE, tlib.action_light(lit))
         if self.leds.changed("register_undo", state):
             self._send_osc(lib.button_osc("note_repeat", state[0], state[1]))
@@ -8719,7 +8761,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         it follows a mode change, and from both edges of _act_mod, so it
         follows MOD being held or latched."""
 
-        possible = self.mode != "STEP" and not self.mod_down
+        # ANY OVERLAY THAT OWNS THE PADS, not MOD alone. This asked
+        # `not self.mod_down` back when MOD was the only modifier that could
+        # latch; since the duration rule every one of them can, so a player
+        # could latch MUTE or the bank grid, walk away, and find REC lit green
+        # for a take the pads cannot make. Asked through _pad_owner, the same
+        # predicate the pad dispatcher uses, so the light cannot promise
+        # something the press will refuse.
+        possible = self.mode != "STEP" and self._pad_owner() is None
         # ONE predicate, every fact. Capture is a second meaning on this LED
         # and a second writer would fight the first, so there is no second
         # writer - this is the only place REC's LED is written.
