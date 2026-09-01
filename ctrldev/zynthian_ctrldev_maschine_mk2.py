@@ -622,7 +622,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # `base` is the driver's own truth for the parameter - the LFO writes
         # base+offset and never reads its own output back.
         self.mod = {}
-        # THE SIX MODIFIERS, one object each, 2026-09-01. Every one of them
+        # THE SEVEN MODIFIERS, one object each, 2026-09-01. Every one of them
         # obeys the same duration rule now - a tap latches, a hold is
         # momentary - where there used to be five different grammars for
         # "enter a state". tlib.latch holds the rule and is unit tested;

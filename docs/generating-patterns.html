@@ -55,13 +55,14 @@
 <ul class="track-list">
 <li><a href="02-features.html">What it is</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
-<li><a href="generating-patterns.html" aria-current="page"><strong>Generating patterns</strong></a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
-<li><a href="modulation.html">Modulation</a></li>
+<li><a href="performing.html">Performing</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
-<li><a href="the-surface.html">The surface</a></li>
+<li><a href="modulation.html">Modulation</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
@@ -169,8 +170,18 @@
 <p><strong>RATCHET is encoder 7 on a drum's STEP page.</strong> Turn it up and every step of that channel fires two, three or four times inside its own slot &mdash; a roll rather than a hit. It reads <code>OFF</code> at the bottom, because one hit is not a ratchet.</p>
 <p>It applies to the whole channel, not one step, which is what makes it a knob rather than an edit: turn it up for a bar of rolls and back down again without touching the pattern you wrote.</p>
 <hr>
+<h2 id="the-quiet-knobs">SWING, VELO, OCTAVE and RANGE &mdash; the four that shape rather than generate</h2>
+<p>Four encoders on the STEP pages do not decide <em>which</em> steps exist. They decide how the steps that do exist come out, and they are the ones a reader most often walks past.</p>
+<table><thead><tr><th>Knob</th><th>Where</th><th>What it does</th></tr></thead><tbody>
+<tr><td><strong>SWING</strong></td><td>encoder 8, both STEP pages</td><td>How far the offbeats are pushed late, from <code>50</code> to <code>75</code>. 50 is dead straight and the machine's default; the mid&ndash;fifties are where a straight techno bar starts to walk; the top is a hard shuffle. It is <strong>per channel</strong>, which is the point &mdash; a swung hat over a straight kick is most of what makes a groove feel played. Put the <a href="the-surface.html#modes-and-pages">lens</a> on it to set all eight at once.</td></tr>
+<tr><td><strong>VELO</strong></td><td>encoder 5 (drum), 6 (voice)</td><td>How hard every generated step is struck, 1 to 127. Under a velocity&ndash;layered kit this is a timbre knob as much as a level one: turn it down and a sampled snare finds its quieter layer rather than just getting smaller. It sets what the <em>generator</em> writes; a step you played in by hand keeps the velocity your finger gave it.</td></tr>
+<tr><td><strong>OCTAVE</strong></td><td>encoder 4, voice STEP</td><td>Moves the whole voice up or down, &minus;2 to +2 octaves, without touching a note it chose. This is how three voices sharing one key and one scale stop crowding each other &mdash; BASS down, PADS up, and the same walker suddenly sounds arranged.</td></tr>
+<tr><td><strong>RANGE</strong></td><td>encoder 5, voice STEP</td><td>How many octaves the register is allowed to spread its notes over. Small and the line stays put and sounds like a riff; wide and it leaps and sounds like a machine. OCTAVE moves the window, RANGE sizes it.</td></tr>
+</tbody></table>
+<p>On a euclidean drum, OCTAVE and RANGE draw <a href="the-surface.html#reading-the-displays">dead</a>. A sampled kit has no register to spread and no octave to move it in, and a knob that turned a number without changing a sound is exactly the lie this surface refuses.</p>
+<hr>
 <h2 id="chance-ramp">The CHANCE ramp &mdash; the kit thins out and re-forms</h2>
-<p><strong>Hold ARM &mdash; that is SELECT &mdash; tap pad 2, then tap a length.</strong> The gesture is on <a href="the-surface.html#arm">The surface</a>; this is what it does.</p>
+<p><strong>Hold ARM &mdash; that is SELECT &mdash; tap pad 2, then tap a length.</strong> The gesture is on <a href="performing.html#arm">The surface</a>; this is what it does.</p>
 <p>From the landing bar every channel's play chance walks down, one step per bar. Halfway through the length all eight are at <strong>one time in four</strong> &mdash; still playing, but most of it missing &mdash; and over the second half they walk back up. An eight-bar ramp is four bars falling apart and four bars coming back.</p>
 <p><strong>It lands back on each channel's own value, not on always.</strong> A channel sitting at half the time comes back at half the time. Assuming everything wants to be at full is exactly how a channel saved quiet comes back loud, and this does not do it.</p>
 <p><strong>A channel already at one time in four or below is left alone.</strong> A breakdown that made a quiet channel louder would be the gesture backwards.</p>
@@ -191,7 +202,7 @@
 <p><strong>Voices are skipped, and so are recorded channels.</strong> RATCHET is a drum verb &mdash; it is written into the notes as sequencer stutter, and a voice&rsquo;s pattern comes from a different generator entirely, so taking the voices too simply overwrote their melodies. Recorded channels are left out for the same reason as everywhere else: the ramp rewrites the pattern from the generator settings each bar.</p>
 <p><strong>The page indicator says how many channels it took</strong> &mdash; <code>ROLL 3/8</code> means three of the eight are rolling and five are not. Three drums and five voices is a normal reading, not a fault; so is a lower number when you have recorded onto a drum.</p>
 <hr>
-<h2 id="reroll">Reroll — two buttons that ask for a different bar</h2>
+<h2 id="reroll">Reroll — one button that asks for a different bar</h2>
 <p><strong>Press PATTERN to reroll the channel you are on.</strong> A drum channel gets a new hit count and rotation; a channel played by the Turing register gets a new rhythm and a new play chance, and its MELODY is left at <code>LOCK</code> so you hear the new line held rather than already drifting.</p>
 <p><strong>Hold SHIFT to reroll a whole family at once</strong> &mdash; every channel of the same kind as the one you have selected. On a drum that is every sampler; on a voice, every synth. The split follows the <em>engine</em> rather than how a channel is being played, so a drum sampler switched to Turing is still a sampler, and asking for new synth lines never hands you a new drum pattern as well. To reroll all the drums while looking at a voice, select a drum first.</p>
 <p><strong>The button goes dark when a press would do nothing.</strong> A reroll refuses on a channel you have recorded onto &mdash; it would throw your take away &mdash; and a refusal you cannot see is the same fault as a channel going quiet without saying why. Hold SHIFT and it lights again, because the wider scope has other channels to work on.</p>
@@ -219,12 +230,13 @@
 
 <h2 id="chord-walker">The chord walker &mdash; three voices, one progression</h2>
 <p>ROOT and SCALE are shared: all three voices pick their notes from the same key, and a key change lands on the bar. The walker moves that root for you.</p>
+<p><strong>SCALE has six positions</strong>, and they are the six a techno record actually uses: <code>MIN</code> natural minor, <code>MAJ</code> major, <code>DOR</code> dorian, <code>PHR</code> phrygian, <code>HMIN</code> harmonic minor and <code>PENT</code> minor pentatonic. They run roughly from most familiar to most opinionated &mdash; DOR is minor with a lift in it, PHR is the flat second that makes a bassline sound menacing, HMIN is the one that will sound like a soundtrack if you leave it on, and PENT has no semitones at all, so nothing a voice invents inside it can clash. If a generated line sounds wrong rather than surprising, PENT is the place to go and find out whether it is the notes or the rhythm.</p>
 <p>Press <strong>VOLUME</strong> for the GLOBAL page. <strong>WALK</strong> is how often the root moves, in bars, and <strong>SPAN</strong> is how far it may wander. At zero WALK reads <strong>LOCK</strong> and the key stands still.</p>
 <p>Every WALK bars the root steps to a new degree <em>of the scale you are already in</em> &mdash; never chromatically, because three voices sharing a scale should not be walked out of it. It reflects at the edge of its span rather than parking against it, and a walk that returns to zero returns to exactly the key you dialled in, not near it.</p>
 <p>Measured on the instrument: at four bars and 121 BPM the root moved every 7.9 seconds, which is four bars to within a twentieth of a second, and every root it visited belonged to the same minor key.</p>
 
 <h2 id="rule">RULE &mdash; a second way a register evolves</h2>
-<p>Everything that evolves on this instrument has done it the same way: a bit flips at random, and RANDOM or RHYTHM is how often. <strong>RULE</strong> offers the other kind of change. Instead of rolling dice per step, it looks at each step&rsquo;s <em>neighbours</em> and applies a rule &mdash; so a shape can travel along the bar, collide with another, and come out the far side.</p>
+<p>Everything that evolves on this instrument has done it the same way: a bit flips at random, and MELODY or RHYTHM is how often. <strong>RULE</strong> offers the other kind of change. Instead of rolling dice per step, it looks at each step&rsquo;s <em>neighbours</em> and applies a rule &mdash; so a shape can travel along the bar, collide with another, and come out the far side.</p>
 <p>It is encoder 1 of the AUTO page, on both kinds. Four settings, and the first is what you already have.</p>
 <ul>
 <li><strong>RAND</strong> &mdash; the shift register, unchanged. This is where every channel starts.</li>
@@ -232,7 +244,7 @@
 <li><strong>R90</strong> &mdash; diagonals. Shapes drift across the bar and cancel where they meet.</li>
 <li><strong>R110</strong> &mdash; the interesting one. Structures form, survive for bars, and are disturbed by whatever passes.</li>
 </ul>
-<p><strong>RANDOM and RHYTHM still mean the same thing.</strong> On the shift register they are how likely the fed-back bit is to flip; on a rule they are how likely the rule is to be applied to each step, with the rest held. So LOCK is still exactly LOCK on either, and a channel at the top of the knob is the pure automaton.</p>
+<p><strong>MELODY and RHYTHM still mean the same thing.</strong> On the shift register they are how likely the fed-back bit is to flip; on a rule they are how likely the rule is to be applied to each step, with the rest held. So LOCK is still exactly LOCK on either, and a channel at the top of the knob is the pure automaton.</p>
 <p>These rules are deterministic: the same bar leads to the same next bar. That is what makes a shape survive long enough to be heard rather than dissolving into noise. One consequence is worth knowing &mdash; <strong>if the pattern ever empties completely, a single step is put back</strong>. Every rule of this kind maps an empty bar to an empty bar, so without that the channel would go silent for good with the knob still reading a number.</p>
 
 <h2 id="lean">LEAN &mdash; a generator that leans</h2>
@@ -260,7 +272,7 @@
 <p>It gates the bar-rate gestures too &mdash; the ratchet and chance ramps, HALF and DOUBLE, the drop. Those used to walk every channel whether or not you had an opinion about that one.</p>
 
 <h2 id="phrase-fill">PHRASE and FILL &mdash; the fourth bar answers the first</h2>
-<p>Encoders 6 and 7 of the AUTO page. <strong>PHRASE</strong> is how long a channel&rsquo;s phrase is &mdash; <code>BAR</code>, <code>2bar</code> or <code>4bar</code> &mdash; and <strong>FILL</strong> is how full its last bar gets.</p>
+<p>Encoders 6 and 7 of the AUTO page. <strong>PHRASE</strong> is how long a channel&rsquo;s phrase is &mdash; <code>BAR</code>, <code>2bar</code>, <code>3bar</code> or <code>4bar</code>, and the odd one is there on purpose: a channel on <code>3bar</code> against the rest on <code>4bar</code> takes twelve bars to come back round &mdash; and <strong>FILL</strong> is how full its last bar gets.</p>
 <p>Set a channel to <code>4bar</code> and raise its FILL, and every fourth bar comes back busier before the plain pattern returns. The added steps go to the <em>offbeats</em> first, because a fill that added hits on the beats would just be a louder version of the bar it is supposed to answer.</p>
 <p>A fill only ever adds. Taking hits away is a breakdown, and there are knobs for that.</p>
 <p>At <code>BAR</code> and <code>OFF</code>, which is where everything starts, no bar is ever a fill.</p>

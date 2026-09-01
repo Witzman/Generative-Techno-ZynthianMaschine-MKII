@@ -55,13 +55,14 @@
 <ul class="track-list" style="display:none">
 <li><a href="02-features.html">What it is</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
-<li><a href="modulation.html">Modulation</a></li>
+<li><a href="performing.html">Performing</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
-<li><a href="the-surface.html">The surface</a></li>
+<li><a href="modulation.html">Modulation</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
@@ -79,6 +80,9 @@
 <table>
 <tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
 <tr><td>Euclidean drums</td><td>Five drum channels, always alive. HITS, ROTATE, DIVIDE and LENGTH; the generator writes the notes.</td><td><a href="generating-patterns.html#what-it-is">Generating patterns</a></td></tr>
+<tr><td>Per-step odds</td><td>Hold SHIFT and tap a pad to ladder that one step through 100, 75, 50 and 25 per cent.</td><td><a href="generating-patterns.html#probability">A step that sounds sometimes</a></td></tr>
+<tr><td>SWING, VELO, OCTAVE and RANGE</td><td>The four knobs that shape what the generator writes rather than deciding it. SWING is per channel.</td><td><a href="generating-patterns.html#the-quiet-knobs">SWING, VELO, OCTAVE and RANGE</a></td></tr>
+<tr><td>Six scales</td><td>MIN, MAJ, DOR, PHR, HMIN and PENT, shared by all three voices.</td><td><a href="generating-patterns.html#chord-walker">The chord walker</a></td></tr>
 <tr><td>Turing-machine voices</td><td>Three voices, each evolving its own shift register into a melody.</td><td><a href="generating-patterns.html#how-it-works">How it works</a></td></tr>
 <tr><td>A pattern rebuilt every cycle</td><td>The bar is regenerated rather than looped, so it does not come back around identical.</td><td><a href="generating-patterns.html#how-it-works">How it works</a></td></tr>
 <tr><td>Polymeter</td><td>LENGTH reaches three, five and seven beats against a four-to-the-floor kick.</td><td><a href="generating-patterns.html#polymeter">Lengths that do not agree</a></td></tr>
@@ -111,19 +115,19 @@
 <h2 id="structure">Structure and performance</h2>
 <table>
 <tr><th>Feature</th><th>What it does</th><th>Where</th></tr>
-<tr><td>One phrase clock</td><td>A single bar count for the whole instrument, which every timed gesture resolves against.</td><td><a href="the-surface.html#phrase">The phrase</a></td></tr>
-<tr><td>ARM &mdash; land it on a bar</td><td>Choose a gesture and a length; it fires at the boundary rather than under your finger.</td><td><a href="the-surface.html#arm">ARM</a></td></tr>
-<tr><td>PENDING</td><td>A page showing what is armed and how long it has left, and how to cancel one.</td><td><a href="the-surface.html#pending">PENDING</a></td></tr>
-<tr><td>FREEZE</td><td>Two stages on one button: hold the generators, or hold the modulators as well.</td><td><a href="the-surface.html#freeze">FREEZE</a></td></tr>
-<tr><td>The mute grid</td><td>One pad per channel, instant on the top row and queued to the bar on the bottom.</td><td><a href="the-surface.html#mute-grid">The mute grid</a></td></tr>
-<tr><td>Beat repeat</td><td>Hold a button and the whole machine squeezes down to one beat, then lets go.</td><td><a href="the-surface.html#beat-repeat">Beat repeat</a></td></tr>
-<tr><td>Gate collapse</td><td>Every note shortens across the bars you choose, then returns.</td><td><a href="the-surface.html#gate-collapse">Gate collapse</a></td></tr>
+<tr><td>One phrase clock</td><td>A single bar count for the whole instrument, which every timed gesture resolves against.</td><td><a href="performing.html#phrase">The phrase</a></td></tr>
+<tr><td>ARM &mdash; land it on a bar</td><td>Choose a gesture and a length; it fires at the boundary rather than under your finger.</td><td><a href="performing.html#arm">ARM</a></td></tr>
+<tr><td>PENDING</td><td>A page showing what is armed and how long it has left, and how to cancel one.</td><td><a href="performing.html#pending">PENDING</a></td></tr>
+<tr><td>FREEZE</td><td>Two stages on one button: hold the generators, or hold the modulators as well.</td><td><a href="performing.html#freeze">FREEZE</a></td></tr>
+<tr><td>The mute grid</td><td>One pad per channel, instant on the top row and queued to the bar on the bottom.</td><td><a href="performing.html#mute-grid">The mute grid</a></td></tr>
+<tr><td>Beat repeat</td><td>Hold a button and the whole machine squeezes down to one beat, then lets go.</td><td><a href="performing.html#beat-repeat">Beat repeat</a></td></tr>
+<tr><td>Gate collapse</td><td>Every note shortens across the bars you choose, then returns.</td><td><a href="performing.html#gate-collapse">Gate collapse</a></td></tr>
 <tr><td>DROP</td><td>Everything falls away except the channels you nominated, and comes back on the bar.</td><td><a href="mixing-and-effects.html#drop">DROP</a></td></tr>
 <tr><td>BREAK</td><td>Fall out now, come back on the bar.</td><td><a href="mixing-and-effects.html#break">BREAK</a></td></tr>
 <tr><td>HALF and DOUBLE</td><td>The same rhythm at another speed, landing on a boundary.</td><td><a href="generating-patterns.html#half-double">HALF and DOUBLE</a></td></tr>
 <tr><td>The CHANCE ramp</td><td>The kit thins out over the bars you choose and re-forms.</td><td><a href="generating-patterns.html#chance-ramp">The CHANCE ramp</a></td></tr>
 <tr><td>The ratchet ramp</td><td>The roll into the drop, climbing RATCHET as it goes.</td><td><a href="generating-patterns.html#ratchet-ramp">The ratchet ramp</a></td></tr>
-<tr><td>Banks as scenes</td><td>Hold or tap DUPLICATE: sixteen pads are sixteen whole arrangements, and a press lands on the bar.</td><td><a href="the-surface.html#bank-grid">The bank grid</a></td></tr>
+<tr><td>Banks as scenes</td><td>Hold or tap DUPLICATE: sixteen pads are sixteen whole arrangements, and a press lands on the bar.</td><td><a href="performing.html#bank-grid">The bank grid</a></td></tr>
 <tr><td>Parts that leave rather than stop</td><td>EXIT closes a channel through its filter and level over a bar or four instead of muting it.</td><td><a href="mixing-and-effects.html#exit">EXIT</a></td></tr>
 </table>
 
@@ -155,9 +159,22 @@
 <tr><td>Two displays that say what the knobs are</td><td>Eight columns, each with a name, a value and a bar, plus the page indicator above them.</td><td><a href="the-surface.html#reading-the-displays">Reading the displays</a></td></tr>
 <tr><td>Colour-coded channels</td><td>Every channel has a hue, and it is the same hue on the pads, the tabs and the Group buttons.</td><td><a href="the-surface.html#what-the-lights-mean">What the lights mean</a></td></tr>
 <tr><td>One alphabet for the lights</td><td>Dark does nothing, dim is available, bright is acting or held, a slow blink is latched, and a pulse on the bar is counting down. Every modifier lights.</td><td><a href="the-surface.html#what-the-lights-mean">What the lights mean</a></td></tr>
+<tr><td>The F row, and SOLO</td><td>F1&ndash;F8 mute the eight channels in every mode; hold or latch SOLO and the same row solos instead.</td><td><a href="the-surface.html#mute-solo-erase">Mute, solo and erase</a></td></tr>
+<tr><td>The register undo</td><td>NOTE REPEAT walks a voice back up to four registers and holds it there.</td><td><a href="the-surface.html#the-buttons">The buttons, one by one</a></td></tr>
+<tr><td>A coarse gear for the knobs</td><td>Hold TEMPO and every encoder turns twice as fast. It never latches.</td><td><a href="the-surface.html#the-buttons">The buttons, one by one</a></td></tr>
+<tr><td>Silence a channel, or hand it back</td><td>ERASE + a Group button silences that channel and returns it to the generator.</td><td><a href="the-surface.html#mute-solo-erase">Mute, solo and erase</a></td></tr>
+<tr><td>A fixed order for the overlays</td><td>Six modifiers share sixteen pads, and which one owns them never changes.</td><td><a href="the-surface.html#duration">A tap latches, a hold is momentary</a></td></tr>
+<tr><td>Erase one step</td><td>ERASE and a pad deletes that step.</td><td><a href="playing-and-recording.html#what-it-is">Playing and recording</a></td></tr>
+<tr><td>The NAVIGATE phrase page</td><td>The pads become a readout of where every channel is in its phrase, and nothing else.</td><td><a href="performing.html#phrase">The phrase</a></td></tr>
+<tr><td>Cancel everything armed</td><td>ERASE + SELECT drops every pending change at once.</td><td><a href="performing.html#arm">ARM</a></td></tr>
+<tr><td>Generated effect pages</td><td>REV, DLY and MAIN appear on the VOLUME ring, built from the plugins&rsquo; own ports.</td><td><a href="mixing-and-effects.html#master-insert">The master insert</a></td></tr>
 <tr><td>It says when it has stopped</td><td>If generation stops, the indicator reads GEN STOPPED and the pads keep playing.</td><td><a href="the-surface.html#when-it-goes-quiet">When it goes quiet</a></td></tr>
 <tr><td>Snapshots</td><td>The whole state saved and recalled, including the generators&rsquo; own registers and any running modulators.</td><td><a href="saving.html#what-persists">What a snapshot carries</a></td></tr>
-<tr><td>Seventy-three starting points</td><td>A genre pack and a drone/ambient pack, ready to load.</td><td><a href="sound-and-presets.html#genre-pack">Fifty-one starting points</a></td></tr>
+<tr><td>Seventy-one snapshots, ready to load</td><td>A fifty-one-snapshot genre pack and a twenty-snapshot drone and ambient pack, beside the two factory sets.</td><td><a href="sound-and-presets.html#genre-pack">Fifty-one starting points</a></td></tr>
+<tr><td>The big-encoder depth multiplier</td><td>While MOD is on, the big encoder scales the depth of every live modulator at once.</td><td><a href="modulation.html#depth">Depth</a></td></tr>
+<tr><td>Clear every modulator</td><td>MOD + ERASE + ALL returns every modulated value to the base you set.</td><td><a href="modulation.html#clear-everything">Clearing everything</a></td></tr>
+<tr><td>Exact tempo for a snapshot</td><td>An offline tool moves a saved set onto a tempo the hardware plays exactly, and proves nothing else moved.</td><td><a href="saving.html#exact-tempo">Putting a snapshot on an exact tempo</a></td></tr>
+<tr><td>Styles as odds</td><td>Write a style as ranges and draw variants from it, or blend two, reproducibly from a seed.</td><td><a href="saving.html#style-sampler">Generating starting points of your own</a></td></tr>
 <tr><td>MIDI export</td><td>A tool writes the eight patterns as an ordinary MIDI file, read from the saved snapshot.</td><td><a href="saving.html#taking-patterns-elsewhere">Taking your patterns elsewhere</a></td></tr>
 </table>
 

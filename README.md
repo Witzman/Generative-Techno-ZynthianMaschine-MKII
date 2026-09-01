@@ -22,7 +22,7 @@ you through it, and **Changelog** says when each of them arrived.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![1459 tests](https://img.shields.io/badge/tests-1459%20passing-b4b4bc)
+![1616 tests](https://img.shields.io/badge/tests-1616%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -30,9 +30,27 @@ you through it, and **Changelog** says when each of them arrived.
 ## What the instrument does
 
 Eight channels are **always alive** — nothing is created or torn down while you
-play. A mode decides what the eight encoders mean: CONTROL is what the selected
-channel sounds like, STEP is what it plays, ALL is the machine's globals, and
-MIXER and FILTER spread one parameter across all eight channels at once.
+play.
+
+**Four buttons decide what the eight encoders mean**, and each one answers one
+question about the channel you have selected. **CONTROL** — how does it sound.
+**STEP** — what does it play. **AUTO** — what does the machine do to it by
+itself. **VOLUME** — what holds for everything.
+
+**The fifth button, ALL, is not a mode. It is a lens.** Hold it, or tap it to
+latch it, and the eight encoders stop being eight verbs of one channel and
+become **one verb across all eight** — whichever knob your hand last moved. Turn
+CHANCE on the kick, hold ALL, and there is CHANCE on all eight under your
+fingers. A channel that has no such control draws four dashes rather than
+pretending. Let go and you are back where you were, on the same page, without
+having navigated anywhere.
+
+That is the whole grammar of the panel, and the rest of it follows one rule
+each: **a tap latches and a hold is momentary**, for every modifier there is;
+**a light is dark when it does nothing, dim when it is available, bright when it
+is acting, and blinks when it is latched**, and nothing else is invented; and
+the big encoder's press is **HOME** — back to a known place, without throwing
+anything away.
 
 **The generator owns the pattern.** You do not draw a beat and decorate it. You
 set hits, rotation and randomness, and the driver writes notes into Zynthian's own
@@ -49,10 +67,11 @@ moves the root all three share, along the scale rather than chromatically, so
 three independent lines become a progression.
 
 The drums have an evolving generator of their own now: **RHYTHM** lets steps
-appear and disappear from bar to bar. Tapping a pad flips a step in that same
-register rather than editing the pattern, so a hand-chosen rhythm survives
-rotation and is saved with the snapshot — and HITS, DIVIDE or LENGTH put every
-step back when you want the plain euclidean line again.
+appear and disappear from bar to bar. Tapping a pad writes into that same
+register rather than editing the pattern — **a tap takes a step away where there
+is one and puts a step in where there is not** — so a hand-chosen rhythm
+survives rotation and is saved with the snapshot, and HITS, DIVIDE or LENGTH put
+every step back when you want the plain euclidean line again.
 
 **The pads are pressure-sensitive.** Squeeze a held pad on a voice and the filter
 opens for as long as you press, easing back when you let go.
@@ -111,7 +130,7 @@ is authoritative; `install.sh` is only a wrapper over it.
 Every test in this repository runs without a Pi and without the controller:
 
 ```bash
-cd ctrldev && python3 -m unittest discover -s tests -q   # → 1044  the driver
+cd ctrldev && python3 -m unittest discover -s tests -q   # → 1201  the driver
 cd daemon  && cargo test                                 # →  179  the HID daemon
 bash system/tests/test-system-files.sh                   # →   55  units, udev, helpers
 python3 -m unittest discover -s tools/tests -q           # →   95  the offline tools

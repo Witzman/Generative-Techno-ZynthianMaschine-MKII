@@ -55,13 +55,14 @@
 <ul class="track-list">
 <li><a href="02-features.html">What it is</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
-<li><a href="modulation.html" aria-current="page"><strong>Modulation</strong></a></li>
+<li><a href="performing.html">Performing</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
-<li><a href="the-surface.html">The surface</a></li>
+<li><a href="modulation.html">Modulation</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
@@ -107,13 +108,16 @@
 <p><strong>Rates are locked to the bar</strong>, so a modulator lines up with the pattern it is colouring rather than drifting against it. Twelve rates and four shapes fill the sixteen pads exactly, with nothing unreachable.</p>
 <p><strong>The value cell always shows the base.</strong> Motion lives on the indicator bar: a dashed span across the range the modulator covers, and a small tick travelling inside it. A fast modulator blurs into a static span, and that is honest — the span is the truth, the tick is a courtesy. On 1-bit glass refreshing five times a second, animating the number would just make it unreadable.</p>
 <p><strong>Under the lens it is eight at once.</strong> Put your hand on LEVEL, tap ALL to latch the lens on it, then tap MOD and turn each encoder in turn, and every channel gets its own modulator on the same control. They do not run in lockstep: each starts its cycle at the moment you bind it, so binding them one after another spreads them around the bar and the row breathes rather than pumps.</p>
+<p><strong>An effect modulator is one object, not eight.</strong> The reverb and the delay are a single insert pair shared by all eight chains, so a modulator you bind on the REV, DLY or MAIN page belongs to the instrument rather than to the channel you happened to be on when you bound it. Bind it from anywhere and every channel hears it; clear it from anywhere and it is gone for all of them. This is the one place the lens has nothing to spread — there is only ever one.</p>
 <p><strong>It is saved.</strong> Modulators go into the snapshot with their depth, rate, shape and position, and the value stored is the base you set rather than wherever the sweep happened to be. Load the set tomorrow and they are still running, still spread apart.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
-<p>MOD will not bind to anything that rewrites the pattern. <strong>While MOD is down, those columns lose their bar</strong> — the name and the value stay, because they are still live controls; they just cannot be modulated. So the rule under MOD is simple: <strong>a bar means you can bind here</strong>.</p>
-<p><strong>HITS · ROTATE · MELODY · RHYTHM · CHANCE · VELO · GATE · DIVIDE · LENGTH · KIT · PRESET · ROOT · SCALE</strong></p>
+<p><strong>While MOD is down, a column that will not take a modulator loses its bar</strong> — the name and the value stay, because they are still live controls; they just cannot be modulated. So you never have to remember the list: <strong>a bar means you can bind here</strong>. But the list is short enough to learn, and knowing it saves you hunting.</p>
+<p><strong>It takes the sound.</strong> LEVEL, REVERB and DELAY on every channel; CUTOFF, RESO, ENV and DECAY on a voice; every parameter on a <a href="deep-parameters.html">generated EXTRA page</a>; and every knob on the REV, DLY and MAIN pages.</p>
+<p><strong>And it takes three pattern verbs</strong> — HITS, ROTATE and CHANCE. Those are <a href="#drift">drift</a>, and they are the exception the next section is about: they move once a bar rather than continuously, and they refuse outright on a channel you have played or recorded onto.</p>
+<p><strong>It takes nothing else.</strong> Not the rest of the pattern — DIVIDE, LENGTH, VELO, GATE, OCTAVE, RANGE, RATCHET. Not the generator’s own controls — RULE, LEAN, MODEL, MELODY, RHYTHM, LANE, MOVE, PHRASE, FILL, EXIT. Not the walk — SPAN, STRIDE, FEED, AMT. Not a name column — KIT, SAMPLE, PRESET. And not the globals — ROOT, SCALE, BPM, WALK.</p>
 <p>The refusal is the design, not a gap. A modulator writes several times a second. A knob that rewrites the pattern would tear the line up continuously — and on a channel you had recorded onto, it would destroy your take with nothing on the surface explaining why. <strong>Nothing MOD can do will touch a recorded take.</strong></p>
-<p>Generation moving on its own is a genuinely good idea and it is coming, but it needs its own answer to that question first.</p>
+<p>Generation moving on its own is a genuinely good idea, and it does ship — but only under its own rules, which is what <a href="#drift">drift</a> is.</p>
 <hr>
 <h2 id="drift">Drift — when the pattern itself moves</h2>
 <p><strong>Everything above modulates the sound. Drift modulates the pattern.</strong> Bind it to HITS and the channel gains and loses hits on its own; bind it to ROTATE and the bar turns under itself; bind it to CHANCE and the whole channel thins out and comes back. The arrangement evolves instead of the tone.</p>

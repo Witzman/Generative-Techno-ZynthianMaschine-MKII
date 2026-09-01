@@ -2813,9 +2813,14 @@ class techno_lib:
 
     BUTTONS_STATEFUL = {
         2: "erase",
-        # SCENE and PATTERN, both measured free in the G4 capture and both
-        # named right on the panel for what they do. STATEFUL rather than
-        # press-only because a reroll is hold-to-fire: the press arms nothing,
+        # SUPERSEDED 2026-09-01: reroll is ONE button now, CC 26, and it
+        # lives in BUTTONS_PRESS because a press is the whole gesture - it
+        # arms at the wrap and a second press takes it back. SCENE (CC 25)
+        # was freed by that merge and is in CCS_MEASURED_AND_UNCLAIMED above.
+        # The paragraph below is kept because it records why the two-button
+        # shape existed and what replaced it; do not read it as current.
+        # ---- WAS: STATEFUL rather than press-only because a reroll is
+        # hold-to-fire: the press arms nothing,
         # the RELEASE past the threshold does. Hold-to-fire is already this
         # instrument's law, it is self-cancelling - let go early and nothing
         # happens - and the hold buys a disclosure window for free.
@@ -5140,9 +5145,11 @@ techno_lib.VERB_COLS = {
 # out of the class body is the only reason they are down here; they are read as
 # techno_lib.PAGE_RINGS like everything else.
 _d = techno_lib.page_desc
-# THE ELEVEN PAGES, 2026-09-01. It was twenty-four, and 74 of its 192 columns
-# were dead. Every page below is full or within two of it, and no ring is
-# longer than two.
+# THE NINE STATIC PAGES, 2026-09-01. It was twenty-four, and 74 of its 192
+# columns were dead. Every page below is full or within two of it, and no ring
+# is longer than two. NINE descriptors across SEVEN ring keys - the spec's
+# table says eleven because it counted the generated LV2 and FX pages, which
+# are not here; they are built at runtime from the plugins' own ports.
 #
 # The cut is by QUESTION, not by implementation class:
 #   CONTROL  how does this channel SOUND

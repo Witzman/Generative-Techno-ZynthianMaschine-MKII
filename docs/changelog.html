@@ -55,13 +55,14 @@
 <ul class="track-list" style="display:none">
 <li><a href="02-features.html">What it is</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
-<li><a href="modulation.html">Modulation</a></li>
+<li><a href="performing.html">Performing</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
-<li><a href="the-surface.html">The surface</a></li>
+<li><a href="modulation.html">Modulation</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
@@ -69,12 +70,12 @@
 <main>
 <article>
 <h1 id="changelog">Changelog</h1>
-<p>What arrived, and when. Dates are the day the work landed on the instrument, not the day it was thought of &mdash; nothing appears here until it has been played on the hardware.</p>
+<p>What arrived, and when. Dates are the day the work landed on the instrument, not the day it was thought of &mdash; nothing appears here until it is on the instrument and running.</p>
 <p>Entries are written for a player: what you can now do that you could not do before. Fixes appear only where they changed what you would see or hear.</p>
 <hr>
 
-<h2 id="unreleased">Unreleased &mdash; the surface, redesigned</h2>
-<p>Built and written up, but <strong>not yet played through</strong>. It is listed here rather than above so nobody reads it as shipped.</p>
+<h2 id="2026-09-01">1 September 2026 &mdash; the surface, redesigned</h2>
+<p><strong>Played through at the rig, and the gate found five defects.</strong> All five are fixed and in what follows: the light alphabet was unreadable because <em>dim</em> had been chosen on paper and is ten times too bright on real LEDs; the right-hand display froze on a segmented bar given the wrong kind of number; RANGE was a knob that showed a value it could not move; and a kind switch quietly reset the channel&rsquo;s own play chance, so the screen read 100 while the channel played thinner.</p>
 <p>The panel was rebuilt around four rules: four modes and a lens, one duration rule for every modifier, one alphabet for every light, and a home to come back to.</p>
 <ul>
 <li><strong>Four modes instead of five.</strong> CONTROL, STEP, AUTO, VOLUME &mdash; how it sounds, what it plays, what the machine does by itself, what holds for everything. The generator has a button of its own. <a href="the-surface.html#modes-and-pages">Read</a></li>
@@ -84,12 +85,23 @@
 <li><strong>Every modifier lights</strong>, all saying the same five things: dark, dim, bright, a blink for latched, a pulse for counting down. FREEZE&rsquo;s two depths are visible for the first time. <a href="the-surface.html#what-the-lights-mean">Read</a></li>
 <li><strong>F1&ndash;F8 are mutes in every mode</strong>, CONTROL included. A plugin switch steps on its own column&rsquo;s encoder. <a href="deep-parameters.html#switches">Read</a></li>
 <li><strong>One button regenerates</strong> &mdash; PATTERN, both kinds, and the selected channel decides which half. A press fires it, a second press before the bar takes it back, and it goes <strong>dark when it would do nothing</strong>. <a href="generating-patterns.html#reroll">Read</a></li>
-<li><strong>ERASE + SELECT cancels everything armed</strong>, now that a tap on SELECT latches the macro pads. <a href="the-surface.html#arm">Read</a></li>
+<li><strong>ERASE + SELECT cancels everything armed</strong>, now that a tap on SELECT latches the macro pads. <a href="performing.html#arm">Read</a></li>
 <li><strong>RANGE reaches the drum CONTROL page</strong> &mdash; the kit walk&rsquo;s window has a knob at last. <a href="sound-and-presets.html#kit-window">Read</a></li>
 </ul>
 
-<h2 id="unreleased-features">Unreleased &mdash; what it can now do</h2>
-<p>The same gate. These are new capabilities rather than changes to how the panel works.</p>
+<h2 id="2026-09-01-sweep">1 September 2026 &mdash; the silent-refusal sweep</h2>
+<p>After the gate, every gesture the instrument can decline was checked against what it tells you. The rule it was measured by: <strong>a refused gesture that says nothing is the same fault as a channel going quiet without explaining itself.</strong> Six were fixed, and three of them were worse than silent &mdash; they answered.</p>
+<ul>
+<li><strong>A drum pad tap adds a hit</strong>, not only removes one. The same gesture used to mean two different things on the two kinds: on a voice a tap adds a step, on a drum it did nothing wherever the generator had not already placed one. It was hidden because the tap played the drum either way &mdash; a sound that said it had worked. <a href="generating-patterns.html#drum-rhythm">Read</a></li>
+<li><strong>A knob that cannot act says so, on every page.</strong> Five controls were drawing live on channels that have no such control, and three of them moved a number on screen while changing no sound. <a href="the-surface.html#reading-the-displays">Read</a></li>
+<li><strong>NOTE REPEAT lights only when it has something to give back.</strong> A voice that has never mutated has nothing to undo, and the button now says so instead of sitting lit. <a href="generating-patterns.html#how-it-works">Read</a></li>
+<li><strong>PATTERN goes dark when a press would do nothing</strong> &mdash; a reroll refuses on a channel you have recorded onto, and that refusal used to be invisible. <a href="generating-patterns.html#reroll">Read</a></li>
+<li><strong>REC stops promising a take it cannot make</strong> while a latched overlay owns the pads.</li>
+<li><strong>A column with nothing to step through draws dead.</strong> A chain with no kits loaded used to show a kit name in normal type with a bar under it, and a knob that did nothing.</li>
+</ul>
+<hr>
+<h2 id="2026-09-01-features">1 September 2026 &mdash; twelve more things it can do</h2>
+<p>Built the same morning and on the instrument the same day. Several were played through during that evening&rsquo;s run at the rig &mdash; the AUTO verbs, the bank grid, the phrase page &mdash; and the rest are running but have not yet been taken end to end by hand, which is the next thing this project does rather than something the reader has to worry about. New capabilities rather than changes to how the panel works.</p>
 <ul>
 <li><strong>RULE</strong> &mdash; a cellular automaton as a second way a register evolves, on both kinds. <a href="generating-patterns.html#rule">Read</a></li>
 <li><strong>LEAN</strong> &mdash; a third placement generator beside euclid, weighting hits toward the beat, the eighths or the offbeat. <a href="generating-patterns.html#lean">Read</a></li>
@@ -97,7 +109,7 @@
 <li><strong>MOVE</strong> &mdash; how often the machine may touch a channel at all, as a probability rather than a switch. <a href="generating-patterns.html#move">Read</a></li>
 <li><strong>PHRASE and FILL</strong> &mdash; the fourth bar answers the first. <a href="generating-patterns.html#phrase-fill">Read</a></li>
 <li><strong>EXIT</strong> &mdash; a part leaves through its filter over a bar or four instead of stopping dead. <a href="mixing-and-effects.html#exit">Read</a></li>
-<li><strong>The bank grid</strong> &mdash; hold DUPLICATE and sixteen pads are sixteen whole arrangements. <a href="the-surface.html#bank-grid">Read</a></li>
+<li><strong>The bank grid</strong> &mdash; hold DUPLICATE and sixteen pads are sixteen whole arrangements. <a href="performing.html#bank-grid">Read</a></li>
 <li><strong>A modulator&rsquo;s shape, on the screen</strong> &mdash; a bound column draws a small picture of its wave. <a href="modulation.html#shape-on-the-screen">Read</a></li>
 <li><strong>It says when it has stopped</strong> &mdash; if generation stops, the indicator says so and the pads keep playing. <a href="the-surface.html#when-it-goes-quiet">Read</a></li>
 <li><strong>Per-screen brightness and contrast</strong> &mdash; two settings the daemon applies at start-up. Absent, nothing is read and nothing is written.</li>
@@ -108,7 +120,7 @@
 <h2 id="2026-08-31">31 August 2026 &mdash; eight features, gated the same evening</h2>
 <ul>
 <li><strong>The GEN page</strong> for the three voices: ROTATE a melody, MODEL between the shift register and a bounded walk with SPAN and STRIDE, and FEED/AMOUNT so one voice drifts toward another.</li>
-<li><strong>The drum rhythm register</strong> on encoder 7 of the drum STEP page &mdash; steps appear and disappear without the line sliding. SWING moved one page along to its spread, where it reaches all eight.</li>
+<li><strong>The drum rhythm register</strong> &mdash; steps appear and disappear without the line sliding. SWING moved one page along to its spread, where it reaches all eight.</li>
 <li><strong>A pad tap now flips a bit in the rhythm register</strong> on both kinds, so a hand-chosen step survives ROTATE and RHYTHM. HITS, DIVIDE and LENGTH are the way back.</li>
 <li><strong>The chord walker</strong>: the shared root steps along the scale every few bars.</li>
 <li><strong>The pump</strong> &mdash; MOD + RESTART snaps every modulator into the same phase.</li>

@@ -55,13 +55,14 @@
 <ul class="track-list" style="display:none">
 <li><a href="02-features.html">What it is</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
-<li><a href="modulation.html">Modulation</a></li>
+<li><a href="performing.html">Performing</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
-<li><a href="the-surface.html">The surface</a></li>
+<li><a href="modulation.html">Modulation</a></li>
 <li><a href="saving.html">Saving your work</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
@@ -103,7 +104,7 @@
 </table>
 
 <h2 id="building-and-landing">Building, landing, breaking</h2>
-<p>Gestures you fire that resolve somewhere musical, four or eight or sixteen bars later, instead of happening the instant your finger moves. That rested on something the instrument did not have &mdash; a sense of which bar it was on. <strong>It has one now</strong>: the <a href="the-surface.html#phrase">phrase clock and ARM</a>, <a href="mixing-and-effects.html#drop">DROP</a>, the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a> and <a href="modulation.html#rise">RISE</a> are built and written up. What is below is what else could fire into that clock.</p>
+<p>Gestures you fire that resolve somewhere musical, four or eight or sixteen bars later, instead of happening the instant your finger moves. That rested on something the instrument did not have &mdash; a sense of which bar it was on. <strong>It has one now</strong>: the <a href="performing.html#phrase">phrase clock and ARM</a>, <a href="mixing-and-effects.html#drop">DROP</a>, the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a> and <a href="modulation.html#rise">RISE</a> are built and written up. What is below is what else could fire into that clock.</p>
 <table>
 <tr><th>#</th><th>Idea</th><th>What it does</th><th>Cost</th><th>Impact</th></tr>
 <tr><td>11</td><td>The build ladder</td><td>One number from 0 to 100 that moves hits, density, odds, ratchet and cutoff together. Turn it by hand, or arm it and let it climb over sixteen bars.</td><td>M</td><td>5</td></tr>
@@ -173,6 +174,10 @@
 <tr><td>58</td><td>Screen brightness and contrast</td><td>The displays accept both, on a channel that costs the busy part of the connection nothing. Nobody has ever set them.</td><td>S</td><td>2</td></tr>
 <tr><td>59</td><td>Layout presets</td><td>Rearranging which knob sits where, saved per player.</td><td>M</td><td>2</td></tr>
 <tr><td>60</td><td>Three focuses collapsed into one</td><td>A simplification of how the instrument decides what a knob is pointed at. The only entry on the list that would cost relearning.</td><td>M</td><td>2</td></tr>
+<tr><td>70</td><td>A step stutter on the transport&rsquo;s left arrow</td><td>Hold it and the machine stops advancing and repeats the step it is on; let go and it comes back on the bar. Its neighbour already holds the beat repeat, so the two form a ladder under one finger &mdash; one beat to the right, one step to the left &mdash; learnable in a gesture with nothing explained. The 1/16 roll into a drop is the most-played live gesture in this music and the instrument does not have it.</td><td>S</td><td>5</td></tr>
+<tr><td>71</td><td>ERASE + pad, or nothing</td><td>A bare pad tap now both adds and removes a step, so ERASE + pad may have no job left. Worse, the two write to different places: ERASE deletes the note straight out of the pattern while a tap writes the register, so an erased step quietly returns at the next rewrite. Either give ERASE + pad a meaning the tap does not have, or take it away.</td><td>S</td><td>3</td></tr>
+<tr><td>72</td><td>LENGTH means two things side by side</td><td>Under the lens, LENGTH lays pattern beats on the drums next to shift-register bits on the voices &mdash; two quantities that cannot be compared, in one row whose whole purpose is comparison. Either the lens refuses a verb whose meaning changes with the kind, or the two get different names.</td><td>S</td><td>3</td></tr>
+<tr><td>73</td><td>The screens repaint whole</td><td>Every repaint clears the framebuffer first, which forces a full-screen transfer: 2120 bytes per changed display where a single changed column would need about 300. The dirty-rectangle path is built and tested and never exercised. It is the one path that has thrown the controller off the USB bus, and it is what makes &ldquo;never animate a value on the screens&rdquo; a rule rather than a preference.</td><td>M</td><td>4</td></tr>
 </table>
 
 <h2 id="recall-and-other-machines">Recall, recording, and other machines</h2>

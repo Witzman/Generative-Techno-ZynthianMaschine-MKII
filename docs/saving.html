@@ -55,14 +55,15 @@
 <ul class="track-list">
 <li><a href="02-features.html">What it is</a></li>
 <li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
 <li><a href="generating-patterns.html">Generating patterns</a></li>
 <li><a href="playing-and-recording.html">Playing and recording</a></li>
-<li><a href="modulation.html">Modulation</a></li>
+<li><a href="performing.html">Performing</a></li>
 <li><a href="sound-and-presets.html">Sound and presets</a></li>
 <li><a href="deep-parameters.html">Deep parameter control</a></li>
 <li><a href="mixing-and-effects.html">Mixing and effects</a></li>
-<li><a href="the-surface.html">The surface</a></li>
-<li><a href="saving.html" aria-current="page"><strong>Saving your work</strong></a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="saving.html">Saving your work</a></li>
 </ul></div>
 <a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
 </nav>
@@ -102,6 +103,17 @@
 <li><strong>Per-note chance.</strong> A step that plays four times in five is not something a MIDI file can express, so it is written as a note that always plays. What you get is the pattern as it would sound with every chance turned up.</li>
 </ul>
 
+<h2 id="exact-tempo">Putting a snapshot on an exact tempo</h2>
+<p><a href="performing.html#phrase">The phrase page</a> explains why a handful of tempos are exact on this hardware and the rest run a few parts per million fast. If you want one of your own snapshots moved onto an exact one, there is a tool for it:</p>
+<pre><code>python3 tools/set-snapshot-tempo.py --tempo 125 snapshot/my-set.zss</code></pre>
+<p><strong>Do not edit the file by hand.</strong> A snapshot carries the tempo in <em>two</em> places &mdash; the sequencer's own riff and the surface's saved globals &mdash; and writing one without the other gives you a set whose display and whose playback disagree. The tool writes both, then reads the file back, puts both fields where they were, and refuses unless the result is byte&ndash;identical to what it started with. That proves the tempo is the only thing that moved.</p>
+<hr>
+<h2 id="style-sampler">Generating starting points of your own</h2>
+<p>The <a href="sound-and-presets.html#genre-pack">genre pack</a> is built from a plain list of snapshot descriptions. A second tool lets you write one of those descriptions as <em>ranges</em> rather than numbers &mdash; a tempo somewhere in the low 130s, a filter somewhere open &mdash; and draw as many concrete variants from it as you want, or blend two existing styles into a third:</p>
+<pre><code>python3 tools/style-sampler.py sample --style snapshot/example-style.json --variants 4 --seed 1234 --out /tmp/sampled.json
+python3 tools/style-sampler.py blend --manifest snapshot/genre-pack-manifest.json --a 031-house-classic --b 046-minimal-dry --t 0.5 --out /tmp/blend.json</code></pre>
+<p>What comes out is an ordinary description list, which the normal pack builder turns into <code>.zss</code> files with no change at all. The seed is part of the command, so the same seed gives you the same set of variants tomorrow &mdash; a style you liked is a number you can write down. <strong>It runs on a computer, never on the instrument</strong>: nothing on the rig can read a range, and a knob that could show one has nowhere to put it on a 256&times;64 screen.</p>
+<hr>
 <h2 id="see-also">See also</h2>
 <ul>
 <li><a href="playing-and-recording.html">Playing and recording</a> — what ownership means, and why amber matters</li>

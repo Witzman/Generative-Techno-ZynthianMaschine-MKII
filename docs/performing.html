@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performing — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="changelog.html">Changelog</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="features.html">Features</a></li>
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="whats-next.html">What could come next</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html">What it is</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="performing.html">Performing</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="performing">Performing</h1>
+<p>Everything that lands on a boundary rather than under your finger: the bar count the whole instrument shares, the macros you arm against it, the two grids that rearrange the set, and the two ways of holding the machine still.</p>
+<hr>
+<p>These are the controls you reach for while the music is running and your eyes are somewhere else. They have one thing in common and it is worth saying before any of them: <strong>almost nothing here happens the moment you press it.</strong> A drop, a bank, a queued mute and a reroll all wait for a boundary, because a change arriving mid-bar is a change that trips the groove. What you get instead of immediacy is a countdown you can read and, nearly always, a second press that takes it back.</p>
+<p>The panel itself &mdash; the four modes, the lens, the duration rule and what the lights mean &mdash; is on <a href="the-surface.html">The surface</a>. This page assumes it.</p>
+<hr>
+<h2 id="phrase">The phrase &mdash; one bar count for the whole instrument</h2>
+<p><strong>The page name on the display carries a bar number</strong> &mdash; <code>STEP 5/16</code> &mdash; counting one to sixteen and starting again.</p>
+<p><strong>It is one count for all eight channels, not one per channel.</strong> Each channel owns its own length, so eight channels can be on eight different bars; a count taken from any one of them would be a lie on the other seven. This one comes from the transport instead, so it stays true however far apart the lengths are &mdash; see <a href="generating-patterns.html#polymeter">lengths that do not agree</a>.</p>
+<p><strong>The count corrects itself against the music, every bar.</strong> It is worked out from tempo and the system clock, while the sequencer runs on the audio clock &mdash; two time bases for the same number, and they were measured drifting far enough apart to lose a whole bar every eight minutes, which put every armed macro progressively late in a long set. Each bar the count now takes back a quarter of the gap, gently enough that nothing you are reading ever jumps. Measured after the change: a bar of slip would take about a month.</p>
+<p><strong>Which of the two was wrong is now known, and it is the sequencer.</strong> Zynthian rounds one sequencer tick down to a whole audio frame and never gives the remainder back, so at most tempi you play slightly faster than you asked &mdash; ask for 124 and you get 124.48. The count above no longer cares, because it corrects against the sequencer rather than against the tempo. But it does mean <strong>the number on the touchscreen need not be the number you are playing</strong>, which matters the moment you run alongside anything else.</p>
+<p><strong>Some tempi come out exact, and the instrument now ships on one.</strong> At 48 kHz the rounding vanishes whenever the tempo divides 30000 &mdash; 100, <strong>120</strong>, <strong>125</strong>, <strong>150</strong>, 200. It is not gradual: 124 drifts a bar clear of nominal every eight minutes, while <strong>125, where the factory snapshot now starts, is perfect.</strong> Stay on one of those and the touchscreen number is the truth. Move off and nothing inside the instrument minds &mdash; only outside gear does.</p>
+<p><strong>Bar 1 is the moment you press Play, and Restart re-zeros it</strong> along with the playheads &mdash; count and patterns are pulled back onto the one together. Stop and the number goes away rather than freezing, because a stuck number reads as a clock that has died. It is a live ruler, not a position: it is not saved, and it starts again from one on the next Play.</p>
+<p><strong>Hold NAVIGATE and the sixteen pads become the phrase</strong>, one pad per bar: the bars behind you dim, the bar you are in full, the bars ahead dark. With the transport stopped every pad is dark. Let go and your pattern comes straight back.</p>
+<p><strong>While NAVIGATE is up, the pads are a readout and nothing else.</strong> A pad hit does not toggle a step, does not play the channel, does nothing at all &mdash; the surface takes the press and drops it. This is the one overlay that is purely a display, so you can read the phrase page mid&ndash;bar without your hand costing you anything.</p>
+<p>The count is read thirty times a second, so anything scheduled against it lands within a few hundredths of a bar. That is close enough for a mute or a level, and deliberately not close enough for anything that has to sit on a step.</p>
+<hr>
+<h2 id="arm">ARM &mdash; landing a change on a bar</h2>
+<p><strong>SELECT is ARM.</strong> Hold it and compose two things on the pads: <em>what</em> is going to happen, and <em>how many bars away</em>. Tap it instead and the grid stays, like every other modifier here.</p>
+<table><thead><tr><th>Pads while ARM is held</th><th>What they are</th></tr></thead><tbody>
+<tr><td>1&ndash;7</td><td>the macro &mdash; <strong>DROP</strong>, <strong>CHANCE ramp</strong>, <strong>HALF</strong>, <strong>DOUBLE</strong>, <strong>BREAK</strong>, <strong>ratchet ramp</strong>, <strong><a href="#gate-collapse">gate collapse</a></strong>. Amber, and the one you picked lights full</td></tr>
+<tr><td>8</td><td>dark, and it does nothing. This is where a later macro goes</td></tr>
+<tr><td>9&ndash;16</td><td>the length in bars &mdash; 1, 2, 3, 4, 6, 8, 12, 16. Green</td></tr>
+</tbody></table>
+<p><strong>The page indicator says what you have picked.</strong> While ARM is held it reads <code>ARM?</code> until you touch a macro pad, then <code>ARM DROP</code>, <code>ARM THIN</code>, <code>ARM HALF</code>, <code>ARM DOUBLE</code>, <code>ARM BREAK</code>, <code>ARM ROLL</code> or <code>ARM TIGHT</code>. Seven amber pads look alike in a dark room; the label is how you know which one your thumb found. It goes away the moment you release ARM, because from then on the countdown, the SELECT light and the <a href="#pending">PENDING</a> page carry it.</p>
+<p><strong>Pick the macro first, then the length.</strong> The length is the commit: tapping it arms the macro. A length on its own does nothing at all, because guessing which macro you meant would fire something you never named.</p>
+<p><strong>The grid becomes a countdown the instant something is armed.</strong> One red pad per bar of the length you chose, going out from the top left as the bars pass, so the pads still lit are the bars still to come. While that is showing every pad is inert &mdash; reading the countdown must not also change it.</p>
+<p><strong>ERASE + SELECT cancels everything pending.</strong> That is the panic gesture, and it cancels all rather than one for the same reason a reroll does: a half-cancelled gesture is harder to think about mid-bar than none. It sits on ERASE because ERASE is this instrument&rsquo;s one word for taking something away, and it rhymes with the surgical version &mdash; ERASE and the encoder under a single column on the <a href="#pending">PENDING</a> page.</p>
+<p><strong>Reading the countdown is safe.</strong> Any release used to cancel everything, however long you had held it &mdash; so the only way to look at the ruler destroyed what you were looking at. Now a release does nothing at all, and a tap leaves the grid up so you can keep reading it with your hand back on a knob.</p>
+<p><strong>Freeze the machine and the countdown holds with it.</strong> The pads stop going out, the number stops falling, and the <a href="#pending">PENDING</a> page swaps its digits for <code>HELD</code>. Nothing armed is lost &mdash; it lands on the first bar after you thaw. Without this the count ran to zero and sat there advertising a drop that could not land, which is the one reading a countdown must never give.</p>
+<p><strong>SELECT is the indicator once your hand has left it.</strong> Dim when nothing is armed, <strong>one pulse per bar</strong> while a macro counts down, and steady through the bar it lands on. The pulse is driven by the bar count rather than by a timer, so it cannot drift away from the thing it is counting &mdash; and it is the one place on this panel where a moving light does not mean latched. A countdown and a modifier cannot share one LED, and the countdown is the one you need from across a room.</p>
+<p><strong>Arming with the transport stopped keeps the length and waits.</strong> There is no bar to count from yet, so nothing can fire; press Play and the macro lands that many bars in. SELECT sits steady rather than flashing meanwhile, because nothing is counting down yet.</p>
+<p><strong>Arming a macro that is already pending replaces it</strong> instead of stacking a second one, so two drops can never land on different bars and fight over the same restore.</p>
+<p><strong>With MOD active, ARM belongs to the modulators instead.</strong> MOD latches, so MOD held or latched plus ARM is the gesture that makes a modulator sweep once &mdash; see <a href="modulation.html#rise">RISE</a>. Tap MOD off first if you want to arm a macro. <strong>SHIFT outranks both</strong>: a pad under SHIFT is a step's odds, whatever else is latched.</p>
+<p><strong>BREAK is the exception to the length.</strong> Every other macro fires in N bars; BREAK fires <em>immediately</em> and comes back in N. There is no &ldquo;in N bars&rdquo; for a gesture whose whole point is that it happens now.</p>
+<p><strong>DROP and BREAK cannot both be armed.</strong> They are the same mechanism with its ends swapped and they share one snapshot of who was muted, so arming either quietly drops the other. Only one thing may own the mutes at a time.</p>
+<p>Each macro is written up where it lands: <a href="mixing-and-effects.html#drop">DROP and BREAK</a>, the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a>, <a href="generating-patterns.html#half-double">HALF and DOUBLE</a>, and the <a href="generating-patterns.html#ratchet-ramp">ratchet ramp</a>.</p>
+<hr>
+<h2 id="pending">PENDING &mdash; what is armed, and how to kill one</h2>
+<p><strong>Press VOLUME and step to its second page.</strong> One column per armed macro, soonest first, with the bars remaining and a bar counting down. With nothing armed it says <code>NONE</code> rather than drawing eight blank columns.</p>
+<p><strong>Hold ERASE and turn the encoder under a column to cancel that one.</strong> ERASE + SELECT still cancels everything &mdash; that is the panic gesture. This is the surgical version, and the two share a modifier because they are the same verb at two sizes.</p>
+<p>The columns are sorted by how soon each lands and only move when something really overtakes something else, so the page stays readable while it counts.</p>
+<p><strong>Every macro shows up twice &mdash; once going out, once coming back.</strong> The names are short enough for a column head, so learn the twelve of them: <code>DROP</code> and <code>UNDROP</code>, <code>BREAK</code> and <code>UNBREAK</code>, <code>HALF</code> or <code>DOUBLE</code> and their <code>RETURN</code>, <code>ROLL</code> and <code>UNROLL</code> for the ratchet ramp, <code>TIGHT</code> and <code>UNTIGHT</code> for gate collapse, and <code>THIN</code> for the CHANCE ramp. <code>THIN</code> is the one that does not match its name elsewhere in this guide: the ramp is called CHANCE where you arm it and <code>THIN</code> where it counts down, because it is thinning the bar out.</p>
+<hr>
+<h2 id="freeze">FREEZE &mdash; stop the machine evolving</h2>
+<p><strong>PAD MODE is FREEZE, and it has two depths.</strong></p>
+<table><thead><tr><th>Gesture</th><th>What holds still</th></tr></thead><tbody>
+<tr><td><strong>Tap</strong> &mdash; latches</td><td>MELODY, RHYTHM, drift, reroll, FILL, the armed macro queue and the chord walker &mdash; <em>everything that would rewrite a pattern or move the key on its own</em>. The notes stop changing under you, the key stops moving, the fourth bar stops answering &mdash; <strong>and the LFOs keep sweeping</strong>, so the sound goes on breathing</td></tr>
+<tr><td><strong>Hold</strong> &mdash; momentary</td><td>all of that <em>plus</em> the LFOs. Everything parks until you let go</td></tr>
+</tbody></table>
+<p>That is the surface&rsquo;s standing rule &mdash; a tap latches, a hold is momentary &mdash; so there is nothing new to learn. Tap again to thaw.</p>
+<p><strong>A frozen instrument says so three times over</strong>, because one that did not would read as a broken one: PAD MODE lights, the page indicator gains <code>FRZ</code> (or <code>FRZ!</code> for the total hold), and the MELODY and RHYTHM columns lose their bars in the same grey MOD already uses for &ldquo;this control cannot act right now&rdquo;. The values stay &mdash; they are what resumes.</p>
+<p>The light tells the two depths apart the way the whole panel does: <strong>blinking</strong> for the latched, shallow freeze, <strong>steady bright</strong> while you hold the total one.</p>
+<p><strong>A pending reroll is held, not thrown away.</strong> Its tab stays dashed and it fires on the next wrap after you thaw.</p>
+<p><strong>Do not hold SHIFT and press PAD MODE.</strong> That combination never reaches the instrument at all: the USB daemon eats it for a mode of its own, where the pads program its internal sequence. It is a pre-existing trapdoor rather than anything FREEZE added, and the way out is to press PAD MODE without SHIFT until the pads behave again.</p>
+<hr>
+<h2 id="mute-grid">The mute grid &mdash; arrangement by pad</h2>
+<p><strong>Hold MUTE and the sixteen pads become your eight channels, twice.</strong> Tap it instead and the grid stays, which is what you want when you are going to work the arrangement for a while and need the hand back.</p>
+<table><thead><tr><th>Pads while MUTE is held</th><th>What they do</th></tr></thead><tbody>
+<tr><td>Top two rows, 1&ndash;8</td><td>mute and unmute channel A&ndash;H <strong>now</strong></td></tr>
+<tr><td>Bottom two rows, 9&ndash;16</td><td>queue the same change to that channel&rsquo;s <strong>next wrap</strong></td></tr>
+</tbody></table>
+<p>Each pad wears its channel&rsquo;s own colour, because hue is identity everywhere on this surface. Full means audible, dark means muted. <strong>A pad in the bottom half shows the change, not the state</strong>: half-lit when something is queued for that channel and dark when nothing is. Drawing the state there would only repeat the row above.</p>
+<p><strong>Tap a queued pad twice and the queue is cancelled</strong> rather than reversed &mdash; the second press of a gesture is its undo everywhere else here. Pressing the instant pad also clears anything queued for that channel, so one strip never has two answers waiting.</p>
+<p>It is the mixer strip that mutes, the same one the F row uses, so it is in your snapshot and shows on the touchscreen mixer.</p>
+<hr>
+<h2 id="beat-repeat">Beat repeat &mdash; squeeze it to one beat</h2>
+<p><strong>Hold the transport&rsquo;s <span aria-hidden="true">&#9654;</span> STEP button.</strong> Every generated channel collapses to its first beat and loops it; let go and the patterns come straight back.</p>
+<p><strong>One beat is the floor</strong> &mdash; a pattern&rsquo;s length is whole beats and always will be, so there is no half-bar repeat. Worth knowing that a beat is a different <em>size</em> per channel: at 1/4 it is a single step, at 1/32 it is eight. The same gesture is a repeated hit on a coarse channel and a tight stutter on a fine one.</p>
+<p><strong>Channels you have recorded onto are skipped</strong>, and the page indicator says how many it took &mdash; <code>RPT6</code> means six of the eight. A take has no generator settings to rebuild it from afterwards, so collapsing one would lose it.</p>
+<hr>
+<h2 id="gate-collapse">Gate collapse &mdash; the notes tighten into the landing</h2>
+<p>The seventh macro on ARM, on pad 7. Arm it and, over the bars you chose, every note gets shorter &mdash; the groove goes tight and dry without a filter moving &mdash; and then everything returns to the length it had.</p>
+<p>It is the cheapest way to build tension this instrument has, because nothing about the pattern changes: the same steps play, they just stop sooner. Ratchets survive it, which is worth knowing, because collapse rebuilds each pattern from a capture and a rebuild is exactly where a roll could quietly go missing.</p>
+
+<h2 id="bank-grid">The bank grid &mdash; sixteen arrangements under one button</h2>
+<p>The sequencer has sixty-four banks and this instrument has always used one. A bank is a complete eight-channel pattern set, so a bank is a <em>scene</em>: every channel&rsquo;s pattern at once.</p>
+<p><strong>Hold DUPLICATE</strong>, or tap it and it stays. The pads become sixteen banks, and the big encoder walks the four pages of them &mdash; the label reads <code>BANK 1/4</code> and then which bank you are in. A press lands on the bar, so tapping the modifier is the useful half here: your hand is free while you wait for the boundary.</p>
+<p>What the colours mean:</p>
+<ul>
+<li><strong>One bright pad</strong> &mdash; the bank you are playing.</li>
+<li><strong>Dimmer pads of the same colour</strong> &mdash; banks that exist and hold something.</li>
+<li><strong>A green pad</strong> &mdash; a bank you have asked for. It arrives at the bar.</li>
+<li><strong>Dark</strong> &mdash; nothing there yet.</li>
+</ul>
+<p><strong>A press lands on the bar, never under your finger.</strong> A whole arrangement arriving mid-bar is the one gesture on this instrument that could not possibly be in time. Press the queued bank again to cancel it, which is what a second press means everywhere else here.</p>
+<p><strong>Pressing a dark pad makes that bank.</strong> It arrives blank &mdash; eight empty channels laid out the way this instrument expects &mdash; and you build it from there. This is deliberate: left to itself the sequencer would have invented a sixteen-pad grid on the wrong MIDI channels and written it into your snapshot.</p>
+<p>One limit worth knowing. A snapshot saves the registers of the bank you are <em>in</em>: the patterns of every bank are saved, but the generator settings of the ones you are not currently playing are not, so a reloaded snapshot gives fresh settings on the other banks rather than the ones they had.</p>
+
+<hr>
+<h2 id="see-also">See also</h2>
+<ul>
+<li><a href="the-surface.html">The surface</a> &mdash; the panel these gestures are made on</li>
+<li><a href="generating-patterns.html">Generating patterns</a> &mdash; what a reroll is actually rerolling</li>
+<li><a href="modulation.html">Modulation</a> &mdash; RISE, the one-shot sweep armed the same way</li>
+<li><a href="saving.html">Saving your work</a> &mdash; what a snapshot keeps of all this</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
