@@ -774,6 +774,40 @@ class techno_lib:
         return max(0.05, min(duration, float(limit)))
 
     @staticmethod
+    def take_pitch(sounding, step, fallback):
+        """The pitch a hand-tapped step takes on a channel the PLAYER owns.
+
+        THE TAKE'S OWN MATERIAL, NOT THE GENERATOR'S LINE, and that is the
+        whole rule. A channel marked `player` holds notes the generator did
+        not write and will not rewrite; adding a note there from the shift
+        register would put a pitch into the take that nothing else in it uses,
+        and the pads would draw it in the group colour rather than the player
+        amber - so a step the player tapped would look like a step the machine
+        placed.
+
+        `sounding` is `{step: pitch}` for every step that already sounds.
+        The nearest one wins, and **an earlier step beats a later one at the
+        same distance**: that is the note the player just heard, so it is the
+        one they are answering.
+
+        `fallback` is for an owned channel with nothing in it - which is a real
+        case, because ownership survives an ERASE of every step. There the
+        generator's pitch for that step is the only sensible answer, and the
+        caller passes it.
+
+        Written 2026-09-02, when a bare tap in STEP mode was found to CLEAR a
+        hand-authored chord take and regenerate the whole pattern."""
+
+        best_key, best_pitch = None, fallback
+        for other, pitch in sounding.items():
+            if other == step:
+                continue
+            key = (abs(other - step), 0 if other < step else 1)
+            if best_key is None or key < best_key:
+                best_key, best_pitch = key, pitch
+        return best_pitch
+
+    @staticmethod
     def record_step(playpos, cps, steps):
         """Which step a live strike belongs to: the nearest grid line, wrapping.
 

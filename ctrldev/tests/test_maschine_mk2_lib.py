@@ -1470,3 +1470,69 @@ class TheLevelIsNeverReadFromTheStoredCopy(unittest.TestCase):
             "the stored level is stale by design - read the fader with "
             "_live_level(channel), which is what state_view() and _verb() "
             "already do")
+
+
+class AHandEditNeverGoesThroughTheGenerator(unittest.TestCase):
+    """A pad tap in STEP mode must ask WHO OWNS the channel before it does
+    anything, and an erase must remove the whole step.
+
+    THE TWO DEFECTS, both found 2026-09-02 from the owner playing `019`:
+
+    * `_toggle_rhythm_step` flipped a register bit and called
+      `_write_voice_pattern(..., by_hand=True)`, and `by_hand` exists to
+      BYPASS the ownership refusal. That writer opens with `clear()`, so a
+      tap on a channel holding a hand-authored chord take deleted the take
+      and regenerated a monophonic line - silently, and while CHORD was drawn
+      dead on the stated grounds that "the generator never writes a take".
+    * `_erase_step` removed `_step_note`, which is the CHORD'S ROOT, so ERASE
+      on a three-note stab left two notes sounding and the pad went dark.
+
+    Static, like the rest: the driver does not import off the Pi."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _function(self, name):
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == name:
+                return node
+        self.fail(f"the driver has no {name}()")
+
+    def _names_in(self, name):
+        """Every attribute and identifier mentioned inside one function."""
+        import ast
+        found = set()
+        for node in ast.walk(self._function(name)):
+            if isinstance(node, ast.Attribute):
+                found.add(node.attr)
+            elif isinstance(node, ast.Name):
+                found.add(node.id)
+        return found
+
+    def test_the_guard_can_see_both_functions(self):
+        # A guard that found neither would pass by checking nothing.
+        self.assertTrue(self._names_in("_toggle_rhythm_step"))
+        self.assertTrue(self._names_in("_erase_step"))
+
+    def test_the_step_tap_asks_who_owns_the_channel(self):
+        self.assertIn(
+            "OWNER_PLAYER", self._names_in("_toggle_rhythm_step"),
+            "a tap that does not check ownership reaches the generator's "
+            "writer with by_hand=True, and that writer begins with clear() - "
+            "which deletes a take rather than editing it")
+
+    def test_the_step_tap_routes_an_owned_channel_to_the_in_place_editor(self):
+        self.assertIn("_take_tap", self._names_in("_toggle_rhythm_step"))
+
+    def test_erasing_a_step_removes_EVERY_pitch_on_it(self):
+        names = self._names_in("_erase_step")
+        self.assertIn(
+            "_notes_at", names,
+            "_erase_step must ask for every pitch on the step; _step_note "
+            "returns the chord's ROOT and leaves the rest sounding")
+        self.assertNotIn(
+            "_step_note", names,
+            "_step_note is the root alone - that is the defect this guards")

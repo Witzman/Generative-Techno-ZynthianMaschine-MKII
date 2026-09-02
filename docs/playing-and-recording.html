@@ -105,6 +105,17 @@
 <p>Two details worth carrying: a drum's LENGTH keeps the take, because shortening a pattern preserves the steps that still fit; and MELODY and RHYTHM only hand back when they move <em>off</em> <code>LOCK</code>, since a locked generator rewrites nothing and could not undo your recording anyway. A knob has to actually move — brushing one does nothing.</p>
 <p><strong>On a drum channel the amber colouring does not survive a snapshot reload, and that is not a lost take.</strong> A played drum note carries the same pitch as a generated one, so once the pattern is read back there is nothing left to tell the two apart. The notes are all there and the channel is still yours: the indicator still reads <code>PLAY</code>, and after a reload that indicator, not the pad colour, is the authority. On a voice the amber usually survives, because the played pitch is normally its own. The exception is worth knowing: if the note you play happens to be the very note the generator would have put on that step, the two are indistinguishable once the pattern is read back, and that step returns in the group colour like a drum. The take is intact either way &mdash; the <code>PLAY</code> indicator remains the authority.</p>
 <hr>
+<h2 id="editing-a-take">Editing a take, step by step</h2>
+<p><strong>On a channel you own, the pads in STEP mode edit the pattern itself.</strong> Tap an empty step and a note appears there; tap a step that sounds and it goes. Nothing else in the pattern moves &mdash; the note you recorded four steps earlier is exactly where you left it.</p>
+<p>That is not what a tap does on a channel the machine owns, and the difference is the whole idea. There, a tap is a <em>message to the generator</em>: it marks the step as one you want used, and the line is rewritten around it. On a take there is no generator to send a message to, so the tap does the obvious thing instead.</p>
+<table><thead><tr><th>You tap</th><th>What happens</th></tr></thead><tbody>
+<tr><td>an empty step</td><td>a note is added, at <strong>the nearest note your take already uses</strong> &mdash; so it stays in the material you played rather than borrowing a pitch from the generator</td></tr>
+<tr><td>a step that sounds</td><td>it is removed. <strong>A chord goes as a chord</strong>, all of its notes at once</td></tr>
+<tr><td>ERASE + a step</td><td>the same removal, and the same whole-chord rule</td></tr>
+</tbody></table>
+<p><strong>Your tap&rsquo;s velocity is the note&rsquo;s accent</strong>, so a hard tap is a loud step. And an added note is shortened if it would otherwise run into the next step that sounds, which is the same rule the generator writes under.</p>
+<p>One thing to expect: a step you tap in draws in the channel&rsquo;s colour rather than amber when the note you added happens to be the note the generator would have put there. That is the same limit described above &mdash; nothing in the pattern records who wrote a note &mdash; and the <code>PLAY</code> indicator remains the authority on whose channel it is.</p>
+<hr>
 <h2 id="audio-capture">Capturing the jam to a file</h2>
 <p><strong>SHIFT + REC starts and stops an audio recording.</strong> It captures the master &mdash; all eight channels, the effects, and anything a macro does to them &mdash; to a WAV on the Pi, alongside the other captures.</p>
 <p>It cannot collide with overdub, which is <em>bare REC held</em>. That is also why it is a chord rather than a long press: a long press of REC already <em>is</em> the overdub hold.</p>
@@ -122,7 +133,7 @@
 <p>Every modifier that claims the pads replaces this picture for as long as it is held or latched, and hands it straight back: SHIFT shows each step&rsquo;s odds, MOD the rates and shapes, ARM the macros and the countdown, MUTE the eight channels, DUPLICATE the sixteen banks, NAVIGATE the phrase &mdash; and under NAVIGATE alone a pad press does nothing at all, because a bar of the phrase is not a step. Each is written up where that gesture is.</p>
 <hr>
 <h2 id="what-it-refuses">What it refuses, and why</h2>
-<p><strong>You cannot record in STEP mode</strong> — there the pads belong to the step editor — <strong>and you cannot record while MOD is active</strong>, where they pick a modulator's rate and shape.</p>
+<p><strong>You cannot record in STEP mode</strong> — there the pads belong to the step editor, which on a channel you own <a href="#editing-a-take">edits your take directly</a> — <strong>and you cannot record while MOD is active</strong>, where they pick a modulator's rate and shape.</p>
 <p>In both cases <strong>the REC button is unlit</strong> &mdash; unless an audio capture is running, which outranks everything and keeps it red. A lit REC would otherwise be promising a take it cannot make, so it goes dark rather than letting you play a phrase into nothing and wonder why it vanished.</p>
 <hr>
 <h2 id="pad-pressure">Pressing harder &mdash; the pads are pressure-sensitive</h2>

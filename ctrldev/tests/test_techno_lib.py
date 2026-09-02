@@ -7741,6 +7741,71 @@ class ALockedChannelSaysSoFromEveryPage(unittest.TestCase):
                              tl.blink_phase(now))
 
 
+class AHandTappedStepOnATakeUsesTheTakesOwnMaterial(unittest.TestCase):
+    """2026-09-02. A bare tap in STEP mode used to CLEAR a hand-authored chord
+    take and regenerate the whole pattern from the shift register. The fix
+    edits the pattern in place instead - and then has to answer a question the
+    old path never asked: what PITCH does a tapped-in step take?
+
+    The take's own nearest note, not the generator's line. A pitch from the
+    register would be a note nothing else in the take uses, and the pads would
+    draw it in the group colour rather than the player amber - so the step the
+    player tapped would look like one the machine placed."""
+
+    def test_the_nearest_note_before_wins(self):
+        self.assertEqual(tl.take_pitch({0: 43, 12: 50}, 2, 99), 43)
+
+    def test_the_nearest_note_after_wins_when_it_is_nearer(self):
+        self.assertEqual(tl.take_pitch({0: 43, 6: 50}, 5, 99), 50)
+
+    def test_a_TIE_goes_to_the_EARLIER_step(self):
+        # The note the player just heard is the one they are answering.
+        self.assertEqual(tl.take_pitch({0: 43, 8: 50}, 4, 99), 43)
+
+    def test_an_EMPTY_take_falls_back(self):
+        # A real case: ownership survives erasing every step, so an owned
+        # channel with nothing in it has no material to copy.
+        self.assertEqual(tl.take_pitch({}, 5, 99), 99)
+
+    def test_the_step_being_tapped_is_not_its_own_source(self):
+        # It is empty by construction - this is the ADD branch - but a caller
+        # that passed the whole picture must not get the step's own stale
+        # pitch handed back.
+        self.assertEqual(tl.take_pitch({5: 60}, 5, 99), 99)
+
+    def test_the_dub_factory_case_end_to_end(self):
+        # H holds ONE chord, at step 0, rooted on G2. A tap anywhere else must
+        # answer with G2 rather than with whatever the register says.
+        self.assertEqual(tl.take_pitch({0: 43}, 8, 71), 43)
+
+
+class ATappedStepShortensTheNoteBeforeIt(unittest.TestCase):
+    """The other half of the same fix. A note may not reach the next SOUNDING
+    step - zynseq deletes it when that step writes the same pitch - so adding
+    a step has to clamp the note that now runs into it.
+
+    These are note_duration's own rules, pinned against the numbers the dub
+    factory actually ships, because that is where the defect was seen."""
+
+    def test_H_holds_its_pad_for_the_whole_bar_when_nothing_follows(self):
+        # gate 1500 is fifteen steps, and with only step 0 sounding it keeps
+        # every one of them.
+        mask = [True] + [False] * 15
+        self.assertEqual(tl.note_duration(1500, 0, 16, mask), 15.0)
+
+    def test_a_tap_at_step_4_cuts_it_to_four(self):
+        # THE DEFECT THE OWNER HEARD, as arithmetic: the held pad becomes a
+        # blip the moment another step sounds.
+        mask = [True, False, False, False, True] + [False] * 11
+        self.assertEqual(tl.note_duration(1500, 0, 16, mask), 4.0)
+
+    def test_the_clamp_never_reaches_zero(self):
+        # Adjacent steps still leave a note that sounds; a zero-length note is
+        # a note that never plays.
+        mask = [True, True] + [False] * 14
+        self.assertEqual(tl.note_duration(1500, 0, 16, mask), 1.0)
+
+
 class TheWatchdogSaysWhenTheMachineStopped(unittest.TestCase):
     """2026-09-01. The three-hour silence this was written from - a poll thread
     that died by raising - CANNOT recur: that thread has carried an exception

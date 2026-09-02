@@ -6928,7 +6928,121 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._render_pads()
         self._render_transport()
 
-    def _toggle_rhythm_step(self, step):
+    def _notes_at(self, step):
+        """Every pitch sounding at one step of the SELECTED pattern.
+
+        THE WHOLE MIDI RANGE, because there is no enumerator in the installed
+        API - `getNoteVelocity(step, note)` is the only question that can be
+        asked, and it has to be asked per pitch. 128 reads on a HUMAN GESTURE,
+        under a lock the MIDI thread is already holding; the voice writer does
+        80 addNote in one hold and writes cost more than reads.
+
+        Asking about a RANGE instead would be the bug this replaces: a take
+        holds whatever the player played or the builder authored, and probing
+        only the keyboard notes is exactly how `_erase_step` came to remove one
+        note of a three-note chord and leave the pad looking empty.
+
+        Caller selects the pattern and holds the lock."""
+
+        return [note for note in range(128)
+                if self.libseq.getNoteVelocity(step, note)]
+
+    def _pattern_notes(self, steps):
+        """`{step: lowest pitch}` for every step of the SELECTED pattern that
+        sounds - read from the PATTERN, never from a register.
+
+        Both halves of a hand edit need this and they need it together, which
+        is why it is one scan rather than two. `note_duration` needs to know
+        WHICH steps sound, because a note may not reach the next one; and
+        `take_pitch` needs to know WHAT they play, because a tapped step
+        copies the take's own material. Scanning twice would double the cost
+        of a gesture that already probes the whole MIDI range per step.
+
+        The register cannot answer either question on an owned channel: it
+        describes the line the GENERATOR would write, and on a take the
+        generator wrote nothing.
+
+        Caller selects the pattern and holds the lock."""
+
+        found = {}
+        for other in range(steps):
+            notes = self._notes_at(other)
+            if notes:
+                found[other] = notes[0]
+        return found
+
+    def _take_tap(self, step, velocity=None):
+        """A pad tap in STEP mode on a channel the PLAYER owns: edit the
+        pattern IN PLACE. Add or remove one step, and touch nothing else.
+
+        WHY THIS EXISTS. The tap used to flip a bit in the rhythm register and
+        call the generator's writer with `by_hand=True`, which bypasses the
+        ownership refusal and begins with `clear()`. On a channel holding a
+        take that is not an edit, it is a DELETION: `019`'s hand-authored dub
+        chords on G and H became single generated notes on the first tap, with
+        nothing on the surface saying so. Owner found it by ear - "when I add
+        another step, the sound of the amber step changes".
+
+        AND THE SURFACE WAS ALREADY PROMISING THIS. CHORD draws dead on an
+        owned channel on the stated grounds that "the generator never writes a
+        take" - so the tap made a liar of the refusal, and because CHORD was
+        dead the player could not even rebuild what the tap had removed.
+
+        THE RHYTHM REGISTER IS DELIBERATELY NOT TOUCHED HERE. It describes the
+        line the generator would write if the channel were handed back, and
+        the player editing their own take has not changed the generator's
+        mind. Handing back with ERASE + Group therefore still produces the
+        line the register always described, which is the one behaviour a
+        player can predict.
+
+        THE TAP'S VELOCITY IS AN ACCENT AGAIN. That was lost when taps became
+        register bits - a mask bit has no room for a number - and it comes
+        back for free here, because this writes a note rather than a bit."""
+
+        channel = self.group
+        with self.lock:
+            self._select_pattern(channel)
+            steps = self.libseq.getSteps()
+            if not 0 <= step < steps:
+                return
+            existing = self._notes_at(step)
+            added = None
+            if existing:
+                # EVERY pitch, not the root. A chord is one step with three
+                # notes on it, and removing one of them leaves a step that
+                # sounds while the pad reads empty.
+                for note in existing:
+                    self.libseq.removeNote(step, note)
+            else:
+                sounding = self._pattern_notes(steps)
+                mask = [other in sounding for other in range(steps)]
+                mask[step] = True
+                # BOTH PITCHES GO IN THE LOG, not just the one written. Whether
+                # a hand-tapped step draws AMBER depends on whether the
+                # generator would have played the same note there -
+                # _rebuild_notes says so in its own docstring, and it is a
+                # limit of the pattern rather than of the probe: nothing in a
+                # .zss records who wrote a note. Logging both is the only way
+                # to tell a coincidence from a bug afterwards.
+                generated = self._step_note(channel, step)
+                pitch = tlib.take_pitch(sounding, step, generated)
+                added = (pitch, generated)
+                gate = int(self.state[channel].get("gate", 100) or 100)
+                self.libseq.addNote(
+                    step, pitch,
+                    max(1, min(127, int(velocity
+                                        or self.state[channel]["velo"]))),
+                    tlib.note_duration(gate, step, steps, mask), 0.0)
+            self.libseq.updateSequenceInfo()
+            self._render_pads()
+        # The pad colours are derived from a scan this has just invalidated.
+        self._rebuild_due.add(channel)
+        self._slog("pad", result="take edit", step=step,
+                   channel=channel, removed=len(existing),
+                   wrote=None if added is None else added[0],
+                   would=None if added is None else added[1])
+
+    def _toggle_rhythm_step(self, step, velocity=None):
         """A pad tap on EITHER KIND: flip that step in the rhythm register.
 
         Drums joined voices here on 2026-08-31, when they got a rhythm
@@ -6946,6 +7060,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         channel = self.group
         st = self.state[channel]
         voice = self.channel_kind(channel) == "voice"
+        if self.owner.get(channel) == tlib.OWNER_PLAYER:
+            # A TAKE IS EDITED, NEVER REGENERATED. Both kinds: a drum take is
+            # made by exactly the same REC gesture, and the drum writer has no
+            # ownership check of its own at all - see todo.md, which carries
+            # that wider hole separately. Here the two paths agree.
+            self._take_tap(step, velocity)
+            return
         # A VOICE's register spans the division's own step count; a DRUM's
         # pattern is as long as LENGTH makes it, and a bit set past the end
         # would reappear when the length changed back.
@@ -7034,20 +7155,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         number. That accent never survived a regeneration anyway, so what is
         lost is a transient the next encoder turn erased."""
 
-        self._toggle_rhythm_step(step)
+        self._toggle_rhythm_step(step, velocity)
 
     def _erase_step(self, step):
         """ERASE + pad. Removes that step's note if it has one; a pad that is
         already empty is left alone rather than toggled on."""
 
-        self._select_pattern(self.group)
-        if step >= self.libseq.getSteps():
-            return
-        note = self._step_note(self.group, step)
-        if self.libseq.getNoteVelocity(step, note):
-            self.libseq.removeNote(step, note)
-            self.libseq.updateSequenceInfo()
-            self._render_pads()
+        with self.lock:
+            self._select_pattern(self.group)
+            if step >= self.libseq.getSteps():
+                return
+            # EVERY PITCH ON THE STEP, since 2026-09-02. This used to remove
+            # `_step_note`, which is the CHORD'S ROOT - element 0 - so ERASE
+            # on a three-note stab left two notes sounding while the pad went
+            # dark, because the pads test the root. The step read as empty and
+            # was not: the unexplained-silence law inside out.
+            notes = self._notes_at(step)
+            if notes:
+                for note in notes:
+                    self.libseq.removeNote(step, note)
+                self.libseq.updateSequenceInfo()
+                self._render_pads()
 
     def _kit_centre(self, channel):
         """The note SP8's kit window centres on: the drum this channel plays.
