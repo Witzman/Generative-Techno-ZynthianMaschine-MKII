@@ -54,7 +54,19 @@ FALLBACK = {"clap": ["snare"], "ohat": ["chat"], "chat": ["ohat"], "snare": ["cl
 
 
 def normalise(name):
-    return re.sub(r"[_\-]+", " ", name)
+    """Fold the separators the sample names actually use into one space.
+
+    **U+00A0 IS IN HERE ON PURPOSE.** NI's filenames contain NO-BREAK SPACES,
+    and a no-break space is not `\x20`: a classifier that folds `_` and `-`
+    but leaves `\xa0` alone sees `hat\xa0closed` as one token and misses the
+    word boundary it is looking for. The rest of `\s` comes along with it
+    because a tab or a newline in a filename is the same problem wearing a
+    different byte, and because Python's `\s` is Unicode-aware for `str`
+    patterns - it already matches `\xa0`, so naming it as well is redundant
+    to the engine and NOT redundant to the reader, who has to know this was
+    considered rather than inherited."""
+
+    return re.sub(r"[_\-\s\u00a0]+", " ", name)
 
 
 def regions_of(path):
