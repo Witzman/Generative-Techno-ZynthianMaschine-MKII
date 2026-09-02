@@ -15,7 +15,6 @@
       "hits": 4,
       "rotate": 0,
       "velo": 108,
-      "gate": 45,
       "why": "four on the floor, the anchor"
     },
     "1": {
@@ -23,7 +22,6 @@
       "hits": 2,
       "rotate": 4,
       "velo": 84,
-      "gate": 40,
       "why": "backbeat, dry"
     },
     "2": {
@@ -31,7 +29,6 @@
       "hits": 1,
       "rotate": 12,
       "velo": 88,
-      "gate": 40,
       "why": "one clap a bar, drenched"
     },
     "3": {
@@ -39,7 +36,6 @@
       "hits": 4,
       "rotate": 2,
       "velo": 66,
-      "gate": 25,
       "why": "offbeat sixteenths"
     }
   },
@@ -268,5 +264,6 @@
     "7": 0.2826,
     "16": 1.0
   },
-  "levels_why": "The owner's mix, tuned by ear at the rig 2026-09-02 and then ramped for loudness with every ratio preserved. Measured on zynmixer's main bus over 40 s: peak -7.76 dBFS before, -3.99 dBFS after, RMS -23.34 -> -20.34, zero samples within 0.1 dB of full scale. The ceiling is the HATS modulator, not the faders: base 62 + depth 30 was already 92 of 100, so everything could only go up by 100/92 = 1.087 before that sweep would clip its own range. Main took the rest, 0.774 -> 1.0. Going louder than -4 dBFS needs a gain stage on the main bus, not a fader; the owner chose to stop here 2026-09-02. NOTE for channels 0 and 3: the level named here is the modulator's BASE, not a fader reading. A modulated strip's saved fader is wherever the LFO happened to be at save time, and the builder computes the base FROM the strip - so copying a saved fader for a modulated channel sets a base the owner never chose. 0.77 and 0.67 are the bases; base+depth is 93 and 100."
+  "levels_why": "The owner's mix, tuned by ear at the rig 2026-09-02 and then ramped for loudness with every ratio preserved. Measured on zynmixer's main bus over 40 s: peak -7.76 dBFS before, -3.99 dBFS after, RMS -23.34 -> -20.34, zero samples within 0.1 dB of full scale. The ceiling is the HATS modulator, not the faders: base 62 + depth 30 was already 92 of 100, so everything could only go up by 100/92 = 1.087 before that sweep would clip its own range. Main took the rest, 0.774 -> 1.0. Going louder than -4 dBFS needs a gain stage on the main bus, not a fader; the owner chose to stop here 2026-09-02. NOTE for channels 0 and 3: the level named here is the modulator's BASE, not a fader reading. A modulated strip's saved fader is wherever the LFO happened to be at save time, and the builder computes the base FROM the strip - so copying a saved fader for a modulated channel sets a base the owner never chose. 0.77 and 0.67 are the bases; base+depth is 93 and 100.",
+  "drums_why_gate_went": "Every drum carried a `gate` with a sentence beside it and NOTHING READ IT: the drum writer hardcodes a one-step duration and `gate` does not exist on a drum at all - VERB_KINDS puts it on voices only. Removed 2026-09-02, and a test now fails on any manifest key the builder does not consume. The four values were 45, 40, 40 and 25 if they are ever wanted for a feature that reads them."
 }

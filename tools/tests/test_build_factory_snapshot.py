@@ -879,3 +879,51 @@ class TheShippedManifestIsValid(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NoManifestKeyIsDeadData(unittest.TestCase):
+    """A key in the manifest that nothing reads is worse than a missing one:
+    it reads as a setting, it usually carries a `why`, and the next person
+    tunes it and hears nothing change.
+
+    FOUND 2026-09-02, chasing "the long-gate collision can eat drum notes".
+    It cannot - the drum writer hardcodes a duration of one step and `gate`
+    does not exist on a drum at all (`VERB_KINDS["gate"]` is voices only) -
+    and the reason the entry believed otherwise is that every drum in the
+    factory manifest carried `"gate": 45` with a sentence beside it. Four dead
+    keys, four explanations, nothing reading any of them.
+
+    The allowlist is what a drum spec may contain. Extend it when the builder
+    learns to read something new, and only then."""
+
+    MANIFEST = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__)))), "snapshot",
+        "factory-manifest.json")
+
+    DRUM_KEYS = {
+        # read by the builder
+        "kit", "hits", "rotate", "velo",
+        # read by drum_state, which is the driver's own saved block
+        "rhythm", "rhythm_reg", "hand_reg", "lean", "lane", "move", "exit",
+        "rule", "phrase", "fill", "div", "length", "ratchet",
+        # prose, for a reader
+        "why",
+    }
+
+    def _manifest(self):
+        with open(self.MANIFEST, encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_the_manifest_is_there(self):
+        self.assertTrue(self._manifest().get("drums"))
+
+    def test_no_drum_carries_a_key_nothing_reads(self):
+        dead = {}
+        for channel, spec in (self._manifest().get("drums") or {}).items():
+            extra = sorted(set(spec) - self.DRUM_KEYS)
+            if extra:
+                dead[channel] = extra
+        self.assertEqual(
+            dead, {},
+            "these manifest keys are read by nothing - they look like "
+            f"settings and are not: {dead}")
