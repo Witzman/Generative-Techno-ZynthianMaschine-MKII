@@ -554,8 +554,32 @@ def build(base, manifest, kit_notes):
             ctrls[symbol]["value"] = value
             report.append(f"  {chain['title']:11} {symbol:14} {was:.3f} -> {value}")
 
-    # --- the modulators -----------------------------------------------------
+    # --- the mix ------------------------------------------------------------
+    #
+    # BEFORE the modulators, and that order is load bearing: a `level`
+    # modulator's base is read from the strip this block just wrote, so
+    # writing the mix afterwards would leave every level modulator sweeping
+    # around the OLD mix while the fader sat at the new one.
+    #
+    # Levels used to come from whatever the base snapshot happened to hold,
+    # which made the mix the one part of this file nothing could reproduce -
+    # an ear-tuned mix lived only in a .zss and the next build reverted it
+    # without saying so. Found 2026-09-02 when the owner tuned the levels at
+    # the rig and asked for them to be kept.
     mixer = zs3.get("mixer") or {}
+    for channel, level in sorted((manifest.get("levels") or {}).items(),
+                                 key=lambda kv: int(kv[0])):
+        strip = f"chan_{int(channel):02d}"
+        if strip not in mixer:
+            raise ValueError(f"no mixer strip {strip} to set a level on")
+        level = float(level)
+        if not 0.0 <= level <= 1.0:
+            raise ValueError(f"{strip} level {level} is outside the fader")
+        was = mixer[strip].get("level")
+        mixer[strip]["level"] = level
+        report.append(f"  {strip} level {was} -> {level}")
+
+    # --- the modulators -----------------------------------------------------
     mods_out = {}
     for m in (manifest.get("mods") or []):
         channel, verb = int(m["channel"]), m["verb"]

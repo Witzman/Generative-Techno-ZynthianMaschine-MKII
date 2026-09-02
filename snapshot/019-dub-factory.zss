@@ -1257,32 +1257,32 @@
       },
       "mixer": {
         "chan_00": {
-          "level": 0.19
+          "level": 0.77
         },
         "midi_learn": {},
         "chan_01": {
-          "level": 0.19
+          "level": 0.7065
         },
         "chan_02": {
-          "level": 0.19
+          "level": 0.7826
         },
         "chan_03": {
-          "level": 0.19
+          "level": 0.67
         },
         "chan_04": {
-          "level": 0.19
+          "level": 0.2065
         },
         "chan_05": {
-          "level": 0.19
+          "level": 0.337
         },
         "chan_06": {
-          "level": 0.19
+          "level": 0.3261
         },
         "chan_07": {
-          "level": 0.19
+          "level": 0.2826
         },
         "chan_16": {
-          "level": 0.774264705882353
+          "level": 1.0
         }
       },
       "midi_capture": {
@@ -1702,11 +1702,11 @@
             },
             "mods": {
               "0|level": {
-                "depth": 15,
+                "depth": 16,
                 "rate": 0,
                 "shape": "tri",
                 "phase0": 0.0,
-                "base": 19,
+                "base": 77,
                 "seed": 1
               },
               "1|reverb": {
@@ -1742,11 +1742,11 @@
                 "seed": 6
               },
               "3|level": {
-                "depth": 30,
+                "depth": 33,
                 "rate": 3,
                 "shape": "tri",
                 "phase0": 0.8,
-                "base": 19,
+                "base": 67,
                 "seed": 4
               }
             },

@@ -100,7 +100,10 @@ def base_snapshot():
         "zs3": {"zs3-0": {
             "title": "Base",
             "processors": procs,
-            "mixer": {f"chan_{i:02d}": {"level": 0.19} for i in range(8)},
+            # chan_16 is the MAIN strip, which the rig always has and this
+            # fixture did not until 2026-09-02.
+            "mixer": dict({f"chan_{i:02d}": {"level": 0.19} for i in range(8)},
+                          chan_16={"level": 0.8}),
             "midi_capture": {PORT: {"ctrldev_state": {
                 "globals": {"root": 0, "scale": 0, "bpm": 125, "master": 80},
                 "kinds": {"4": "voice"},
@@ -766,6 +769,42 @@ class ItTouchesNothingItWasNotAskedTo(unittest.TestCase):
     def test_the_mixer_is_not_restaged(self):
         d, _r = builder.build(base_snapshot(), manifest(), KITS)
         self.assertEqual(d["zs3"]["zs3-0"]["mixer"]["chan_00"]["level"], 0.19)
+
+
+class LevelsAreDataLikeEverythingElse(unittest.TestCase):
+    """The mix was the one part of the factory snapshot nothing could
+    reproduce: strip levels came from whatever the BASE snapshot happened to
+    hold, so an ear-tuned mix lived only in a .zss and the next build silently
+    reverted it. Found 2026-09-02, when the owner tuned the levels at the rig
+    and asked for them to be saved."""
+
+    def test_a_named_strip_takes_the_manifest_level(self):
+        d, _s, _r = build(levels={"1": 0.7065})
+        self.assertAlmostEqual(
+            d["zs3"]["zs3-0"]["mixer"]["chan_01"]["level"], 0.7065)
+
+    def test_the_main_strip_is_reachable_too(self):
+        d, _s, _r = build(levels={"16": 1.0})
+        self.assertEqual(d["zs3"]["zs3-0"]["mixer"]["chan_16"]["level"], 1.0)
+
+    def test_a_strip_the_manifest_does_not_name_is_left_alone(self):
+        d, _s, _r = build(levels={"1": 0.5})
+        self.assertEqual(d["zs3"]["zs3-0"]["mixer"]["chan_00"]["level"], 0.19)
+
+    def test_a_level_modulator_reads_the_NEW_level_as_its_base(self):
+        """The base is computed from what the builder just wrote, so writing
+        the level and computing the base in the wrong order would give a
+        modulator that sweeps around the old mix."""
+        _d, state, _r = build(levels={"0": 0.77})
+        self.assertEqual(state["mods"]["0|level"]["base"], 77)
+
+    def test_a_level_outside_the_fader_range_is_refused(self):
+        with self.assertRaises(ValueError):
+            build(levels={"0": 1.5})
+
+    def test_a_strip_that_does_not_exist_is_refused(self):
+        with self.assertRaises(ValueError):
+            build(levels={"99": 0.5})
 
     def test_the_base_snapshot_itself_is_not_mutated(self):
         base = base_snapshot()

@@ -3,100 +3,270 @@
   "title": "Dub Factory",
   "base": "snapshot/018-generative-techno-main-insert.zss",
   "notes": "Round 1: dub drums on A-D with one slow modulator each, a four-note JC303 bass on F, and E/G/H empty. Owner brief 2026-09-02: 'Genre Dub. 4 on the floor beat with a bit of modulation for groups 1-4 first' and 'for group F a groovy baseline, all generation off, a few notes on the bar, supporting the drums'.",
-
   "tempo": 120,
-  "globals": {"root": 7, "scale": 0},
-
+  "globals": {
+    "root": 7,
+    "scale": 0
+  },
   "delay_ms": 250.0,
-
   "drums": {
-    "0": {"kit": "Roland TR909", "hits": 4, "rotate": 0,  "velo": 108, "gate": 45,
-          "why": "four on the floor, the anchor"},
-    "1": {"kit": "Roland TR909", "hits": 2, "rotate": 4,  "velo": 84,  "gate": 40,
-          "why": "backbeat, dry"},
-    "2": {"kit": "Roland CR78",  "hits": 1, "rotate": 12, "velo": 88,  "gate": 40,
-          "why": "one clap a bar, drenched"},
-    "3": {"kit": "Roland CR78",  "hits": 4, "rotate": 2,  "velo": 66,  "gate": 25,
-          "why": "offbeat sixteenths"}
+    "0": {
+      "kit": "Roland TR909",
+      "hits": 4,
+      "rotate": 0,
+      "velo": 108,
+      "gate": 45,
+      "why": "four on the floor, the anchor"
+    },
+    "1": {
+      "kit": "Roland TR909",
+      "hits": 2,
+      "rotate": 4,
+      "velo": 84,
+      "gate": 40,
+      "why": "backbeat, dry"
+    },
+    "2": {
+      "kit": "Roland CR78",
+      "hits": 1,
+      "rotate": 12,
+      "velo": 88,
+      "gate": 40,
+      "why": "one clap a bar, drenched"
+    },
+    "3": {
+      "kit": "Roland CR78",
+      "hits": 4,
+      "rotate": 2,
+      "velo": 66,
+      "gate": 25,
+      "why": "offbeat sixteenths"
+    }
   },
-
   "voices": {
-    "4": {"empty": true, "why": "E left silent this round; still carries 018's voice override"},
-    "5": {"register": 58, "length": 16, "rhythm_reg": 17473, "rotate": 0,
-          "random": 0, "rhythm": 0, "gate": 150, "octave": 0, "range": 1,
-          "velo": 110, "chord": 3,
-          "why": "G G F C on steps 0/6/10/14 - root, root, flat seventh, fourth. TEST CONFIGURATION 2026-09-02: octave moved -1 to 0 and chord set to 3 (TRI). A triad at G1 is mud, so a chord test down there would be inconclusive; at octave 0 the figure is G2 G2 F3 C3 and every voicing is audible. Starting ON a triad rather than OFF so the feature is heard on load rather than only after a knob turn. Both revert with the manifest."},
-    "6": {"register": 179, "length": 16, "rhythm_reg": 16448, "rotate": 0,
-          "random": 0, "rhythm": 0, "gate": 75, "octave": 1, "range": 1,
-          "velo": 96,
-          "why": "G plays CHORDS, which the generator cannot write - see the chords block. This entry is not what sounds; it is the octave the pads colour against, and what the generator would write on steps 6 and 14 if ownership were ever handed back."},
-    "7": {"register": 179, "length": 16, "rhythm_reg": 1, "rotate": 0,
-          "random": 0, "rhythm": 0, "gate": 1500, "octave": 0, "range": 1,
-          "velo": 72,
-          "why": "H is a deep pad: ONE chord a bar, held almost the whole bar. Like G it is authored as a take, so this entry is the octave the pads colour against and what the generator would write on step 0 if ownership were handed back."}
+    "4": {
+      "empty": true,
+      "why": "E left silent this round; still carries 018's voice override"
+    },
+    "5": {
+      "register": 58,
+      "length": 16,
+      "rhythm_reg": 17473,
+      "rotate": 0,
+      "random": 0,
+      "rhythm": 0,
+      "gate": 150,
+      "octave": 0,
+      "range": 1,
+      "velo": 110,
+      "chord": 3,
+      "why": "G G F C on steps 0/6/10/14 - root, root, flat seventh, fourth. TEST CONFIGURATION 2026-09-02: octave moved -1 to 0 and chord set to 3 (TRI). A triad at G1 is mud, so a chord test down there would be inconclusive; at octave 0 the figure is G2 G2 F3 C3 and every voicing is audible. Starting ON a triad rather than OFF so the feature is heard on load rather than only after a knob turn. Both revert with the manifest."
+    },
+    "6": {
+      "register": 179,
+      "length": 16,
+      "rhythm_reg": 16448,
+      "rotate": 0,
+      "random": 0,
+      "rhythm": 0,
+      "gate": 75,
+      "octave": 1,
+      "range": 1,
+      "velo": 96,
+      "why": "G plays CHORDS, which the generator cannot write - see the chords block. This entry is not what sounds; it is the octave the pads colour against, and what the generator would write on steps 6 and 14 if ownership were ever handed back."
+    },
+    "7": {
+      "register": 179,
+      "length": 16,
+      "rhythm_reg": 1,
+      "rotate": 0,
+      "random": 0,
+      "rhythm": 0,
+      "gate": 1500,
+      "octave": 0,
+      "range": 1,
+      "velo": 72,
+      "why": "H is a deep pad: ONE chord a bar, held almost the whole bar. Like G it is authored as a take, so this entry is the octave the pads colour against and what the generator would write on step 0 if ownership were handed back."
+    }
   },
-
   "chords": {
     "6": [
-      {"step": 6,  "notes": [55, 58, 62], "velo": 96, "duration": 0.75,
-       "why": "G minor - G3 Bb3 D4 - on the and of beat 2"},
-      {"step": 14, "notes": [57, 60, 65], "velo": 84, "duration": 0.75,
-       "why": "the flat-seventh chord voiced up, A3 C4 F4, on the and of beat 4. i to bVII is the dub progression, and this voicing keeps all three notes inside the pad keyboard"}
+      {
+        "step": 6,
+        "notes": [
+          55,
+          58,
+          62
+        ],
+        "velo": 96,
+        "duration": 0.75,
+        "why": "G minor - G3 Bb3 D4 - on the and of beat 2"
+      },
+      {
+        "step": 14,
+        "notes": [
+          57,
+          60,
+          65
+        ],
+        "velo": 84,
+        "duration": 0.75,
+        "why": "the flat-seventh chord voiced up, A3 C4 F4, on the and of beat 4. i to bVII is the dub progression, and this voicing keeps all three notes inside the pad keyboard"
+      }
     ],
     "7": [
-      {"step": 0, "notes": [43, 50, 58], "velo": 72, "duration": 15.0,
-       "why": "G minor voiced open and low - G2 D3 Bb3, root, fifth, tenth - one chord a bar held 15 of 16 steps, which is 1.9 s at 120 BPM. The tenth rather than a close third so it does not crowd the 303 bass, and the one-step gap before the retrigger keeps the note clear of the loop wrap."}
+      {
+        "step": 0,
+        "notes": [
+          43,
+          50,
+          58
+        ],
+        "velo": 72,
+        "duration": 15.0,
+        "why": "G minor voiced open and low - G2 D3 Bb3, root, fifth, tenth - one chord a bar held 15 of 16 steps, which is 1.9 s at 120 BPM. The tenth rather than a close third so it does not crowd the 303 bass, and the one-step gap before the retrigger keeps the note clear of the loop wrap."
+      }
     ]
   },
-
   "presets": {
-    "6": {"engine": "JV/Obxd",
-          "bundle": "Obxd_003-KVR_Brass_Synths",
-          "file": "003-KVR_Brass_Synths_BzSYN_PolySynth.ttl",
-          "name": "BzSYN PolySynth",
-          "controllers": {"voicecount": 1.0, "unison": 0.0},
-          "why": "Chosen off Obxd's own amp envelope rather than by name: attack 0.0, the only instant attack among the high-voicecount candidates, which is what makes a chord audible AS a chord instead of a smear. voicecount forced to 1.0 = 8 voices because the patch ships at 0.716 and a 9TH is five notes; unison forced OFF because the patch ships at 0.483 and unison stacks voices per note, which would exhaust the polyphony a chord needs. TEST CONFIGURATION - see the engines block."},
-    "7": {"engine": "JV/Obxd",
-          "bundle": "Obxd_003-KVR_Brass_Synths",
-          "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
-          "name": "Analog Brass Chrds",
-          "controllers": {"voicecount": 0.575},
-          "why": "018 had a BASS preset on the LEAD chain at voicecount 0.25, which is TWO voices - a three-note chord would silently lose a note. 0.575 is the scale point for 5. The rest of the patch comes from the preset, because the restore writes saved controllers OVER the preset and keeping 018's 82 would have made the swap inaudible."},
-    "8": {"engine": "JV/padthv1",
-          "bundle": "padthv1_67Padthv1Patches",
-          "file": "67Padthv1Patches_TapeStrings.ttl",
-          "name": "TapeStrings",
-          "controllers": {},
-          "why": "018 had DexKeys02 here, a KEYS patch - plucked attack, wrong for a sustained pad. TapeStrings was chosen off the patch data rather than the name: DEF1_MONO 0 so it can hold a chord, DCA1_ATTACK 0.81 the slowest swell in the bundle, DCA1_RELEASE 0.73 for the tail, and DCF1_CUTOFF 0.35 which is the darkest of the candidates. Haze01 read like the obvious pick by name and is DEF1_MONO 1 - it would have collapsed the chord to one note."}
+    "6": {
+      "engine": "JV/Obxd",
+      "bundle": "Obxd_003-KVR_Brass_Synths",
+      "file": "003-KVR_Brass_Synths_BzSYN_PolySynth.ttl",
+      "name": "BzSYN PolySynth",
+      "controllers": {
+        "voicecount": 1.0,
+        "unison": 0.0
+      },
+      "why": "Chosen off Obxd's own amp envelope rather than by name: attack 0.0, the only instant attack among the high-voicecount candidates, which is what makes a chord audible AS a chord instead of a smear. voicecount forced to 1.0 = 8 voices because the patch ships at 0.716 and a 9TH is five notes; unison forced OFF because the patch ships at 0.483 and unison stacks voices per note, which would exhaust the polyphony a chord needs. TEST CONFIGURATION - see the engines block."
+    },
+    "7": {
+      "engine": "JV/Obxd",
+      "bundle": "Obxd_003-KVR_Brass_Synths",
+      "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+      "name": "Analog Brass Chrds",
+      "controllers": {
+        "voicecount": 0.575
+      },
+      "why": "018 had a BASS preset on the LEAD chain at voicecount 0.25, which is TWO voices - a three-note chord would silently lose a note. 0.575 is the scale point for 5. The rest of the patch comes from the preset, because the restore writes saved controllers OVER the preset and keeping 018's 82 would have made the swap inaudible."
+    },
+    "8": {
+      "engine": "JV/padthv1",
+      "bundle": "padthv1_67Padthv1Patches",
+      "file": "67Padthv1Patches_TapeStrings.ttl",
+      "name": "TapeStrings",
+      "controllers": {},
+      "why": "018 had DexKeys02 here, a KEYS patch - plucked attack, wrong for a sustained pad. TapeStrings was chosen off the patch data rather than the name: DEF1_MONO 0 so it can hold a chord, DCA1_ATTACK 0.81 the slowest swell in the bundle, DCA1_RELEASE 0.73 for the tail, and DCF1_CUTOFF 0.35 which is the darkest of the candidates. Haze01 read like the obvious pick by name and is DEF1_MONO 1 - it would have collapsed the chord to one note."
+    }
   },
-
   "wets": {
-    "1": {"delay": 0,  "reverb": 8},
-    "2": {"delay": 12, "reverb": 35},
-    "3": {"delay": 30, "reverb": 22},
-    "4": {"delay": 10, "reverb": 6},
-    "6": {"delay": 14, "reverb": 10},
-    "7": {"delay": 45, "reverb": 40},
-    "8": {"delay": 20, "reverb": 55}
+    "1": {
+      "delay": 0,
+      "reverb": 8
+    },
+    "2": {
+      "delay": 12,
+      "reverb": 35
+    },
+    "3": {
+      "delay": 30,
+      "reverb": 22
+    },
+    "4": {
+      "delay": 10,
+      "reverb": 6
+    },
+    "6": {
+      "delay": 14,
+      "reverb": 10
+    },
+    "7": {
+      "delay": 45,
+      "reverb": 40
+    },
+    "8": {
+      "delay": 20,
+      "reverb": 55
+    }
   },
-
   "engines": {
-    "6": {"engine": "JV/Obxd",
-          "why": "TEST CONFIGURATION, 2026-09-02. F was JC303, which is a MONOSYNTH by design - it cannot prove anything about CHORD, and F is the only channel where the verb is live (E is a sampler, G and H are takes, and CHORD draws dead on all three). Obxd is the one plugin whose voicecount scale points and bank naming are already verified here. TO REVERT: git checkout 7e013f0 -- snapshot/factory-manifest.json, which restores JC303 and its four tuned controllers (_decay 0.35, _envmod 0.30, _resonance 0.28, _cutoff 0.50)."}
+    "6": {
+      "engine": "JV/Obxd",
+      "why": "TEST CONFIGURATION, 2026-09-02. F was JC303, which is a MONOSYNTH by design - it cannot prove anything about CHORD, and F is the only channel where the verb is live (E is a sampler, G and H are takes, and CHORD draws dead on all three). Obxd is the one plugin whose voicecount scale points and bank naming are already verified here. TO REVERT: git checkout 7e013f0 -- snapshot/factory-manifest.json, which restores JC303 and its four tuned controllers (_decay 0.35, _envmod 0.30, _resonance 0.28, _cutoff 0.50)."
+    }
   },
-
   "mods": [
-    {"channel": 0, "verb": "level",  "depth": 15, "rate": 0, "shape": "tri",
-     "phase0": 0.00, "seed": 1, "why": "a 16-bar breath on the kick. Depth 100 is plus or minus half the verb range, so 15 is 19 plus or minus 7.5 - about 7 dB of swing. Was 6, which is 0.26 dB and inaudible on a kick; owner asked for 15 by ear, 2026-09-02"},
-    {"channel": 1, "verb": "reverb", "depth": 22, "rate": 1, "shape": "tri",
-     "phase0": 0.30, "seed": 2, "why": "the snare tail opens and closes"},
-    {"channel": 2, "verb": "delay",  "depth": 28, "rate": 2, "shape": "tri",
-     "phase0": 0.55, "seed": 3, "why": "the clap echo comes and goes - the dub move"},
-    {"channel": 6, "verb": "delay",  "depth": 40, "rate": 4, "shape": "tri",
-     "phase0": 0.15, "seed": 5, "why": "the stab's echo swells and recedes over three bars - 45 plus or minus 20"},
-    {"channel": 6, "verb": "reverb", "depth": 30, "rate": 1, "shape": "tri",
-     "phase0": 0.65, "seed": 6, "why": "and its room opens and closes over eight, out of phase with the echo so the two never peak together"},
-    {"channel": 3, "verb": "level",  "depth": 30, "rate": 3, "shape": "tri",
-     "phase0": 0.80, "seed": 4, "why": "the hats breathe against everything else - 19 plus or minus 15, so they nearly vanish at the trough every four bars. Was 14; owner asked for 30 by ear, 2026-09-02"}
-  ]
+    {
+      "channel": 0,
+      "verb": "level",
+      "depth": 16,
+      "rate": 0,
+      "shape": "tri",
+      "phase0": 0.0,
+      "seed": 1,
+      "why": "a 16-bar breath on the kick. Depth 100 is plus or minus half the verb range, so 15 is 19 plus or minus 7.5 - about 7 dB of swing. Was 6, which is 0.26 dB and inaudible on a kick; owner asked for 15 by ear, 2026-09-02. Depth 15 -> 16 with the 2026-09-02 loudness ramp, so the swing keeps its proportion to the new base"
+    },
+    {
+      "channel": 1,
+      "verb": "reverb",
+      "depth": 22,
+      "rate": 1,
+      "shape": "tri",
+      "phase0": 0.3,
+      "seed": 2,
+      "why": "the snare tail opens and closes"
+    },
+    {
+      "channel": 2,
+      "verb": "delay",
+      "depth": 28,
+      "rate": 2,
+      "shape": "tri",
+      "phase0": 0.55,
+      "seed": 3,
+      "why": "the clap echo comes and goes - the dub move"
+    },
+    {
+      "channel": 6,
+      "verb": "delay",
+      "depth": 40,
+      "rate": 4,
+      "shape": "tri",
+      "phase0": 0.15,
+      "seed": 5,
+      "why": "the stab's echo swells and recedes over three bars - 45 plus or minus 20"
+    },
+    {
+      "channel": 6,
+      "verb": "reverb",
+      "depth": 30,
+      "rate": 1,
+      "shape": "tri",
+      "phase0": 0.65,
+      "seed": 6,
+      "why": "and its room opens and closes over eight, out of phase with the echo so the two never peak together"
+    },
+    {
+      "channel": 3,
+      "verb": "level",
+      "depth": 33,
+      "rate": 3,
+      "shape": "tri",
+      "phase0": 0.8,
+      "seed": 4,
+      "why": "the hats breathe against everything else - 19 plus or minus 15, so they nearly vanish at the trough every four bars. Was 14; owner asked for 30 by ear, 2026-09-02. Depth 30 -> 33 with the 2026-09-02 loudness ramp; this is the modulator that sets the ceiling - base 67 plus depth 33 is exactly 100"
+    }
+  ],
+  "levels": {
+    "0": 0.77,
+    "1": 0.7065,
+    "2": 0.7826,
+    "3": 0.67,
+    "4": 0.2065,
+    "5": 0.337,
+    "6": 0.3261,
+    "7": 0.2826,
+    "16": 1.0
+  },
+  "levels_why": "The owner's mix, tuned by ear at the rig 2026-09-02 and then ramped for loudness with every ratio preserved. Measured on zynmixer's main bus over 40 s: peak -7.76 dBFS before, -3.99 dBFS after, RMS -23.34 -> -20.34, zero samples within 0.1 dB of full scale. The ceiling is the HATS modulator, not the faders: base 62 + depth 30 was already 92 of 100, so everything could only go up by 100/92 = 1.087 before that sweep would clip its own range. Main took the rest, 0.774 -> 1.0. Going louder than -4 dBFS needs a gain stage on the main bus, not a fader; the owner chose to stop here 2026-09-02. NOTE for channels 0 and 3: the level named here is the modulator's BASE, not a fader reading. A modulated strip's saved fader is wherever the LFO happened to be at save time, and the builder computes the base FROM the strip - so copying a saved fader for a modulated channel sets a base the owner never chose. 0.77 and 0.67 are the bases; base+depth is 93 and 100."
 }
