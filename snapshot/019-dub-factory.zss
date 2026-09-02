@@ -2267,7 +2267,7 @@
             },
             "mods": {
               "0|level": {
-                "depth": 6,
+                "depth": 15,
                 "rate": 0,
                 "shape": "tri",
                 "phase0": 0.0,
@@ -2291,7 +2291,7 @@
                 "seed": 3
               },
               "3|level": {
-                "depth": 14,
+                "depth": 30,
                 "rate": 3,
                 "shape": "tri",
                 "phase0": 0.8,

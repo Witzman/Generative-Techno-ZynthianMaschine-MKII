@@ -43,13 +43,13 @@
   },
 
   "mods": [
-    {"channel": 0, "verb": "level",  "depth": 6,  "rate": 0, "shape": "tri",
-     "phase0": 0.00, "seed": 1, "why": "a 16-bar breath on the kick, not a pump"},
+    {"channel": 0, "verb": "level",  "depth": 15, "rate": 0, "shape": "tri",
+     "phase0": 0.00, "seed": 1, "why": "a 16-bar breath on the kick. Depth 100 is plus or minus half the verb range, so 15 is 19 plus or minus 7.5 - about 7 dB of swing. Was 6, which is 0.26 dB and inaudible on a kick; owner asked for 15 by ear, 2026-09-02"},
     {"channel": 1, "verb": "reverb", "depth": 22, "rate": 1, "shape": "tri",
      "phase0": 0.30, "seed": 2, "why": "the snare tail opens and closes"},
     {"channel": 2, "verb": "delay",  "depth": 28, "rate": 2, "shape": "tri",
      "phase0": 0.55, "seed": 3, "why": "the clap echo comes and goes - the dub move"},
-    {"channel": 3, "verb": "level",  "depth": 14, "rate": 3, "shape": "tri",
-     "phase0": 0.80, "seed": 4, "why": "the hats breathe against everything else"}
+    {"channel": 3, "verb": "level",  "depth": 30, "rate": 3, "shape": "tri",
+     "phase0": 0.80, "seed": 4, "why": "the hats breathe against everything else - 19 plus or minus 15, so they nearly vanish at the trough every four bars. Was 14; owner asked for 30 by ear, 2026-09-02"}
   ]
 }
