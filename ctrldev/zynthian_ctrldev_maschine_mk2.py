@@ -3249,6 +3249,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # euclid generator was actually given, or a load would
                     # resume from whatever the driver happened to hold.
                     "hits": self.hits[i],
+                    # ROTATE TRAVELS TOO, 2026-09-02, and THROUGH param_get -
+                    # it lives in the legacy per-group array self.rot, which is
+                    # the fifth appearance of that shape and the reason the
+                    # voice block above carries the same comment.
+                    #
+                    # A drum's rotation was the last thing in this block with
+                    # no home. Drum patterns are NOT rewritten on load - only
+                    # voices are - so a rotated line came back sounding
+                    # rotated while the ROT encoder read 0, and the first touch
+                    # of ROT regenerated the bar from that 0 and jumped every
+                    # hit onto the downbeat. Silent until somebody turned the
+                    # knob, which is the worst kind.
+                    "rotate": self.param_get(i, "rotate"),
                     # LEAN, 2026-09-01. .get with a default for the reason
                     # every field above has one: a channel whose state
                     # predates the verb saves euclid, which is what it was
@@ -3537,6 +3550,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.state[channel]["rule"] = saved.get("rule", tlib.RULE_RANDOM)
             if "hits" in saved:
                 self.hits[channel] = int(saved["hits"])
+            if "rotate" in saved:
+                # INTO THE LEGACY ARRAY, and clamped - the identical treatment
+                # the voice branch above gives it, for the identical reasons.
+                # A snapshot written at a longer division carries a rotation
+                # this pattern has no room for.
+                self.rot[channel] = max(
+                    0, min(max(0, self._steps(channel) - 1),
+                           int(saved["rotate"])))
 
         # Take each voice's division from what the snapshot actually restored,
         # BEFORE rewriting its pattern. _write_voice_pattern writes

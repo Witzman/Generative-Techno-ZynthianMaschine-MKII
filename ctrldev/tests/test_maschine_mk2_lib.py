@@ -1164,3 +1164,101 @@ class NoPropertyIsEverAssignedTo(unittest.TestCase):
         self.assertEqual(clashes, [],
                          "assigning to a read-only property raises at "
                          f"runtime, and py_compile cannot see it: {clashes}")
+
+
+class EverythingTheSnapshotSavesIsSomethingTheLoadReadsBack(unittest.TestCase):
+    """The SIXTH AST guard, 2026-09-02. A saved key nothing reads is dead data.
+
+    This is the shape that keeps costing this project days, and it has two
+    faces that look nothing alike from the outside:
+
+      - SAVED AND NEVER READ. `rotate` was in the voices block and nothing in
+        set_state put it anywhere param_get looks, so every snapshot ever
+        written carried a rotation the load threw away.
+      - READ AND NEVER SAVED. The drums block had no `rotate` at all until
+        2026-09-02. A rotated drum line came back sounding rotated - drum
+        patterns are not rewritten on load - while the ROT encoder read 0, so
+        the first touch of ROT jumped every hit onto the downbeat.
+
+    Both are invisible to py_compile, to 1201 unit tests and to a green docs
+    gate, because nothing raises: the value simply is not there. The only
+    thing that can see it is a reader that puts the two halves side by side.
+
+    Deliberately one-directional: save keys must be READ, not the reverse. The
+    load legitimately reads keys no longer written - that is how an old
+    snapshot keeps working, and `density` is exactly such a key."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _tree(self):
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            return ast.parse(fh.read())
+
+    def _function(self, name):
+        import ast
+        for node in ast.walk(self._tree()):
+            if isinstance(node, ast.FunctionDef) and node.name == name:
+                return node
+        self.fail(f"the driver has no {name}()")
+
+    def _saved_keys(self, block):
+        """The keys of the dict comprehension get_state stores under `block`."""
+        import ast
+        for node in ast.walk(self._function("get_state")):
+            if not isinstance(node, ast.Dict):
+                continue
+            for key, value in zip(node.keys, node.values):
+                if not (isinstance(key, ast.Constant) and key.value == block):
+                    continue
+                inner = value.value if isinstance(value, ast.DictComp) else value
+                if not isinstance(inner, ast.Dict):
+                    continue
+                return {k.value for k in inner.keys
+                        if isinstance(k, ast.Constant) and isinstance(k.value, str)}
+        self.fail(f"get_state does not save a {block!r} block")
+
+    def _restored_names(self, block):
+        """Every string the set_state loop over `block` mentions. Coarse on
+        purpose: this guard asks whether the load has HEARD of a key, not how
+        it stores it - the two blocks legitimately store differently, and
+        `rotate` goes to a legacy array rather than into self.state."""
+        import ast
+        for node in ast.walk(self._function("set_state")):
+            if not isinstance(node, ast.For):
+                continue
+            iter_strings = {leaf.value for leaf in ast.walk(node.iter)
+                            if isinstance(leaf, ast.Constant)
+                            and isinstance(leaf.value, str)}
+            if block not in iter_strings:
+                continue
+            return {leaf.value for leaf in ast.walk(node)
+                    if isinstance(leaf, ast.Constant)
+                    and isinstance(leaf.value, str)}
+        self.fail(f"set_state does not restore a {block!r} block")
+
+    def test_the_guard_can_see_both_halves(self):
+        # A guard that found neither block would pass by checking nothing.
+        for block in ("drums", "voices"):
+            self.assertTrue(self._saved_keys(block), f"no {block} save keys")
+            self.assertTrue(self._restored_names(block), f"no {block} load keys")
+
+    def test_every_saved_drum_field_is_read_back(self):
+        missing = sorted(self._saved_keys("drums") - self._restored_names("drums"))
+        self.assertEqual(missing, [],
+                         "get_state saves these and set_state never reads "
+                         f"them, so they are dead in every snapshot: {missing}")
+
+    def test_every_saved_voice_field_is_read_back(self):
+        missing = sorted(self._saved_keys("voices")
+                         - self._restored_names("voices"))
+        self.assertEqual(missing, [],
+                         "get_state saves these and set_state never reads "
+                         f"them, so they are dead in every snapshot: {missing}")
+
+    def test_a_drum_rotation_travels(self):
+        # The defect this guard was written for, named so a future rename
+        # cannot quietly drop it.
+        self.assertIn("rotate", self._saved_keys("drums"))
+        self.assertIn("rotate", self._restored_names("drums"))

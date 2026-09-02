@@ -1,0 +1,55 @@
+{
+  "file": "019-dub-factory",
+  "title": "Dub Factory",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "Round 1: dub drums on A-D with one slow modulator each, a four-note JC303 bass on F, and E/G/H empty. Owner brief 2026-09-02: 'Genre Dub. 4 on the floor beat with a bit of modulation for groups 1-4 first' and 'for group F a groovy baseline, all generation off, a few notes on the bar, supporting the drums'.",
+
+  "tempo": 120,
+  "globals": {"root": 7, "scale": 0},
+
+  "delay_ms": 250.0,
+
+  "drums": {
+    "0": {"kit": "Roland TR909", "hits": 4, "rotate": 0,  "velo": 108, "gate": 45,
+          "why": "four on the floor, the anchor"},
+    "1": {"kit": "Roland TR909", "hits": 2, "rotate": 4,  "velo": 84,  "gate": 40,
+          "why": "backbeat, dry"},
+    "2": {"kit": "Roland CR78",  "hits": 1, "rotate": 12, "velo": 88,  "gate": 40,
+          "why": "one clap a bar, drenched"},
+    "3": {"kit": "Roland CR78",  "hits": 4, "rotate": 2,  "velo": 66,  "gate": 25,
+          "why": "offbeat sixteenths"}
+  },
+
+  "voices": {
+    "4": {"empty": true, "why": "E left silent this round; still carries 018's voice override"},
+    "5": {"register": 58, "length": 16, "rhythm_reg": 17473, "rotate": 0,
+          "random": 0, "rhythm": 0, "gate": 150, "octave": -1, "range": 1,
+          "velo": 110,
+          "why": "G1 G1 F2 C2 on steps 0/6/10/14 - root, root, flat seventh, fourth; octave -1 keeps the whole figure in bass register"},
+    "6": {"empty": true, "why": "G left silent this round"},
+    "7": {"empty": true, "why": "H left silent this round"}
+  },
+
+  "wets": {
+    "1": {"delay": 0,  "reverb": 8},
+    "2": {"delay": 12, "reverb": 35},
+    "3": {"delay": 30, "reverb": 22},
+    "4": {"delay": 10, "reverb": 6},
+    "6": {"delay": 14, "reverb": 10}
+  },
+
+  "controllers": {
+    "6": {"_decay": 0.35, "_envmod": 0.30, "_resonance": 0.28, "_cutoff": 0.50}
+  },
+
+  "mods": [
+    {"channel": 0, "verb": "level",  "depth": 6,  "rate": 0, "shape": "tri",
+     "phase0": 0.00, "seed": 1, "why": "a 16-bar breath on the kick, not a pump"},
+    {"channel": 1, "verb": "reverb", "depth": 22, "rate": 1, "shape": "tri",
+     "phase0": 0.30, "seed": 2, "why": "the snare tail opens and closes"},
+    {"channel": 2, "verb": "delay",  "depth": 28, "rate": 2, "shape": "tri",
+     "phase0": 0.55, "seed": 3, "why": "the clap echo comes and goes - the dub move"},
+    {"channel": 3, "verb": "level",  "depth": 14, "rate": 3, "shape": "tri",
+     "phase0": 0.80, "seed": 4, "why": "the hats breathe against everything else"}
+  ]
+}
