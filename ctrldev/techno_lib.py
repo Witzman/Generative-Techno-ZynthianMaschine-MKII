@@ -762,6 +762,51 @@ class techno_lib:
 
     NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
+    # ----------------------------------------------------------------- chords
+    #
+    # CHORD is a SETTING, not a mode and not a button - see
+    # notes/specs/2026-09-02-chords-on-the-surface-design.md for why a third
+    # behaviour kind and an eighth modifier were both refused. A voice playing
+    # triads is the same shift register, the same rhythm register and the same
+    # ROOT and SCALE; only the pitch rendering differs.
+    #
+    # SHAPES ARE STACKS OF SCALE DEGREES, NEVER SEMITONES. The three voices
+    # share one ROOT and one SCALE and a key change lands on the bar for all of
+    # them; a chromatic stack would walk out of the key they are sharing, which
+    # is the same argument walk_root() already records for the key walker.
+    # A consequence worth stating: in PENT a "triad" is root plus two
+    # pentatonic degrees rather than a third and a fifth. That is what
+    # diatonic MEANS in a five-note scale, and it is preferable to a shape
+    # that is in tune in five scales and out of key in the sixth.
+    #
+    # THE OCTAVE FIELD IS SEPARATE FROM THE DEGREE FIELD, and that is not
+    # tidiness. An octave is `len(intervals)` degrees - SEVEN in five of the
+    # scales and FIVE in PENT - so a literal degree offset of 7 would be an
+    # octave in MIN and a sixth in PENT. Octave doublings are therefore
+    # counted in octaves and multiplied by the scale's own length.
+    #
+    # ZERO IS OFF, which is this instrument's grammar everywhere else - MELODY
+    # and RHYTHM at zero hold their registers still, and walk_due() reads 0 as
+    # LOCK. Shape 0 returns exactly what pitch() returns, so a channel with
+    # CHORD off is bit-identical to one built before chords existed.
+    #
+    # (label, degree offsets, octave doublings)
+    CHORD_SHAPES = (
+        ("OFF", (0,), ()),
+        ("OCT", (0,), (1,)),
+        ("5TH", (0, 4), ()),
+        ("TRI", (0, 2, 4), ()),
+        ("SUS", (0, 3, 4), ()),
+        ("7TH", (0, 2, 4, 6), ()),
+        ("9TH", (0, 2, 4, 6, 8), ()),
+    )
+
+    # The most notes any shape can put on one step. The write burst is
+    # `steps * CHORD_MAX_NOTES` addNote calls under a single lock hold, and
+    # that number is the one to bring to a rig gate.
+    CHORD_MAX_NOTES = max(len(degrees) + len(octaves)
+                          for _label, degrees, octaves in CHORD_SHAPES)
+
     # ---------------------------------------------------------- chord walker
     #
     # THE GLOBAL-SCALE HALF OF THIS FEATURE ALREADY SHIPPED. `new_features.md`
@@ -815,17 +860,59 @@ class techno_lib:
         return base_root + intervals[idx] + 12 * octaves
 
     @staticmethod
+    def pitch_degree(value, length, scale_idx, range_octaves):
+        """Which scale degree a register value lands on. pitch()'s first half,
+        split out 2026-09-02 so a chord can be stacked on the SAME degree the
+        single note would have used - deriving it twice is how the chord and
+        its own root come to disagree."""
+        degrees = len(techno_lib.SCALES[scale_idx][1]) * max(1, range_octaves)
+        degree = (value * degrees) >> length
+        return degrees - 1 if degree >= degrees else degree
+
+    @staticmethod
     def pitch(value, length, root, scale_idx, octave, range_octaves):
         """Scale the register value across `range_octaves`, quantise it to the
         scale, transpose by root and octave. Returns a MIDI note number."""
-        intervals = techno_lib.SCALES[scale_idx][1]
-        degrees = len(intervals) * max(1, range_octaves)
-        degree = (value * degrees) >> length
-        if degree >= degrees:
-            degree = degrees - 1
-        oct_i, idx = divmod(degree, len(intervals))
-        note = techno_lib.BASE_NOTE + root + 12 * (octave + oct_i) + intervals[idx]
-        return max(0, min(127, note))
+        return techno_lib.degree_note(
+            techno_lib.pitch_degree(value, length, scale_idx, range_octaves),
+            root, scale_idx, octave)
+
+    @staticmethod
+    def chord_notes(value, length, root, scale_idx, octave, range_octaves,
+                    shape):
+        """Every note one step sounds: a tuple, lowest first.
+
+        SHAPE 0 RETURNS EXACTLY `(pitch(...),)`, which is what makes CHORD off
+        bit-identical to the instrument before chords existed - including for
+        every snapshot already written, where the key is absent and reads 0.
+
+        The stack sits on the degree the single note would have used, so the
+        chord's own root IS that note and turning CHORD up never moves the
+        line. Duplicates are dropped - two shapes can land on one note once
+        the 0-127 clamp bites at the extremes - and the result is sorted,
+        because the writer's note order is what a listener hears as voicing."""
+        if not 0 <= shape < len(techno_lib.CHORD_SHAPES):
+            shape = 0
+        _label, degrees, octaves = techno_lib.CHORD_SHAPES[shape]
+        base = techno_lib.pitch_degree(value, length, scale_idx, range_octaves)
+        per_octave = len(techno_lib.SCALES[scale_idx][1])
+        wanted = [base + off for off in degrees]
+        wanted += [base + up * per_octave for up in octaves]
+        return tuple(sorted({techno_lib.degree_note(d, root, scale_idx, octave)
+                             for d in wanted}))
+
+    @staticmethod
+    def chord_line(register, length, steps, root, scale_idx, octave,
+                   range_octaves, shape):
+        """line()'s counterpart when a step may sound more than one note.
+
+        Deliberately the same shape and the same rotations as line(), so ROOT,
+        SCALE, OCTAVE and RANGE mean exactly what they mean everywhere else and
+        the only thing chords change is how many notes come out of each step."""
+        return tuple(
+            techno_lib.chord_notes(v, length, root, scale_idx, octave,
+                                   range_octaves, shape)
+            for v in techno_lib.rotations(register, length, steps))
 
     @staticmethod
     def line(register, length, steps, root, scale_idx, octave, range_octaves):
@@ -846,6 +933,22 @@ class techno_lib:
                                  range_octaves)
                 for v in techno_lib.walk_values(start, length, steps, span,
                                                 stride, rng)]
+
+    @staticmethod
+    def chord_walk_line(start, length, steps, root, scale_idx, octave,
+                        range_octaves, span, stride, shape,
+                        rng=random.random):
+        """chord_line()'s counterpart for a voice on MODEL_WALK.
+
+        Exists so CHORD does not have to draw dead on the walk model. The walk
+        replaces where the VALUES come from and nothing else - which is the
+        sentence walk_line's own docstring uses - so the chord stacks on the
+        walked degree exactly as it stacks on the register's."""
+        return tuple(
+            techno_lib.chord_notes(v, length, root, scale_idx, octave,
+                                   range_octaves, shape)
+            for v in techno_lib.walk_values(start, length, steps, span,
+                                            stride, rng))
 
     @staticmethod
     def kit_line(register, length, steps, kit_notes, kit_range=4, centre=None):
@@ -909,6 +1012,19 @@ class techno_lib:
         return out
 
     @staticmethod
+    def degree_note(degree, root, scale_idx, octave):
+        """The note `degree` scale steps above the root, at `octave`.
+
+        Extracted 2026-09-02 because pitch() and pad_note() had carried
+        identical copies of this arithmetic since the prototype, and chords
+        needed a third caller. Three copies of one formula is how a scale
+        gains an off-by-one in exactly one of the places it is used."""
+        intervals = techno_lib.SCALES[scale_idx][1]
+        oct_i, idx = divmod(degree, len(intervals))
+        note = techno_lib.BASE_NOTE + root + 12 * (octave + oct_i) + intervals[idx]
+        return max(0, min(127, note))
+
+    @staticmethod
     def pad_note(pad, root, scale_idx, octave):
         """The note pad `pad` plays on a voice: scale degree `pad` counting up
         from the root.
@@ -917,10 +1033,7 @@ class techno_lib:
         nor the running line. A keyboard has to lie still under the hands, and
         both alternatives move the mapping while you play, while coupling hand
         play to the very generator the recording is about to switch off."""
-        intervals = techno_lib.SCALES[scale_idx][1]
-        oct_i, idx = divmod(pad, len(intervals))
-        note = techno_lib.BASE_NOTE + root + 12 * (octave + oct_i) + intervals[idx]
-        return max(0, min(127, note))
+        return techno_lib.degree_note(pad, root, scale_idx, octave)
 
     @staticmethod
     def pad_notes(root, scale_idx, octave, count=16):
@@ -1165,6 +1278,14 @@ class techno_lib:
             state.update(
                 preset="----", cutoff=64, reso=32, env=64, decay=40,
                 random=0, gate=40, octave=0, range=2,
+                # CHORD, 2026-09-02. 0 IS OFF AND IT IS THE MIGRATION:
+                # chord_notes() at shape 0 returns exactly what pitch()
+                # returns, so a voice out of any existing snapshot - 017, 018,
+                # 019, both packs - plays bit for bit the single-note line it
+                # always played, and the column reads OFF. upgrade_state
+                # builds from here, which is what makes that true of files
+                # written before the verb existed.
+                chord=0,
                 # The rhythm generator. `rhythm` is its evolve knob, 0 = LOCK,
                 # exactly like `random` is the melody generator's. `rhythm_reg`
                 # is its register: one bit per step, all 16 set, which is every
@@ -2699,7 +2820,13 @@ class techno_lib:
     # how this one would become the thing it replaced.
     AUTO_DRAWS = frozenset(("rule", "lean", "model", "random", "rhythm",
                             "lane", "rotate", "walk_span", "walk_stride",
-                            "feed", "amount"))
+                            "feed", "amount",
+                            # RANGE joined the LINE page 2026-09-02, when
+                            # CHORD took its slot on STEP. It belongs to the
+                            # left half by the rule above: how far out the
+                            # machine may go when it DRAWS the line, which is
+                            # the same question SPAN answers for the walk.
+                            "range"))
     AUTO_TIMES = frozenset(("move", "phrase", "fill", "exit"))
 
     # ------------------------------------------------- button dispatch tables
@@ -3416,6 +3543,10 @@ class techno_lib:
         "amount": frozenset({"voice"}),
         "walk_span": frozenset({"voice"}),
         "walk_stride": frozenset({"voice"}),
+        # CHORD, 2026-09-02. Voice-only, and declared here rather than left to
+        # the accident of the key's absence from a drum's state - which is the
+        # mistake the comment below this table records five verbs making.
+        "chord": frozenset({"voice"}),
         "gate": frozenset({"voice"}),
         "octave": frozenset({"voice"}),
         "random": frozenset({"voice"}),
@@ -3462,6 +3593,24 @@ class techno_lib:
         if verb in ("walk_span", "walk_stride"):
             return state.get("model", techno_lib.MODEL_REGISTER) != \
                 techno_lib.MODEL_WALK
+        if verb == "chord":
+            # TWO REFUSALS, both law L4, both found by reading rather than at
+            # the rig.
+            #
+            # ON A PLAYER-OWNED CHANNEL the generator never writes:
+            # _write_voice_pattern returns early on a take, by design. So
+            # CHORD would move a number on screen and change no sound, which
+            # is the shape the 2026-09-01 silent-refusal sweep called worse
+            # than a silence. That is also the answer to whether the generator
+            # retires 019's hand-authored chords: it does not, and the surface
+            # now says why.
+            #
+            # ON A SAMPLER a note number selects WHICH DRUM sounds, so a
+            # stack of scale degrees would not thicken anything - it would add
+            # unrelated drum hits. Same argument RANGE already makes on this
+            # page, and the same conclusion.
+            return (state.get("owner") == "player"
+                    or bool(state.get("sampler")))
         # BEHAVIOUR, NOT ENGINE, and the difference is the whole bug. The
         # CONTROL page passes the ENGINE kind on purpose - a sampler always
         # has kits and samples however it is being played - so `kind` is
@@ -5059,6 +5208,10 @@ def _scale_fmt(v, state=None, kind=None):
     return _pick([sc[0] for sc in techno_lib.SCALES], v)
 
 
+def _chord_fmt(v, state=None, kind=None):
+    return _pick([sh[0] for sh in techno_lib.CHORD_SHAPES], v)
+
+
 def _dlytime_fmt(v, state=None, kind=None):
     return _pick([d[0] for d in techno_lib.DELAY_DIVISIONS], v)
 
@@ -5143,6 +5296,10 @@ techno_lib.VERB_COLS = {
     "dlytime": ("DLYTIME", "seg", _span(len(techno_lib.DELAY_DIVISIONS)),
                 _dlytime_fmt),
     "dlyfbk":  ("DLYFBK", "uni", _pct, _plain),
+    # CHORD, 2026-09-02. A segment bar rather than a meter: the shapes are an
+    # ordered list, not a quantity, and OFF sits at one end of it.
+    "chord":   ("CHORD", "seg", _span(len(techno_lib.CHORD_SHAPES)),
+                _chord_fmt),
     "walk":    ("WALK", "seg", _span(17),
                 lambda v, s=None, k=None: "LOCK" if v <= 0 else "%dbar" % v),
     "wspan":   ("SPAN", "uni", _over(7.0), _plain),
@@ -5193,9 +5350,20 @@ techno_lib.PAGE_RINGS = {
            verbs=("hits", "rotate", "div", "length", "velo", "chance",
                   "ratchet", "swing")),
     ),
+    # CHORD TAKES SLOT 5 AND RANGE MOVES TO THE LINE PAGE, 2026-09-02. STEP
+    # asks what a channel PLAYS and a chord is literally that, so this is the
+    # only ring with a claim on it - but page one was already eight live verbs,
+    # and a STEP page 2 would need FIVE live columns to be legal. There are not
+    # five honest chord verbs, and inventing them to satisfy a test is how a
+    # drawer gets built.
+    #
+    # RANGE is the right thing to move because it answers the same question
+    # the LINE page asks - how is this voice's line of pitches built - and it
+    # turns that page from five live columns into six. The cost is real and
+    # small: RANGE goes from one press to a press plus a page turn.
     ("STEP", "voice"): (
         _d(techno_lib.SHAPE_CHANNEL, "STEP",
-           verbs=("div", "length", "gate", "octave", "range", "velo",
+           verbs=("div", "length", "gate", "octave", "chord", "velo",
                   "chance", "swing")),
     ),
     # AUTO - everything the machine does without being asked. RHYTHM, LANE,
@@ -5224,12 +5392,19 @@ techno_lib.PAGE_RINGS = {
         _d(techno_lib.SHAPE_CHANNEL, "AUTO",
            verbs=("rule", "model", "random", "rhythm", "move", "phrase",
                   "fill", "exit")),
-        # The walk's own controls, plus the line rotation. SPAN and STRIDE
-        # draw dead unless MODEL is on WALK, which is why they are not on the
-        # page above competing with verbs that are always live.
-        _d(techno_lib.SHAPE_CHANNEL, "WALK",
+        # The walk's own controls, the line rotation, and RANGE. SPAN and
+        # STRIDE draw dead unless MODEL is on WALK, which is why they are not
+        # on the page above competing with verbs that are always live.
+        #
+        # RETITLED WALK -> LINE 2026-09-02, when RANGE arrived from the STEP
+        # page to make room for CHORD. The old title named the half of the page
+        # that draws dead most of the time; all six live columns answer one
+        # question - how is this voice's line of pitches built - and RANGE, the
+        # span of octaves the line is spread across, is the plainest member of
+        # that set. Six live columns now, up from five.
+        _d(techno_lib.SHAPE_CHANNEL, "LINE",
            verbs=("rotate", "walk_span", "walk_stride", "feed", "amount",
-                  None, None, None)),
+                  "range", None, None)),
     ),
     ("VOLUME", None): (
         # REVTYPE and DLYFBK left this page so WALK and SPAN could land on it,

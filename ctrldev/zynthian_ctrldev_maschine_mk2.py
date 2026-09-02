@@ -1358,6 +1358,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # and law L4's contextual half (SPAN off the walk model, a synth role
         # the plugin does not publish) has to be answered per column.
         view["kind"] = self.channel_kind(channel)
+        # OWNERSHIP AND SAMPLER-NESS TRAVEL WITH THE VIEW, 2026-09-02, for the
+        # same reason `kind` does: law L4's contextual half has to be answered
+        # per column, and the lens draws eight channels at once so it cannot
+        # take either as an argument. CHORD is the first verb to need them -
+        # the generator never writes a player-owned channel, and a stack of
+        # scale degrees on a kit walk adds unrelated drums rather than a chord.
+        view["owner"] = self.owner.get(channel)
+        view["sampler"] = self._is_sampler(channel)
         for param in self._LEGACY:
             if self._legacy_attr(channel, param) is not None:
                 view[param] = self.param_get(channel, param)
@@ -1819,19 +1827,38 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self.libseq.setStepsPerBeat(lib.DIVISIONS[self.div[channel]][1])
                 self.libseq.setBeatsInPattern(lib.DIVISIONS[self.div[channel]][2])
                 self.libseq.clear()
-                for step, note in enumerate(notes):
+                for step, chord in enumerate(notes):
                     if not mask[step]:
                         continue
                     # Per step, not once per pattern: a long gate near the end
                     # of the pattern is clamped so the note cannot outlive it.
                     duration = tlib.note_duration(st["gate"], step, steps)
-                    self.libseq.addNote(step, note, velocity, duration, 0.0)
-                    played.append(note)
+                    # ONE addNote PER CHORD TONE, 2026-09-02. `chord` is a
+                    # tuple of one when CHORD is off, so this loop is the same
+                    # single call it always was in that case.
+                    #
+                    # THE WRITE BURST IS THE COST OF THIS FEATURE and it is
+                    # worth naming: 16 steps of the widest shape is
+                    # 16 * CHORD_MAX_NOTES = 80 addNote calls inside ONE lock
+                    # hold, against 16 before. Deliberately NOT capped - a cap
+                    # would thin a chord without saying so, which is the silent
+                    # refusal this surface may not commit. If the MIDI thread
+                    # is ever measured lagging behind this, the answer is to
+                    # drop the widest SHAPE from the table, where a player can
+                    # see it go.
+                    for note in chord:
+                        self.libseq.addNote(step, note, velocity, duration, 0.0)
+                        played.append(note)
                 self.libseq.updateSequenceInfo()
             # The range must come from what was written, not from the line:
             # reporting pitches that were masked out would make this log lie.
             note_range = (min(played), max(played)) if played else None
+            shape_name = tlib.CHORD_SHAPES[
+                int(st.get("chord", 0) or 0)
+                if 0 <= int(st.get("chord", 0) or 0) < len(tlib.CHORD_SHAPES)
+                else 0][0]
             logging.debug(f"Maschine voice {channel}: {len(played)}/{steps} notes, "
+                          f"chord {shape_name}, "
                           f"register {st['register']:0{st['length']}b}, range {note_range}")
         finally:
             self.writer_token[channel] = None
@@ -2047,11 +2074,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # register is untouched - but the pattern is rewritten so a move
             # off LOCK takes effect on this wrap rather than the next.
             self._write_voice_pattern(channel)
-        elif param in ("gate", "octave", "range", "kit_range") and \
+        elif param in ("gate", "octave", "range", "kit_range", "chord") and \
                 self.channel_kind(channel) == "voice":
             # Timbre-ish, but they only exist in the written notes, so the
             # line has to be rewritten from the unchanged register. Law L2
             # still holds: nothing about the register or the structure moved.
+            #
+            # CHORD JOINS THEM, 2026-09-02, and it belongs here rather than
+            # anywhere else for exactly the same reason: a chord exists only
+            # in the notes that were written, and the register, the rhythm
+            # register, the rotation and the mask are all untouched by it. The
+            # rewrite is what makes the new shape audible on this wrap instead
+            # of the next.
+            #
+            # This is also the branch that would have been MISSING if CHORD had
+            # been added to the state and the page and nowhere else - the
+            # `apply()` defect of 2026-08-19, where HITS and ROTATE stored a
+            # number, moved the display, and changed nothing audible.
             self._write_voice_pattern(channel)
         elif param == "velo" and self.channel_kind(channel) == "voice":
             self._write_voice_pattern(channel)
@@ -3213,6 +3252,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     "rotate": self.param_get(i, "rotate"),
                     "feed": self.state[i].get("feed"),
                     "amount": self.state[i].get("amount", 0),
+                    # CHORD, 2026-09-02. .get with a default for the reason
+                    # every field above has one: a channel whose state
+                    # predates the verb SAVES the compatible value rather
+                    # than raising on the save path. 0 is OFF, which is what
+                    # it was doing anyway.
+                    "chord": self.state[i].get("chord", 0),
                 }
                 # SP4: keyed on how the channel BEHAVES, not on the table. A
                 # drum chain switched to voice holds register, gate and octave
@@ -3468,11 +3513,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if channel not in self.state or "register" not in self.state[channel]:
                 continue
             st = self.state[channel]
+            # ABSENT IS OFF for `chord`, and that is the whole migration: a
+            # snapshot written before the verb existed - 017, 018, 019, the
+            # genre pack, the drone pack - restores 0, chord_notes() at shape 0
+            # returns exactly what pitch() returned, and the file sounds bit
+            # for bit as it always did while the column reads OFF.
             for field in ("register", "length", "random", "gate", "octave",
                           "range", "kit_range", "velo", "rhythm", "rhythm_reg",
                           "model", "rule", "walk_span", "walk_stride",
                           "walk_seed", "feed", "amount", "move", "exit",
-                          "phrase", "fill"):
+                          "phrase", "fill", "chord"):
                 if field in saved:
                     st[field] = saved[field]
             if "rotate" in saved:
@@ -5380,6 +5430,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "walk_span": (1, 128, None),
         "walk_stride": (1, 32, None),
         "amount": (0, 100, None),
+        # CHORD, 2026-09-02. An index into tlib.CHORD_SHAPES, 0 = OFF, and
+        # DISCRETE because every value is a different chord rather than more
+        # of the same one - a nudge that slid between shapes would be a knob
+        # you cannot aim.
+        "chord": (0, len(tlib.CHORD_SHAPES) - 1, ENC_UNITS_DISCRETE),
     }
 
     def _mod_steer(self, key, cc_num, cc_val):
@@ -6894,7 +6949,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return centre
 
     def _voice_notes(self, channel, steps):
-        """The notes a voice-behaving channel's line uses.
+        """The notes a voice-behaving channel's line uses: ONE TUPLE PER STEP.
 
         On a synth this is the scale-quantised Turing line as always. On a
         SAMPLER chain the register walks the kit's own note list instead,
@@ -6903,9 +6958,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         empty key is silence with nothing to explain it.
 
         The single place both the writer and the pad renderer ask, so they can
-        never disagree about what is on a step."""
+        never disagree about what is on a step.
+
+        A TUPLE PER STEP SINCE CHORD SHIPPED, 2026-09-02, and it is a tuple
+        even when CHORD is off - length one. One return shape for both cases
+        is what keeps the writer from carrying a branch, and chord_notes() at
+        shape 0 returns exactly what pitch() returned before, so a channel
+        with CHORD off is bit-identical to one built before chords existed.
+        The callers that want a single note - both pad renderers - take
+        element 0, which is the chord's root and IS the old line."""
 
         st = self.state[channel]
+        # SHAPE 0 ON A SAMPLER, always. A stack of scale degrees on a kit walk
+        # would not thicken a sound, it would add unrelated drum hits - which
+        # is why the CHORD column draws dead there too. The two halves are
+        # deliberately in different files and must agree: tlib.verb_is_dead
+        # refuses the encoder, this refuses the write.
+        shape = 0 if self._is_sampler(channel) else int(st.get("chord", 0) or 0)
         if self._is_sampler(channel):
             kit = [num for num, _ in self._keymap(channel)]
             # SP8: RANGE narrows the walk to part of the kit, centred on the
@@ -6926,7 +6995,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                                   centre=self._kit_centre(channel))
             # An unreadable or empty kit degrades to the channel's own drum,
             # never to silence.
-            return notes or [self._group_note(channel)] * steps
+            notes = notes or [self._group_note(channel)] * steps
+            return [(note,) for note in notes]
         if st.get("model") == tlib.MODEL_WALK:
             # A bounded random walk instead of the shift register. Same root,
             # same scale, same octave and range - only where the VALUES come
@@ -6945,19 +7015,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # mutated, so the walk evolves once a bar instead of five times a
             # second - and RANDOM at 0 holds it, which is this instrument's
             # existing grammar for LOCK.
-            return tlib.walk_line(st["register"], st["length"], steps,
-                                  self.globals["root"], self.globals["scale"],
-                                  st["octave"], st["range"],
-                                  st.get("walk_span", 32),
-                                  st.get("walk_stride", 4),
-                                  rng=tlib.walk_rng(st.get("walk_seed", 0)))
-        return tlib.line(st["register"], st["length"], steps,
-                         self.globals["root"], self.globals["scale"],
-                         st["octave"], st["range"])
+            return list(tlib.chord_walk_line(
+                st["register"], st["length"], steps,
+                self.globals["root"], self.globals["scale"],
+                st["octave"], st["range"],
+                st.get("walk_span", 32), st.get("walk_stride", 4), shape,
+                rng=tlib.walk_rng(st.get("walk_seed", 0))))
+        return list(tlib.chord_line(
+            st["register"], st["length"], steps,
+            self.globals["root"], self.globals["scale"],
+            st["octave"], st["range"], shape))
 
     def _voice_line(self, channel, steps):
-        """(notes, mask) for a voice: what each step plays and whether it
+        """(chords, mask) for a voice: what each step plays and whether it
         sounds, ROTATED. The single place ROTATE is applied.
+
+        `chords` is one TUPLE per step since 2026-09-02 - length one whenever
+        CHORD is off, which is every channel of every snapshot written before
+        the verb existed. rotate_line rotates the sequence whatever its
+        elements are, so the rotation is untouched by chords.
 
         It has to be single. _step_notes and _step_note derive the pitch a
         step carries so the pads can query it, and _write_voice_pattern writes
@@ -6998,12 +7074,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _step_notes(self, channel, steps):
         """The note each step carries, as a list. Computed once per repaint:
         deriving it per pad meant recomputing the whole line sixteen times,
-        five times a second, for one answer."""
+        five times a second, for one answer.
+
+        ONE NOTE PER STEP, still, now that a step can hold a chord: the
+        CHORD'S ROOT, which is element 0 and is exactly the note this returned
+        before chords existed. The pads ask "does this step sound", and the
+        root answers it - `_step_lit` queries zynseq for this pitch, and if the
+        root sounds the chord sounds."""
 
         if self.channel_kind(channel) != "voice":
             return [self._group_note(channel)] * steps
-        notes, _mask = self._voice_line(channel, max(1, steps))
-        return [notes[i % len(notes)] for i in range(steps)] if notes \
+        chords, _mask = self._voice_line(channel, max(1, steps))
+        return [chords[i % len(chords)][0] for i in range(steps)] if chords \
             else [self._group_note(channel)] * steps
 
     def _step_note(self, channel, step):
@@ -7019,8 +7101,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         steps = lib.step_count(self.div[channel])
         if steps <= 0:
             return self._group_note(channel)
-        notes, _mask = self._voice_line(channel, steps)
-        return notes[step % len(notes)] if notes else self._group_note(channel)
+        chords, _mask = self._voice_line(channel, steps)
+        # The chord's ROOT - see _step_notes for why one note is the right
+        # answer to the question the pads are asking.
+        return chords[step % len(chords)][0] if chords \
+            else self._group_note(channel)
 
     def _note_duration(self, step, note):
         """A stored note's length, if the installed libzynseq can tell us.
@@ -7060,20 +7145,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if steps <= 0:
                 self.notes[channel] = {}
                 return
-            generated = self._step_notes(channel, steps)
+            # THE WHOLE CHORD IS "GENERATED", NOT JUST ITS ROOT, 2026-09-02.
+            # This used to skip one note per step, which was the same thing
+            # while a step held one note. With chords the UPPER TONES are also
+            # pad notes - a triad is scale degrees and so is the keyboard - so
+            # every one of them would have been found by the probe below and
+            # recorded as a note a human played. The result is not a wrong
+            # note but a wrong PICTURE: every chord step paints player amber,
+            # and amber is the surface's one signal for "there is a take here,
+            # the generator will not touch it". No test on WSL can see this;
+            # it needs the pads.
             if kind == "voice":
+                chords, _mask = self._voice_line(channel, steps)
+                mine = [set(chords[i % len(chords)]) if chords else set()
+                        for i in range(steps)]
                 cands = tlib.candidate_notes(
                     kind, self._group_note(channel),
                     pads=tlib.pad_notes(self.globals["root"],
                                         self.globals["scale"],
                                         self.state[channel]["octave"]),
-                    line=generated)
+                    line=[n for chord in chords for n in chord])
             else:
+                generated = self._step_notes(channel, steps)
+                mine = [{generated[i]} for i in range(steps)]
                 cands = tlib.candidate_notes(kind, self._group_note(channel))
             out = {}
             for step in range(steps):
                 for note in cands:
-                    if note == generated[step]:
+                    if note in mine[step]:
                         continue
                     vel = self.libseq.getNoteVelocity(step, note)
                     if vel:

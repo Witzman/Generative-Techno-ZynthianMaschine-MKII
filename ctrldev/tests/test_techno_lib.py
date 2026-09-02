@@ -420,9 +420,13 @@ class TestPageRings(unittest.TestCase):
         # The voice keeps the owner's 2026-08-16 principle - pattern time
         # first, then how the note is played, then pitch - minus MELODY and
         # RHYTHM, which now sit side by side on AUTO instead.
+        #
+        # CHORD took RANGE's slot on 2026-09-02 and RANGE moved to the LINE
+        # page. It is the same slot on purpose: both answer "what pitches",
+        # and the hand that used to find RANGE fifth now finds CHORD there.
         self.assertEqual(
             tl.PAGE_RINGS[("STEP", "voice")][0]["verbs"],
-            ("div", "length", "gate", "octave", "range", "velo",
+            ("div", "length", "gate", "octave", "chord", "velo",
              "chance", "swing"))
 
     def test_control_channel_page_verbs_match_the_shipped_layout(self):
@@ -484,7 +488,7 @@ def _voice_view(**over):
     view = dict(kind="voice", length=8, div=1, random=0, gate=40, octave=0, range=2,
                 swing=50, velo=110, level=19, reverb=0, delay=0, chance=100,
                 rhythm=0, rhythm_reg=0xFFFF, preset="SAW", cutoff=64, reso=32, env=64, decay=40,
-                pending=set())
+                chord=0, pending=set())
     view.update(over)
     return view
 
@@ -3628,7 +3632,7 @@ class TestVerbColumnAlignment(unittest.TestCase):
     # off the spread pages that became the lens.
     VOICE_STEP = (
         ("div", "DIVIDE"), ("length", "LENGTH"), ("gate", "GATE"),
-        ("octave", "OCTAVE"), ("range", "RANGE"), ("velo", "VELO"),
+        ("octave", "OCTAVE"), ("chord", "CHORD"), ("velo", "VELO"),
         ("chance", "CHANCE"), ("swing", "SWING"),
     )
 
@@ -6410,22 +6414,26 @@ class TestGenPage(unittest.TestCase):
         st.update(over)
         return st
 
-    def test_the_voice_auto_ring_carries_a_walk_page(self):
+    def test_the_voice_auto_ring_carries_a_line_page(self):
+        # Titled WALK until 2026-09-02. The old title named the half of the
+        # page that draws dead most of the time; every live column answers one
+        # question - how is this voice's line of pitches built.
         titles = [d["title"] for d in tl.PAGE_RINGS[("AUTO", "voice")]]
-        self.assertIn("WALK", titles)
+        self.assertIn("LINE", titles)
+        self.assertNotIn("WALK", titles)
 
     def test_the_walk_page_verbs_match_what_it_draws(self):
         # verbs decide what an encoder WRITES, _columns_inner what it DRAWS,
         # and nothing checks they agree at runtime. This is that check.
-        desc = _page("AUTO", "voice", "WALK")
+        desc = _page("AUTO", "voice", "LINE")
         self.assertEqual(desc["verbs"],
                          ("rotate", "walk_span", "walk_stride", "feed",
-                          "amount", None, None, None))
-        # On the WALK model every one of the five is live. On the register
+                          "amount", "range", None, None))
+        # On the WALK model every one of the six is live. On the register
         # model SPAN and STRIDE draw dead - see the test below.
         cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
-        self.assertEqual([c["name"] for c in cols][:5],
-                         ["ROTATE", "SPAN", "STRIDE", "FEED", "AMT"])
+        self.assertEqual([c["name"] for c in cols][:6],
+                         ["ROTATE", "SPAN", "STRIDE", "FEED", "AMT", "RANGE"])
         # MODEL and RULE moved to the AUTO page in front of this one, and are
         # still two separate verbs: RULE was deliberately NOT folded into
         # MODEL when it arrived on 2026-09-01.
@@ -6436,12 +6444,16 @@ class TestGenPage(unittest.TestCase):
     def test_the_UNUSED_columns_draw_dead(self):
         # A lit column that does nothing is the fault this surface must never
         # commit - law L4, draw dead rather than a number the knob cannot move.
-        # Three slots are spare on this page since the collapse, and all three
-        # are honest about it.
-        desc = _page("AUTO", "voice", "WALK")
+        # TWO slots are spare since RANGE arrived here on 2026-09-02, and
+        # both are honest about it. It was three.
+        desc = _page("AUTO", "voice", "LINE")
         cols = tl.columns(desc, "voice", self._state())
-        for index in (5, 6, 7):
+        for index in (6, 7):
             self.assertTrue(cols[index]["grey"], f"column {index + 1}")
+        # And the column RANGE landed in is LIVE, which is the point of
+        # moving it here rather than dropping it.
+        self.assertFalse(cols[5]["grey"])
+        self.assertEqual(cols[5]["name"], "RANGE")
         # RULE is live where it moved to, not merely gone from here.
         auto = tl.columns(_page("AUTO", "voice", "AUTO"), "voice",
                           self._state())
@@ -6464,7 +6476,7 @@ class TestGenPage(unittest.TestCase):
         # A silent channel must say why - and so must a coupling that is not
         # coupled to anything. FEED is column four of the WALK page since the
         # collapse, was column five of GEN.
-        desc = _page("AUTO", "voice", "WALK")
+        desc = _page("AUTO", "voice", "LINE")
         cols = tl.columns(desc, "voice", self._state())
         self.assertEqual(cols[3]["value"], "OFF")
 
@@ -6529,7 +6541,7 @@ class TestGenPageDeadColumns(unittest.TestCase):
         # The WALK page of the voice AUTO ring since 2026-09-01, where the GEN
         # page's walk verbs went. SPAN and STRIDE are columns 2 and 3 there,
         # one left of where they sat on GEN because MODEL moved to AUTO.
-        return _page("AUTO", "voice", "WALK")
+        return _page("AUTO", "voice", "LINE")
 
     def test_span_and_stride_are_dead_on_the_register_model(self):
         st = tl.default_channel_state("voice")
@@ -7920,3 +7932,279 @@ class TheLightAlphabet(unittest.TestCase):
         for now in (0.0, tl.BLINK_S, 2 * tl.BLINK_S):
             self.assertEqual(tl.toggle_light(True), tl.LIGHT_ON)
 
+
+
+class ChordsAreStacksOfScaleDegrees(unittest.TestCase):
+    """CHORD, 2026-09-02. The design is
+    notes/specs/2026-09-02-chords-on-the-surface-design.md; these are the
+    claims it rests on.
+
+    The load-bearing one is the FIRST test: shape 0 must be
+    bit-identical to the single note, because that is what makes every
+    snapshot already written - 017, 018, 019 and both packs - sound exactly
+    as it did on the day this shipped."""
+
+    ROOT, SCALE, OCT, RANGE, LEN = 7, 0, 0, 1, 16
+    VALUES = (0, 1, 58, 179, 4354, 24222, 40000, 61260, 65535)
+
+    def test_shape_zero_is_the_single_note_and_nothing_else(self):
+        for value in self.VALUES:
+            self.assertEqual(
+                tl.chord_notes(value, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 0),
+                (tl.pitch(value, self.LEN, self.ROOT, self.SCALE,
+                          self.OCT, self.RANGE),),
+                f"value {value}")
+
+    def test_a_chord_line_with_chords_off_is_the_old_line(self):
+        for register in (58, 179, 61260):
+            for octave in (-1, 0, 1):
+                line = tl.line(register, 16, 16, self.ROOT, self.SCALE,
+                               octave, self.RANGE)
+                chords = tl.chord_line(register, 16, 16, self.ROOT,
+                                       self.SCALE, octave, self.RANGE, 0)
+                self.assertEqual([c[0] for c in chords], list(line))
+                self.assertTrue(all(len(c) == 1 for c in chords))
+
+    def test_the_chord_sits_on_the_note_the_line_already_played(self):
+        # Turning CHORD up must never MOVE the line - the single note stays
+        # and notes are added above it. A chord whose root wanders is a
+        # transpose wearing a chord's name.
+        for value in self.VALUES:
+            root = tl.pitch(value, self.LEN, self.ROOT, self.SCALE,
+                            self.OCT, self.RANGE)
+            for shape in range(len(tl.CHORD_SHAPES)):
+                notes = tl.chord_notes(value, self.LEN, self.ROOT, self.SCALE,
+                                       self.OCT, self.RANGE, shape)
+                self.assertIn(root, notes, f"value {value} shape {shape}")
+                self.assertEqual(min(notes), root)
+
+    def test_a_triad_in_natural_minor_is_root_flat_third_fifth(self):
+        notes = tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 3)
+        self.assertEqual(notes, (43, 46, 50))          # G2, Bb2, D3
+        self.assertEqual([n - notes[0] for n in notes], [0, 3, 7])
+
+    def test_the_fifth_shape_is_a_fifth(self):
+        notes = tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 2)
+        self.assertEqual([n - notes[0] for n in notes], [0, 7])
+
+    def test_the_octave_shape_is_an_octave(self):
+        notes = tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 1)
+        self.assertEqual([n - notes[0] for n in notes], [0, 12])
+
+    def test_a_seventh_adds_the_flat_seventh_and_a_ninth_the_ninth(self):
+        seventh = tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                                 self.OCT, self.RANGE, 5)
+        ninth = tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 6)
+        self.assertEqual([n - seventh[0] for n in seventh], [0, 3, 7, 10])
+        self.assertEqual([n - ninth[0] for n in ninth], [0, 3, 7, 10, 14])
+
+    def test_a_sus_shape_has_a_fourth_and_no_third(self):
+        notes = tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 4)
+        self.assertEqual([n - notes[0] for n in notes], [0, 5, 7])
+
+    def test_every_shape_is_diatonic_in_every_scale(self):
+        # THE WHOLE REASON SHAPES ARE DEGREES AND NOT SEMITONES. The three
+        # voices share one ROOT and one SCALE, and a key change lands on the
+        # bar for all of them; a chromatic stack would walk out of the key
+        # they are sharing.
+        for scale_idx, (name, intervals) in enumerate(tl.SCALES):
+            allowed = {(self.ROOT + i) % 12 for i in intervals}
+            for shape in range(len(tl.CHORD_SHAPES)):
+                for value in self.VALUES:
+                    for note in tl.chord_notes(value, self.LEN, self.ROOT,
+                                               scale_idx, self.OCT, 2, shape):
+                        self.assertIn(note % 12, allowed,
+                                      f"{name} shape {shape} value {value}")
+
+    def test_a_pentatonic_triad_is_a_pentatonic_stack(self):
+        # Not a bug: in a five-note scale "the third degree up" is a fourth.
+        # Diatonic in PENT beats in-tune-in-five-scales-and-wrong-in-the-sixth.
+        notes = tl.chord_notes(179, self.LEN, self.ROOT, 5, self.OCT, 1, 3)
+        self.assertEqual([n - notes[0] for n in notes], [0, 5, 10])
+
+    def test_an_octave_doubling_follows_the_scale_length(self):
+        # The reason octaves are a separate field: an octave is
+        # len(intervals) degrees, SEVEN in five scales and FIVE in PENT, so a
+        # literal degree offset of 7 would be an octave in MIN and a sixth in
+        # PENT.
+        for scale_idx in range(len(tl.SCALES)):
+            notes = tl.chord_notes(179, self.LEN, self.ROOT, scale_idx,
+                                   self.OCT, 1, 1)
+            self.assertEqual([n - notes[0] for n in notes], [0, 12],
+                             tl.SCALES[scale_idx][0])
+
+    def test_the_notes_come_back_sorted_and_unique(self):
+        for scale_idx in range(len(tl.SCALES)):
+            for shape in range(len(tl.CHORD_SHAPES)):
+                for octave in (-3, 0, 3):
+                    notes = tl.chord_notes(60000, self.LEN, self.ROOT,
+                                           scale_idx, octave, 2, shape)
+                    self.assertEqual(list(notes), sorted(set(notes)))
+
+    def test_no_note_ever_leaves_the_midi_range(self):
+        for shape in range(len(tl.CHORD_SHAPES)):
+            for octave in (-9, -4, 0, 4, 8):
+                for value in self.VALUES:
+                    for note in tl.chord_notes(value, self.LEN, self.ROOT,
+                                               self.SCALE, octave, 4, shape):
+                        self.assertGreaterEqual(note, 0)
+                        self.assertLessEqual(note, 127)
+
+    def test_a_shape_index_out_of_range_falls_back_to_off(self):
+        # The render and write paths must not throw: a snapshot from a later
+        # version, or a clamp that slipped, becomes a single note rather than
+        # an exception on the poll thread.
+        for shape in (-1, len(tl.CHORD_SHAPES), 99, 1000):
+            self.assertEqual(
+                tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, shape),
+                tl.chord_notes(179, self.LEN, self.ROOT, self.SCALE,
+                               self.OCT, self.RANGE, 0))
+
+    def test_the_advertised_maximum_is_the_real_one(self):
+        # The write burst is steps * CHORD_MAX_NOTES addNote calls under one
+        # lock hold, and that is the number a rig gate needs.
+        widest = max(
+            len(tl.chord_notes(v, self.LEN, self.ROOT, s, self.OCT, 2, shape))
+            for v in self.VALUES
+            for s in range(len(tl.SCALES))
+            for shape in range(len(tl.CHORD_SHAPES)))
+        self.assertEqual(widest, tl.CHORD_MAX_NOTES)
+        self.assertEqual(tl.CHORD_MAX_NOTES, 5)
+
+    def test_off_is_the_first_shape_because_zero_reads_as_off(self):
+        # This instrument's grammar everywhere else: MELODY and RHYTHM at zero
+        # hold their registers still, walk_due reads 0 as LOCK.
+        self.assertEqual(tl.CHORD_SHAPES[0][0], "OFF")
+        self.assertEqual(tl.CHORD_SHAPES[0][1], (0,))
+        self.assertEqual(tl.CHORD_SHAPES[0][2], ())
+
+    def test_every_label_fits_the_value_field(self):
+        for label, _degrees, _octaves in tl.CHORD_SHAPES:
+            self.assertLessEqual(len(label), 4, label)
+
+    def test_the_shapes_only_ever_stack_upward(self):
+        for label, degrees, octaves in tl.CHORD_SHAPES:
+            self.assertEqual(degrees[0], 0, label)
+            self.assertEqual(list(degrees), sorted(set(degrees)), label)
+            self.assertTrue(all(o > 0 for o in octaves), label)
+
+    def test_a_chord_line_rotates_exactly_as_the_old_line_does(self):
+        chords = tl.chord_line(179, 16, 16, self.ROOT, self.SCALE, self.OCT,
+                               self.RANGE, 3)
+        roots = [c[0] for c in chords]
+        self.assertEqual(roots, list(tl.line(179, 16, 16, self.ROOT,
+                                             self.SCALE, self.OCT,
+                                             self.RANGE)))
+        self.assertTrue(all(len(c) == 3 for c in chords))
+
+    def test_degree_note_is_what_the_keyboard_already_used(self):
+        # Extracted from pitch() and pad_note(), which carried identical
+        # copies. Three copies of one formula is how a scale gains an
+        # off-by-one in exactly one of the places it is used.
+        for degree in range(16):
+            self.assertEqual(
+                tl.degree_note(degree, self.ROOT, self.SCALE, 1),
+                tl.pad_note(degree, self.ROOT, self.SCALE, 1))
+
+    def test_the_line_itself_did_not_move_when_chords_arrived(self):
+        # A golden regression: these are the pitches 019's BASS register
+        # produced before chords existed, read off the shipped snapshot.
+        self.assertEqual(
+            [tl.line(58, 16, 16, 7, 0, -1, 1)[s] for s in (0, 6, 10, 14)],
+            [31, 31, 41, 36])
+
+
+class ChordRefusesWhereItCannotAct(unittest.TestCase):
+    """Law L4 for CHORD. Both refusals were found by reading the code before
+    it was built, and both would otherwise have been the exact fault the
+    2026-09-01 sweep called worse than a silence: a number that moves on
+    screen while the sound does not change."""
+
+    def _view(self, **over):
+        view = _voice_view()
+        view.update(over)
+        return view
+
+    def _dead(self, verb, **over):
+        desc = tl.PAGE_RINGS[("STEP", "voice")][0]
+        cols = tl.columns(desc, "voice", self._view(**over))
+        index = desc["verbs"].index(verb)
+        return cols[index]["grey"]
+
+    def test_chord_is_live_on_an_ordinary_voice(self):
+        self.assertFalse(self._dead("chord"))
+
+    def test_chord_is_dead_on_a_player_owned_channel(self):
+        # _write_voice_pattern returns early on a take, by design, so the
+        # generator would never write the new shape. This is also the answer
+        # to whether the generator retires 019's hand-authored chords: it does
+        # not, and the surface says why.
+        self.assertTrue(self._dead("chord", owner="player"))
+
+    def test_chord_is_dead_on_a_sampler_behaving_as_a_voice(self):
+        # A note number on a kit selects WHICH DRUM sounds, so a stack of
+        # scale degrees would add unrelated drum hits rather than thicken
+        # anything. Same argument RANGE already makes.
+        self.assertTrue(self._dead("chord", sampler=True))
+
+    def test_a_take_does_not_kill_the_whole_page(self):
+        # The refusal has to be surgical: a player-owned channel still wants
+        # its gate, its velocity and its swing.
+        for verb in ("velo", "swing", "chance"):
+            self.assertFalse(self._dead(verb, owner="player"), verb)
+
+    def test_chord_is_dead_on_every_drum(self):
+        drum = _drum_view()
+        cols = tl.columns(tl.lens_desc("chord"), None,
+                          [(chr(65 + i), tl.CHANNELS[i][1],
+                            drum if i < 5 else _voice_view())
+                           for i in range(8)])
+        self.assertEqual("".join("." if c["grey"] else "#" for c in cols),
+                         ".....###")
+
+    def test_chord_may_not_take_a_modulator(self):
+        # It rewrites the pattern, which is why gate and velo are out of
+        # MOD_TIMBRE. It is not a drift verb either: drift on a PITCH verb has
+        # never been played, and shipping it in the same round as the verb
+        # itself would mean two untested things at once.
+        self.assertFalse(tl.mod_allowed("chord"))
+        self.assertFalse(tl.mod_allowed("chord", owned=True))
+        self.assertFalse(tl.is_drift("chord"))
+        self.assertNotIn("chord", tl.MOD_TIMBRE)
+        self.assertNotIn("chord", tl.DRIFT_VERBS)
+
+
+class ChordMigratesSilently(unittest.TestCase):
+    """Every snapshot already written - 017, 018, 019, the genre pack, the
+    drone pack - must sound bit for bit as it did. `chord` absent reads 0,
+    and shape 0 is the single note."""
+
+    def test_a_new_voice_starts_with_chords_off(self):
+        self.assertEqual(tl.default_channel_state("voice")["chord"], 0)
+
+    def test_a_drum_has_no_chord_key_at_all(self):
+        self.assertNotIn("chord", tl.default_channel_state("drum"))
+
+    def test_an_old_voice_dict_is_upgraded_to_chords_off(self):
+        # upgrade_state builds from default_channel_state, which is what makes
+        # a key added today cover a snapshot written months ago.
+        old = {"register": 179, "length": 16, "random": 0, "gate": 40,
+               "octave": 0, "range": 2, "velo": 110, "density": 100}
+        upgraded = tl.upgrade_state("voice", old, 16)
+        self.assertEqual(upgraded["chord"], 0)
+
+    def test_the_upgraded_state_still_plays_the_single_note(self):
+        upgraded = tl.upgrade_state("voice", {"register": 58, "length": 16,
+                                              "octave": -1, "range": 1}, 16)
+        self.assertEqual(
+            tl.chord_notes(58, upgraded["length"], 7, 0, upgraded["octave"],
+                           upgraded["range"], upgraded["chord"]),
+            (tl.pitch(58, upgraded["length"], 7, 0, upgraded["octave"],
+                      upgraded["range"]),))
