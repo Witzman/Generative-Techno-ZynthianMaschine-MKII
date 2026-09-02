@@ -4977,9 +4977,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     def _recentre_encoders(self):
         """Park every encoder mid-range in the daemon, so none of them starts
-        driving a new group from against an end stop."""
+        driving a new group from against an end stop.
+
+        A KNOB ALREADY PARKED IS NOT RE-PARKED, since 2026-09-02, and this is
+        the cheapest eight-to-one saving on the surface. Measured on the rig:
+        ten detents of the big encoder cost **96 `/maschine/encoder`
+        messages** - all eight knobs, on every page step, whether or not any
+        of them had moved - which made this the single most expensive thing a
+        page step does now that the screens are coalesced.
+
+        The driver is the ONLY writer of an encoder position and it tracks
+        every one: a physical turn arrives as a CC and updates `enc_last`, and
+        nothing else in the system moves them. So "I believe this knob is at
+        centre and its carry is clear" is as good as the LED cache's identical
+        assumption, and it is wrong only if a loopback UDP packet is lost -
+        which would already have broken every light on the panel.
+
+        `None` is NOT parked. `_enc_delta` sets it after an automatic
+        re-centre to mean "baseline unknown", and a knob in that state has to
+        be written."""
 
         for idx, cc_num in enumerate(ENCODER_CCS):
+            if (self.enc_last.get(cc_num) == ENC_CENTRE
+                    and not self.enc_carry.get(cc_num)):
+                continue
             self._send_osc(lib.encoder_osc(idx, ENC_CENTRE))
             self.enc_last[cc_num] = ENC_CENTRE
             self.enc_carry[cc_num] = 0
