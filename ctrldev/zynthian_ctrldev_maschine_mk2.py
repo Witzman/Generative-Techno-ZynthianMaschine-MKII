@@ -7095,10 +7095,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 pitch = tlib.take_pitch(sounding, step, generated)
                 added = (pitch, generated)
                 gate = int(self.state[channel].get("gate", 100) or 100)
+                # THE TAP'S OWN VELOCITY, and nothing else. It used to fall
+                # back to the channel's VELO, which is drawn DEAD on an owned
+                # voice since 2026-09-02 - reading a value the surface says
+                # the player cannot set is the same lie from the other side.
+                # A pad NoteOn always carries one; a zero is a note-off and is
+                # filtered long before this.
                 self.libseq.addNote(
-                    step, pitch,
-                    max(1, min(127, int(velocity
-                                        or self.state[channel]["velo"]))),
+                    step, pitch, max(1, min(127, int(velocity or 100))),
                     tlib.note_duration(gate, step, steps, mask), 0.0)
             self.libseq.updateSequenceInfo()
             self._render_pads()

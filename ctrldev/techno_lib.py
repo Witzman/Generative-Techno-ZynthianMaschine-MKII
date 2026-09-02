@@ -1192,6 +1192,12 @@ class techno_lib:
             return (value or 0) > 0
         return True
 
+    # Verbs that exist on a voice, are written ONLY by the generator, and
+    # therefore cannot act on a channel the player owns. They draw dead there.
+    # CHORD is not in the set because it refuses on a sampler as well and
+    # carries its own branch above.
+    TAKE_DEAD_ON_A_VOICE = frozenset(("range", "velo"))
+
     KINDS = ("drum", "voice")
 
     # How a voice picks its pitches. A MODEL, not a KIND - see the `model` key
@@ -3779,6 +3785,36 @@ class techno_lib:
             # page, and the same conclusion.
             return (state.get("owner") == "player"
                     or bool(state.get("sampler")))
+        if (behaving == "voice"
+                and verb in techno_lib.TAKE_DEAD_ON_A_VOICE):
+            # SAME LAW AS CHORD, TWO MORE VERBS, 2026-09-02. Both are read
+            # ONLY by `_write_voice_pattern`, which returns early on a take -
+            # so on a channel the player owns they move a number on the glass
+            # and change no sound, which the silent-refusal sweep of
+            # 2026-09-01 called worse than a silence.
+            #
+            # GATE AND OCTAVE ARE DELIBERATELY NOT HERE, and the difference is
+            # a measurement rather than a guess. `gate` is read by the
+            # in-place step editor for the length of a tapped-in note, and
+            # `octave` is read by `_pad_note`, which decides what a pad PLAYS
+            # - take or no take. Both are live on an owned channel; greying
+            # them would be the opposite lie.
+            #
+            # VELO could have been made live instead, the way a drum's VELO
+            # restyles its notes in place - and it is not, for a measured
+            # reason: a drum pattern is ONE pitch, so a restyle is `steps`
+            # writes, while a voice take holds arbitrary pitches and the
+            # installed API has no enumerator. Finding them means probing 128
+            # pitches per step, and VELO is a continuous encoder. That is
+            # about two thousand zynseq reads per detent, under the lock, on
+            # the MIDI thread - the shape of thing that wedges this
+            # controller. Drawn dead honestly beats live and dangerous.
+            #
+            # SCOPED TO A VOICE-BEHAVING CHANNEL, and that is not tidiness.
+            # `range` on a sampler is the KIT WINDOW and `velo` on a drum is
+            # restyled in place by `_restyle_pattern` - both act on a take,
+            # and greying them would break two features that already work.
+            return state.get("owner") == "player"
         # BEHAVIOUR, NOT ENGINE, and the difference is the whole bug. The
         # CONTROL page passes the ENGINE kind on purpose - a sampler always
         # has kits and samples however it is being played - so `kind` is

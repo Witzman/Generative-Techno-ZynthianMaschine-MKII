@@ -8377,10 +8377,15 @@ class ChordRefusesWhereItCannotAct(unittest.TestCase):
         return view
 
     def _dead(self, verb, **over):
-        desc = tl.PAGE_RINGS[("STEP", "voice")][0]
-        cols = tl.columns(desc, "voice", self._view(**over))
-        index = desc["verbs"].index(verb)
-        return cols[index]["grey"]
+        # RANGE lives on the voice's SECOND AUTO page since 2026-09-02, when
+        # CHORD took its slot on STEP - so the page has to be looked up rather
+        # than assumed, or a verb that moved reads as a verb that vanished.
+        for key in (("STEP", "voice"), ("AUTO", "voice")):
+            for desc in tl.PAGE_RINGS[key]:
+                if verb in desc["verbs"]:
+                    cols = tl.columns(desc, "voice", self._view(**over))
+                    return cols[desc["verbs"].index(verb)]["grey"]
+        raise AssertionError(f"no voice page carries {verb!r}")
 
     def test_chord_is_live_on_an_ordinary_voice(self):
         self.assertFalse(self._dead("chord"))
@@ -8400,9 +8405,35 @@ class ChordRefusesWhereItCannotAct(unittest.TestCase):
 
     def test_a_take_does_not_kill_the_whole_page(self):
         # The refusal has to be surgical: a player-owned channel still wants
-        # its gate, its velocity and its swing.
-        for verb in ("velo", "swing", "chance"):
+        # its gate, its swing and its odds.
+        #
+        # VELO CAME OUT OF THIS LIST ON 2026-09-02, and the line it was on was
+        # a BELIEF rather than a measurement - the shape of claim this project
+        # keeps catching in its own comments. Every read of a voice's `velo`
+        # was found: `_write_voice_pattern`, which returns early on a take,
+        # and one unreachable fallback in the step editor. It moved a number
+        # and changed no sound. The three below are different and each was
+        # checked the same way - `gate` is read by the in-place step editor,
+        # and `swing` and `chance` are native per-pattern zynseq properties
+        # that act whoever owns the notes.
+        for verb in ("gate", "swing", "chance"):
             self.assertFalse(self._dead(verb, owner="player"), verb)
+
+    def test_VELO_and_RANGE_are_dead_on_a_voice_take(self):
+        # Both are written ONLY by the generator, and the generator does not
+        # write a take. RANGE is read from the LINE page, where it now lives.
+        self.assertTrue(self._dead("velo", owner="player"))
+        self.assertTrue(self._dead("range", owner="player"))
+
+    def test_and_they_are_live_again_once_the_channel_is_handed_back(self):
+        self.assertFalse(self._dead("velo"))
+        self.assertFalse(self._dead("range"))
+
+    def test_OCTAVE_stays_live_on_a_take_because_the_PADS_read_it(self):
+        # `_pad_note` asks for it on every strike, so it decides what a pad
+        # PLAYS whether or not the generator is writing. Greying it would be
+        # the opposite lie to the one this round is fixing.
+        self.assertFalse(self._dead("octave", owner="player"))
 
     def test_chord_is_dead_on_every_drum(self):
         drum = _drum_view()
