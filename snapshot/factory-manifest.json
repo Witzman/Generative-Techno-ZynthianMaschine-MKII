@@ -30,7 +30,10 @@
           "random": 0, "rhythm": 0, "gate": 75, "octave": 1, "range": 1,
           "velo": 96,
           "why": "G plays CHORDS, which the generator cannot write - see the chords block. This entry is not what sounds; it is the octave the pads colour against, and what the generator would write on steps 6 and 14 if ownership were ever handed back."},
-    "7": {"empty": true, "why": "H left silent this round"}
+    "7": {"register": 179, "length": 16, "rhythm_reg": 1, "rotate": 0,
+          "random": 0, "rhythm": 0, "gate": 1500, "octave": 0, "range": 1,
+          "velo": 72,
+          "why": "H is a deep pad: ONE chord a bar, held almost the whole bar. Like G it is authored as a take, so this entry is the octave the pads colour against and what the generator would write on step 0 if ownership were handed back."}
   },
 
   "chords": {
@@ -39,6 +42,10 @@
        "why": "G minor - G3 Bb3 D4 - on the and of beat 2"},
       {"step": 14, "notes": [57, 60, 65], "velo": 84, "duration": 0.75,
        "why": "the flat-seventh chord voiced up, A3 C4 F4, on the and of beat 4. i to bVII is the dub progression, and this voicing keeps all three notes inside the pad keyboard"}
+    ],
+    "7": [
+      {"step": 0, "notes": [43, 50, 58], "velo": 72, "duration": 15.0,
+       "why": "G minor voiced open and low - G2 D3 Bb3, root, fifth, tenth - one chord a bar held 15 of 16 steps, which is 1.9 s at 120 BPM. The tenth rather than a close third so it does not crowd the 303 bass, and the one-step gap before the retrigger keeps the note clear of the loop wrap."}
     ]
   },
 
@@ -48,7 +55,13 @@
           "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
           "name": "Analog Brass Chrds",
           "controllers": {"voicecount": 0.575},
-          "why": "018 had a BASS preset on the LEAD chain at voicecount 0.25, which is TWO voices - a three-note chord would silently lose a note. 0.575 is the scale point for 5. The rest of the patch comes from the preset, because the restore writes saved controllers OVER the preset and keeping 018's 82 would have made the swap inaudible."}
+          "why": "018 had a BASS preset on the LEAD chain at voicecount 0.25, which is TWO voices - a three-note chord would silently lose a note. 0.575 is the scale point for 5. The rest of the patch comes from the preset, because the restore writes saved controllers OVER the preset and keeping 018's 82 would have made the swap inaudible."},
+    "8": {"engine": "JV/padthv1",
+          "bundle": "padthv1_67Padthv1Patches",
+          "file": "67Padthv1Patches_TapeStrings.ttl",
+          "name": "TapeStrings",
+          "controllers": {},
+          "why": "018 had DexKeys02 here, a KEYS patch - plucked attack, wrong for a sustained pad. TapeStrings was chosen off the patch data rather than the name: DEF1_MONO 0 so it can hold a chord, DCA1_ATTACK 0.81 the slowest swell in the bundle, DCA1_RELEASE 0.73 for the tail, and DCF1_CUTOFF 0.35 which is the darkest of the candidates. Haze01 read like the obvious pick by name and is DEF1_MONO 1 - it would have collapsed the chord to one note."}
   },
 
   "wets": {
@@ -57,7 +70,8 @@
     "3": {"delay": 30, "reverb": 22},
     "4": {"delay": 10, "reverb": 6},
     "6": {"delay": 14, "reverb": 10},
-    "7": {"delay": 45, "reverb": 40}
+    "7": {"delay": 45, "reverb": 40},
+    "8": {"delay": 20, "reverb": 55}
   },
 
   "controllers": {

@@ -158,10 +158,19 @@ def set_chord_pattern(body, stabs, template):
         step = int(stab["step"])
         if not 0 <= step < STEPS:
             raise ValueError(f"stab step {step} outside 0..{STEPS - 1}")
+        # CLAMPED SO A NOTE CANNOT OUTLIVE ITS PATTERN, which is the rule the
+        # driver's own tlib.note_duration enforces and for the reason its
+        # docstring gives: the Pi probe proved libzynseq STORES a duration
+        # longer than the pattern, and never proved the player still emits the
+        # note-off after the loop wraps. "A stuck pad drone is the worst
+        # failure this instrument has" - and a pad is exactly what asks for a
+        # note this long. The 0.05 floor is the same one: a zero-length note
+        # is a note that never sounds.
+        room = float(max(1, STEPS - step))
+        duration = max(0.05, min(float(stab.get("duration", 1.0)), room))
         for note in stab["notes"]:
             out += chord_event(template, step, int(note),
-                               stab.get("velo", 96),
-                               float(stab.get("duration", 1.0)))
+                               stab.get("velo", 96), duration)
     return out
 
 

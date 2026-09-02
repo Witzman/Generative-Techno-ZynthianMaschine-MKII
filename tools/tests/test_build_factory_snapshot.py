@@ -333,6 +333,40 @@ class AChordIsATakeBecauseTheGeneratorIsMonophonic(unittest.TestCase):
             self.assertEqual(e["cmd"], 0x90)
             self.assertEqual(e["chance"], 100)
 
+    def test_a_note_cannot_outlive_its_pattern(self):
+        # tlib.note_duration's own rule, and its reason: libzynseq STORES a
+        # duration longer than the pattern and the note-off after the wrap was
+        # never proved. "A stuck pad drone is the worst failure this
+        # instrument has."
+        m = manifest(chords={"6": [{"step": 14, "notes": [55],
+                                    "duration": 99.0}]})
+        d, _r = builder.build(base_snapshot(), m, KITS)
+        raw = base64.b64decode(d["zynseq_riff_b64"])
+        patns = [b for b in builder.genre.parse_blocks(raw) if b[0] == "patn"]
+        frac, units = struct.unpack_from(">HH", bytes(patns[6][1]), 
+                                         builder.genre.PATN_HEADER + 8)
+        self.assertAlmostEqual(units + frac / 10000.0, 2.0, places=4)
+
+    def test_a_zero_length_note_is_floored(self):
+        m = manifest(chords={"6": [{"step": 0, "notes": [55],
+                                    "duration": 0.0}]})
+        d, _r = builder.build(base_snapshot(), m, KITS)
+        raw = base64.b64decode(d["zynseq_riff_b64"])
+        patns = [b for b in builder.genre.parse_blocks(raw) if b[0] == "patn"]
+        frac, units = struct.unpack_from(">HH", bytes(patns[6][1]),
+                                         builder.genre.PATN_HEADER + 8)
+        self.assertAlmostEqual(units + frac / 10000.0, 0.05, places=4)
+
+    def test_a_whole_bar_note_from_step_zero_is_allowed(self):
+        m = manifest(chords={"6": [{"step": 0, "notes": [55],
+                                    "duration": 16.0}]})
+        d, _r = builder.build(base_snapshot(), m, KITS)
+        raw = base64.b64decode(d["zynseq_riff_b64"])
+        patns = [b for b in builder.genre.parse_blocks(raw) if b[0] == "patn"]
+        frac, units = struct.unpack_from(">HH", bytes(patns[6][1]),
+                                         builder.genre.PATN_HEADER + 8)
+        self.assertAlmostEqual(units + frac / 10000.0, 16.0, places=4)
+
     def test_the_channel_becomes_player_owned(self):
         # WITHOUT THIS THE CHORDS ARE GONE within a second of loading:
         # set_state calls _write_voice_pattern for every voice, and it only
