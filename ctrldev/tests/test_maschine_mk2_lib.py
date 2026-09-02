@@ -1407,3 +1407,66 @@ class ARerollUndoSavesEverythingTheRerollWrites(unittest.TestCase):
         from techno_lib import techno_lib as tlib
         self.assertEqual(self._undo_keys("hits"),
                          set(tlib.reroll_drum(steps=16)))
+
+
+class TheLevelIsNeverReadFromTheStoredCopy(unittest.TestCase):
+    """`self.state[ch]["level"]` is STALE BY DESIGN, so nothing may read it
+    through param_get().
+
+    THE DEFECT, found at the rig 2026-09-02. `_exit_start` captured the level
+    it was going to ramp with `param_get(channel, "level")`. That copy starts
+    at 19 and the snapshot's driver block does not carry it, while the actual
+    fader is wherever the mix put it - 67 on the dub factory's Group D. So the
+    first 200 ms tick of a two-bar close dropped the strip from 67 to 18 and
+    the owner reported EXIT as "mutes instantly" on both kinds; the landing
+    then restored 19 over the mix. One reader, one line, and the feature
+    looked entirely absent.
+
+    Everything else already knew: state_view() draws the mixer's value,
+    _verb() reads _live_level() before it increments, and _live_level() exists
+    for exactly this. This is the guard that stops the next reader.
+
+    Static, like the other five: the driver does not import off the Pi."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _param_get_literals(self, source=None):
+        """Every string literal passed as param_get()'s `param` argument."""
+        import ast
+        if source is None:
+            with open(self.DRIVER, encoding="utf-8") as fh:
+                source = fh.read()
+        found = set()
+        for node in ast.walk(ast.parse(source)):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = (func.attr if isinstance(func, ast.Attribute)
+                    else func.id if isinstance(func, ast.Name) else None)
+            if name != "param_get":
+                continue
+            # (channel, param) positionally, or param= by keyword.
+            args = list(node.args[1:]) + [kw.value for kw in node.keywords
+                                          if kw.arg == "param"]
+            for arg in args:
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    found.add(arg.value)
+        return found
+
+    def test_the_guard_can_see_param_get_calls(self):
+        # A guard that found nothing would pass by checking nothing.
+        self.assertTrue(self._param_get_literals())
+
+    def test_the_check_can_fail(self):
+        self.assertEqual(
+            self._param_get_literals(
+                'x = self.param_get(channel, "level")\n'),
+            {"level"})
+
+    def test_nothing_reads_the_level_through_param_get(self):
+        self.assertNotIn(
+            "level", self._param_get_literals(),
+            "the stored level is stale by design - read the fader with "
+            "_live_level(channel), which is what state_view() and _verb() "
+            "already do")

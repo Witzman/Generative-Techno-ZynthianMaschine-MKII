@@ -183,6 +183,40 @@ class techno_lib:
         f = min(1.0, max(0.0, float(factor)))
         return f ** techno_lib.EXIT_CUTOFF_CURVE
 
+    # THE DISPLAY IS COALESCED WHILE A CONTROL IS STILL MOVING, 2026-09-02.
+    # How long the surface waits, after the last movement, before it puts a
+    # screen on the wire.
+    #
+    # THE COST THIS EXISTS TO STOP: the big encoder steps a page per detent,
+    # every page draws different content, and the poll thread repaints both
+    # screens whenever that content changes - so a hand walking a ring paid a
+    # full clear-and-redraw per detent it could reach. Measured on the rig
+    # 2026-09-02 at a peak of 674 OSC messages a second while the owner
+    # turned it, and it wedged the controller during the jam that followed.
+    # Display traffic is what wedges this hardware; the message RATE was
+    # exonerated on 2026-08-31 and the WRITE PATH was not.
+    #
+    # THE PAGE THAT IS SKIPPED WAS NEVER READ. At a comfortable turn a page
+    # is on the glass for about 140 ms, which is under the time it takes to
+    # focus on a four-character label - so N detents cost one repaint of the
+    # page the hand actually stopped on, and nothing legible is lost.
+    #
+    # 0.15 s is chosen against the GESTURE, not against the hardware: a fast
+    # walk through a ten-page ring is about eight detents a second, so this
+    # swallows the whole burst, and the page lands within a poll tick (33 ms)
+    # of the hand stopping.
+    DISPLAY_SETTLE_S = 0.15
+
+    @staticmethod
+    def display_held(now, until):
+        """Is a coalesced display repaint still waiting for the hand to stop?
+
+        A hold that has never been set (0.0, the initial value) is not a hold:
+        the driver arms this only from the controls that can move faster than
+        the screens, so every other repaint must pass through untouched."""
+
+        return now < until
+
     # THE WATCHDOG, 2026-09-01. Long enough that a kit change which merely
     # took a while does not cry wolf - the poll tick is 33 ms and the shipped
     # sub-rate is ~200 ms - and short enough that a player notices the banner
@@ -2770,6 +2804,35 @@ class techno_lib:
             return (techno_lib.LIGHT_ON if techno_lib.blink_phase(now)
                     else techno_lib.LIGHT_OFF)
         return techno_lib.LIGHT_DIM if available else techno_lib.LIGHT_OFF
+
+    @staticmethod
+    def locked_light(bright, locked, now=0.0):
+        """The Group LED for a channel the machine may not touch.
+
+        MOVE at 0 is LOCK, and it was invisible from every page but the one
+        that set it - owner at the rig 2026-09-02, "only this page shows the
+        lock". A standing decision the player made and walked away from is
+        exactly what the panel's 1 Hz blink means, and blinking is free on
+        this hardware while the screens are not.
+
+        THE DIP IS `LIGHT_DIM`, NOT the Group row's own floor, and that is a
+        measurement rather than a taste. This row scales its brightness with
+        the fader between 0.10 and 1.0, but the eye does not: 0.30 and 0.35
+        read as full, 0.12 is NEARLY FULL and 0.08 reads as half - measured
+        against the owner's eyes on 2026-09-01, after an OSC sniff had
+        "verified" a light alphabet the owner could not tell apart. A blink
+        between 0.67 and 0.10 is bytes moving, not a light blinking.
+
+        Dipping below the floor cannot be read as a MUTE - dark on this row
+        means "not sounding" - because a mute is STEADY. A lamp returning to
+        its level twice a second is the one thing a dark lamp never does.
+
+        The hue is untouched: hue is identity on this row and has been since
+        the Group LEDs were written."""
+
+        if not locked:
+            return bright
+        return bright if techno_lib.blink_phase(now) else techno_lib.LIGHT_DIM
 
     @staticmethod
     def action_light(available):

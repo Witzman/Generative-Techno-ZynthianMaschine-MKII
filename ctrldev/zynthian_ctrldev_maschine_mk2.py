@@ -671,6 +671,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # 'no reference yet' and the first report only establishes one.
         self._big_last = None
         self._big_carry = 0
+        # THE COALESCED DISPLAY REPAINT, 2026-09-02. `_display_due` is set by
+        # a control that can move faster than the screens can be drawn, and
+        # `_display_hold_until` is pushed forward by every further movement -
+        # so the poll thread draws ONCE, after the hand stops, instead of once
+        # per detent. tlib.DISPLAY_SETTLE_S carries the measurement.
+        self._display_due = False
+        self._display_hold_until = 0.0
         # REROLL: channels waiting for their own wrap, and the one-deep undo.
         # Pending is per CHANNEL rather than per button so a reroll lands on
         # each channel's OWN bar - the whole point of per-group pattern
@@ -1025,7 +1032,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         CAPTURE AND RESTORE, the same bookkeeping _drop_fire uses: what is put
         back is what was there, never a nominal full level. A channel the
-        player had at 40 comes back at 40."""
+        player had at 40 comes back at 40.
+
+        THE LEVEL IS READ FROM THE MIXER, NEVER FROM self.state - fixed
+        2026-09-02, and reading the stored copy is what made this feature look
+        like it did nothing at all.
+
+        The stored copy is stale BY DESIGN: `state[ch]["level"]` starts at 19
+        (default_channel_state), the snapshot's own driver block does not
+        carry it, and the touchscreen and the mixer both move a fader behind
+        the driver's back - which is why state_view() draws the live value and
+        why _verb() reads the live value before it increments. This was the
+        one reader left asking self.state, and the whole rest of the driver
+        already knew not to.
+
+        WHAT IT COST, at the rig on 2026-09-02: the dub factory has Group D at
+        67 and Group F at 34; both captured 19, so the first 200 ms tick of a
+        two-bar close slammed the strip from 67 to about 18 - eleven decibels
+        in one write - and the owner reported "mutes instantly" on both kinds.
+        The landing then RESTORED 19, so the close also quietly rewrote the
+        mix it was supposed to leave alone."""
 
         bars = self._exit_bars(channel)
         if bars <= 0:
@@ -1033,7 +1059,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         chan = self._mixer_chan(channel)
         if chan is None:
             return False
-        level = int(self.param_get(channel, "level"))
+        level = self._live_level(channel)
+        if level is None:
+            return False
         cutoff = (int(self.param_get(channel, "cutoff"))
                   if self.channel_kind(channel) == "voice" else None)
         running = self._exit_ramps.get(channel)
@@ -2627,6 +2655,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         steps, self._big_carry = tlib.big_detents(self._big_carry + units)
         if not steps:
             return
+        # THE SESSION LOG COULD NOT SEE THIS KNOB AT ALL until 2026-09-02, and
+        # it is the log's own blind spot rather than a missing feature: this
+        # handler returns from midi_event before the `_slog("cc", ...)` call
+        # that every other button passes through. Found while reconstructing a
+        # failure in which the big encoder was the ONLY control in use - the
+        # recording held AUTO, a group button, and then silence.
+        #
+        # A LANDED DETENT, not a report. CC 15 streams a position, so logging
+        # every one of them would put a hundred lines a second into a tmpfs
+        # for a knob nobody turned far - the same reason the eight encoders
+        # above this return before the log too. What a reconstruction needs is
+        # the gesture, and one line per detent IS the gesture.
+        #
+        # The target is worked out with the same predicates in the same order
+        # as the branches below, so the log cannot claim a branch the dispatch
+        # did not take. Keep the two in step.
+        self._slog("big", steps=steps, mode=self.mode,
+                   target=("lens" if (self.lens_down and not self.bank_down
+                                      and not self.mod_down)
+                           else "bank" if self.bank_down
+                           else "mod" if self.mod_down
+                           else "page"))
         if self.lens_down and not self.bank_down and not self.mod_down:
             # THE LENS IS ONE PAGE by construction, so there is no ring to
             # walk. Turning the big encoder here used to move the page index
@@ -2650,7 +2700,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._bank_page = page
                 with self.lock:
                     self._render_pads()
-                    self._render_display()
+                # COALESCED, like every other page this knob walks. The pads
+                # are painted at once because sixteen pad LEDs are ONE HID
+                # report and the ring is clamped at four pages; the screens
+                # are not, and they carry the only label saying which page of
+                # banks this is.
+                self._display_soon()
             return
         if self.mod_down:
             # WHILE MOD IS LATCHED THE BIG ENCODER IS NOT THE PAGE RING. It
@@ -2660,8 +2715,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # so the surface is not silent about it.
             self.mod_depth_mult = max(0.0, min(
                 2.0, self.mod_depth_mult + steps * 0.05))
-            with self.lock:
-                self._render_display()
+            # COALESCED. This is the one branch of this knob that is a
+            # CONTINUOUS value rather than a ring - forty detents from end to
+            # end - so it is the branch that can put the most repaints on the
+            # wire in one gesture.
+            self._display_soon()
             return
         for _ in range(abs(steps)):
             self._step_page(1 if steps > 0 else -1)
@@ -2709,6 +2767,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.enc_carry.clear()
         with self.lock:
             self._render_all()
+        # THE SCREENS ARE COALESCED HERE and the LEDs above are not, which is
+        # the whole shape of the fix. A page step changes what both screens
+        # say, and the big encoder can step a page per detent; _render_all is
+        # cached per LED and a still panel puts nothing on the wire, while a
+        # both-screen repaint is about a hundred OSC packets every time.
+        #
+        # DL and DR come through here too, and they get the settle as well.
+        # They cost nothing by it: this branch never drew the screens at all
+        # before, so an arrow press already waited for the poll thread's
+        # ~200 ms sub-rate, and it now lands within 150 ms of the press.
+        self._display_soon()
 
     def _set_mode(self, name):
         """Latched, mutually exclusive, five of them. Pressing the mode that is
@@ -6219,7 +6288,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         Selection is deliberately not in here. The inverted tab on the screen
         is authoritative for that; a fourth meaning on one LED would make all
-        four unreadable."""
+        four unreadable.
+
+        LOCK IS THE ONE EXCEPTION, added 2026-09-02, and it is on a dimension
+        of its own rather than a fourth meaning on brightness: a locked
+        channel BLINKS its level instead of holding it. MOVE at 0 was visible
+        only on the page that set it - owner at the rig, "only this page shows
+        the lock" - and a standing decision the player walked away from is
+        what the panel's 1 Hz blink has always meant. tlib.locked_light
+        carries the reasoning and the measurement."""
 
         chan = self._mixer_chan(group)
         if chan is None:
@@ -6258,7 +6335,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self._any_soloed() and not mixer.get_solo(chan):
             return 0.0
         level = min(1.0, max(0.0, mixer.get_level(chan)))
-        return BRIGHT_GROUP_MIN + (BRIGHT_GROUP_MAX - BRIGHT_GROUP_MIN) * level
+        bright = BRIGHT_GROUP_MIN + (BRIGHT_GROUP_MAX - BRIGHT_GROUP_MIN) * level
+        # BELOW the mute and solo tests on purpose: a channel that is not
+        # sounding is dark, and a blink that survived a mute would say the
+        # machine is being kept off something the player cannot hear anyway.
+        # And below the ERASE and ARM branches for the law those two already
+        # follow - while a modifier is held this row answers exactly one
+        # question.
+        #
+        # Read through _move_of, never out of self.state: MOVE is a verb, and
+        # a verb read from the wrong place is the quiet bug this project has
+        # met seven times.
+        return tlib.locked_light(bright, self._move_of(group) == 0,
+                                 time.monotonic())
 
     def _any_soloed(self):
         mixer = self.state_manager.zynmixer
@@ -8407,9 +8496,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         # dict lookups against the LED cache when nothing has
                         # changed.
                         self._render_mutes()
-                        # Volume, pan and the mutes can all move on the
-                        # touchscreen with nothing signalling it, so the
-                        # screens are polled on the same tick.
+                    # THE SCREENS, and the one surface here with two rates.
+                    #
+                    # Volume, pan and the mutes can all move on the
+                    # touchscreen with nothing signalling it, so the screens
+                    # are polled - at the same ~200 ms sub-rate as everything
+                    # above.
+                    #
+                    # UNLESS A REPAINT IS BEING COALESCED, in which case the
+                    # periodic one is suppressed entirely and the draw happens
+                    # on the first 30 Hz tick after the hand stops. Both
+                    # halves matter: without the suppression a hand on the big
+                    # encoder still pays five full both-screen repaints a
+                    # second, which is the 674 msg/s that wedged the
+                    # controller; without the 30 Hz check the page would land
+                    # up to a whole sub-rate tick late and the knob would feel
+                    # slow. _display_soon() carries the measurement.
+                    if self._display_due:
+                        if not tlib.display_held(time.monotonic(),
+                                                 self._display_hold_until):
+                            self._render_display()
+                    elif tick % VOLUME_POLL_TICKS == 0:
                         self._render_display()
             except Exception as e:
                 # NEVER return. Everything that makes the instrument evolve
@@ -9389,11 +9496,43 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return None
         return tlib.quantise_frac(frac, self.METER_PIXELS)
 
+    def _display_soon(self):
+        """Ask for a repaint the POLL THREAD will do once the hand stops.
+
+        THE ONE CONTROL THIS EXISTS FOR is the big encoder. It steps a page
+        per detent, every page draws different content, and a full both-screen
+        repaint is about a hundred OSC packets - so a hand walking a ring paid
+        one of those per detent it could reach. Measured at the rig
+        2026-09-02: a peak of 674 messages a second while the owner turned it,
+        and a wedged controller in the jam that followed.
+
+        NOT THE SAME BUG as the phrase counter fixed the same day, and the
+        difference decides the fix. That one redrew IDENTICAL content on a
+        timer, so the answer was to take a self-moving value out of the
+        change-detection key. This one redraws DIFFERENT content as fast as a
+        hand can turn, so there is nothing to take out - the answer is to draw
+        the page the hand STOPS on, and none of the ones it passed through.
+
+        Deliberately NOT a guard inside _render_display: every other repaint
+        on this surface answers a discrete gesture and must still land at
+        once. Only the callers that can outrun the screens come through here.
+
+        Cheap enough for the MIDI thread on purpose - two attribute writes and
+        a clock read, no lock, no OSC."""
+
+        self._display_due = True
+        self._display_hold_until = time.monotonic() + tlib.DISPLAY_SETTLE_S
+
     def _render_display(self):
         """Repaint both screens, but only put a screen on the wire when its
         contents actually changed - this runs at the same rate as the pad
         repaint, and a full screen is ~50 OSC packets."""
 
+        # ANY repaint satisfies a coalesced one. Cleared here rather than at
+        # the poll thread's call site so a direct repaint - HOME, a mode
+        # press, a snapshot load - cannot leave a second one owed for a page
+        # that has already been drawn.
+        self._display_due = False
         desc = self._page()
         if self.lens_down:
             # THE LENS IS ONE PAGE and its arrows step the VERB, not a page.

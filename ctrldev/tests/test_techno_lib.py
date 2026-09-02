@@ -7659,6 +7659,88 @@ class ChannelsThatLeaveThroughAFilter(unittest.TestCase):
             tl.spread_columns(tl.lens_desc("exit"), views)[0]["value"], "2bar")
 
 
+class TheScreensAreCoalescedWhileAControlIsStillMoving(unittest.TestCase):
+    """2026-09-02. The big encoder steps a page per detent and every page
+    draws different content, so a hand walking a ring paid a full both-screen
+    repaint per detent: 674 OSC messages a second measured at the rig, and a
+    wedged controller in the jam that followed. Display traffic is what wedges
+    this hardware.
+
+    NOT the phrase counter's bug, and the difference decides the fix. That one
+    redrew IDENTICAL content on a timer, so a self-moving value came out of
+    the change-detection key. This one redraws DIFFERENT content as fast as a
+    hand can turn, so the answer is to draw the page the hand STOPS on."""
+
+    def test_a_hold_that_has_not_expired_holds(self):
+        self.assertTrue(tl.display_held(100.0, 100.1))
+
+    def test_a_hold_that_has_expired_does_not(self):
+        self.assertFalse(tl.display_held(100.2, 100.1))
+
+    def test_the_instant_it_expires_it_draws(self):
+        # The poll thread asks at 30 Hz, so the boundary is asked about often
+        # enough to matter: `now == until` must DRAW rather than wait another
+        # tick, or the page lands 33 ms later than the settle promises.
+        self.assertFalse(tl.display_held(100.1, 100.1))
+
+    def test_an_unset_hold_never_holds(self):
+        # The driver arms this only from the controls that can outrun the
+        # screens; every other repaint must pass through untouched, and the
+        # initial value is 0.0.
+        self.assertFalse(tl.display_held(0.0, 0.0))
+        self.assertFalse(tl.display_held(12345.0, 0.0))
+
+    def test_the_settle_swallows_a_whole_fast_turn(self):
+        # A fast walk through a page ring is about eight detents a second.
+        # A settle shorter than the gap between them would draw every page
+        # the hand passed through, which is the bug.
+        self.assertGreaterEqual(tl.DISPLAY_SETTLE_S, 1.0 / 8.0)
+
+    def test_the_settle_is_shorter_than_a_page_can_be_read(self):
+        # And it must not become a lag. A page is on the glass for about
+        # 140 ms at a comfortable turn, which is under the time it takes to
+        # focus on a four-character label - so the settle stays inside the
+        # window in which nothing legible was lost anyway.
+        self.assertLessEqual(tl.DISPLAY_SETTLE_S, 0.25)
+
+
+class ALockedChannelSaysSoFromEveryPage(unittest.TestCase):
+    """2026-09-02, from the rig: MOVE at 0 stops the machine rewriting a
+    channel, and the owner could only see it on the page that set it. The
+    panel's word for a standing decision is a 1 Hz blink, and the Group row is
+    the one per-channel light that is visible in every mode."""
+
+    def test_an_unlocked_channel_holds_its_level(self):
+        self.assertEqual(tl.locked_light(0.67, False, 0.0), 0.67)
+        self.assertEqual(tl.locked_light(0.67, False, 0.6), 0.67)
+
+    def test_a_locked_channel_blinks_between_its_level_and_dim(self):
+        self.assertEqual(tl.locked_light(0.67, True, 0.0), 0.67)
+        self.assertEqual(tl.locked_light(0.67, True, 0.6), tl.LIGHT_DIM)
+
+    def test_the_dip_is_low_enough_to_SEE(self):
+        # The Group row's own floor is 0.10, and 0.12 was measured against
+        # the owner's eyes as NEARLY FULL. A blink whose dark half is 0.10 is
+        # bytes moving, not a light blinking.
+        self.assertLess(tl.locked_light(1.0, True, 0.6), 0.10)
+
+    def test_a_quiet_locked_channel_still_blinks(self):
+        # A channel near the bottom of the fader is already close to the dip,
+        # so the blink is at its least visible exactly where a player is
+        # least likely to be looking. It still has to be a blink and not a
+        # steady light: the lit half is the channel's own level, whatever
+        # that is.
+        self.assertNotEqual(tl.locked_light(0.12, True, 0.0),
+                            tl.locked_light(0.12, True, 0.6))
+
+    def test_it_blinks_at_the_panel_rate_and_no_other(self):
+        # One rate on the whole panel: a second rate would read as a second
+        # meaning. Same phase as every other latched light, from the clock.
+        for now in (0.0, 0.25, 0.49, 0.5, 0.75, 1.0):
+            self.assertEqual(tl.locked_light(1.0, True, now) == 1.0,
+                             tl.blink_phase(now))
+
+
 class TheWatchdogSaysWhenTheMachineStopped(unittest.TestCase):
     """2026-09-01. The three-hour silence this was written from - a poll thread
     that died by raising - CANNOT recur: that thread has carried an exception
