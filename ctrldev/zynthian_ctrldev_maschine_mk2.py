@@ -1096,27 +1096,48 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             ramp["step"] += 1
             factor = tlib.exit_factor(ramp["step"], ramp["steps"],
                                       closing=ramp["closing"])
-            self._apply_mix(channel, "level",
-                            int(round(ramp["level"] * factor)))
-            if ramp["cutoff"] is not None:
-                self._set_voice_ctrl(
-                    channel, self.VOICE_CTRL_COLUMNS["cutoff"],
-                    int(round(ramp["cutoff"] * tlib.exit_cutoff(factor))))
+            # PER CHANNEL, and the landing is in a `finally`. Both halves of
+            # that are the same lesson: a raise anywhere in here used to
+            # strand the strip at whatever fraction of its level the ramp had
+            # reached, PERMANENTLY, because the entry was deleted before the
+            # restore was written and the poll thread's own handler catches
+            # and moves on. A mix quietly left at 67 instead of 71 is exactly
+            # the class of fault EXIT was fixed for on this same day, and it
+            # was seen once - 0.71 becoming 0.46 during rapid cycling - and
+            # never reproduced. Whatever caused that, it cannot end here.
+            try:
+                self._apply_mix(channel, "level",
+                                int(round(ramp["level"] * factor)))
+                if ramp["cutoff"] is not None:
+                    self._set_voice_ctrl(
+                        channel, self.VOICE_CTRL_COLUMNS["cutoff"],
+                        int(round(ramp["cutoff"] * tlib.exit_cutoff(factor))))
+            except Exception as e:
+                # Land it now rather than leaving it part-closed forever.
+                ramp["step"] = ramp["steps"]
+                self._log_poll_error(f"exit ramp ch{channel}", e)
             if ramp["step"] < ramp["steps"]:
                 continue
-            del self._exit_ramps[channel]
-            # LANDED. Put the captured values back on the strip BEFORE muting,
-            # so the channel that comes back later is the channel that left -
-            # and mute last, so nothing is heard between the two writes.
-            self._apply_mix(channel, "level", ramp["level"])
-            if ramp["cutoff"] is not None:
-                self._set_voice_ctrl(channel,
-                                     self.VOICE_CTRL_COLUMNS["cutoff"],
-                                     ramp["cutoff"])
-            if ramp["closing"]:
-                self._set_muted(channel, True)
-            with self.lock:
-                self._render_mutes()
+            try:
+                # LANDED. Put the captured values back on the strip BEFORE
+                # muting, so the channel that comes back later is the channel
+                # that left - and mute last, so nothing is heard between the
+                # two writes.
+                self._apply_mix(channel, "level", ramp["level"])
+                if ramp["cutoff"] is not None:
+                    self._set_voice_ctrl(channel,
+                                         self.VOICE_CTRL_COLUMNS["cutoff"],
+                                         ramp["cutoff"])
+                if ramp["closing"]:
+                    self._set_muted(channel, True)
+                with self.lock:
+                    self._render_mutes()
+            finally:
+                # LAST, so nothing above can lose the entry that still knows
+                # what to put back.
+                self._exit_ramps.pop(channel, None)
+                self._slog("exit", channel=channel, landed=ramp["closing"],
+                           level=ramp["level"], steps=ramp["steps"])
 
     def _move_of(self, channel):
         """This channel's MOVE, for the gate. Read through param_get, never
