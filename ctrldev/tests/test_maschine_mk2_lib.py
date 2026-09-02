@@ -1262,3 +1262,101 @@ class EverythingTheSnapshotSavesIsSomethingTheLoadReadsBack(unittest.TestCase):
         # cannot quietly drop it.
         self.assertIn("rotate", self._saved_keys("drums"))
         self.assertIn("rotate", self._restored_names("drums"))
+
+
+class EveryBranchOfTheWritePathIsReachable(unittest.TestCase):
+    """The SEVENTH AST guard, 2026-09-02, and it exists because this project
+    has now made the same mistake three times.
+
+    `apply()` is the single write path, and it only calls `_apply_generator`
+    when the verb is in `GENERATOR_PARAMS`. A verb with a branch in
+    `_apply_generator` but no membership in that set is stored into
+    self.state, drawn on the screen, and NEVER REACHES THE PATTERN - the
+    branch is dead code and the knob is a number that moves while the sound
+    does not change.
+
+    The set's own comment has warned about this since 2026-08-31:
+
+        "Membership here is what makes apply() the write path for them: a verb
+        missing from this set is stored and displayed and never reaches the
+        pattern - which is exactly the apply() hole that hid HITS and ROTATE
+        for months."
+
+    And it happened anyway, to CHORD, on the day the verb shipped - caught by
+    the owner at the rig within the hour, not by 1236 passing tests. A comment
+    cannot fail a build. This can.
+
+    One-directional on purpose: the set may name verbs with no branch of their
+    own (`register` and `rhythm_reg` are written by other paths entirely), and
+    that costs nothing. A branch with no membership is what silently does
+    nothing."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _tree(self):
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            return ast.parse(fh.read())
+
+    def _generator_params(self):
+        """The GENERATOR_PARAMS set literal, read out of __init__."""
+        import ast
+        for node in ast.walk(self._tree()):
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                if (isinstance(target, ast.Attribute)
+                        and target.attr == "GENERATOR_PARAMS"
+                        and isinstance(node.value, ast.Set)):
+                    return {leaf.value for leaf in node.value.elts
+                            if isinstance(leaf, ast.Constant)
+                            and isinstance(leaf.value, str)}
+        self.fail("the driver has no GENERATOR_PARAMS set literal")
+
+    def _params_branched_on(self, function):
+        """Every string `function` compares its `param` argument against,
+        through `param == "x"` or `param in ("x", "y")`."""
+        import ast
+        target = None
+        for node in ast.walk(self._tree()):
+            if isinstance(node, ast.FunctionDef) and node.name == function:
+                target = node
+                break
+        if target is None:
+            self.fail(f"the driver has no {function}()")
+        found = set()
+        for node in ast.walk(target):
+            if not isinstance(node, ast.Compare):
+                continue
+            if not (isinstance(node.left, ast.Name)
+                    and node.left.id == "param"):
+                continue
+            for op, comparator in zip(node.ops, node.comparators):
+                if not isinstance(op, (ast.Eq, ast.In)):
+                    continue
+                for leaf in ast.walk(comparator):
+                    if (isinstance(leaf, ast.Constant)
+                            and isinstance(leaf.value, str)):
+                        found.add(leaf.value)
+        return found
+
+    def test_the_guard_can_see_both_halves(self):
+        # A guard that found neither would pass by checking nothing.
+        self.assertTrue(self._generator_params())
+        self.assertTrue(self._params_branched_on("_apply_generator"))
+
+    def test_every_generator_branch_is_reachable(self):
+        branches = self._params_branched_on("_apply_generator")
+        unreachable = sorted(branches - self._generator_params())
+        self.assertEqual(
+            unreachable, [],
+            "_apply_generator has a branch for these and apply() never "
+            "routes them there, so they are stored, drawn, and silent: "
+            f"{unreachable}")
+
+    def test_chord_is_reachable(self):
+        # The defect this guard was written for, named so a rename cannot
+        # quietly drop it.
+        self.assertIn("chord", self._generator_params())
+        self.assertIn("chord", self._params_branched_on("_apply_generator"))

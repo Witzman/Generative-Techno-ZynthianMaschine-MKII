@@ -596,7 +596,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                                  # which is exactly the apply() hole that hid
                                  # HITS and ROTATE for months.
                                  "model", "walk_span", "walk_stride",
-                                 "feed", "amount"}
+                                 "feed", "amount",
+                                 # CHORD, 2026-09-02, and it was MISSING for
+                                 # the first hour of the verb's life. The
+                                 # branch in _apply_generator was there, the
+                                 # state key was there, the column drew and
+                                 # the number moved - and the pattern was
+                                 # never rewritten, because apply() only
+                                 # routes a verb here if it is in this set.
+                                 # The comment above said so in advance and a
+                                 # comment cannot fail a build; the seventh
+                                 # AST guard now does.
+                                 "chord"}
         self.MIX_PARAMS = {"level", "reverb", "delay"}
         # Built now, while the Turing mutation is the only writer, so a morph
         # can take it later. Two writers to one pattern is the SIGSEGV by a
