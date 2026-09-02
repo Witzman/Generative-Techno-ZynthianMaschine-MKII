@@ -4802,6 +4802,28 @@ class TestPhraseLabel(unittest.TestCase):
     def test_no_bar_means_no_suffix(self):
         self.assertEqual(tl.phrase_label("LEVEL 1/3", None), "LEVEL 1/3")
 
+    # THE COUNTER IS WHY THE SURFACE REPAINTED EVERY BAR. Measured on the rig
+    # 2026-09-02: idle traffic 63 OSC msg/s with nobody touching the
+    # controller, one full clear-and-redraw of BOTH screens per bar, and two
+    # controller stalls in one session. The number changes on its own, so it
+    # changed the display's change-detection key on its own, and a moving
+    # value must not be in that key - the same law that took the live tick out
+    # of it on 2026-08-20 and the modulator's rate out of it on 2026-08-31.
+    #
+    # It is not deleted, because its purpose is real: a timed gesture needs
+    # something to resolve against. It is shown only while there IS a timed
+    # gesture waiting to land.
+    def test_it_is_silent_when_nothing_is_waiting_to_land(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", 3, show=False),
+                         "LEVEL 1/3")
+
+    def test_it_appears_when_a_gesture_is_waiting(self):
+        self.assertEqual(tl.phrase_label("LEVEL 1/3", 3, show=True),
+                         "LEVEL 1/3 4/16")
+
+    def test_showing_still_needs_a_bar(self):
+        self.assertEqual(tl.phrase_label("X", None, show=True), "X")
+
 
 class TestArmLegendPad(unittest.TestCase):
     """The ARM overlay's sixteen pads: a picker, or a countdown ruler."""

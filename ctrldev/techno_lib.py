@@ -2053,15 +2053,31 @@ class techno_lib:
         return f"{label} REROLL>" if pending else label
 
     @staticmethod
-    def phrase_label(label, bar, phrase_bars=16):
+    def phrase_label(label, bar, phrase_bars=16, show=True):
         """Append bar N of the phrase to the page indicator.
 
         Counts from ONE. The player is reading a bar number, not an array
         index, and every other number on this surface is one-based.
 
         `bar` is None when the transport is stopped: there is no bar to be on,
-        and a frozen "1/16" would read as a running clock that had stuck."""
-        if bar is None:
+        and a frozen "1/16" would read as a running clock that had stuck.
+
+        `show` is False when nothing is waiting to land, AND THAT IS NOT
+        COSMETIC. This number moves on its own, so while it was always drawn
+        it changed the display's change-detection key on its own, and the
+        driver cleared and redrew BOTH SCREENS once a bar for as long as the
+        transport ran. Measured at the rig 2026-09-02: 63 OSC messages a
+        second with the owner's hands off the controller, against 6.5
+        measured on 2026-08-31, and two controller stalls in one session on
+        the write path that is known to wedge this hardware.
+
+        It is the third time this exact mistake has been made - the live tick
+        came out of the key on 2026-08-20 and the modulator's rate on
+        2026-08-31 - and the rule it breaks is the project's own: never
+        animate a value on the screens. What is kept is the number's PURPOSE,
+        which is to give a timed gesture something to resolve against; it is
+        drawn while such a gesture is pending and not otherwise."""
+        if bar is None or not show:
             return label
         return f"{label} {techno_lib.phrase_bar(bar, phrase_bars) + 1}/{phrase_bars}"
 

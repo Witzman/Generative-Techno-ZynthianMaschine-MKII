@@ -9438,7 +9438,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         label = tlib.reroll_label(label, bool(self._reroll_pending))
         # The bar of the phrase, so every timed gesture has something to
         # resolve against that the player can see.
-        label = tlib.phrase_label(label, self._phrase_bar)
+        #
+        # DRAWN ONLY WHILE A GESTURE IS ACTUALLY WAITING TO LAND, since
+        # 2026-09-02. Always drawing it put a number that moves BY ITSELF into
+        # the change-detection key below, so the driver cleared and redrew
+        # both screens once a bar for as long as the transport ran: 63 OSC
+        # messages a second with nobody touching the controller, against 6.5
+        # measured on 2026-08-31, and two stalls in one rig session. Same
+        # predicate as the ARM countdown LED, so the lamp and the number
+        # cannot disagree about whether anything is pending.
+        phrase_shown = bool(self._pending_macros.pending()
+                            or self._armed_while_stopped)
+        label = tlib.phrase_label(label, self._phrase_bar, show=phrase_shown)
         # And FREEZE says the machine is being held, which is the difference
         # between held and broken.
         if self.bank_down:
@@ -9493,7 +9504,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # its animation; what is kept is a controller that answers.
             key = tuple(c[:5] + (None,) + c[6:] for c in cols)
             state = (self._tabs(screen), key, label, mod,
-                     frozenset(self._reroll_pending), self._phrase_bar)
+                     frozenset(self._reroll_pending),
+                     self._phrase_bar if phrase_shown else None)
             if not self.leds.changed(f"disp{screen}", state):
                 continue
             # Drawn from `cols`, which still carries the live tick - only the
