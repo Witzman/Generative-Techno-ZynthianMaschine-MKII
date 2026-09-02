@@ -82,6 +82,10 @@ def base_snapshot():
         procs[engine] = {"preset_info": ["a/preset.ttl", 0, "P", "lv2", "P"],
                          "controllers": {"_decay": {"value": 0.0},
                                          "_cutoff": {"value": 0.6}}}
+        if cid == "7":                       # the chain the preset tests swap
+            chains[cid]["slots"][0] = {engine: "JV/Obxd"}
+            procs[engine]["controllers"] = {
+                f"c{n}": {"value": 0.5} for n in range(82)}
         procs[delay] = {"controllers": {
             "ldelay": {"value": 241.9}, "rhaasdelay": {"value": 241.9},
             "lecholevel": {"value": -70.0}, "recholevel": {"value": -70.0},
@@ -121,7 +125,19 @@ def manifest(**over):
         "voices": {"5": {"register": 58, "length": 16, "rhythm_reg": 17473,
                          "random": 0, "rhythm": 0, "gate": 150,
                          "octave": -1, "range": 1, "velo": 110},
-                   "6": {"empty": True}},
+                   "6": {"register": 179, "length": 16, "rhythm_reg": 16448,
+                         "random": 0, "rhythm": 0, "gate": 75,
+                         "octave": 1, "range": 1, "velo": 96},
+                   "7": {"empty": True}},
+        "chords": {"6": [
+            {"step": 6, "notes": [55, 58, 62], "velo": 96, "duration": 0.75},
+            {"step": 14, "notes": [57, 60, 65], "velo": 84, "duration": 0.75},
+        ]},
+        "presets": {"7": {"engine": "JV/Obxd",
+                          "bundle": "Obxd_003-KVR_Brass_Synths",
+                          "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+                          "name": "Analog Brass Chrds",
+                          "controllers": {"voicecount": 0.575}}},
         "wets": {"3": {"delay": 30, "reverb": 22}},
         "controllers": {"6": {"_decay": 0.35}},
         "mods": [{"channel": 0, "verb": "level", "depth": 6, "rate": 0,
@@ -239,16 +255,16 @@ class AVoiceIsAuthoredAsItsRegister(unittest.TestCase):
 
     def test_empty_is_a_zero_rhythm_register_and_no_notes(self):
         d, state, _r = build()
-        self.assertEqual(state["voices"]["6"]["rhythm_reg"], 0)
+        self.assertEqual(state["voices"]["7"]["rhythm_reg"], 0)
         raw = base64.b64decode(d["zynseq_riff_b64"])
-        self.assertEqual(events(raw, 6), [])
+        self.assertEqual(events(raw, 7), [])
 
     def test_empty_also_switches_generation_off(self):
         # An empty channel that was still evolving would fill itself in the
         # moment anything moved the register.
         _d, state, _r = build()
-        self.assertEqual(state["voices"]["6"]["random"], 0)
-        self.assertEqual(state["voices"]["6"]["rhythm"], 0)
+        self.assertEqual(state["voices"]["7"]["random"], 0)
+        self.assertEqual(state["voices"]["7"]["rhythm"], 0)
 
     def test_the_courtesy_notes_match_the_register_mask(self):
         d, _state, _r = build()
@@ -263,6 +279,167 @@ class AVoiceIsAuthoredAsItsRegister(unittest.TestCase):
                       "phrase", "fill", "walk_span", "walk_stride",
                       "walk_seed", "feed", "amount"):
             self.assertIn(field, state["voices"]["5"], field)
+
+
+class AChordIsATakeBecauseTheGeneratorIsMonophonic(unittest.TestCase):
+    """_write_voice_pattern writes one note per step and the "chord walker"
+    walks the shared ROOT, so real chords can only be a player-owned take."""
+
+    def chord_events(self, index=6):
+        d, _state, _r = build()
+        raw = base64.b64decode(d["zynseq_riff_b64"])
+        patns = [b for b in builder.genre.parse_blocks(raw) if b[0] == "patn"]
+        body = patns[index][1]
+        header, size = builder.genre.PATN_HEADER, builder.genre.PATN_EVENT
+        out = []
+        for off in range(header, len(body), size):
+            ev = body[off:off + size]
+            if len(ev) < size:
+                break
+            frac, units = struct.unpack_from(">HH", bytes(ev), 8)
+            out.append({"step": struct.unpack(">I", bytes(ev[0:4]))[0],
+                        "note": ev[13], "velo": ev[14],
+                        "dur": units + frac / 10000.0,
+                        "cmd": ev[12], "chance": ev[19]})
+        return out
+
+    def test_three_notes_land_on_one_step(self):
+        evs = [e for e in self.chord_events() if e["step"] == 6]
+        self.assertEqual([e["note"] for e in evs], [55, 58, 62])
+
+    def test_both_stabs_are_written(self):
+        self.assertEqual(sorted({e["step"] for e in self.chord_events()}),
+                         [6, 14])
+
+    def test_each_stab_keeps_its_own_velocity(self):
+        evs = self.chord_events()
+        self.assertEqual({e["velo"] for e in evs if e["step"] == 6}, {96})
+        self.assertEqual({e["velo"] for e in evs if e["step"] == 14}, {84})
+
+    def test_the_duration_is_written_not_inherited(self):
+        # The template event carries the pattern it came from, and this
+        # project's MIDI exporter records that the duration field "was never
+        # decoded and never mattered". For a stab it is the whole point.
+        for e in self.chord_events():
+            self.assertAlmostEqual(e["dur"], 0.75, places=4)
+
+    def test_the_fixed_point_encoding_round_trips(self):
+        for value in (0.05, 0.4, 0.75, 1.0, 1.5, 8.0):
+            frac, units = struct.unpack(">HH", builder.bcd(value))
+            self.assertAlmostEqual(units + frac / 10000.0, value, places=4)
+
+    def test_every_event_is_a_note_on_at_full_play_chance(self):
+        for e in self.chord_events():
+            self.assertEqual(e["cmd"], 0x90)
+            self.assertEqual(e["chance"], 100)
+
+    def test_the_channel_becomes_player_owned(self):
+        # WITHOUT THIS THE CHORDS ARE GONE within a second of loading:
+        # set_state calls _write_voice_pattern for every voice, and it only
+        # returns early on a player-owned channel.
+        _d, state, _r = build()
+        self.assertEqual(state["owners"]["6"], "player")
+
+    def test_no_other_channel_is_taken_from_the_generator(self):
+        _d, state, _r = build()
+        self.assertEqual([c for c, who in state["owners"].items()
+                          if who == "player"], ["6"])
+
+    def test_a_chord_channel_must_have_a_voice_entry(self):
+        # The pads colour a take against pad_notes at the channel's octave,
+        # so the octave has to come from somewhere.
+        m = manifest()
+        del m["voices"]["6"]
+        with self.assertRaises(ValueError):
+            builder.build(base_snapshot(), m, KITS)
+
+    def test_a_step_outside_the_pattern_is_refused(self):
+        m = manifest(chords={"6": [{"step": 16, "notes": [55]}]})
+        with self.assertRaises(ValueError):
+            builder.build(base_snapshot(), m, KITS)
+
+    def test_every_shipped_chord_tone_is_reachable_from_the_pads(self):
+        # A tone outside pad_notes still SOUNDS, but _rebuild_notes cannot
+        # find it, so the step draws in the group colour instead of amber.
+        # The shipped manifest is voiced to avoid that; this is the guard.
+        with open(os.path.join(ROOT, "snapshot", "factory-manifest.json"),
+                  encoding="utf-8") as fh:
+            m = json.load(fh)
+        for key, stabs in (m.get("chords") or {}).items():
+            pads = tlib.pad_notes(m["globals"]["root"], m["globals"]["scale"],
+                                  m["voices"][key]["octave"])
+            for stab in stabs:
+                for note in stab["notes"]:
+                    self.assertIn(note, pads,
+                                  f"channel {key} step {stab['step']}")
+
+    def test_the_report_says_the_channel_is_player_owned(self):
+        _d, _state, report = build()
+        self.assertTrue(any("PLAYER-OWNED" in line for line in report))
+
+
+class APresetSwapHasToTakeTheControllersWithIt(unittest.TestCase):
+    """zynthian_processor.set_state calls set_preset FIRST and then writes
+    every saved controller over the top, so a swap that keeps the old values
+    loads the new patch and is then overwritten by the old one."""
+
+    def proc(self, d, cid="7"):
+        pid = next(iter(d["chains"][cid]["slots"][0]))
+        return d["zs3"]["zs3-0"]["processors"][pid]
+
+    def test_the_preset_path_is_built_in_the_lv2_shape(self):
+        d, _state, _r = build()
+        info = self.proc(d)["preset_info"]
+        self.assertEqual(len(info), 4)
+        self.assertTrue(info[0].endswith(
+            "Obxd_003-KVR_Brass_Synths.presets.lv2/"
+            "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl"))
+        self.assertEqual(info[2], "Analog Brass Chrds")
+
+    def test_the_index_is_null_because_it_is_re_derived_on_restore(self):
+        d, _state, _r = build()
+        self.assertIsNone(self.proc(d)["preset_info"][1])
+
+    def test_the_bank_matches_the_bundle(self):
+        d, _state, _r = build()
+        proc = self.proc(d)
+        self.assertTrue(proc["bank_info"][0].endswith(
+            "Obxd_bank_003-KVR_Brass_Synths"))
+        self.assertEqual(proc["bank_info"][2], "003-KVR_Brass_Synths")
+        self.assertEqual(proc["preset_info"][3], proc["bank_info"][0])
+
+    def test_the_old_presets_controllers_are_gone(self):
+        d, _state, _r = build()
+        self.assertEqual(sorted(self.proc(d)["controllers"]), ["voicecount"])
+
+    def test_what_must_win_over_the_preset_survives(self):
+        # 018 sat at voicecount 0.25, which is TWO voices on Obxd's own scale
+        # points - a three-note chord would silently lose a note.
+        d, _state, _r = build()
+        self.assertEqual(
+            self.proc(d)["controllers"]["voicecount"]["value"], 0.575)
+
+    def test_a_preset_for_the_wrong_plugin_is_refused(self):
+        m = manifest()
+        m["presets"]["7"]["engine"] = "JV/padthv1"
+        with self.assertRaises(ValueError):
+            builder.build(base_snapshot(), m, KITS)
+
+    def test_a_bundle_that_is_not_that_engines_is_refused(self):
+        m = manifest()
+        m["presets"]["7"]["bundle"] = "padthv1_67Padthv1Patches"
+        with self.assertRaises(ValueError):
+            builder.build(base_snapshot(), m, KITS)
+
+    def test_a_chain_cannot_be_in_presets_and_controllers_at_once(self):
+        m = manifest()
+        m["controllers"]["7"] = {"voicecount": 0.1}
+        with self.assertRaises(ValueError):
+            builder.build(base_snapshot(), m, KITS)
+
+    def test_an_untouched_chains_preset_is_still_untouched(self):
+        d, _state, _r = build()
+        self.assertEqual(self.proc(d, "8")["preset_info"][0], "a/preset.ttl")
 
 
 class TheTempoIsWrittenInBothPlaces(unittest.TestCase):

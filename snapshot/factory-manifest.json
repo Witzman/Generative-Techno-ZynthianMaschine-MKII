@@ -26,8 +26,29 @@
           "random": 0, "rhythm": 0, "gate": 150, "octave": -1, "range": 1,
           "velo": 110,
           "why": "G1 G1 F2 C2 on steps 0/6/10/14 - root, root, flat seventh, fourth; octave -1 keeps the whole figure in bass register"},
-    "6": {"empty": true, "why": "G left silent this round"},
+    "6": {"register": 179, "length": 16, "rhythm_reg": 16448, "rotate": 0,
+          "random": 0, "rhythm": 0, "gate": 75, "octave": 1, "range": 1,
+          "velo": 96,
+          "why": "G plays CHORDS, which the generator cannot write - see the chords block. This entry is not what sounds; it is the octave the pads colour against, and what the generator would write on steps 6 and 14 if ownership were ever handed back."},
     "7": {"empty": true, "why": "H left silent this round"}
+  },
+
+  "chords": {
+    "6": [
+      {"step": 6,  "notes": [55, 58, 62], "velo": 96, "duration": 0.75,
+       "why": "G minor - G3 Bb3 D4 - on the and of beat 2"},
+      {"step": 14, "notes": [57, 60, 65], "velo": 84, "duration": 0.75,
+       "why": "the flat-seventh chord voiced up, A3 C4 F4, on the and of beat 4. i to bVII is the dub progression, and this voicing keeps all three notes inside the pad keyboard"}
+    ]
+  },
+
+  "presets": {
+    "7": {"engine": "JV/Obxd",
+          "bundle": "Obxd_003-KVR_Brass_Synths",
+          "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+          "name": "Analog Brass Chrds",
+          "controllers": {"voicecount": 0.575},
+          "why": "018 had a BASS preset on the LEAD chain at voicecount 0.25, which is TWO voices - a three-note chord would silently lose a note. 0.575 is the scale point for 5. The rest of the patch comes from the preset, because the restore writes saved controllers OVER the preset and keeping 018's 82 would have made the swap inaudible."}
   },
 
   "wets": {
@@ -35,7 +56,8 @@
     "2": {"delay": 12, "reverb": 35},
     "3": {"delay": 30, "reverb": 22},
     "4": {"delay": 10, "reverb": 6},
-    "6": {"delay": 14, "reverb": 10}
+    "6": {"delay": 14, "reverb": 10},
+    "7": {"delay": 45, "reverb": 40}
   },
 
   "controllers": {
@@ -49,6 +71,10 @@
      "phase0": 0.30, "seed": 2, "why": "the snare tail opens and closes"},
     {"channel": 2, "verb": "delay",  "depth": 28, "rate": 2, "shape": "tri",
      "phase0": 0.55, "seed": 3, "why": "the clap echo comes and goes - the dub move"},
+    {"channel": 6, "verb": "delay",  "depth": 40, "rate": 4, "shape": "tri",
+     "phase0": 0.15, "seed": 5, "why": "the stab's echo swells and recedes over three bars - 45 plus or minus 20"},
+    {"channel": 6, "verb": "reverb", "depth": 30, "rate": 1, "shape": "tri",
+     "phase0": 0.65, "seed": 6, "why": "and its room opens and closes over eight, out of phase with the echo so the two never peak together"},
     {"channel": 3, "verb": "level",  "depth": 30, "rate": 3, "shape": "tri",
      "phase0": 0.80, "seed": 4, "why": "the hats breathe against everything else - 19 plus or minus 15, so they nearly vanish at the trough every four bars. Was 14; owner asked for 30 by ear, 2026-09-02"}
   ]

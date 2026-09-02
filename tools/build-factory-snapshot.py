@@ -58,6 +58,7 @@ import copy
 import importlib.util
 import json
 import os
+import struct
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -93,6 +94,8 @@ DELAY_NAME = "TAP Stereo Echo"
 # _set_wet does it. Kept as one pair of functions so the tool and the
 # instrument cannot disagree about what "30% wet" means.
 WET_LO, WET_HI = -70.0, 10.0
+LV2_PRESETS = "file:///zynthian/zynthian-data/presets/lv2"
+PATN_EVENT = 21
 
 
 def wet_db(percent):
@@ -101,6 +104,65 @@ def wet_db(percent):
 
 def wet_percent(db):
     return int(round((db - WET_LO) / (WET_HI - WET_LO) * 100.0))
+
+
+def bcd(value):
+    """zynseq's four-byte fixed-point: big-endian u16 of the fraction times
+    10000, then big-endian u16 of the units. It is called BCD in
+    `zynseq.cpp:851` and is not BCD.
+
+    Decoded here rather than copied from a template event because a CHORD
+    STAB is a note length: the template carries whatever gate the pattern it
+    came from was written with, and this project's own MIDI exporter records
+    that the duration field "was never decoded and never mattered". It
+    matters now."""
+    units = int(value)
+    frac = int(round((value - units) * 10000))
+    return struct.pack(">HH", frac, units)
+
+
+def chord_event(template, step, note, velocity, duration):
+    """One note of a chord. Start, duration, note and velocity are ours;
+    every other byte - the offset, the stutter fields, the per-note play
+    chance - is copied from an event the rig itself wrote."""
+    ev = bytearray(template)
+    ev[0:4] = struct.pack(">I", step)
+    ev[8:12] = bcd(duration)
+    ev[12] = 0x90
+    ev[13] = note & 0x7F
+    ev[14] = max(1, min(127, int(velocity)))
+    ev[15] = note & 0x7F
+    # PLAY CHANCE, SET RATHER THAN INHERITED. It is the last byte before the
+    # pad and it is per-note; the template carries whatever the pattern it came
+    # from was written with. A chord whose third note has a chance of 40 is a
+    # chord that is sometimes a dyad, for no reason anybody could see - and a
+    # template written at chance 0 would mean a stab that never sounds at all.
+    # A test caught exactly that against a zeroed template.
+    ev[19] = 100
+    return bytes(ev)
+
+
+def set_chord_pattern(body, stabs, template):
+    """A pattern holding CHORDS - more than one note on a step.
+
+    THE GENERATOR CANNOT DO THIS AND IS NOT MEANT TO. _write_voice_pattern
+    writes exactly one note per step, and the "chord walker" that shipped in
+    August walks the shared ROOT along the scale - it is a progression, not
+    polyphony. So a chord is a TAKE: the notes go straight into the riff and
+    the channel is marked player-owned, which is what makes them survive.
+    _write_voice_pattern returns early on a player-owned channel, and set_state
+    restores `owners` BEFORE it calls the writer, so the load cannot overwrite
+    them."""
+    out = bytearray(body[:genre.PATN_HEADER])
+    for stab in sorted(stabs, key=lambda s: s["step"]):
+        step = int(stab["step"])
+        if not 0 <= step < STEPS:
+            raise ValueError(f"stab step {step} outside 0..{STEPS - 1}")
+        for note in stab["notes"]:
+            out += chord_event(template, step, int(note),
+                               stab.get("velo", 96),
+                               float(stab.get("duration", 1.0)))
+    return out
 
 
 def chain_of_channel(channel):
@@ -139,6 +201,44 @@ def read_wet(proc, which):
     if symbol not in ctrls:
         return None
     return wet_percent(ctrls[symbol]["value"])
+
+
+def set_preset(proc, spec):
+    """Replace a chain's PRESET, in the shape Zynthian's own LV2 restore
+    reads, and reset the controllers that belonged to the old one.
+
+    THE ORDER IS WHY THE RESET IS NOT OPTIONAL. `zynthian_processor.set_state`
+    calls `set_preset` FIRST and then writes every saved controller over the
+    top (`zynthian_processor.py:792-820`). So changing preset_info while
+    keeping the old preset's 82 saved values loads the new patch and then
+    overwrites it with the old one - the swap would look done in the file, be
+    named correctly on the touchscreen, and sound exactly as before.
+
+    `controllers` in the spec is therefore what SURVIVES the reset: the few
+    values that must win over the preset's own. Everything else comes from the
+    preset, which is the point of choosing one.
+
+    preset_info is FOUR elements for an LV2 preset, not the five a drum kit
+    takes - [path, index, name, bank path] - and the index is `null` here
+    because it is re-derived from the path on restore."""
+    # The bundle is "<Engine>_<bank>", and the bank file inside it is
+    # "<Engine>_bank_<bank>". Derived from the spec's own engine name rather
+    # than hardcoded, so this is not an Obxd-only helper - and `engine` is the
+    # same string the caller asserts against the chain's slot, so a preset
+    # cannot land on the wrong plugin.
+    engine = spec["engine"].rsplit("/", 1)[-1]
+    if not spec["bundle"].startswith(engine + "_"):
+        raise ValueError(f"bundle {spec['bundle']!r} is not a {engine} bundle")
+    bank_name = spec["bundle"][len(engine) + 1:]
+    bundle = f"{LV2_PRESETS}/{spec['bundle']}.presets.lv2"
+    bank = spec.get("bank") or f"{bundle}/{engine}_bank_{bank_name}"
+    proc["bank_info"] = [bank, None, bank_name, None]
+    proc["preset_info"] = [f"{bundle}/{spec['file']}", None, spec["name"], bank]
+    proc["bank_subdir_info"] = None
+    proc["preset_subdir_info"] = None
+    proc["controllers"] = {symbol: {"value": value}
+                           for symbol, value in (spec.get("controllers")
+                                                 or {}).items()}
 
 
 def drum_pattern(spec):
@@ -266,6 +366,32 @@ def build(base, manifest, kit_notes):
             f"steps {steps}  velo {spec['velo']}")
     state["drums"] = drums_out
 
+    # --- the presets --------------------------------------------------------
+    # Before the plain `controllers` step, because a preset swap RESETS the
+    # controllers and that step's job is to assert against ones that exist.
+    # A chain in both would be one editing what the other just deleted, so it
+    # is refused rather than ordered.
+    preset_specs = manifest.get("presets") or {}
+    overlap = sorted(set(preset_specs) & set(manifest.get("controllers") or {}))
+    if overlap:
+        raise ValueError(
+            f"chains {overlap} are in BOTH 'presets' and 'controllers'. A "
+            f"preset swap resets the controllers, so put the values that must "
+            f"survive it in the preset entry's own 'controllers'.")
+    for cid, spec in sorted(preset_specs.items()):
+        chain = chains[cid]
+        pid = genre.proc_of(chain)
+        engine = chain["slots"][0][pid]
+        if engine != spec["engine"]:
+            raise ValueError(
+                f"chain {cid} runs {engine!r}, not {spec['engine']!r} - a "
+                f"preset for the wrong plugin is worse than none")
+        was = ((procs[pid].get("preset_info") or [None])[0] or "?").split("/")[-1]
+        kept = len(spec.get("controllers") or {})
+        set_preset(procs[pid], spec)
+        report.append(f"  {chain['title']:11} preset {was} -> {spec['file']}"
+                      f"  ({kept} controller(s) kept over it)")
+
     # --- the voices ---------------------------------------------------------
     voices_out = dict(state.get("voices") or {})
     for key, spec in sorted((manifest.get("voices") or {}).items()):
@@ -288,6 +414,45 @@ def build(base, manifest, kit_notes):
                 f"steps {steps} notes {[notes[s] for s in steps]} "
                 f"gate {saved['gate']}")
     state["voices"] = voices_out
+
+    # --- the chords ---------------------------------------------------------
+    # A chord is a TAKE, not a generated line - see set_chord_pattern. This
+    # runs AFTER the voices step so a channel can carry both: the chord notes
+    # are what sounds, and the voice state beside them is what the generator
+    # would write if ownership were ever handed back.
+    for key, stabs in sorted((manifest.get("chords") or {}).items()):
+        channel = int(key)
+        saved = voices_out.get(str(channel))
+        if saved is None:
+            raise ValueError(
+                f"channel {channel} has chords and no voice entry - it needs "
+                f"one for its octave, which is what the pads colour against")
+        patns[channel][1] = set_chord_pattern(patns[channel][1], stabs, template)
+        # OWNERSHIP IS WHAT MAKES A CHORD SURVIVE. Without it the load's
+        # _write_voice_pattern replaces the whole pattern with a monophonic
+        # line within a second, and nothing says so.
+        state["owners"] = dict(state.get("owners") or {})
+        state["owners"][str(channel)] = "player"
+        pads = tlib.pad_notes(state["globals"].get("root", 0),
+                              state["globals"].get("scale", 0),
+                              saved["octave"])
+        for stab in stabs:
+            outside = [n for n in stab["notes"] if n not in pads]
+            if outside:
+                # Not fatal: the note sounds either way. But _rebuild_notes
+                # only probes the keyboard notes and the generated line, so a
+                # chord tone outside both cannot be found and its step draws
+                # in the group colour instead of the player amber.
+                report.append(
+                    f"  NOTE: channel {channel} step {stab['step']} has "
+                    f"{outside} outside the pad notes at octave "
+                    f"{saved['octave']} - they will SOUND but the pad will "
+                    f"not read as a take")
+        names = [tlib.NOTE_NAMES[n % 12] + str(n // 12 - 1) for stab in stabs
+                 for n in stab["notes"]]
+        report.append(
+            f"  channel {channel} PLAYER-OWNED chords, steps "
+            f"{[s['step'] for s in stabs]}, notes {names}")
 
     # --- gate the note-off writes back into the riff ------------------------
     d["zynseq_riff_b64"] = base64.b64encode(genre.build_blocks(blocks)).decode("ascii")

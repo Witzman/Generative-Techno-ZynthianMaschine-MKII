@@ -1055,265 +1055,22 @@
         },
         "7": {
           "bank_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/Obxd_bank_002-KVR_Bass",
+            "file:///zynthian/zynthian-data/presets/lv2/Obxd_003-KVR_Brass_Synths.presets.lv2/Obxd_bank_003-KVR_Brass_Synths",
             null,
-            "002-KVR_Bass",
+            "003-KVR_Brass_Synths",
             null
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/002-KVR_Bass_BA_001_ng.ttl",
+            "file:///zynthian/zynthian-data/presets/lv2/Obxd_003-KVR_Brass_Synths.presets.lv2/003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
             null,
-            "BA 001 ng",
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/Obxd_bank_002-KVR_Bass"
+            "Analog Brass Chrds",
+            "file:///zynthian/zynthian-data/presets/lv2/Obxd_003-KVR_Brass_Synths.presets.lv2/Obxd_bank_003-KVR_Brass_Synths"
           ],
           "preset_subdir_info": null,
           "controllers": {
-            "modulation wheel": {
-              "value": 0
-            },
-            "lv2_freewheel": {
-              "value": 0.0
-            },
-            "lv2_port_1": {
-              "value": 0.0
-            },
-            "unused_1": {
-              "value": 0.0
-            },
-            "volume": {
-              "value": 0.5
-            },
             "voicecount": {
-              "value": 0.25
-            },
-            "tune": {
-              "value": 0.512
-            },
-            "octave": {
-              "value": 0.404
-            },
-            "bendrange": {
-              "value": 0.0
-            },
-            "bendosc2only": {
-              "value": 0.0
-            },
-            "legatomode": {
-              "value": 0.0
-            },
-            "vibratorate": {
-              "value": 0.0
-            },
-            "vfltfactor": {
-              "value": 0.244
-            },
-            "vampfactor": {
-              "value": 0.064
-            },
-            "asplayedallocation": {
-              "value": 0.0
-            },
-            "portamento": {
-              "value": 0.0
-            },
-            "unison": {
-              "value": 1.0
-            },
-            "voicedetune": {
-              "value": 0.108
-            },
-            "oscillator2detune": {
-              "value": 0.12
-            },
-            "lfofrequency": {
-              "value": 0.404
-            },
-            "lfosinewave": {
-              "value": 1.0
-            },
-            "lfosquarewave": {
-              "value": 0.0
-            },
-            "lfosampleholdwave": {
-              "value": 0.0
-            },
-            "lfoamount1": {
-              "value": 0.236
-            },
-            "lfoamount2": {
-              "value": 0.152
-            },
-            "lfoosc1": {
-              "value": 0.0
-            },
-            "lfoosc2": {
-              "value": 0.0
-            },
-            "lfofilter": {
-              "value": 1.0
-            },
-            "lfopw1": {
-              "value": 1.0
-            },
-            "lfopw2": {
-              "value": 0.0
-            },
-            "osc2hardsync": {
-              "value": 1.0
-            },
-            "xmod": {
-              "value": 0.0
-            },
-            "osc1pitch": {
-              "value": 0.0
-            },
-            "osc2pitch": {
-              "value": 0.0
-            },
-            "pitchquant": {
-              "value": 0.0
-            },
-            "osc1saw": {
-              "value": 0.0
-            },
-            "osc1pulse": {
-              "value": 1.0
-            },
-            "osc2saw": {
-              "value": 0.0
-            },
-            "osc2pulse": {
-              "value": 1.0
-            },
-            "pulsewidth": {
-              "value": 0.224
-            },
-            "brightness": {
-              "value": 1.0
-            },
-            "envelopetopitch": {
-              "value": 0.092
-            },
-            "osc1mix": {
-              "value": 1.0
-            },
-            "osc2mix": {
-              "value": 1.0
-            },
-            "noisemix": {
-              "value": 0.0
-            },
-            "filterkeyfollow": {
-              "value": 0.0
-            },
-            "cutoff": {
-              "value": 0.42
-            },
-            "resonance": {
-              "value": 0.34
-            },
-            "multimode": {
-              "value": 0.044
-            },
-            "filter_warm": {
-              "value": 1.0
-            },
-            "bandpassblend": {
-              "value": 0.0
-            },
-            "fourpole": {
-              "value": 1.0
-            },
-            "filterenvamount": {
-              "value": 0.14
-            },
-            "attack": {
-              "value": 0.064
-            },
-            "decay": {
-              "value": 0.4
-            },
-            "sustain": {
-              "value": 0.0
-            },
-            "release": {
-              "value": 0.328
-            },
-            "filterattack": {
-              "value": 0.0
-            },
-            "filterdecay": {
-              "value": 0.12
-            },
-            "filtersustain": {
-              "value": 0.052
-            },
-            "filterrelease": {
-              "value": 0.16
-            },
-            "envelopedetune": {
-              "value": 0.12
-            },
-            "filterdetune": {
-              "value": 0.0
-            },
-            "portamentodetune": {
-              "value": 0.14
-            },
-            "pan1": {
-              "value": 0.5
-            },
-            "pan2": {
-              "value": 0.5
-            },
-            "pan3": {
-              "value": 0.5
-            },
-            "pan4": {
-              "value": 0.5
-            },
-            "pan5": {
-              "value": 0.5
-            },
-            "pan6": {
-              "value": 0.5
-            },
-            "pan7": {
-              "value": 0.5
-            },
-            "pan8": {
-              "value": 0.5
-            },
-            "unused_2": {
-              "value": 0.0
-            },
-            "economymode": {
-              "value": 1.0
-            },
-            "lfosync": {
-              "value": 0.0
-            },
-            "pwenv": {
-              "value": 0.0
-            },
-            "pwenvboth": {
-              "value": 0.0
-            },
-            "envpitchboth": {
-              "value": 0.0
-            },
-            "fenvinvert": {
-              "value": 0.0
-            },
-            "pwofs": {
-              "value": 0.0
-            },
-            "leveldif": {
-              "value": 0.3
-            },
-            "selfoscpush": {
-              "value": 0.0
+              "value": 0.575
             }
           }
         },
@@ -1341,10 +1098,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -34.0
             },
             "recholevel": {
-              "value": -70.0
+              "value": -34.0
             },
             "dryLevel": {
               "value": 0.0
@@ -1378,7 +1135,7 @@
               "value": 0.0
             },
             "wetlevel": {
-              "value": -70.0
+              "value": -38.0
             },
             "combs_en": {
               "value": 1
@@ -2102,7 +1859,7 @@
               "3": "gen",
               "4": "gen",
               "5": "gen",
-              "6": "gen",
+              "6": "player",
               "7": "gen"
             },
             "voices": {
@@ -2162,12 +1919,12 @@
                 "length": 16,
                 "random": 0,
                 "rhythm": 0,
-                "rhythm_reg": 0,
-                "gate": 40,
-                "octave": 0,
+                "rhythm_reg": 16448,
+                "gate": 75,
+                "octave": 1,
                 "range": 1,
                 "kit_range": 4,
-                "velo": 110,
+                "velo": 96,
                 "rotate": 0,
                 "model": "reg",
                 "rule": "rand",
@@ -2290,6 +2047,22 @@
                 "base": 30,
                 "seed": 3
               },
+              "6|delay": {
+                "depth": 40,
+                "rate": 4,
+                "shape": "tri",
+                "phase0": 0.15,
+                "base": 45,
+                "seed": 5
+              },
+              "6|reverb": {
+                "depth": 30,
+                "rate": 1,
+                "shape": "tri",
+                "phase0": 0.65,
+                "base": 40,
+                "seed": 6
+              },
               "3|level": {
                 "depth": 30,
                 "rate": 3,
@@ -2299,7 +2072,7 @@
                 "seed": 4
               }
             },
-            "mod_seed": 4,
+            "mod_seed": 6,
             "mod_depth_mult": 1.0
           }
         },
@@ -2392,5 +2165,5 @@
     }
   },
   "last_zs3_id": null,
-  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHgABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkbCQAAAFkAAAAAAQAAAAAAAAAAZAkbCQAAAFkAAAAAAgAAAAAAAAAAZAkbCQAAAFkAAAAAAwAAAAAAAAAAZAkbCQAAAFkAHBhdG4AAABKAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAEAAAAAAAAAAGQKFQoAAABZAAAAAAMAAAAAAAAAAGQKFQoAAABZABwYXRuAAAANQAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAADAAAAAAAAAABkChYKAAAAWQAcGF0bgAAAHQAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZAqQioAAAFkAAAAAAYAAAAAAAAAAZAqQioAAAFkAAAAAAoAAAAAAAAAAZAqQioAAAFkAAAAAA4AAAAAAAAAAZAqQioAAAFkAHBhdG4AAAAgAAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBwYXRuAAAAdAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDxuPAAAAWQAAAAABgAAAAAAAAABkDxuPAAAAWQAAAAACgAAAAAAAAABkDxuPAAAAWQAAAAADgAAAAAAAAABkDxuPAAAAWQAcGF0bgAAACAAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAHBhdG4AAAAgAAAAEQAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
+  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHgABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkbCQAAAFkAAAAAAQAAAAAAAAAAZAkbCQAAAFkAAAAAAgAAAAAAAAAAZAkbCQAAAFkAAAAAAwAAAAAAAAAAZAkbCQAAAFkAHBhdG4AAABKAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAEAAAAAAAAAAGQKFQoAAABZAAAAAAMAAAAAAAAAAGQKFQoAAABZABwYXRuAAAANQAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAADAAAAAAAAAABkChYKAAAAWQAcGF0bgAAAHQAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZAqQioAAAFkAAAAAAYAAAAAAAAAAZAqQioAAAFkAAAAAAoAAAAAAAAAAZAqQioAAAFkAAAAAA4AAAAAAAAAAZAqQioAAAFkAHBhdG4AAAAgAAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBwYXRuAAAAdAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDxuPAAAAWQAAAAABgAAAAAAAAABkDxuPAAAAWQAAAAACgAAAAAAAAABkDxuPAAAAWQAAAAADgAAAAAAAAABkDxuPAAAAWQAcGF0bgAAAJ4AAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAYAAAAAHUwAAJA3YDcAAAFkAAAAAAYAAAAAHUwAAJA6YDoAAAFkAAAAAAYAAAAAHUwAAJA+YD4AAAFkAAAAAA4AAAAAHUwAAJA5VDkAAAFkAAAAAA4AAAAAHUwAAJA8VDwAAAFkAAAAAA4AAAAAHUwAAJBBVEEAAAFkAHBhdG4AAAAgAAAAEQAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
 }
