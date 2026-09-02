@@ -4322,6 +4322,27 @@ class TestReroll(unittest.TestCase):
         vals = {tl.reroll_voice(rng=rng.random)["random"] for _ in range(50)}
         self.assertEqual(vals, {0})
 
+    def test_a_voice_reroll_always_LOCKS_rhythm_too(self):
+        # Owner, 2026-09-02: the same argument that locks MELODY. This reroll
+        # hands the channel a NEW rhythm register, and leaving RHYTHM running
+        # meant that register started evolving away before it had been heard.
+        rng = random.Random(7)
+        vals = {tl.reroll_voice(rng=rng.random)["rhythm"] for _ in range(50)}
+        self.assertEqual(vals, {0})
+
+    def test_a_voice_reroll_locks_BOTH_generators(self):
+        # Stated as one assertion because the asymmetry was an omission, not a
+        # decision, and this is the shape that would have caught it.
+        new = tl.reroll_voice(rng=random.Random(8).random)
+        self.assertEqual((new["random"], new["rhythm"]), (0, 0))
+
+    def test_a_voice_reroll_touches_exactly_four_things(self):
+        # A reroll that grew a fifth field without anybody noticing is a
+        # reroll whose undo is incomplete - the driver saves these four keys
+        # and replays them, so the sets have to match.
+        self.assertEqual(sorted(tl.reroll_voice(rng=random.Random(9).random)),
+                         ["chance", "random", "rhythm", "rhythm_reg"])
+
     def test_a_tiny_pattern_still_gets_a_hit(self):
         # step_count is 12 on a triplet division and could be smaller still.
         for steps in (1, 2, 3, 4):

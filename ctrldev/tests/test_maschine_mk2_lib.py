@@ -1360,3 +1360,50 @@ class EveryBranchOfTheWritePathIsReachable(unittest.TestCase):
         # quietly drop it.
         self.assertIn("chord", self._generator_params())
         self.assertIn("chord", self._params_branched_on("_apply_generator"))
+
+
+class ARerollUndoSavesEverythingTheRerollWrites(unittest.TestCase):
+    """A reroll that grows a field whose old value nobody kept is a reroll
+    with an incomplete undo - and ERASE + PATTERN is advertised as putting the
+    channel back.
+
+    Static because the driver does not import off the Pi: the keys
+    `reroll_voice()` returns are compared against the keys
+    `_reroll_channel` stores in `_reroll_undo`. Written 2026-09-02, when
+    RHYTHM joined the reroll and had to join the undo in the same round."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _undo_keys(self, marker):
+        """The keys assigned to self._reroll_undo[channel] in the branch that
+        mentions `marker`."""
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Assign):
+                continue
+            for target in node.targets:
+                if not (isinstance(target, ast.Subscript)
+                        and isinstance(target.value, ast.Attribute)
+                        and target.value.attr == "_reroll_undo"):
+                    continue
+                if not isinstance(node.value, ast.Dict):
+                    continue
+                keys = {k.value for k in node.value.keys
+                        if isinstance(k, ast.Constant)}
+                if marker in keys:
+                    return keys
+        self.fail(f"no _reroll_undo assignment carrying {marker!r}")
+
+    def test_the_voice_undo_keeps_every_field_the_reroll_writes(self):
+        # Imported inside the test, which is this file's own convention.
+        from techno_lib import techno_lib as tlib
+        self.assertEqual(self._undo_keys("rhythm_reg"),
+                         set(tlib.reroll_voice()))
+
+    def test_the_drum_undo_keeps_every_field_the_reroll_writes(self):
+        from techno_lib import techno_lib as tlib
+        self.assertEqual(self._undo_keys("hits"),
+                         set(tlib.reroll_drum(steps=16)))

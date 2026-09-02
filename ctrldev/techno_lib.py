@@ -2134,6 +2134,17 @@ class techno_lib:
             # you can hear what you got before deciding to let it move. It is
             # also what _duplicate already does when it gives a register back.
             "random": 0,
+            # AND RHYTHM GOES TO LOCK WITH IT - owner, 2026-09-02, and the
+            # argument is the one above with one word changed. This reroll
+            # hands the channel a NEW RHYTHM REGISTER; leaving RHYTHM running
+            # meant the register the player had just been given started
+            # evolving away before they had heard it, which is exactly what
+            # locking MELODY exists to prevent for the pitch register.
+            #
+            # The asymmetry was not a decision - it was an omission. The 08-19
+            # change locked the generator whose register it rerolled, and the
+            # rhythm generator did not exist yet in the same shape.
+            "rhythm": 0,
         }
 
     # ------------------------------------------------------------- RATCHET

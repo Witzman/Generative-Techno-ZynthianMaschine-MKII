@@ -2539,6 +2539,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             for param, value in saved.items():
                 self.apply(channel, param, value)
+            if self.channel_kind(channel) == "voice":
+                # EXPLICITLY, rather than relying on one of the restored keys
+                # happening to trigger it. `rhythm_reg` is stored straight into
+                # the state dict and _apply_generator has no branch for it, so
+                # before RHYTHM joined the saved set the undo could put the
+                # register back and leave the PATTERN showing the rerolled one.
+                self._write_voice_pattern(channel)
             restored = True
         if restored:
             with self.lock:
@@ -2563,14 +2570,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         if self.channel_kind(channel) == "voice":
             new = tlib.reroll_voice()
+            # ORDER MATTERS IN THIS DICT and it is not cosmetic: the undo path
+            # replays it with apply(), and `rhythm` is the only key here whose
+            # apply() rewrites the pattern on a voice. Restoring it LAST means
+            # the rewrite sees the register that was put back a line earlier.
+            # _reroll_undo_apply also writes explicitly, so this is belt and
+            # braces rather than the only thing holding it up.
             self._reroll_undo[channel] = {
                 "chance": self.param_get(channel, "chance"),
                 "rhythm_reg": self.state[channel].get("rhythm_reg", 0xFFFF),
                 "random": self.param_get(channel, "random"),
+                "rhythm": self.param_get(channel, "rhythm"),
             }
             self.state[channel]["rhythm_reg"] = new["rhythm_reg"]
             self.apply(channel, "chance", new["chance"])
             self.apply(channel, "random", new["random"])
+            # RHYTHM LOCKS WITH MELODY, 2026-09-02. A reroll hands the channel
+            # a new rhythm register; leaving the rhythm generator running meant
+            # it started evolving away before the player had heard it.
+            self.apply(channel, "rhythm", new["rhythm"])
             self._write_voice_pattern(channel)
         else:
             steps = lib.step_count(self.div[channel])
