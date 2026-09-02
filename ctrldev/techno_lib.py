@@ -697,8 +697,9 @@ class techno_lib:
         return sum(1 << i for i, on in enumerate(mask) if on)
 
     @staticmethod
-    def note_duration(gate, step, steps):
-        """A note's length in steps, clamped so it cannot cross the loop point.
+    def note_duration(gate, step, steps, mask=None):
+        """A note's length in steps, clamped so it cannot cross the loop point
+        NOR REACH THE NEXT SOUNDING STEP.
 
         The Pi probe proved libzynseq STORES a duration longer than its
         pattern; it did not prove the player still emits the note-off after
@@ -706,11 +707,37 @@ class techno_lib:
         outlive its pattern - a stuck pad drone is the worst failure this
         instrument has.
 
+        `mask` IS THE SECOND CLAMP, 2026-09-02, and it was found by ear.
+        A note whose duration reaches the next sounding step is DELETED from
+        the pattern when that step writes the same pitch: measured on the rig
+        with gate 150 (1.5 steps) and RHYTHM on, where steps 0 and 13 kept
+        exactly ONE note of a five-note chord - the one pitch the following
+        step did not re-use. Four out of five notes gone, silently, from the
+        pattern itself.
+
+        It is not a chord bug. A single long note followed by the same pitch
+        on the next step has always been eaten this way; chords only made it
+        visible, because a chord shares four pitches with its neighbour where
+        a single note shares one or none. Adjacent sounding steps are rare
+        until RHYTHM starts moving the register, which is why months of play
+        never hit it.
+
+        The clamp is the same shape as the loop-point one - shorten to what
+        cannot collide - because the alternative is dropping notes, and a
+        note that vanishes from the pattern is worse than a note that is
+        shorter than the knob says.
+
         The floor of 0.05 is the shipped one: a zero-length note is a note
         that never sounds."""
         duration = gate / 100.0
         remaining = max(1, steps - step)
-        return max(0.05, min(duration, float(remaining)))
+        limit = remaining
+        if mask:
+            for ahead in range(1, remaining):
+                if mask[(step + ahead) % len(mask)]:
+                    limit = ahead
+                    break
+        return max(0.05, min(duration, float(limit)))
 
     @staticmethod
     def record_step(playpos, cps, steps):

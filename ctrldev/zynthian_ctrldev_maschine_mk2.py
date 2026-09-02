@@ -1842,8 +1842,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     if not mask[step]:
                         continue
                     # Per step, not once per pattern: a long gate near the end
-                    # of the pattern is clamped so the note cannot outlive it.
-                    duration = tlib.note_duration(st["gate"], step, steps)
+                    # of the pattern is clamped so the note cannot outlive it -
+                    # AND, since 2026-09-02, so that it cannot reach the next
+                    # SOUNDING step either. zynseq deletes an overlapping note
+                    # when the following step writes the same pitch, which cost
+                    # four notes out of five on any step whose neighbour also
+                    # sounded. The mask is what says which steps those are.
+                    duration = tlib.note_duration(st["gate"], step, steps, mask)
                     # ONE addNote PER CHORD TONE, 2026-09-02. `chord` is a
                     # tuple of one when CHORD is off, so this loop is the same
                     # single call it always was in that case.

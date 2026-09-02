@@ -8208,3 +8208,84 @@ class ChordMigratesSilently(unittest.TestCase):
                            upgraded["range"], upgraded["chord"]),
             (tl.pitch(58, upgraded["length"], 7, 0, upgraded["octave"],
                       upgraded["range"]),))
+
+
+class ANoteMayNotReachTheNextSoundingStep(unittest.TestCase):
+    """Found by ear on the rig, 2026-09-02, with gate 150 and RHYTHM on.
+
+    zynseq DELETES an overlapping note when the following step writes the same
+    pitch. The saved pattern for F kept exactly ONE note of a five-note chord
+    on two steps - the one pitch the next step did not re-use - so four notes
+    out of five were gone from the pattern itself, not merely from playback.
+
+    NOT a chord bug. A single long note followed by the same pitch on the next
+    step has always been eaten this way; a chord shares four pitches with its
+    neighbour where a single note shares one or none, so chords made it
+    visible. Adjacent sounding steps are rare until RHYTHM moves the register,
+    which is why months of play never hit it."""
+
+    FULL = [True] * 16
+
+    def test_the_old_behaviour_is_unchanged_without_a_mask(self):
+        # Every existing caller passes no mask and must keep its lengths.
+        for gate, step in ((40, 0), (150, 0), (800, 3), (1600, 0), (5, 15)):
+            self.assertEqual(tl.note_duration(gate, step, 16),
+                             tl.note_duration(gate, step, 16, None))
+
+    def test_a_note_is_cut_at_the_next_sounding_step(self):
+        mask = [False] * 16
+        mask[0] = mask[1] = True
+        self.assertEqual(tl.note_duration(150, 0, 16, mask), 1.0)
+
+    def test_a_note_keeps_its_length_when_the_next_step_is_silent(self):
+        mask = [False] * 16
+        mask[0] = mask[7] = True
+        self.assertEqual(tl.note_duration(150, 0, 16, mask), 1.5)
+
+    def test_the_gap_to_the_next_hit_is_the_ceiling(self):
+        mask = [False] * 16
+        mask[0] = mask[4] = True
+        self.assertEqual(tl.note_duration(800, 0, 16, mask), 4.0)
+        self.assertEqual(tl.note_duration(150, 0, 16, mask), 1.5)
+
+    def test_the_loop_point_still_clamps_on_the_last_step(self):
+        # The original clamp, unchanged: a note may not outlive its pattern.
+        self.assertEqual(tl.note_duration(800, 15, 16, self.FULL), 1.0)
+
+    def test_a_lone_note_in_the_bar_keeps_the_full_gate(self):
+        mask = [False] * 16
+        mask[0] = True
+        self.assertEqual(tl.note_duration(1500, 0, 16, mask), 15.0)
+
+    def test_the_floor_still_holds(self):
+        mask = [True] * 16
+        self.assertEqual(tl.note_duration(1, 0, 16, mask), 0.05)
+
+    def test_no_note_ever_reaches_its_successor_on_any_mask(self):
+        # The property, over every mask a 16-step pattern can have bits for.
+        import random as _r
+        rng = _r.Random(20260902)
+        for _ in range(400):
+            reg = rng.randrange(1, 1 << 16)
+            mask = [bool(reg >> i & 1) for i in range(16)]
+            hits = [i for i, on in enumerate(mask) if on]
+            for step in hits:
+                dur = tl.note_duration(1600, step, 16, mask)
+                later = [h for h in hits if h > step]
+                if later:
+                    self.assertLessEqual(dur, later[0] - step,
+                                         f"step {step} reaches {later[0]}")
+                self.assertLessEqual(dur, 16 - step)
+
+    def test_the_defect_that_was_measured_on_the_rig(self):
+        # rhythm_reg 28803 is what the owner's save carried: bits 0, 1, 7, 12,
+        # 13 and 14. At gate 150 steps 0 and 13 each reached their neighbour,
+        # and each lost four of its five chord notes.
+        mask = tl.rhythm_mask(28803, 16)
+        self.assertEqual([i for i, on in enumerate(mask) if on],
+                         [0, 1, 7, 12, 13, 14])
+        self.assertEqual(tl.note_duration(150, 0, 16, mask), 1.0)
+        self.assertEqual(tl.note_duration(150, 13, 16, mask), 1.0)
+        # The two that were never in danger keep their full length.
+        self.assertEqual(tl.note_duration(150, 7, 16, mask), 1.5)
+        self.assertEqual(tl.note_duration(150, 14, 16, mask), 1.5)
