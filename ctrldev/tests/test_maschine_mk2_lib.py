@@ -1536,3 +1536,79 @@ class AHandEditNeverGoesThroughTheGenerator(unittest.TestCase):
         self.assertNotIn(
             "_step_note", names,
             "_step_note is the root alone - that is the defect this guards")
+
+
+class EveryPatternWriterAsksWhoOwnsTheChannel(unittest.TestCase):
+    """`_write_pattern` opens with `clear()`. Every function that reaches it
+    must have decided what to do about a take FIRST.
+
+    THE OWNER'S DECISION, 2026-09-02: route each caller rather than guard the
+    writer. Guarding the writer is one line, but a drum take would then freeze
+    the euclid knobs with no explanation - so instead every gesture keeps a
+    meaning. A machine-initiated write REFUSES on a take, an encoder turn HANDS
+    IT BACK the way HITS and ROTATE always have, and a pad tap EDITS IN PLACE.
+
+    **This test IS the survey**, kept executable so it cannot rot the way the
+    prose version would. A new caller of `_write_pattern` fails it until
+    somebody decides which of the three it is.
+
+    The allowlist below is short on purpose and every entry carries the reason
+    it is safe by a route this scan cannot see."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    # Any one of these in a function body counts as having asked the question.
+    ASKED = ("OWNER_PLAYER", "hands_back", "generator_may_write",
+             "generated_channels", "_handback", "_take_tap", "self.owner")
+
+    SAFE_BY_ANOTHER_ROUTE = {
+        # The write path itself. Its callers are what this test checks.
+        "_apply_generator",
+        # ERASE + Group. The dispatcher sends an OWNED channel to _handback
+        # and returns before ever reaching this, so by the time it runs the
+        # channel is the machine's.
+        "_silence_channel",
+        # Handing the pattern back IS the gesture. Writing is the point.
+        "_handback",
+        # Takes pending `div` and `length` changes at the wrap. Both arrive
+        # from a turn that has already handed the take back (`div` is in
+        # HANDBACK_VERBS) or from _timescale_fire, which filters by ownership
+        # through generated_channels.
+        "_wrap_channel",
+    }
+
+    def _writers(self):
+        """Every function whose body calls _write_pattern."""
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        out = {}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            if node.name == "_write_pattern":
+                continue
+            calls = [n for n in ast.walk(node)
+                     if isinstance(n, ast.Call)
+                     and isinstance(n.func, ast.Attribute)
+                     and n.func.attr == "_write_pattern"]
+            if calls:
+                out[node.name] = ast.dump(node)
+        return out
+
+    def test_the_guard_can_see_the_callers(self):
+        # A guard that found none would pass by checking nothing. There were
+        # eleven on the day it was written.
+        self.assertGreaterEqual(len(self._writers()), 8)
+
+    def test_every_caller_has_decided_what_a_take_means(self):
+        unasked = sorted(
+            name for name, body in self._writers().items()
+            if name not in self.SAFE_BY_ANOTHER_ROUTE
+            and not any(term in body for term in self.ASKED))
+        self.assertEqual(
+            unasked, [],
+            "these reach _write_pattern, which begins with clear(), without "
+            "asking who owns the channel - so they delete a take rather than "
+            f"refusing, handing back, or editing in place: {unasked}")

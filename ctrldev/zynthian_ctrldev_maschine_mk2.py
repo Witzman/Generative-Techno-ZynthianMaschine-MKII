@@ -2101,7 +2101,47 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         CHANCE and SWING are native per-pattern properties, persisted in the
         .zss and costing zero pattern writes, which is what keeps the write
-        burst - the largest risk in this design - as small as it is."""
+        burst - the largest risk in this design - as small as it is.
+
+        A STILL-OWNED CHANNEL IS NOT REGENERATED, 2026-09-02, and the guard is
+        the second half of widening HANDBACK_VERBS. Every branch below that
+        rewrites a DRUM's pattern reaches `_write_pattern`, which opens with
+        `clear()`.
+
+        By the time a hand turn arrives here the take has ALREADY been handed
+        back if the verb takes it - `hands_back` decides that at the encoder,
+        and `_handback` clears ownership before `apply()` is called. So a
+        channel that is STILL owned when this runs is one whose verb chose NOT
+        to take the pattern: LANE turned down to the raw field, RHYTHM turned
+        down to LOCK, LEAN put back to OFF. Every one of those is a knob moving
+        toward "ask the generator for nothing", and destroying a take with it
+        would be the opposite of what the player did.
+
+        It is a guard on ONE CALLER, not on the writer. The owner's decision of
+        2026-09-02 was to route each caller: guarding `_write_pattern` itself
+        would freeze the euclid knobs on a take with no explanation, where this
+        leaves HITS, ROTATE and DIV free to hand the take back and rewrite."""
+
+        # THE SET IS `HANDBACK_VERBS["drum"]` ITSELF, not a copy of it. The
+        # two are the same question from opposite ends - "does this turn take
+        # the pattern from the player" and "may this turn regenerate a pattern
+        # the player still owns" - and a second list would drift from the
+        # first the way every duplicated table in this project has.
+        #
+        # VELO and RATCHET are deliberately NOT here: they go through
+        # `_restyle_pattern`, which rewrites the notes in place and keeps every
+        # hand-placed step. That was fixed once already and must not be
+        # re-broken by a guard meant to protect the same takes.
+        # Bound to a local first, and that is not style: the AST guard that
+        # keeps every branch of this function reachable reads the STRING
+        # LITERALS compared against `param`, and an inline
+        # `param in tlib.HANDBACK_VERBS["drum"]` hands it the subscript's
+        # "drum" as if this function branched on a verb by that name.
+        regenerates = tlib.HANDBACK_VERBS["drum"]
+        if (self.owner.get(channel) == tlib.OWNER_PLAYER
+                and self.channel_kind(channel) == "drum"
+                and param in regenerates):
+            return
 
         if param == "chance":
             with self.lock:
@@ -5699,6 +5739,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 want = values[tlib.switch_step(index, len(values), delta)]
                 if want == have:
                     return
+                # THE TAKE GOES BACK FIRST, since 2026-09-02. This branch
+                # rewrites the pattern two lines below, and `_write_pattern`
+                # opens with `clear()` - so on a channel holding a take it
+                # DELETED the take and left ownership set, while HITS and
+                # ROTATE on the same page handed it back through the generic
+                # path. The generic path's own call is at the foot of this
+                # function; the switch branch returns before reaching it,
+                # which is the whole reason this line has to exist here too.
+                #
+                # `hands_back` decides, not this branch: LEAN's off value is a
+                # NAME rather than a zero, and putting that test here would be
+                # a second rule for one question.
+                if self.owner[channel] == tlib.OWNER_PLAYER and \
+                        tlib.hands_back(self.channel_kind(channel), verb, want):
+                    self._handback(channel)
                 self.apply(channel, verb, want)
                 with self.lock:
                     # A placement change rewrites the line NOW rather than at
@@ -6798,8 +6853,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         take", and turning any knob that rewrites the pattern, which is the
         shipped law that enc 1-3 own the steps.
 
-        Both writers clear() before rewriting, so no separate wipe is needed."""
+        Both writers clear() before rewriting, so no separate wipe is needed.
 
+        IT SAYS SO IN THE LOG, since 2026-09-02. This is the single most
+        important ownership transition on the instrument - a take stops
+        existing here - and the session log could not see it at all. That gap
+        cost real certainty the day the drum handback was gated: the only way
+        to tell "handed back properly" from "destroyed while still marked
+        yours" was to sniff the page indicator and read whether `PLAY` had
+        gone. One line, and the reconstruction is direct."""
+
+        self._slog("handback", channel=channel,
+                   kind=self.channel_kind(channel),
+                   was=self.owner.get(channel),
+                   steps=len(self.notes.get(channel) or ()))
         self._release_all()
         self.owner[channel] = "gen"
         self.notes[channel].clear()

@@ -1154,7 +1154,16 @@ class techno_lib:
     # _set_length preserves the steps that fit, on a voice it is the shift
     # register and it regenerates the whole line.
     HANDBACK_VERBS = {
-        "drum": frozenset(("hits", "rotate", "div")),
+        # LEAN, LANE and RHYTHM JOINED THE DRUM SET 2026-09-02, and their
+        # absence was a hole rather than a decision. All three rewrite the
+        # whole pattern from the generator - `_apply_generator` and the LEAN
+        # switch each call `_write_pattern`, which opens with `clear()` - so on
+        # a channel holding a take they destroyed it and left ownership set,
+        # while HITS and ROTATE beside them handed it back politely. The rule
+        # is now one rule: **a drum verb that regenerates the pattern takes the
+        # pattern back.**
+        "drum": frozenset(("hits", "rotate", "div",
+                           "lean", "lane", "rhythm")),
         # `rhythm` joins the voice set: it rewrites the whole pattern, so it
         # takes it back from a player the same way `random` does - and under
         # the same exception, moving DOWN to LOCK is not destructive.
@@ -1168,10 +1177,18 @@ class techno_lib:
 
         RANDOM only does so when it moves OFF lock. Turning it down to LOCK is
         what a recording does to itself, and that must not immediately undo the
-        recording."""
+        recording.
+
+        **LANE AND LEAN TAKE THE SAME EXCEPTION**, added 2026-09-02 with the
+        verbs themselves: each has an OFF value that asks the generator for
+        nothing, and turning a knob DOWN to nothing must not cost a take. LANE
+        is numeric and 0 is the raw field; LEAN is a switch and its off value
+        is a name, which is why it cannot share the numeric test."""
         if verb not in techno_lib.HANDBACK_VERBS.get(kind, frozenset()):
             return False
-        if verb in ("random", "rhythm"):
+        if verb == "lean":
+            return value != techno_lib.LEAN_OFF
+        if verb in ("random", "rhythm", "lane"):
             return (value or 0) > 0
         return True
 

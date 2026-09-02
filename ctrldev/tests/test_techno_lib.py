@@ -7806,6 +7806,60 @@ class ATappedStepShortensTheNoteBeforeIt(unittest.TestCase):
         self.assertEqual(tl.note_duration(1500, 0, 16, mask), 1.0)
 
 
+class EveryDrumVerbThatRegeneratesTakesThePatternBack(unittest.TestCase):
+    """2026-09-02, from the owner's instruction to route every
+    `_write_pattern` caller rather than guard the writer.
+
+    The survey found the writer needs no guard: the wrap rewrite, the fill,
+    the beat repeat, the reroll and ERASE + Group are all already gated, and
+    the pad tap was routed the day before. **What was missing was three verbs
+    in the handback set.** LEAN, LANE and RHYTHM each regenerate a drum's
+    whole pattern - `clear()` and rewrite - so on a take they deleted it and
+    left ownership set, while HITS and ROTATE on the same page handed it back.
+
+    One rule now: a drum verb that regenerates the pattern takes the pattern
+    back."""
+
+    # Extend this when a verb starts rewriting a drum's pattern. It is a
+    # deliberate hand-written list: the alternative is deriving it from
+    # `_apply_generator`, which is in the driver, and the driver does not
+    # import off the Pi.
+    REGENERATES = ("hits", "rotate", "div", "lean", "lane", "rhythm")
+
+    def test_every_one_of_them_is_in_the_drum_handback_set(self):
+        missing = [v for v in self.REGENERATES
+                   if v not in tl.HANDBACK_VERBS["drum"]]
+        self.assertEqual(
+            missing, [],
+            "these rewrite a drum's pattern and would destroy a take without "
+            f"handing it back: {missing}")
+
+    def test_LEAN_hands_back_when_it_leaves_OFF(self):
+        self.assertTrue(tl.hands_back("drum", "lean", "beat"))
+
+    def test_LEAN_turned_back_to_OFF_keeps_the_take(self):
+        # Its off value is a NAME, not a zero, which is why it cannot share
+        # the numeric exception.
+        self.assertFalse(tl.hands_back("drum", "lean", tl.LEAN_OFF))
+
+    def test_LANE_hands_back_when_it_leaves_the_raw_field(self):
+        self.assertTrue(tl.hands_back("drum", "lane", 40))
+
+    def test_LANE_turned_down_to_nothing_keeps_the_take(self):
+        self.assertFalse(tl.hands_back("drum", "lane", 0))
+
+    def test_RHYTHM_on_a_DRUM_now_hands_back_like_it_does_on_a_voice(self):
+        self.assertTrue(tl.hands_back("drum", "rhythm", 50))
+        self.assertFalse(tl.hands_back("drum", "rhythm", 0))
+
+    def test_a_verb_that_only_shapes_still_keeps_the_take(self):
+        # The other half of the promise, and the guide prints it as a table:
+        # VELO, CHANCE and SWING change how a pattern sounds without asking
+        # the generator for a new one.
+        for verb in ("velo", "chance", "swing", "length"):
+            self.assertFalse(tl.hands_back("drum", verb, 50), verb)
+
+
 class TheWatchdogSaysWhenTheMachineStopped(unittest.TestCase):
     """2026-09-01. The three-hour silence this was written from - a poll thread
     that died by raising - CANNOT recur: that thread has carried an exception
