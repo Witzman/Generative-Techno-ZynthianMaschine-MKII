@@ -298,6 +298,10 @@ def voice_state(spec):
         "walk_seed": int(spec.get("walk_seed", 0)),
         "feed": spec.get("feed"),
         "amount": int(spec.get("amount", 0)),
+        # CHORD, 2026-09-02. 0 is OFF and shape 0 is bit-identical to the
+        # single note, so an entry that says nothing about chords builds a
+        # snapshot that plays exactly what it played before the verb existed.
+        "chord": int(spec.get("chord", 0)),
     }
 
 
@@ -375,18 +379,57 @@ def build(base, manifest, kit_notes):
             f"steps {steps}  velo {spec['velo']}")
     state["drums"] = drums_out
 
+    # --- the engines --------------------------------------------------------
+    # BEFORE the presets step, because a preset can only be applied to the
+    # engine that is going to be there. Swapping an engine CLEARS the
+    # processor - the old plugin's controller symbols mean nothing to the new
+    # one and a preset_info pointing into the old bundle is worse than none -
+    # which is measured behaviour from the pack builder, proven on the rig
+    # 2026-08-16.
+    for cid, spec in sorted((manifest.get("engines") or {}).items()):
+        # A DICT PER CHAIN, like every other block, so an entry has somewhere
+        # to carry its own reason. A bare string looks tidier and leaves the
+        # "why" nowhere but a comment this file cannot hold.
+        engine = spec["engine"] if isinstance(spec, dict) else spec
+        if cid not in chains:
+            raise ValueError(f"engines names chain {cid!r}, which does not "
+                             f"exist - chains are {sorted(chains)}")
+        chain = chains[cid]
+        pid = genre.proc_of(chain)
+        was = chain["slots"][0][pid]
+        if was == engine:
+            report.append(f"  {chain['title']:11} already runs {engine}")
+            continue
+        chain["slots"][0] = {pid: engine}
+        genre.clear_processor(procs[pid])
+        report.append(f"  {chain['title']:11} ENGINE {was} -> {engine}"
+                      f"  (processor cleared)")
+
     # --- the presets --------------------------------------------------------
     # Before the plain `controllers` step, because a preset swap RESETS the
     # controllers and that step's job is to assert against ones that exist.
     # A chain in both would be one editing what the other just deleted, so it
     # is refused rather than ordered.
     preset_specs = manifest.get("presets") or {}
-    overlap = sorted(set(preset_specs) & set(manifest.get("controllers") or {}))
+    plain = set(manifest.get("controllers") or {})
+    overlap = sorted(set(preset_specs) & plain)
     if overlap:
         raise ValueError(
             f"chains {overlap} are in BOTH 'presets' and 'controllers'. A "
             f"preset swap resets the controllers, so put the values that must "
             f"survive it in the preset entry's own 'controllers'.")
+    # THE SAME CONTRADICTION ONE STEP EARLIER, and a test found it: an engine
+    # swap clears the processor, so a plain `controllers` entry on that chain
+    # is asserting against symbols this run has just deleted. It failed loudly
+    # rather than silently, which is why the strict check is worth having - but
+    # the error it gave named a missing controller instead of the real cause.
+    swapped = sorted(set(manifest.get("engines") or {}) & plain)
+    if swapped:
+        raise ValueError(
+            f"chains {swapped} are in BOTH 'engines' and 'controllers'. An "
+            f"engine swap clears the processor - the old plugin's symbols mean "
+            f"nothing to the new one - so put the values the new engine needs "
+            f"in its 'presets' entry's own 'controllers'.")
     for cid, spec in sorted(preset_specs.items()):
         chain = chains[cid]
         pid = genre.proc_of(chain)
@@ -414,13 +457,20 @@ def build(base, manifest, kit_notes):
         if spec.get("empty"):
             report.append(f"  channel {channel} EMPTY (rhythm_reg 0)")
         else:
-            notes = tlib.line(saved["register"], saved["length"], STEPS,
-                              state["globals"].get("root", 0),
-                              state["globals"].get("scale", 0),
-                              saved["octave"], saved["range"])
+            # THROUGH chord_line, NOT line - the report has to show what the
+            # driver will write, and with CHORD on those are different
+            # things. A report that shows the single note while the rig plays
+            # a triad is a report that cannot be used to verify a build.
+            chords = tlib.chord_line(
+                saved["register"], saved["length"], STEPS,
+                state["globals"].get("root", 0),
+                state["globals"].get("scale", 0),
+                saved["octave"], saved["range"], saved["chord"])
+            shape = tlib.CHORD_SHAPES[saved["chord"]][0]
             report.append(
                 f"  channel {channel} register {saved['register']} "
-                f"steps {steps} notes {[notes[s] for s in steps]} "
+                f"steps {steps} chord {shape} "
+                f"notes {[list(chords[s]) for s in steps]} "
                 f"gate {saved['gate']}")
     state["voices"] = voices_out
 

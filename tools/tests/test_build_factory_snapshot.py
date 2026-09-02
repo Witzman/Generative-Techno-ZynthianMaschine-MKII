@@ -412,6 +412,128 @@ class AChordIsATakeBecauseTheGeneratorIsMonophonic(unittest.TestCase):
         self.assertTrue(any("PLAYER-OWNED" in line for line in report))
 
 
+class AnEngineSwapClearsWhatBelongedToTheOldPlugin(unittest.TestCase):
+    """Measured on the rig 2026-08-16 and recorded in the pack builder: the
+    old plugin's controller symbols mean nothing to the new one, and a
+    preset_info pointing into the old bundle is worse than none."""
+
+    def proc(self, d, cid):
+        pid = next(iter(d["chains"][cid]["slots"][0]))
+        return d["zs3"]["zs3-0"]["processors"][pid]
+
+    def build_with(self, engines, **over):
+        m = manifest(engines=engines, **over)
+        return builder.build(base_snapshot(), m, KITS)
+
+    def test_the_engine_in_slot_zero_changes(self):
+        d, _r = self.build_with({"6": {"engine": "JV/Obxd"}}, controllers={})
+        self.assertEqual(list(d["chains"]["6"]["slots"][0].values()),
+                         ["JV/Obxd"])
+
+    def test_the_old_plugins_controllers_and_preset_are_gone(self):
+        d, _r = self.build_with({"6": {"engine": "JV/Obxd"}},
+                                controllers={})
+        proc = self.proc(d, "6")
+        self.assertEqual(proc["controllers"], {})
+        self.assertIsNone(proc["preset_info"])
+        self.assertIsNone(proc["bank_info"])
+
+    def test_a_bare_string_is_accepted_as_well_as_a_dict(self):
+        d, _r = self.build_with({"6": "JV/Obxd"}, controllers={})
+        self.assertEqual(list(d["chains"]["6"]["slots"][0].values()),
+                         ["JV/Obxd"])
+
+    def test_swapping_to_the_engine_already_there_is_a_no_op(self):
+        d, report = self.build_with({"6": {"engine": "JV/Engine"}},
+                                    controllers={})
+        proc = self.proc(d, "6")
+        # Nothing cleared, so the chain keeps what it had.
+        self.assertEqual(proc["preset_info"][0], "a/preset.ttl")
+        self.assertTrue(any("already runs" in line for line in report))
+
+    def test_a_chain_that_does_not_exist_is_refused(self):
+        with self.assertRaises(ValueError):
+            self.build_with({"99": {"engine": "JV/Obxd"}}, controllers={})
+
+    def test_a_chain_cannot_be_in_engines_and_controllers_at_once(self):
+        # The swap clears the processor, so a plain controllers entry would be
+        # asserting against symbols this run just deleted. Found by a test:
+        # it failed loudly, but the error named a missing controller rather
+        # than the real cause.
+        with self.assertRaises(ValueError):
+            self.build_with({"6": {"engine": "JV/Obxd"}})
+
+    def test_a_preset_lands_on_the_engine_the_swap_just_installed(self):
+        # ORDER: engines before presets, or the preset's own engine assertion
+        # would fire against the engine being replaced.
+        m = manifest(engines={"6": {"engine": "JV/Obxd"}}, controllers={})
+        m["presets"]["6"] = {"engine": "JV/Obxd",
+                             "bundle": "Obxd_003-KVR_Brass_Synths",
+                             "file": "003-KVR_Brass_Synths_BzSYN_PolySynth.ttl",
+                             "name": "BzSYN PolySynth",
+                             "controllers": {"voicecount": 1.0}}
+        d, _r = builder.build(base_snapshot(), m, KITS)
+        proc = self.proc(d, "6")
+        self.assertTrue(proc["preset_info"][0].endswith("BzSYN_PolySynth.ttl"))
+        self.assertEqual(proc["controllers"]["voicecount"]["value"], 1.0)
+
+    def test_a_chain_the_manifest_leaves_alone_keeps_its_engine(self):
+        d, _r = self.build_with({"6": {"engine": "JV/Obxd"}}, controllers={})
+        self.assertEqual(list(d["chains"]["8"]["slots"][0].values()),
+                         ["JV/Engine"])
+
+
+class TheChordShapeTravelsInTheSnapshot(unittest.TestCase):
+
+    def test_a_voice_entry_carries_its_chord(self):
+        m = manifest()
+        m["voices"]["5"]["chord"] = 3
+        d, _r = builder.build(base_snapshot(), m, KITS)
+        state = d["zs3"]["zs3-0"]["midi_capture"][PORT]["ctrldev_state"]
+        self.assertEqual(state["voices"]["5"]["chord"], 3)
+
+    def test_saying_nothing_about_chords_builds_chords_off(self):
+        # Shape 0 is bit-identical to the single note, so a manifest written
+        # before the verb existed builds a snapshot that sounds the same.
+        _d, state, _r = build()
+        self.assertEqual(state["voices"]["7"]["chord"], 0)
+
+    def test_the_report_shows_what_the_driver_will_actually_write(self):
+        m = manifest()
+        m["voices"]["5"]["chord"] = 3
+        _d, report = builder.build(base_snapshot(), m, KITS)
+        line = next(l for l in report if "channel 5" in l)
+        self.assertIn("chord TRI", line)
+        # Three notes per step, not one - a report that showed the single note
+        # while the rig played a triad could not verify a build.
+        # The fixture voice sits at octave -1, so the triad is G1 Bb1 D2.
+        self.assertIn("[31, 34, 38]", line)
+
+    def test_every_chord_the_shipped_manifest_asks_for_is_a_real_shape(self):
+        with open(os.path.join(ROOT, "snapshot", "factory-manifest.json"),
+                  encoding="utf-8") as fh:
+            m = json.load(fh)
+        for key, spec in (m.get("voices") or {}).items():
+            shape = spec.get("chord", 0)
+            self.assertIsInstance(shape, int, key)
+            self.assertGreaterEqual(shape, 0, key)
+            self.assertLess(shape, len(tlib.CHORD_SHAPES), key)
+
+    def test_no_shipped_chord_sits_on_a_channel_where_it_draws_dead(self):
+        # CHORD is refused on a take and on a sampler. A manifest that set a
+        # shape on one of those would be asking for something the surface
+        # says is impossible - and it would be right.
+        with open(os.path.join(ROOT, "snapshot", "factory-manifest.json"),
+                  encoding="utf-8") as fh:
+            m = json.load(fh)
+        takes = set(m.get("chords") or {})
+        for key, spec in (m.get("voices") or {}).items():
+            if spec.get("chord"):
+                self.assertNotIn(key, takes,
+                                 f"channel {key} has both a chord shape and "
+                                 f"hand-authored chords")
+
+
 class APresetSwapHasToTakeTheControllersWithIt(unittest.TestCase):
     """zynthian_processor.set_state calls set_preset FIRST and then writes
     every saved controller over the top, so a swap that keeps the old values
