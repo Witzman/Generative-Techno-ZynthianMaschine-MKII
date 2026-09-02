@@ -927,3 +927,53 @@ class NoManifestKeyIsDeadData(unittest.TestCase):
             dead, {},
             "these manifest keys are read by nothing - they look like "
             f"settings and are not: {dead}")
+
+
+class ThereIsOneRiffDecoder(unittest.TestCase):
+    """Three copies of it had already drifted before this was noticed.
+
+    The entry that asked for this named its own trigger - *"if a third tool
+    needs the riff, that is the moment to lift these out rather than the
+    moment after"* - and the moment had been passed TWICE. On 2026-09-02
+    `build-genre-snapshots`, `export-patterns-midi` and `set-snapshot-tempo`
+    each carried their own reader, and the third differed from the other two
+    in four ways: ascii instead of latin1, tuples instead of lists, a raise on
+    a truncated header, and no trailing-byte check.
+
+    This test is the thing that stops the fourth copy."""
+
+    TOOLS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def _sources(self):
+        out = {}
+        for name in sorted(os.listdir(self.TOOLS)):
+            if name.endswith(".py") and name != "zss_riff.py":
+                with open(os.path.join(self.TOOLS, name), encoding="utf-8") as fh:
+                    out[name] = fh.read()
+        return out
+
+    def test_the_module_is_there_and_round_trips(self):
+        import importlib
+        sys.path.insert(0, self.TOOLS)
+        riff = importlib.import_module("zss_riff")
+        raw = b"vers" + struct.pack(">I", 3) + b"abc"
+        self.assertEqual(riff.build_blocks(riff.parse_blocks(raw)), raw)
+
+    def test_a_body_can_be_replaced_in_place(self):
+        # Lists, not tuples: every builder mutates a block body, which is why
+        # the tuple version could never have been the shared one.
+        import importlib
+        sys.path.insert(0, self.TOOLS)
+        riff = importlib.import_module("zss_riff")
+        blocks = riff.parse_blocks(b"patn" + struct.pack(">I", 1) + b"\x01")
+        blocks[0][1] = bytearray(b"\x02\x03")
+        self.assertEqual(riff.build_blocks(blocks),
+                         b"patn" + struct.pack(">I", 2) + b"\x02\x03")
+
+    def test_no_other_tool_defines_its_own(self):
+        guilty = sorted(name for name, src in self._sources().items()
+                        if "def parse_blocks" in src or "def build_blocks" in src)
+        self.assertEqual(
+            guilty, [],
+            "one binary format, one reader - these define their own and will "
+            f"drift from it: {guilty}")

@@ -66,6 +66,18 @@ import os
 import struct
 import sys
 
+# THE RIFF READER LIVES IN `zss_riff.py`, since 2026-09-02. There were three
+# independent copies of it across four tools and they had already drifted -
+# see that module's docstring for the table.
+#
+# THE sys.path LINE IS NOT DECORATION. A script's own directory is on the path
+# when it is run as a script, and is NOT when it is loaded by
+# `spec_from_file_location` - which is how the tests load these, because the
+# filenames have dashes in them. Without it the import works from the command
+# line and fails in the suite, which is the worst of both.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from zss_riff import parse_blocks, build_blocks  # noqa: E402
+
 SFZ_BANK = "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines"
 DRUM_CHAINS = ["1", "2", "3", "4", "5"]      # Kick, Snare, Clap, Closed Hat, Open Hat
 VOICE_CHAINS = ["6", "7", "8"]               # BASS, LEAD, PADS
@@ -77,23 +89,8 @@ STEPS = 16
 
 # --- the zynseq RIFF -------------------------------------------------------
 
-def parse_blocks(raw):
-    blocks, off = [], 0
-    while off + 8 <= len(raw):
-        bid = raw[off:off + 4].decode("latin1")
-        size = struct.unpack(">I", raw[off + 4:off + 8])[0]
-        blocks.append([bid, bytearray(raw[off + 8:off + 8 + size])])
-        off += 8 + size
-    if off != len(raw):
-        raise ValueError(f"riff has {len(raw) - off} trailing bytes")
-    return blocks
 
 
-def build_blocks(blocks):
-    out = bytearray()
-    for bid, body in blocks:
-        out += bid.encode("latin1") + struct.pack(">I", len(body)) + body
-    return bytes(out)
 
 
 def make_event(template, step, note, velocity):
