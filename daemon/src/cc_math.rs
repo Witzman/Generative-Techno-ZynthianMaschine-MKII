@@ -247,6 +247,41 @@ mod tests {
     }
 
     #[test]
+    fn the_other_nibble_of_byte_seven_cannot_move_the_knob() {
+        // THE DESCRIPTOR SAYS THIS BYTE IS TWO 4-BIT COUNTERS, and the
+        // capture of 2026-08-31 measured which one is the big encoder: the
+        // LOW nibble ran all sixteen values across 117 transitions, every one
+        // +1, while the high nibble stayed at zero.
+        //
+        // The 2026-08-31 finding warned that reading the WHOLE byte "works by
+        // accident" and would break when the other nibble started moving.
+        // Checked on 2026-09-02 and the warning was wrong: the delta is taken
+        // modulo BIG_ENC_MOD, which is 16, so a change of exactly one nibble
+        // step in the high half folds to nothing. The mask added the same day
+        // makes the intent explicit; it does not change a single value, and
+        // these two assertions are what proves that.
+        assert_eq!(big_encoder_value(0x00, 0x10, 64), 64);
+        assert_eq!(big_encoder_value(0x30, 0x00, 64), 64);
+    }
+
+    #[test]
+    fn masking_the_low_nibble_changes_no_value_at_all() {
+        // Same input read both ways, across every pair of counters and a
+        // foreign nibble on top. If these ever disagree the mask is doing
+        // something and somebody has to decide what.
+        for high in [0x00u8, 0x10, 0x70, 0xF0] {
+            for prev in 0..16i32 {
+                for cur in 0..16i32 {
+                    let whole = big_encoder_value(
+                        prev | high as i32, cur | high as i32, 64);
+                    let masked = big_encoder_value(prev, cur, 64);
+                    assert_eq!(whole, masked, "high {high:#x} {prev}->{cur}");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn many_revolutions_never_stall_in_either_direction() {
         for dir in [1i32, -1i32] {
             let mut value = 64i32;

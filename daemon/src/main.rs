@@ -1001,7 +1001,21 @@ impl<'a> MHandler<'a> {
             // Slot 8 of roller_status/roller_value has been sitting free since
             // both arrays were declared [_; 9] for eight encoders. This is
             // what it was for.
-            let counter = status as i32;
+            // THE LOW NIBBLE, AND ONLY THE LOW NIBBLE, since 2026-09-02.
+            // The HID descriptor declares this byte as `2 x 4 bit, Logical
+            // Maximum (15)` - two counters sharing one byte - and the capture
+            // of 2026-08-31 settled which one moves: the LOW nibble ran all
+            // sixteen values across 117 transitions, every one +1, wrapping
+            // 15 to 0, while the HIGH nibble stayed at zero throughout.
+            //
+            // Reading the whole byte therefore WORKED BY ACCIDENT. It worked
+            // because the other nibble happens to be zero, and it would have
+            // stopped the moment whatever that nibble counts started moving -
+            // the value would jump by 16 per foreign tick and big_encoder_value
+            // would read it as a wild turn.
+            //
+            // notes/findings/2026-08-31-three-hardware-answers-one-capture.md
+            let counter = (status & 0x0F) as i32;
             let prev = maschine.get_roller_status(BIG_ENC_SLOT);
             // Resync the baseline whether or not the report is used, exactly
             // as send_encoder_cc does: leaving a stale baseline makes every
