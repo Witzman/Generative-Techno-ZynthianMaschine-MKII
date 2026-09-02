@@ -1325,7 +1325,9 @@ class techno_lib:
         so the two can never drift apart.
 
         chance is common to both kinds: setPlayChance is a per-pattern zynseq
-        property and kind-agnostic, so STEP's spread page reaches a voice too."""
+        property and kind-agnostic, so the LENS reaches a voice with it too.
+        (Said "STEP's spread page" until the 2026-09-02 comment audit; the
+        spread pages went on 2026-09-01 and the lens replaced them.)"""
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
                      chance=100, pending=set(),
                      # A PHRASE, NOT A BAR, 2026-09-01. `phrase` is how many
@@ -2010,8 +2012,13 @@ class techno_lib:
 
     # -------------------------------------------------------------- REROLL
     #
-    # SCENE rerolls the drum channels, PATTERN the voices. Both buttons are
-    # measured free and named right on the panel.
+    # ONE BUTTON, and the SELECTED CHANNEL decides which half it rerolls.
+    # PATTERN (CC 26) does both kinds, on a PRESS. Corrected 2026-09-02: this
+    # block said "SCENE rerolls the drum channels, PATTERN the voices", which
+    # was true until the redesign of 2026-09-01 merged the two buttons and
+    # freed SCENE (CC 25). The code was right and this comment contradicted
+    # it - the exact shape the comment audit exists to find, and the one that
+    # started it.
     #
     # TWO FLOORS, NON-NEGOTIABLE. A reroll may never leave a channel silent
     # with nothing to say why: hits stay >= 1, play chance stays above a floor,
@@ -3980,8 +3987,9 @@ class techno_lib:
         A bar-rate gain LFO already ships: `level` is in MOD_TIMBRE, 1.0 bars
         is the default rate a new bind takes, depth is signed, and a
         negative-depth `ramp` is an instant rise on the downbeat falling
-        linearly to the bar line. Bind that across the MIXER page's eight
-        LEVEL columns and every strip pumps.
+        linearly to the bar line. Bind that across all eight LEVEL columns -
+        hold ALL with LEVEL under your hand, since the MIXER page it used to
+        mean was retired on 2026-09-01 - and every strip pumps.
 
         In eight different phases. phase0 is captured at BIND time, on
         purpose - _mod_encoder says so in as many words, because scattered

@@ -4829,8 +4829,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.mod_down:
             # MOD + RESTART: every modulator back to the start of its cycle,
             # together. THE SIDECHAIN PUMP IS THIS GESTURE, not a new LFO - a
-            # negative-depth ramp on LEVEL across the MIXER page already pumps
-            # each strip, and the only thing wrong with it is that eight binds
+            # negative-depth ramp on LEVEL across all eight strips - the LENS
+            # now, the MIXER page until 2026-09-01 - already pumps each one,
+            # and the only thing wrong with it is that eight binds
             # made one after another run in eight phases.
             #
             # BARE RESTART DELIBERATELY DOES NOT DO THIS, although the case for
@@ -5291,9 +5292,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         LEVEL is read LIVE from the mixer, for exactly the reason _verb() reads
         it live: the touchscreen and a snapshot both move the fader behind the
         driver's back, so self.state's copy is routinely stale. Capturing that
-        stale copy as a modulator's base made the first tick after a bind on
-        the MIXER LEVEL spread page yank the fader back to wherever the driver
-        last thought it was."""
+        stale copy as a modulator's base made the first tick after a bind
+        across the eight LEVEL columns yank the fader back to wherever the
+        driver last thought it was. (That was the MIXER LEVEL spread page when
+        it happened; it is the lens now.)"""
         if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
             return self._mod_percent_get(channel, verb)
         if verb == "level":
@@ -5609,7 +5611,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         "range": (1, 4, ENC_UNITS_DISCRETE),
         # 1 is OFF; 2-4 are the ratchet counts.
         "ratchet": (1, 4, ENC_UNITS_DISCRETE),
-        # THE GEN PAGE, 2026-08-31. `rotate` is deliberately absent: it is a
+        # THE LINE PAGE - the voice's second AUTO page, called GEN when these
+        # verbs were added on 2026-08-31 and retitled on 2026-09-02 when RANGE
+        # joined it. `rotate` is deliberately absent: it is a
         # verb on BOTH kinds and _verb dispatches it by kind before ever
         # reaching this table - see the branch there.
         "walk_span": (1, 128, None),
@@ -7392,7 +7396,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     def _voice_line(self, channel, steps):
         """(chords, mask) for a voice: what each step plays and whether it
-        sounds, ROTATED. The single place ROTATE is applied.
+        sounds, ROTATED. The single place a VOICE's ROTATE is applied -
+        qualified 2026-09-02 by the comment audit, because a DRUM rotates
+        in `_write_pattern` and the unqualified sentence read as a claim
+        about both kinds. `rotate_line` is called here and nowhere else.
 
         `chords` is one TUPLE per step since 2026-09-02 - length one whenever
         CHORD is off, which is every channel of every snapshot written before
