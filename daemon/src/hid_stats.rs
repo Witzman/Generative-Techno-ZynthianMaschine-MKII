@@ -65,6 +65,10 @@ impl WriteStats {
         should_log(count)
     }
 
+    /// Short plus failed. Asserted by the tests rather than called by the
+    /// daemon: the counters are printed individually at each write site, and
+    /// this is the one-number form a future health report would want.
+    #[allow(dead_code)]
     pub fn bad(&self) -> u64 {
         self.short + self.failed
     }

@@ -5,19 +5,39 @@ use tungstenite::{accept, Message};
 
 use crate::ws_types::{DeviceEvent, WsCommand};
 
-pub fn start(cmd_tx: mpsc::Sender<WsCommand>, event_rx: mpsc::Receiver<DeviceEvent>) {
-    std::thread::spawn(move || run(cmd_tx, event_rx));
+pub fn start(
+    bind: String,
+    cmd_tx: mpsc::Sender<WsCommand>,
+    event_rx: mpsc::Receiver<DeviceEvent>,
+) {
+    std::thread::spawn(move || run(bind, cmd_tx, event_rx));
 }
 
-fn run(cmd_tx: mpsc::Sender<WsCommand>, event_rx: mpsc::Receiver<DeviceEvent>) {
-    let listener = match TcpListener::bind("0.0.0.0:9001") {
+/// The port is fixed; only the address is configurable.
+const PORT: u16 = 9001;
+pub const LOOPBACK: &str = "127.0.0.1";
+
+fn run(bind: String, cmd_tx: mpsc::Sender<WsCommand>, event_rx: mpsc::Receiver<DeviceEvent>) {
+    let listener = match TcpListener::bind((bind.as_str(), PORT)) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("error: WebSocket server failed to bind on port 9001: {}", e);
+            eprintln!("error: WebSocket server failed to bind {}:{}: {}", bind, PORT, e);
             return;
         }
     };
-    eprintln!("web editor: open http://<pi-ip>:9000  (ws://0.0.0.0:9001)");
+    if bind != LOOPBACK {
+        // SAID OUT LOUD, since 2026-09-03. This socket takes commands that
+        // remap the pads' MIDI notes and WRITE THEM TO DISK, and it has no
+        // authentication of any kind; the daemon runs as root. That is a
+        // reasonable default only for as long as somebody knows it is the
+        // default, and nothing said so before this line.
+        eprintln!(
+            "warning: the WebSocket editor is listening on {}:{} with NO \
+             authentication - anything on this network can remap the pads. \
+             Set \"ws_bind\": \"127.0.0.1\" in maschine.json to close it.",
+            bind, PORT);
+    }
+    eprintln!("web editor: open http://<pi-ip>:9000  (ws://{}:{})", bind, PORT);
 
     for stream in listener.incoming() {
         let stream = match stream {
@@ -31,7 +51,15 @@ fn run(cmd_tx: mpsc::Sender<WsCommand>, event_rx: mpsc::Receiver<DeviceEvent>) {
                 continue;
             }
         };
-        ws.get_mut().set_nonblocking(true).unwrap();
+        if let Err(e) = ws.get_mut().set_nonblocking(true) {
+            eprintln!("ws: cannot set non-blocking: {}", e);
+            continue;
+        }
+        // THE BACKLOG IS NOT HISTORY. The event channel is bounded and is
+        // drained only here, so whatever is in it when a client arrives is
+        // whatever happened before anyone was looking - up to 256 presses that
+        // would then trickle out at one per 5 ms and read as live.
+        while event_rx.try_recv().is_ok() {}
         let _ = cmd_tx.send(WsCommand::RequestConfig);
 
         loop {

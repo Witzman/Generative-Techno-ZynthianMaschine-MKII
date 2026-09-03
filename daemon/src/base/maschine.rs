@@ -251,7 +251,6 @@ pub trait Maschine {
     fn set_fd(&mut self, _fd: RawFd) {}
     fn invalidate_lights(&mut self) {}
 
-    fn get_pad_pressure(&self, pad_idx: usize) -> Result<f32, ()>;
 
     fn get_midi_note_base(&self) -> u8;
     fn set_midi_note_base(&mut self, base: u8);
@@ -290,7 +289,6 @@ pub trait Maschine {
 
     fn load_notes(&self, pad_idx: usize, context: usize) -> Message;
 
-    fn set_seq_speed(&mut self, status: usize);
     fn get_seq_speed(&self) -> u64;
 
     fn set_padmode(&mut self, state: usize);
@@ -373,8 +371,6 @@ pub trait Maschine {
     /// bands = how many 32-row reports to send per screen (1 or 2).
     fn display_opts(&mut self, _col: u8, _reverse: bool, _bands: usize) {}
     fn write_lights(&mut self);
-    fn write_screen(&mut self);
-    fn write_display(&mut self) {}
 }
 
 #[allow(unused_variables)]

@@ -1,6 +1,16 @@
-pub fn normalize_encoder(raw_status: i32, roller_state: usize) -> u8 {
-    let accumulated = raw_status / 4 + roller_state as i32 * 64;
-    accumulated.clamp(0, 127) as u8
+/// The absolute position an encoder's two report bytes describe.
+///
+/// The low byte counts at ~999 steps a revolution and the high byte is a
+/// carry; `/4` is what discards two bits of it, which is the halved
+/// sensitivity measured on 2026-08-16. UNCLAMPED, because the only live
+/// caller - `send_encoder_cc` - needs the difference between two of these,
+/// and a clamp at either end would swallow the movement away from it.
+///
+/// This used to be `normalize_encoder`, a clamped form that nothing called
+/// while eight unreachable match arms in main.rs open-coded the same
+/// expression. One copy, on the path that runs.
+pub fn accumulate_raw(raw: i32, roller_state: usize) -> i32 {
+    raw / 4 + roller_state as i32 * 64
 }
 
 /// Where an encoder's reported CC lands after moving by `delta`.
@@ -129,23 +139,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn encoder_zero() {
-        assert_eq!(normalize_encoder(0, 0), 0);
+    fn accumulate_raw_at_zero() {
+        assert_eq!(accumulate_raw(0, 0), 0);
     }
 
     #[test]
-    fn encoder_mid_range() {
-        assert_eq!(normalize_encoder(128, 1), 96);
+    fn accumulate_raw_adds_the_carry_byte() {
+        // 128 / 4 = 32, plus one carry of 64.
+        assert_eq!(accumulate_raw(128, 1), 96);
+        assert_eq!(accumulate_raw(252, 3), 255);
     }
 
     #[test]
-    fn encoder_clamps_high() {
-        assert_eq!(normalize_encoder(252, 3), 127);
+    fn accumulate_raw_discards_two_bits() {
+        // The halved sensitivity, stated as arithmetic: four raw units are one
+        // reported unit, and the remainder is dropped rather than carried.
+        assert_eq!(accumulate_raw(3, 0), 0);
+        assert_eq!(accumulate_raw(4, 0), 1);
+        assert_eq!(accumulate_raw(7, 0), 1);
     }
 
     #[test]
-    fn encoder_clamps_low() {
-        assert_eq!(normalize_encoder(-100, 0), 0);
+    fn accumulate_raw_does_not_clamp() {
+        // Deliberate: send_encoder_cc takes the DIFFERENCE of two of these, and
+        // a clamp at 127 would report no movement while the knob was turning.
+        assert!(accumulate_raw(252, 3) > 127);
+        assert_eq!(accumulate_raw(-100, 0), -25);
     }
 
     #[test]

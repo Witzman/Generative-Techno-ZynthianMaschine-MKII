@@ -21,7 +21,7 @@ use std::path::Path;
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};
 
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 extern crate nix;
 use nix::fcntl::{O_NONBLOCK, O_RDWR};
@@ -69,16 +69,22 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         PollFd::new(mhandler.seq_in_fd, POLLIN, EventFlags::empty()),
     ];
 
-    let mut now = SystemTime::now();
-    let mut now2 = SystemTime::now();
-    let mut now_display = SystemTime::now();
+    // INSTANT, NOT SystemTime, since 2026-09-03. `SystemTime::elapsed()`
+    // returns a Result and these four were all `.unwrap()`, so a BACKWARD
+    // clock step panicked the daemon - and this Pi has no RTC: fake-hwclock
+    // restores a stale time at boot and NTP corrects it later, measured eight
+    // days out on 2026-08-30. Every one of these is an interval, which is what
+    // a monotonic clock is for; none of them wants a wall-clock date.
+    let mut now = Instant::now();
+    let mut now2 = Instant::now();
+    let mut now_display = Instant::now();
     let timer_interval = Duration::from_millis(16);
     let display_interval = Duration::from_millis(100);
     let clock_fallback_timeout = Duration::from_millis(500);
     let mut timer_interval2;
     let mut step = 0;
     let mut check = 0;
-    let mut last_report = SystemTime::now();
+    let mut last_report = Instant::now();
     let mut reopens: u64 = 0;
     // Storm state for the input watchdog. `consecutive` counts reopens since
     // input last flowed healthily; it is what the backoff is computed from, and
@@ -86,16 +92,25 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     // `journalctl | grep -c reopened` is this project's primary diagnostic.
     let mut consecutive: u64 = 0;
     let mut last_reopen = Instant::now();
+    let mut last_bpm_sent = Instant::now();
     let mut backoff_until = Instant::now();
     let mut announced_backoff = Duration::from_millis(0);
     let input_timeout = Duration::from_millis(50);
     let mut active = false;
     loop {
-        poll(&mut fds, 16).unwrap();
+        // poll() returns EINTR on any signal the process is handed, and
+        // `.unwrap()` on that ended the daemon. There is nothing to do about
+        // an interrupted wait except take the next lap.
+        if let Err(err) = poll(&mut fds, 16) {
+            if err.errno() != nix::errno::Errno::EINTR {
+                println!("poll failed: {} - retrying", err);
+            }
+            continue;
+        }
 
-        if fds[0].revents().unwrap().contains(POLLIN) {
+        if fds[0].revents().unwrap_or_else(EventFlags::empty).contains(POLLIN) {
             dev.readable(mhandler);
-            last_report = SystemTime::now();
+            last_report = Instant::now();
             // Input is flowing. If it has been flowing long enough, the storm
             // is over and the next isolated stall gets an immediate retry
             // again - which is the common, recovering case and must stay fast.
@@ -114,7 +129,7 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         // delivering to our fd (verified with usbmon: the URBs keep completing
         // with data while read() returns EAGAIN forever). A fresh open() is the
         // only known recovery.
-        if last_report.elapsed().unwrap() >= input_timeout
+        if last_report.elapsed() >= input_timeout
             && Instant::now() >= backoff_until
         {
             // Close BEFORE reopening: usbhid only tears down and resubmits the
@@ -158,14 +173,16 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                     );
                 }
             }
-            last_report = SystemTime::now();
+            last_report = Instant::now();
         }
 
-        if fds[1].revents().unwrap().contains(POLLIN) {
+        if fds[1].revents().unwrap_or_else(EventFlags::empty).contains(POLLIN) {
             mhandler.recv_osc_msg(dev);
         }
 
-        if mhandler.seq_in_fd >= 0 && fds[2].revents().unwrap().contains(POLLIN) {
+        if mhandler.seq_in_fd >= 0
+            && fds[2].revents().unwrap_or_else(EventFlags::empty).contains(POLLIN)
+        {
             while let Some(ev) = mhandler.seq_handle.try_receive_event() {
                 match ev {
                     SeqInputEvent::NoteOn { note, velocity, .. } if note < 16 => {
@@ -186,8 +203,16 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                         mhandler.seq_handle.drain_output();
                         if let Some(_fired_step) = dev.clock_tick() {
                         }
-                        if let Some(bpm) = dev.get_clock_state().estimated_bpm() {
-                            let _ = mhandler.event_tx.send(DeviceEvent::ClockBpm { bpm });
+                        // RATE LIMITED. This fired on every MIDI clock -
+                        // twenty-four a beat, fifty a second at 125 BPM - to
+                        // move a tempo readout in a web page. Twice a second
+                        // is faster than anyone can read it.
+                        if last_bpm_sent.elapsed() >= BPM_REPORT_INTERVAL {
+                            if let Some(bpm) = dev.get_clock_state().estimated_bpm() {
+                                let _ = mhandler.event_tx.try_send(
+                                    DeviceEvent::ClockBpm { bpm });
+                                last_bpm_sent = Instant::now();
+                            }
                         }
                     }
                     SeqInputEvent::Start => {
@@ -196,7 +221,7 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                         dev.clock_start();
                         step = 0;
                         check = 0;
-                        now2 = SystemTime::now();
+                        now2 = Instant::now();
                     }
                     SeqInputEvent::Stop => {
                         let _ = mhandler.seq_port.send_message(&Message::Stop);
@@ -211,7 +236,14 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         while let Ok(cmd) = mhandler.cmd_rx.try_recv() {
             match cmd {
                 WsCommand::SetPadColor { pad, color, brightness } => {
-                    dev.set_pad_light(pad, color, brightness);
+                    // BOUNDED, and the bound is the point. `pad` arrives as a
+                    // usize straight out of JSON on a socket, and
+                    // set_pad_light indexes a sixteen-entry table with it - so
+                    // one message with pad 16 ended the daemon. Every other
+                    // arm here already checked its index; this one did not.
+                    if pad < 16 {
+                        dev.set_pad_light(pad, color, brightness);
+                    }
                 }
                 WsCommand::SetButtonColor { button, brightness } => {
                     if let Some(btn) = osc_button_to_btn_map(&button) {
@@ -224,31 +256,17 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                 WsCommand::SetPadNote { pad, note } => {
                     if pad < 16 {
                         mhandler.pad_notes[pad] = note;
-                        MaschineConfig {
-                            pad_notes: mhandler.pad_notes,
-                            encoder_ccs: mhandler.encoder_ccs,
-                            external_pad_leds: mhandler.external_pad_leds,
-                            send_aftertouch: mhandler.send_aftertouch_cfg,
-                            screen_brightness: mhandler.screen_brightness_cfg,
-                            screen_contrast: mhandler.screen_contrast_cfg,
-                        }.save();
+                        mhandler.save_config();
                     }
                 }
                 WsCommand::SetEncoderCC { encoder, cc } => {
                     if encoder < 8 {
                         mhandler.encoder_ccs[encoder] = cc;
-                        MaschineConfig {
-                            pad_notes: mhandler.pad_notes,
-                            encoder_ccs: mhandler.encoder_ccs,
-                            external_pad_leds: mhandler.external_pad_leds,
-                            send_aftertouch: mhandler.send_aftertouch_cfg,
-                            screen_brightness: mhandler.screen_brightness_cfg,
-                            screen_contrast: mhandler.screen_contrast_cfg,
-                        }.save();
+                        mhandler.save_config();
                     }
                 }
                 WsCommand::RequestConfig => {
-                    let _ = mhandler.event_tx.send(DeviceEvent::ConfigSnapshot {
+                    let _ = mhandler.event_tx.try_send(DeviceEvent::ConfigSnapshot {
                         pad_notes: mhandler.pad_notes.to_vec(),
                         encoder_ccs: mhandler.encoder_ccs.to_vec(),
                     });
@@ -256,11 +274,11 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             }
         }
 
-        if now.elapsed().unwrap() >= timer_interval {
+        if now.elapsed() >= timer_interval {
             dev.write_lights();
-            now = SystemTime::now();
+            now = Instant::now();
         }
-        if now_display.elapsed().unwrap() >= display_interval {
+        if now_display.elapsed() >= display_interval {
             // Normal rendering stays off - it issued ~180 writes/s. Each
             // report is 9 header bytes plus a 256-byte payload = 265, and a
             // both-screen rebuild is 16 of them (this comment said 521 bytes
@@ -271,51 +289,47 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             // reason: pushing them from the OSC handler would interleave HID
             // writes with the input reads.
             dev.display_fb_flush();
-            now_display = SystemTime::now();
+            now_display = Instant::now();
         }
 
         if dev.get_clock_state().should_fallback_to_internal(clock_fallback_timeout) {
             dev.set_clock_source(ClockSource::Internal);
-            now2 = SystemTime::now();
+            now2 = Instant::now();
         }
 
         if dev.get_playing() == true {
             timer_interval2 = Duration::from_millis(dev.get_seq_speed());
             active = true;
             let use_internal_clock = matches!(dev.get_clock_state().source, ClockSource::Internal);
-            if use_internal_clock && dev.note_check(step) == 1 && now2.elapsed().unwrap() >= timer_interval2 && check == 0
+            if use_internal_clock && dev.note_check(step) == 1 && now2.elapsed() >= timer_interval2 && check == 0
             {
                 let msg = dev.load_notes(step, 1);
-                mhandler.seq_port.send_message(&msg).unwrap();
-                mhandler.seq_handle.drain_output();
+                mhandler.send_midi(&msg);
                 check = 1;
             };
-            if use_internal_clock && now2.elapsed().unwrap() >= timer_interval2 * 2 && dev.note_check(step) == 1 {
+            if use_internal_clock && now2.elapsed() >= timer_interval2 * 2 && dev.note_check(step) == 1 {
                 let msg = dev.load_notes(step, 0);
-                mhandler.seq_port.send_message(&msg).unwrap();
-                mhandler.seq_handle.drain_output();
-                now2 = SystemTime::now();
+                mhandler.send_midi(&msg);
+                now2 = Instant::now();
                 step += 1;
                 check = 0;
-            } else if use_internal_clock && now2.elapsed().unwrap() >= timer_interval2 * 2 && dev.note_check(step) == 0 {
+            } else if use_internal_clock && now2.elapsed() >= timer_interval2 * 2 && dev.note_check(step) == 0 {
                 step += 1;
                 check = 0;
-                now2 = SystemTime::now();
+                now2 = Instant::now();
             };
             if !use_internal_clock {
                 let ext_step = dev.get_clock_state().step;
                 if ext_step != step {
                     if dev.note_check(step) == 1 && check == 1 {
                         let msg = dev.load_notes(step, 0);
-                        mhandler.seq_port.send_message(&msg).unwrap();
-                        mhandler.seq_handle.drain_output();
+                        mhandler.send_midi(&msg);
                     }
                     step = ext_step;
                     check = 0;
                     if dev.note_check(step) == 1 {
                         let msg = dev.load_notes(step, 1);
-                        mhandler.seq_port.send_message(&msg).unwrap();
-                        mhandler.seq_handle.drain_output();
+                        mhandler.send_midi(&msg);
                         check = 1;
                     }
                 }
@@ -325,8 +339,7 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             };
         } else if active == true {
             let msg = dev.load_notes(step, 0);
-            mhandler.seq_port.send_message(&msg).unwrap();
-            mhandler.seq_handle.drain_output();
+            mhandler.send_midi(&msg);
             active = false;
         }
     }
@@ -344,6 +357,17 @@ fn usage(prog_name: &String) {
 const BIG_ENC_SLOT: usize = 8;
 
 const PAD_RELEASED_BRIGHTNESS: f32 = 0.015;
+
+/// Events held for a web editor that may never connect.
+///
+/// Deep enough that a burst of pad and encoder traffic reaches an attached
+/// client whole; shallow enough that an absent one costs a few kilobytes
+/// rather than growing forever. ws_server drains what is left before it serves
+/// a new client, so a full queue is never shown to anyone as history.
+const WS_EVENT_QUEUE: usize = 256;
+
+/// Gap between two `ClockBpm` events. See the send site.
+const BPM_REPORT_INTERVAL: Duration = Duration::from_millis(500);
 
 /// Minimum gap between two aftertouch sends for the SAME pad.
 ///
@@ -374,7 +398,7 @@ struct MHandler<'a> {
     osc_socket: &'a UdpSocket,
     osc_outgoing_addr: SocketAddr,
 
-    event_tx: mpsc::Sender<DeviceEvent>,
+    event_tx: mpsc::SyncSender<DeviceEvent>,
     cmd_rx: mpsc::Receiver<WsCommand>,
 
     seq_in_fd: RawFd,
@@ -382,13 +406,12 @@ struct MHandler<'a> {
     pad_notes: [u8; 16],
     encoder_ccs: [u16; 8],
     external_pad_leds: bool,
-    send_aftertouch_cfg: bool,
-    /// Carried purely so the WS config-save path can round-trip them. The
-    /// panel settings are applied once at start-up and never from here - a
-    /// live control could blank the very screen you need to see it on, and the
-    /// device stores them non-volatile.
-    screen_brightness_cfg: Option<u8>,
-    screen_contrast_cfg: Option<u8>,
+    /// Whether SHIFT + PAD MODE may hand the pads to the daemon's own step
+    /// sequencer. Off unless maschine.json asks; see `config::internal_sequencer`.
+    internal_sequencer: bool,
+    /// The config as loaded, kept whole so `save_config` can round-trip every
+    /// key it does not own - including keys added after this line was written.
+    cfg: MaschineConfig,
 
     /// Last aftertouch value sent per pad, and when. Both are needed: the
     /// change gate alone still lets a slowly-moving finger send at the report
@@ -586,7 +609,7 @@ fn btn_to_osc_button_map(btn: MaschineButton) -> &'static str {
         MaschineButton::FF4 => "FF4",
         MaschineButton::FF5 => "FF5",
         MaschineButton::FF6 => "FF6",
-        MaschineButton::FF7 => "FF8",
+        MaschineButton::FF7 => "FF7",
         MaschineButton::FF8 => "FF8",
 
         MaschineButton::G1 => "G1",
@@ -684,6 +707,38 @@ fn btn_to_osc_button_map(btn: MaschineButton) -> &'static str {
 }
 
 impl<'a> MHandler<'a> {
+    /// One MIDI send, and it CANNOT end the process.
+    ///
+    /// Sixty call sites were `self.seq_port.send_message(&msg).unwrap()`
+    /// followed by a drain. Every one of them turned an ALSA error into a
+    /// panic, and a panic here is the worst failure this daemon has: the
+    /// surface goes dark and the music stops, from a button press. A dropped
+    /// message costs one button; a panic costs the instrument.
+    ///
+    /// The drain belongs here too - it followed every one of those sends, and
+    /// a send whose drain was forgotten is a message that sits in the queue.
+    /// Persist what the editor can change, WITHOUT rebuilding the config.
+    ///
+    /// Both callers used to construct a fresh `MaschineConfig` out of six
+    /// handler fields, so every key added to the config had to be remembered
+    /// in two more places or a live rig silently lost it on the next pad-note
+    /// change. config.rs carries two tests about exactly that hazard; holding
+    /// the loaded config and overwriting only the two mutable arrays removes
+    /// the hazard instead of testing for it.
+    fn save_config(&self) {
+        let mut cfg = self.cfg.clone();
+        cfg.pad_notes = self.pad_notes;
+        cfg.encoder_ccs = self.encoder_ccs;
+        cfg.save();
+    }
+
+    fn send_midi(&self, msg: &Message) {
+        if let Err(err) = self.seq_port.send_message(msg) {
+            println!("midi send failed: {:?}", err);
+        }
+        self.seq_handle.drain_output();
+    }
+
     fn pad_color(&self) -> u32 {
         let (r, g, b) = self.color.to_rgb();
 
@@ -696,18 +751,6 @@ impl<'a> MHandler<'a> {
             PressureShape::Exponential(power) => pressure.powf(power),
             PressureShape::Constant(c_pressure) => c_pressure,
         } * 127.0) as U7
-    }
-
-    #[allow(dead_code)]
-    fn update_pad_colors(&self, maschine: &mut dyn Maschine) {
-        for i in 0..16 {
-            let brightness = match maschine.get_pad_pressure(i).unwrap() {
-                b if b == 0.0 => PAD_RELEASED_BRIGHTNESS,
-                pressure @ _ => pressure.sqrt(),
-            };
-
-            maschine.set_pad_light(i, self.pad_color(), brightness);
-        }
     }
 
     fn recv_osc_msg(&self, maschine: &mut dyn Maschine) {
@@ -734,7 +777,15 @@ impl<'a> MHandler<'a> {
 
     fn handle_osc_messge(&self, maschine: &mut dyn Maschine, msg: &osc::Message) {
         if msg.path.starts_with("/maschine/button") {
-            let btn = match osc_button_to_btn_map(&msg.path[17..]) {
+            // strip_prefix, NOT a fixed slice. `&msg.path[17..]` panicked on
+            // the exact path "/maschine/button", which is sixteen bytes: the
+            // starts_with passed and the slice ran off the end. One OSC
+            // message from any local process ended the daemon.
+            let name = match msg.path.strip_prefix("/maschine/button/") {
+                Some(name) => name,
+                None => return,
+            };
+            let btn = match osc_button_to_btn_map(name) {
                 Some(btn) => btn,
                 None => return,
             };
@@ -769,11 +820,16 @@ impl<'a> MHandler<'a> {
                         &osc::Argument::f(brightness),
                     ) = (&msg.arguments[0], &msg.arguments[1], &msg.arguments[2])
                     {
-                        maschine.set_pad_light(
-                            pad as usize,
-                            (color as u32) & 0xFFFFFF,
-                            brightness as f32,
-                        );
+                        // Range-checked BEFORE the cast: a negative i32 becomes
+                        // an enormous usize, and set_pad_light indexes a
+                        // sixteen-entry table with it.
+                        if (0..16).contains(&pad) {
+                            maschine.set_pad_light(
+                                pad as usize,
+                                (color as u32) & 0xFFFFFF,
+                                brightness as f32,
+                            );
+                        }
                     }
                 }
 
@@ -877,10 +933,14 @@ impl<'a> MHandler<'a> {
             arguments: arguments,
         };
 
-        match self
-            .osc_socket
-            .send_to(&*msg.serialize().unwrap(), &self.osc_outgoing_addr)
-        {
+        let bytes = match msg.serialize() {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                println!(" :: could not serialise OSC {}: {:?}", path, e);
+                return;
+            }
+        };
+        match self.osc_socket.send_to(&bytes, &self.osc_outgoing_addr) {
             Ok(_) => {}
             Err(e) => println!(" :: error in send_to: {}", e),
         }
@@ -930,68 +990,23 @@ impl<'a> MHandler<'a> {
         let controlbase = 15;
         let modpress = maschine.get_mod();
         //println!("{} is:  {}", button, status);
-        if button.contains("shift") {
-            if status > 0 {
-                maschine.set_mod(1);
-            } else {
-                maschine.set_mod(0);
-            }
+        // EXACT MATCHES, not substrings, since 2026-09-03. This block used to
+        // read `button.contains("shift")` and `button.contains("C")` and then
+        // test the exact name inside, so the outer guards did nothing except
+        // make it look as though a whole family of tokens was handled. They
+        // were also a live trap: every uppercase group letter is a single
+        // character, so any future token carrying a capital C, E, G, I, K, M or
+        // O would have entered a branch that reparks an encoder. The names
+        // matched here are exactly the names the old code could reach.
+        if button == "shift" {
+            maschine.set_mod(if status > 0 { 1 } else { 0 });
         }
-        if button.contains("C") {
-            let idx = 1;
-            //println!("C: {}", status);
-            if button == "C8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-            if button == "C7" {
-                maschine.set_roller_state(status, idx);
-                //println!("2={}", status);
-            };
-        };
-        if button.contains("E") {
-            let idx = 2;
-            if button == "E8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-        };
-        if button.contains("G") {
-            let idx = 3;
-            if button == "G8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-        };
-        if button.contains("I") {
-            let idx = 4;
-            if button == "I8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-        };
-        if button.contains("K") {
-            let idx = 5;
-            if button == "K8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-        };
-        if button.contains("M") {
-            let idx = 6;
-            if button == "M8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-        };
-        if button.contains("O") {
-            let idx = 7;
-            if button == "O8" {
-                maschine.set_roller_state(status, idx);
-                //println!("3={}", status);
-            };
-        };
-        if button.contains("A8") {
+        // The high-order counter bytes are NOT handled here either, for the
+        // same reason: "C7", "E8" and the rest are row-8-and-up names, and
+        // `read_buttons` sets those directly with `set_roller_state`. Removed
+        // 2026-09-03; row 7 - A1..A8, the big encoder's nibble byte - IS a
+        // button row and is handled below.
+        if button == "A8" {
             // THE BIG ENCODER, and it is the only one that does not go through
             // send_encoder_cc. It used to send `status * 8` as an ABSOLUTE
             // value on every detent, so the counter rolling over snapped the
@@ -1026,8 +1041,7 @@ impl<'a> MHandler<'a> {
                 prev, counter, maschine.get_roller_value(BIG_ENC_SLOT));
             maschine.set_roller_value(value as i32, BIG_ENC_SLOT);
             let msg = Message::RPN7(Ch1, controlbase, value);
-            self.seq_port.send_message(&msg).unwrap();
-            self.seq_handle.drain_output();
+            self.send_midi(&msg);
         }
 
         if status <= 250 {
@@ -1035,8 +1049,7 @@ impl<'a> MHandler<'a> {
                 "play" => {
                     if maschine.get_padmode() != 2 {
                         let msg = Message::RPN7(Ch1, 1, cc_math::button_cc_value(is_down));
-                        self.seq_port.send_message(&msg).unwrap();
-                        self.seq_handle.drain_output();
+                        self.send_midi(&msg);
                     } else if is_down {
                         maschine.clock_start();
                         maschine.set_playing(1);
@@ -1046,301 +1059,214 @@ impl<'a> MHandler<'a> {
                 "stop" => {
                     if maschine.get_padmode() != 2 {
                         let msg = Message::RPN7(Ch1, 2, cc_math::button_cc_value(is_down));
-                        self.seq_port.send_message(&msg).unwrap();
-                        self.seq_handle.drain_output();
+                        self.send_midi(&msg);
                     } else if !is_down {
                         maschine.set_playing(0);
                     }
                 }
                 "rec" => {
                     let msg = Message::RPN7(Ch1, 3, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "grid" => {
                     let msg = Message::RPN7(Ch1, 4, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "step_left" => {
                     let msg = Message::RPN7(Ch1, 5, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "step_right" => {
                     let msg = Message::RPN7(Ch1, 6, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "restart" => {
                     let msg = Message::RPN7(Ch1, 7, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "browse" => {
                     let msg = Message::RPN7(Ch1, 8, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "sampling" => {
                     let msg = Message::RPN7(Ch1, 9, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "note_repeat" => {
                     let msg = Message::RPN7(Ch1, 10, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "control" => {
                     let msg = Message::RPN7(Ch1, 11, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "nav" => {
                     let msg = Message::RPN7(Ch1, 12, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "nav_left" => {
                     let msg = Message::RPN7(Ch1, 13, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "nav_right" => {
                     let msg = Message::RPN7(Ch1, 14, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "main" => {
                     let msg = Message::RPN7(Ch1, 24, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "scene" => {
                     let msg = Message::RPN7(Ch1, 25, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "pattern" => {
                     let msg = Message::RPN7(Ch1, 26, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "pad_mode" => {
                     if modpress == 1 {
-                        if is_down {
+                        // SHIFT + PAD MODE, and it stays EATEN either way -
+                        // the driver's own `_act_freeze` docstring says this
+                        // chord never arrives, and that is still true, so the
+                        // panel's grammar does not move.
+                        //
+                        // What has gone, since 2026-09-03, is what it used to
+                        // do unasked: step the daemon into its own sequencer,
+                        // where the pads stop sending notes to the host, PLAY
+                        // and STOP drive the daemon's transport instead of the
+                        // driver's, the Group buttons switch its pages instead
+                        // of the pad octave, and every pad LED is repainted in
+                        // its colour. Nothing on the panel said so and three
+                        // more presses of the same chord were the way out.
+                        // config::internal_sequencer turns it back on.
+                        if is_down && self.internal_sequencer {
                             maschine.set_padmode(1);
                             if maschine.get_padmode() == 2 {
                                 self.refresh_seq_page(maschine);
                             } else {
                                 self.refresh_normal_mode(maschine);
                             }
+                        } else if is_down {
+                            println!(
+                                "SHIFT + PAD MODE: the daemon's own sequencer is \
+                                 off (\"internal_sequencer\" in maschine.json); \
+                                 ignored");
                         }
                     } else {
                         let msg = Message::RPN7(Ch1, 27, cc_math::button_cc_value(is_down));
-                        self.seq_port.send_message(&msg).unwrap();
-                        self.seq_handle.drain_output();
+                        self.send_midi(&msg);
                     }
                 }
                 "view" => {
                     let msg = Message::RPN7(Ch1, 28, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "duplicate" => {
                     let msg = Message::RPN7(Ch1, 29, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "select" => {
                     let msg = Message::RPN7(Ch1, 30, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "solo" => {
                     let msg = Message::RPN7(Ch1, 31, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "step" => {
                     let msg = Message::RPN7(Ch1, 32, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "mute" => {
                     let msg = Message::RPN7(Ch1, 33, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "navigate" => {
                     let msg = Message::RPN7(Ch1, 34, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "tempo" => {
                     let msg = Message::RPN7(Ch1, 35, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "enter" => {
                     let msg = Message::RPN7(Ch1, 36, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "auto" => {
                     let msg = Message::RPN7(Ch1, 37, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "all" => {
                     let msg = Message::RPN7(Ch1, 38, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f1" => {
                     let msg = Message::RPN7(Ch1, 39, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f2" => {
                     let msg = Message::RPN7(Ch1, 40, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f3" => {
                     let msg = Message::RPN7(Ch1, 41, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f4" => {
                     let msg = Message::RPN7(Ch1, 42, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f5" => {
                     let msg = Message::RPN7(Ch1, 43, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f6" => {
                     let msg = Message::RPN7(Ch1, 44, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f7" => {
                     let msg = Message::RPN7(Ch1, 45, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "f8" => {
                     let msg = Message::RPN7(Ch1, 46, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "page_right" => {
                     let msg = Message::RPN7(Ch1, 47, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "page_left" => {
                     let msg = Message::RPN7(Ch1, 48, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 // SHIFT also stays an internal modifier - the set_mod block
                 // above runs first and does not return, so it keeps gating PAD
                 // MODE and the B6 encoder while the host sees it too.
                 "shift" => {
                     let msg = Message::RPN7(Ch1, 49, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "swing" => {
                     let msg = Message::RPN7(Ch1, 50, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
                 "volume" => {
                     let msg = Message::RPN7(Ch1, 51, cc_math::button_cc_value(is_down));
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
+                    self.send_midi(&msg);
                 }
 
-                "B6" => {
-                    let idx = 1;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    if modpress != 1 {
-                        let value = accumulated.clamp(0, 127) as u8;
-                        let msg = Message::RPN7(Ch1, controlbase + 1, value);
-                        self.seq_port.send_message(&msg).unwrap();
-                        self.seq_handle.drain_output();
-                    } else {
-                        maschine.set_seq_speed(accumulated as usize);
-                    }
-                }
-                "D6" => {
-                    let idx = 2;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    let value = accumulated.clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 2, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-                "FF6" => {
-                    let idx = 3;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    let value = accumulated.clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 3, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-                "H6" => {
-                    let idx = 4;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    let value = accumulated.clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 4, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-                "J6" => {
-                    let idx = 5;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    let value = accumulated.clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 5, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-                "L6" => {
-                    let idx = 6;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    let value = accumulated.clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 6, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-                "N6" => {
-                    let idx = 7;
-                    let state = maschine.get_roller_state(idx);
-                    let accumulated = status as i32 / 4 + state as i32 * 64;
-                    let value = accumulated.clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 7, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-                "P6" => {
-                    let value = (status as i32).clamp(0, 127) as u8;
-                    let msg = Message::RPN7(Ch1, controlbase + 8, value);
-                    self.seq_port.send_message(&msg).unwrap();
-                    self.seq_handle.drain_output();
-                }
-
+                // NO ENCODER ARMS HERE. There used to be eight - "B6" through
+                // "P6", each rebuilding an encoder's absolute position and
+                // sending it on CC 16-23 - and they were UNREACHABLE, which
+                // the button-name tests at the bottom of this file found on
+                // 2026-09-03. `read_buttons` hands rows 0-7 of the report to
+                // `button_down` and rows 8-23 to `encoder_step` and
+                // `set_roller_state`; every one of those arms was keyed on a
+                // row-8-and-up name. The live path is `send_encoder_cc`, and
+                // it is the only one that has run for years.
                 "group_a" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(0), cc_math::button_cc_value(is_down));
                     if let Err(err) = self.seq_port.send_message(&msg) {
@@ -1441,16 +1367,16 @@ impl<'a> MHandler<'a> {
             }
         }
         if is_down {
-            let _ = self.event_tx.send(DeviceEvent::ButtonDown { button: button.to_string() });
+            let _ = self.event_tx.try_send(DeviceEvent::ButtonDown { button: button.to_string() });
         } else {
-            let _ = self.event_tx.send(DeviceEvent::ButtonUp { button: button.to_string() });
+            let _ = self.event_tx.try_send(DeviceEvent::ButtonUp { button: button.to_string() });
         }
         self.send_osc_msg(&*format!("/{}", button), osc_args![status as f32]);
     }
 
     fn send_encoder_cc(&self, maschine: &mut dyn Maschine, idx: usize, raw: i32) {
         let state = maschine.get_roller_state(idx);
-        let accumulated = raw / 4 + state as i32 * 64;
+        let accumulated = cc_math::accumulate_raw(raw, state);
         let prev = maschine.get_roller_status(idx);
         let delta = accumulated - prev;
         // A wrap of the hardware counter shows up as a jump far larger than
@@ -1465,9 +1391,8 @@ impl<'a> MHandler<'a> {
             let cc_num = self.encoder_ccs[idx];
             let msg = Message::RPN7(Ch1, cc_num, value);
             maschine.set_roller_value(value as i32, idx);
-            self.seq_port.send_message(&msg).unwrap();
-            self.seq_handle.drain_output();
-            let _ = self.event_tx.send(DeviceEvent::Encoder { idx, value });
+            self.send_midi(&msg);
+            let _ = self.event_tx.try_send(DeviceEvent::Encoder { idx, value });
         }
     }
 }
@@ -1491,12 +1416,11 @@ impl<'a> MaschineHandler for MHandler<'a> {
                 maschine.note_save(pad_idx, midi_note, self.pressure_to_vel(pressure));
             }
         } else {
-            self.seq_port.send_message(&msg).unwrap();
-            self.seq_handle.drain_output();
+            self.send_midi(&msg);
             if !self.external_pad_leds {
                 maschine.set_pad_light(pad_idx, self.pad_color(), pressure.sqrt());
             }
-            let _ = self.event_tx.send(DeviceEvent::PadPressed {
+            let _ = self.event_tx.try_send(DeviceEvent::PadPressed {
                 pad: pad_idx,
                 velocity: self.pressure_to_vel(pressure),
             });
@@ -1539,8 +1463,7 @@ impl<'a> MaschineHandler for MHandler<'a> {
         let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
         let msg = Message::PolyphonicPressure(Ch1, midi_note, value);
 
-        self.seq_port.send_message(&msg).unwrap();
-        self.seq_handle.drain_output();
+        self.send_midi(&msg);
 
         if !self.external_pad_leds {
             maschine.set_pad_light(pad_idx, self.pad_color(), pressure.sqrt());
@@ -1557,12 +1480,11 @@ impl<'a> MaschineHandler for MHandler<'a> {
         if maschine.get_padmode() != 2 {
             let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
             let msg = Message::NoteOff(Ch1, midi_note, 0);
-            self.seq_port.send_message(&msg).unwrap();
-            self.seq_handle.drain_output();
+            self.send_midi(&msg);
             if !self.external_pad_leds {
                 maschine.set_pad_light(pad_idx, self.pad_color(), PAD_RELEASED_BRIGHTNESS);
             }
-            let _ = self.event_tx.send(DeviceEvent::PadReleased { pad: pad_idx });
+            let _ = self.event_tx.try_send(DeviceEvent::PadReleased { pad: pad_idx });
         };
     }
 
@@ -1648,9 +1570,22 @@ fn main() {
         }
     };
 
-    let (event_tx, event_rx) = mpsc::channel::<DeviceEvent>();
+    // Loaded before the WebSocket server, which needs its bind address.
+    let cfg = MaschineConfig::load();
+
+    // BOUNDED, since 2026-09-03. `event_rx` is drained ONLY inside
+    // ws_server's per-client loop, so on a rig with no web editor attached -
+    // which is every rig - nothing ever read this channel while pad presses,
+    // encoder moves, button edges and one ClockBpm PER MIDI CLOCK TICK were
+    // pushed into it. At 125 BPM that is fifty messages a second into an
+    // unbounded queue, for the life of the process.
+    //
+    // A bounded channel with try_send makes the overflow a dropped event
+    // instead of a leak. Every send site already ignored its result, because
+    // none of them can do anything about a missing web editor.
+    let (event_tx, event_rx) = mpsc::sync_channel::<DeviceEvent>(WS_EVENT_QUEUE);
     let (cmd_tx, cmd_rx) = mpsc::channel::<WsCommand>();
-    ws_server::start(cmd_tx, event_rx);
+    ws_server::start(cfg.ws_bind.clone(), cmd_tx, event_rx);
 
     let seq_handle = SequencerHandle::open("maschine.rs", HandleOpenStreams::Duplex)
         .unwrap_or_else(|_| {
@@ -1673,8 +1608,6 @@ fn main() {
         .unwrap();
     seq_handle.set_nonblock();
     let seq_in_fd = seq_handle.get_poll_fd();
-
-    let cfg = MaschineConfig::load();
 
     let mut dev = devices::mk2::Mikro::new(dev_fd);
 
@@ -1702,9 +1635,8 @@ fn main() {
         pad_notes: cfg.pad_notes,
         encoder_ccs: cfg.encoder_ccs,
         external_pad_leds: cfg.external_pad_leds,
-        send_aftertouch_cfg: cfg.send_aftertouch,
-        screen_brightness_cfg: cfg.screen_brightness,
-        screen_contrast_cfg: cfg.screen_contrast,
+        internal_sequencer: cfg.internal_sequencer,
+        cfg: cfg.clone(),
 
         at_last_val: [0; 16],
         at_last_sent: [None; 16],
@@ -1726,4 +1658,89 @@ fn main() {
     }
 
     ev_loop(&mut dev, &mut handler, &args[1]);
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::devices::mk2::BUTTON_REPORT_TO_MIKROBUTTONS_MAP;
+
+    /// Report rows that `read_buttons` hands to `button_down` / `button_up`.
+    ///
+    /// Rows 8-23 of the same table are the ENCODER bytes: read_buttons sends
+    /// those to `encoder_step` and `set_roller_state` and never to a button
+    /// handler, so their names (B1..Q8) never reach the host at all. Walking
+    /// them here is what found the eight dead match arms this file used to
+    /// carry - and it is why the range stops at 8 rather than at the end.
+    ///
+    /// Row 7 IS a button row: A1..A8 is byte 7, the big encoder's nibble pair,
+    /// which arrives as eight fake buttons and is decoded in "A8".
+    const BUTTON_ROWS: usize = 8;
+
+    /// Every button the DEVICE can actually send, taken from the report decode
+    /// table rather than from a list written by hand - a fourth list would
+    /// drift from the three that already exist.
+    fn every_reachable_button() -> Vec<MaschineButton> {
+        BUTTON_REPORT_TO_MIKROBUTTONS_MAP[..BUTTON_ROWS]
+            .iter()
+            .flatten()
+            .filter_map(|b| *b)
+            .collect()
+    }
+
+    #[test]
+    fn every_reachable_button_has_a_name() {
+        // `btn_to_osc_button_map` ends in `_ => "NO"`, so an unnamed button is
+        // not a compile error: it silently becomes a button called NO, and
+        // every one of them collides with all the others.
+        for btn in every_reachable_button() {
+            let name = btn_to_osc_button_map(btn);
+            assert_ne!(name, "NO", "{:?} reaches the host as \"NO\"", btn);
+        }
+    }
+
+    #[test]
+    fn no_two_buttons_share_a_name() {
+        // THIS IS THE FF7 DEFECT, kept executable. `MaschineButton::FF7`
+        // answered to "FF8": two buttons on one token, the seventh
+        // unreachable, and nothing could see it because both tables are
+        // maintained by hand.
+        let mut seen: Vec<(&str, MaschineButton)> = Vec::new();
+        for btn in every_reachable_button() {
+            let name = btn_to_osc_button_map(btn);
+            if let Some((_, other)) = seen.iter().find(|(n, _)| *n == name) {
+                panic!("{:?} and {:?} both answer to {:?}", btn, other, name);
+            }
+            seen.push((name, btn));
+        }
+    }
+
+    #[test]
+    fn the_named_buttons_round_trip() {
+        // The reverse table is what the driver's LED writes go through, so a
+        // name that does not come back to the same button is an LED that
+        // lights the wrong thing - which has happened here twice.
+        for btn in every_reachable_button() {
+            let name = btn_to_osc_button_map(btn);
+            if let Some(back) = osc_button_to_btn_map(name) {
+                assert_eq!(
+                    btn_to_osc_button_map(back), name,
+                    "{:?} -> {:?} -> {:?}", btn, name, back);
+            }
+        }
+    }
+
+    #[test]
+    fn the_encoder_arms_agree_with_the_shared_formula() {
+        // Eight unreachable arms used to open-code `status / 4 + state * 64`
+        // beside a tested function nothing called. One copy now, on the live
+        // path, and this pins the two together.
+        for raw in [0i32, 4, 100, 252] {
+            for state in [0usize, 1, 3] {
+                assert_eq!(cc_math::accumulate_raw(raw, state),
+                           raw / 4 + state as i32 * 64);
+            }
+        }
+    }
 }

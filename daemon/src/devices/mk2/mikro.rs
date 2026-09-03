@@ -17,8 +17,6 @@
 
 use crate::hid_feature;
 use crate::hid_stats::{self, WriteStats};
-use std::fs::File;
-use std::mem::transmute;
 use std::os::unix::io;
 
 extern crate nix;
@@ -26,14 +24,18 @@ use midi::{Channel::Ch2, Message, U7};
 use nix::unistd;
 
 extern crate hex;
-extern crate png;
 
 use crate::base::{Maschine, MaschineButton, MaschineHandler, MaschinePad, MaschinePadStateTransition};
 use crate::display;
 use crate::clock::{ClockSource, ClockState};
 
 
-const BUTTON_REPORT_TO_MIKROBUTTONS_MAP: [[Option<MaschineButton>; 8]; 24] = [
+/// Every button this device can actually send, by report byte and bit.
+///
+/// `pub` so a test in main.rs can walk it: it is the authoritative list of
+/// reachable buttons, which makes it the only honest input for "is every
+/// button the device can send also a button the host is told about?".
+pub const BUTTON_REPORT_TO_MIKROBUTTONS_MAP: [[Option<MaschineButton>; 8]; 24] = [
     [
         Some(MaschineButton::F8),
         Some(MaschineButton::F7),
@@ -282,6 +284,30 @@ struct ButtonReport {
     pub encoder: u8,
 }
 
+/// Is this report long enough to decode?
+///
+/// A pure function on purpose: the decision lives on the input path, where no
+/// test can reach it, and the failure it prevents is a truncated report read
+/// as pad pressure - a note nobody played, from a device that is already known
+/// to stall and re-deliver under load.
+pub fn report_is_complete(report_nr: u8, payload_len: usize) -> bool {
+    match report_nr {
+        0x01 => payload_len >= BUTTON_REPORT_BYTES,
+        0x20 => payload_len >= PAD_REPORT_BYTES,
+        _ => true,
+    }
+}
+
+/// Payload bytes `read_buttons` requires, report id excluded.
+///
+/// It walks `buf[0..24]` and then reads `buf[23]` again for the encoder
+/// nibbles, so 24 is the floor rather than a preference.
+const BUTTON_REPORT_BYTES: usize = 24;
+
+/// Payload bytes `read_pads` requires, report id excluded: sixteen pads at
+/// 16 bits each.
+const PAD_REPORT_BYTES: usize = 32;
+
 pub struct Mikro {
     dev: io::RawFd,
     light_buf: [u8; 49],
@@ -482,14 +508,21 @@ impl Mikro {
     }
 
     fn read_pads(&mut self, handler: &mut dyn MaschineHandler, buf: &[u8]) {
-        let pads: &[u16] = unsafe { transmute(buf) };
+        // `from_le_bytes`, NOT `transmute`, since 2026-09-03. The old line was
+        // `let pads: &[u16] = unsafe { transmute(buf) }`, which keeps the
+        // slice's LENGTH while doubling the size of its element - so the
+        // resulting slice claimed twice the bytes it had - and it assumed both
+        // 2-byte alignment (not guaranteed for a `[u8; 512]` field) and
+        // little-endian layout without saying so. The caller now guarantees
+        // the length; this reads the field explicitly.
         // HID report is top-row-first (index 0 = top-left pad).
         // Remap to bottom-row-first so pad 0 = physical bottom-left (lowest note).
         const PAD_HID_TO_PHYS: [usize; 16] = [12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3];
 
         for i in 0..16 {
             let pad = PAD_HID_TO_PHYS[i];
-            let pressure = ((pads[i] & 0xFFF) as f32) / 4095.0;
+            let raw = u16::from_le_bytes([buf[i * 2], buf[i * 2 + 1]]);
+            let pressure = ((raw & 0xFFF) as f32) / 4095.0;
 
             match self.pads[pad].pressure_val(pressure) {
                 MaschinePadStateTransition::Pressed => handler.pad_pressed(self, pad, pressure),
@@ -647,6 +680,13 @@ impl Maschine for Mikro {
     }
 
     fn set_pad_light(&mut self, pad: usize, color: u32, brightness: f32) {
+        // The last line of defence. Both callers bound this now - the OSC
+        // handler and the WebSocket arm - but this is the function that
+        // indexes a sixteen-entry table, so it is the function that must not
+        // be able to end the process.
+        if pad >= 16 {
+            return;
+        }
         self.lights_dirty = true;
         // LED report is display-order (top-left first); input is bottom-up row-major.
         // PAD_DISPLAY_ORDER is its own inverse, so applying it remaps correctly in both directions.
@@ -666,11 +706,16 @@ impl Maschine for Mikro {
     }
 
     fn set_roller_state(&mut self, state: usize, idx: usize) {
-        self.roller_state[idx] = state;
+        // Bounded like set_roller_value beside it. Every caller computes this
+        // index arithmetically from a report byte; one arithmetic mistake
+        // should cost a lost detent, not the daemon.
+        if idx < self.roller_state.len() {
+            self.roller_state[idx] = state;
+        }
     }
 
     fn get_roller_state(&self, idx: usize) -> usize {
-        return self.roller_state[idx];
+        if idx < self.roller_state.len() { self.roller_state[idx] } else { 0 }
     }
 
     fn set_roller_value(&mut self, value: i32, idx: usize) {
@@ -684,11 +729,13 @@ impl Maschine for Mikro {
     }
 
     fn set_roller_status(&mut self, status: i32, idx: usize) {
-        self.roller_status[idx] = status;
+        if idx < self.roller_status.len() {
+            self.roller_status[idx] = status;
+        }
     }
 
-    fn get_roller_status(&self, idx:usize) -> i32 {
-        return self.roller_status[idx]
+    fn get_roller_status(&self, idx: usize) -> i32 {
+        if idx < self.roller_status.len() { self.roller_status[idx] } else { 0 }
     }
     fn set_mod(&mut self, state: usize) {
         self.mod_state = state;
@@ -818,11 +865,6 @@ impl Maschine for Mikro {
             Message::NoteOff(Ch2, self.note[self.current_page][pad_idx],
                                    self.vel[self.current_page][pad_idx])
         }
-    }
-
-    fn set_seq_speed(&mut self, status: usize) {
-        self.speed = status as u64;
-        println!("sequencer rate: {}", self.speed);
     }
 
     fn get_seq_speed(&self) -> u64 {
@@ -979,7 +1021,14 @@ impl Maschine for Mikro {
 
             let nbytes = match unistd::read(self.dev, &mut buf) {
                 Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => return,
-                Err(err) => panic!("read failed: {}", err.to_string()),
+                // NOT a panic, since 2026-09-03. An unplug gives ENODEV here
+                // and the daemon died on it; the input watchdog above is built
+                // to reopen the node, and it cannot do that from a dead
+                // process. Return and let it work.
+                Err(err) => {
+                    println!("read failed: {} - leaving it to the watchdog", err);
+                    return;
+                }
                 Ok(nbytes) => nbytes,
             };
 
@@ -990,19 +1039,26 @@ impl Maschine for Mikro {
             let report_nr = buf[0];
             let buf = &buf[1..nbytes];
 
+            // LENGTH-CHECKED, since 2026-09-03. `read_buttons` slices
+            // `buf[0..24]` and `read_pads` reads sixteen 16-bit fields, and
+            // neither asked how many bytes had actually arrived: a truncated
+            // report panicked the first and made the second read whatever was
+            // left on the stack - phantom pad hits with no explanation, which
+            // is precisely the failure mode of the wedge this daemon spends a
+            // watchdog on. A short report is dropped and counted instead.
+            if !report_is_complete(report_nr, buf.len()) {
+                println!(
+                    " :: short {:02X} report: {} payload bytes, dropped",
+                    report_nr, buf.len());
+                continue;
+            }
+
             match report_nr {
-                0x01 => self.read_buttons(handler, &buf),
-                0x20 => self.read_pads(handler, &buf),
+                0x01 => self.read_buttons(handler, buf),
+                0x20 => self.read_pads(handler, buf),
                 0x03 => handler.midi_in_received(self, buf),
                 _ => println!(" :: {:2X}: got {} bytes", report_nr, nbytes),
             }
-        }
-    }
-
-    fn get_pad_pressure(&self, pad_idx: usize) -> Result<f32, ()> {
-        match pad_idx {
-            0..=15 => Ok(self.pads[pad_idx].get_pressure()),
-            _ => Err(()),
         }
     }
 
@@ -1013,120 +1069,6 @@ impl Maschine for Mikro {
         let blank = [0u8; display::HEIGHT * display::STRIDE];
         self.send_display_bits(0xE0, &blank);
         self.send_display_bits(0xE1, &blank);
-    }
-
-    fn write_screen(&mut self) {
-        let png_path = "picturetest.png";
-        if !std::path::Path::new(png_path).exists() {
-            return;
-        }
-        let mut limits = png::Limits::default();
-        limits.bytes = 10 * 1024;
-        let decoder = png::Decoder::new_with_limits(File::open(png_path).unwrap(), limits);
-        let mut reader = decoder.read_info().unwrap();
-        let mut picture = vec![0; reader.output_buffer_size()];
-        let info = reader.next_frame(&mut picture).unwrap();
-        let bytes = &picture[..info.buffer_size()];
-        let mut screen_buf = [0u8; 1 + 8 + 512];
-        //println!("{}", bytes.len());
-
-        //let mut screen_buf2 = [0u8; 1 + 8+ 512];
-        screen_buf[0] = 0xE0;
-        screen_buf[5] = 0x08;
-        screen_buf[7] = 0x20;
-
-        screen_buf[1] = 0;
-        screen_buf[3] = 0;
-
-        let mut screen_writer = 9;
-        let mut steps = 0;
-        let mut bits = [0u8; 4097];
-        let mut inc = 0;
-        let mut ok = 0;
-        let mut count2 = 0;
-
-        let mut a1 = 0;
-        let mut a2 = 0;
-        let mut a3 = 0;
-        let mut a4 = 0;
-        let mut a5 = 0;
-        let mut a6 = 0;
-        let mut a7 = 0;
-        let mut a8 = 0;
-
-        for count in 0..bytes.len() {
-            let c = 1 + 4 * count;
-            let mut swap = 0;
-            //if bytes[c] / 8 + bytes[c + 1] / 8  + bytes[c + 2] / 8 + bytes[c + 3] / 8  + bytes[c + 4] / 8  + bytes[c + 5] / 8  + bytes[c + 6] / 8  + bytes[c + 7] / 8 >= 32{
-            if c < bytes.len() - 3 {
-                if bytes[c] / 2 + bytes[c + 2] / 2 >= 128 {
-                    swap = 1;
-                } else {
-                    swap = 0;
-                }
-                //println!("{}", swap);
-            }
-            let mut binary = [0u8; 4097];
-            if c < 65534 {
-                //print!("{}, ", bytes[count]);
-                let intval;
-                match inc {
-                    0 => a1 = swap,
-                    1 => a2 = swap,
-                    2 => a3 = swap,
-                    3 => a4 = swap,
-                    4 => a5 = swap,
-                    5 => a6 = swap,
-                    6 => a7 = swap,
-                    7 => a8 = swap,
-                    _ => return,
-                }
-                inc += 1;
-                if inc == 8 {
-                    inc = 0;
-                }
-                ok += 1;
-                if ok == 8 {
-                    let combination = format!("{}{}{}{}{}{}{}{}", a1, a2, a3, a4, a5, a6, a7, a8);
-                    intval = usize::from_str_radix(&combination, 2).unwrap();
-                    ok = 0;
-                    binary[count2] = intval as u8;
-                    bits[count2] = binary[count2];
-                    count2 += 1;
-                    a1 = 0;
-                    a2 = 0;
-                    a3 = 0;
-                    a4 = 0;
-                    a5 = 0;
-                    a6 = 0;
-                    a7 = 0;
-                    a8 = 0;
-                }
-            }
-            //let intval = usize::from_str_radix(&combination, 4).unwrap();
-            //println!("{}", combination)
-        }
-
-        for a in 0..bits.len() {
-            if screen_writer == 10 {
-                if steps <= 30 {
-                    screen_buf[1] += 1;
-                    steps += 1;
-                    screen_writer = 9;
-                    screen_buf[screen_writer] = bits[a];
-                } else {
-                    screen_buf[3] += 1;
-                    screen_buf[1] = 0;
-                    steps = 0;
-                    screen_writer = 9;
-                    screen_buf[screen_writer] = bits[a];
-                }
-            }
-            //println!("{}", bits[a]);
-            Self::hid_write(self.dev, &mut self.wstats, &screen_buf, "screen/legacy");
-            screen_writer += 1;
-        }
-        println!("RUNNING!");
     }
 
     fn calib_active(&self) -> bool {
@@ -1503,38 +1445,6 @@ impl Maschine for Mikro {
         self.send_display_bits(0xE1, &bits);
     }
 
-    fn write_display(&mut self) {
-        const SZ: usize = display::HEIGHT * display::STRIDE;
-
-        let note_names = ["C-1","C0","C1","C2","C3","C4","C5","C6","C7","C8","C9"];
-        let base = self.midi_note_base;
-        let note_name = note_names.get((base / 12) as usize).unwrap_or(&"?");
-
-        // Left display (0xE0): encoders 0-3
-        let mut left = [0u8; SZ];
-        display::draw_text(&mut left, 0, 0, " K1    K2    K3    K4");
-        let v0 = self.roller_status[0].clamp(0, 127);
-        let v1 = self.roller_status[1].clamp(0, 127);
-        let v2 = self.roller_status[2].clamp(0, 127);
-        let v3 = self.roller_status[3].clamp(0, 127);
-        let line1 = format!("{:>3}   {:>3}   {:>3}   {:>3}", v0, v1, v2, v3);
-        display::draw_text(&mut left, 0, 10, &line1);
-        let base_line = format!("BASE:{}{}", note_name, base);
-        display::draw_text(&mut left, 0, 20, &base_line);
-
-        // Right display (0xE1): encoders 4-7
-        let mut right = [0u8; SZ];
-        display::draw_text(&mut right, 0, 0, " K5    K6    K7    K8");
-        let v4 = self.roller_status[4].clamp(0, 127);
-        let v5 = self.roller_status[5].clamp(0, 127);
-        let v6 = self.roller_status[6].clamp(0, 127);
-        let v7 = self.roller_status[7].clamp(0, 127);
-        let line2 = format!("{:>3}   {:>3}   {:>3}   {:>3}", v4, v5, v6, v7);
-        display::draw_text(&mut right, 0, 10, &line2);
-
-        self.send_display_bits(0xE0, &left);
-        self.send_display_bits(0xE1, &right);
-    }
 }
 
 #[cfg(test)]
@@ -1619,5 +1529,70 @@ mod tests {
         }
         let result = m.clock_tick();
         assert_eq!(result, Some(0));
+    }
+
+    // --- the input path's own guards, 2026-09-03 ---------------------------
+
+    #[test]
+    fn a_full_button_report_is_decoded() {
+        assert!(report_is_complete(0x01, BUTTON_REPORT_BYTES));
+        assert!(report_is_complete(0x01, BUTTON_REPORT_BYTES + 8));
+    }
+
+    #[test]
+    fn a_short_button_report_is_dropped() {
+        // `read_buttons` slices buf[0..24] and then reads buf[23] again. One
+        // byte short of that was an index panic on the input path.
+        assert!(!report_is_complete(0x01, BUTTON_REPORT_BYTES - 1));
+        assert!(!report_is_complete(0x01, 0));
+    }
+
+    #[test]
+    fn a_short_pad_report_is_dropped() {
+        // Sixteen pads at 16 bits. A byte short and the last pad's pressure
+        // came from whatever was left in the read buffer - a phantom hit.
+        assert!(report_is_complete(0x20, PAD_REPORT_BYTES));
+        assert!(!report_is_complete(0x20, PAD_REPORT_BYTES - 1));
+    }
+
+    #[test]
+    fn a_midi_report_has_no_minimum() {
+        // 0x03 is a passthrough to the MIDI parser, which handles any length.
+        assert!(report_is_complete(0x03, 0));
+        assert!(report_is_complete(0xFF, 0));
+    }
+
+    #[test]
+    fn an_out_of_range_pad_light_is_refused_rather_than_fatal() {
+        // The WebSocket arm takes this index out of JSON on a socket and the
+        // OSC arm out of a datagram. It indexes a sixteen-entry table.
+        let mut m = make_mikro();
+        m.lights_dirty = false;
+        m.set_pad_light(16, 0xFFFFFF, 1.0);
+        m.set_pad_light(usize::MAX, 0xFFFFFF, 1.0);
+        assert!(!m.lights_dirty, "a refused pad must not dirty the LED buffer");
+        m.set_pad_light(15, 0xFFFFFF, 1.0);
+        assert!(m.lights_dirty, "a real pad must still light");
+    }
+
+    #[test]
+    fn an_out_of_range_roller_index_is_refused_rather_than_fatal() {
+        let mut m = make_mikro();
+        m.set_roller_state(5, 99);
+        m.set_roller_status(5, 99);
+        assert_eq!(m.get_roller_state(99), 0);
+        assert_eq!(m.get_roller_status(99), 0);
+    }
+
+    #[test]
+    fn pad_pressure_is_read_little_endian_from_the_report() {
+        // What the transmute used to do implicitly, now asserted: pad 0 of the
+        // report is the first two bytes, low byte first, and only the low
+        // twelve bits are pressure.
+        let mut buf = [0u8; PAD_REPORT_BYTES];
+        buf[0] = 0xFF;
+        buf[1] = 0x0F;
+        let raw = u16::from_le_bytes([buf[0], buf[1]]);
+        assert_eq!(raw & 0xFFF, 4095);
     }
 }

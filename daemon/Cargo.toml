@@ -10,9 +10,11 @@ lto = true
 [dependencies]
 nix = "~0.7"
 hsl = "~0.1"
-midi = "*"
+# PINNED, 2026-09-03. This was `midi = "*"`: any future upload to crates.io
+# could change what the daemon is built from, and a build without the lock
+# file would silently take it.
+midi = "0.1.0"
 tinyosc = "0.0.3"
-png = "0.17.13"
 hex = "0.4.3"
 tungstenite = "0.21"
 serde = { version = "1", features = ["derive"] }

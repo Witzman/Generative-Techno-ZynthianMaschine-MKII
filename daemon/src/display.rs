@@ -34,6 +34,10 @@ pub const HDR_ROW_BYTES: u8 = 0x20;  // header[5]
 pub const HDR_ROWS: u8 = 0x08;       // header[7]
 pub const CHUNK_ROWS: usize = HDR_ROWS as usize;
 pub const CHUNK_BYTES: usize = STRIDE * CHUNK_ROWS; // 256
+/// Reports per whole screen. Read only by the tests that pin the geometry
+/// against the header constants - which is the point of it: the number is a
+/// measured fact about the panel, and the assertion is what keeps it honest.
+#[allow(dead_code)]
 pub const CHUNKS: usize = HEIGHT / CHUNK_ROWS;      // 8
 
 // --- dirty rectangles -------------------------------------------------------
@@ -188,6 +192,11 @@ impl DirtyList {
     pub fn regions(&self) -> &[Region] { &self.rects[..self.len] }
 
     /// Total bytes the current set would cost to send.
+    ///
+    /// Read by the tests that decide whether coalescing is worth it, which is
+    /// what the coalescing rule is derived FROM - so it is measurement, not
+    /// dead weight.
+    #[allow(dead_code)]
     pub fn cost(&self) -> usize {
         self.regions().iter().map(|r| r.cost()).sum()
     }
@@ -264,6 +273,10 @@ impl DirtyList {
     }
 }
 
+/// Blank a framebuffer. Used by the tests that draw and then assert; the
+/// daemon's own clear goes through `display_fb_clear`, which also has to mark
+/// the screen dirty.
+#[allow(dead_code)]
 pub fn clear(bits: &mut [u8; HEIGHT * STRIDE]) {
     for b in bits.iter_mut() { *b = 0; }
 }
@@ -306,11 +319,6 @@ pub fn draw_text(bits: &mut [u8; HEIGHT * STRIDE], px: usize, py: usize, text: &
 // answer for - scaled text, filled/outlined/dashed boxes, and inversion for
 // the selected item - so they live here rather than being open-coded per
 // layout.
-
-pub fn clear_pixel(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize) {
-    if x >= WIDTH || y >= HEIGHT { return; }
-    bits[y * STRIDE + x / 8] &= !(0x80 >> (x % 8));
-}
 
 // Glyphs are square on the panel now that rows map 1:1, so no horizontal
 // compensation is needed. Kept as a named constant because getting this wrong
@@ -355,21 +363,42 @@ pub fn draw_text_scaled(bits: &mut [u8; HEIGHT * STRIDE], px: usize, py: usize, 
     }
 }
 
+/// How many columns and rows of a rectangle can actually land on glass.
+///
+/// EVERY primitive below took its extent straight from an OSC integer, and
+/// `set_pixel` clips per pixel - so a rect of 2,000,000,000 x 2,000,000,000
+/// was perfectly memory-safe and still hung the daemon forever. The daemon is
+/// single threaded: that hang takes the input watchdog with it, and because
+/// nothing crashes, systemd never restarts anything. Clipping the EXTENT is
+/// what makes the loops finite.
+///
+/// The clip cannot move a drawn pixel: everything past the edge was already
+/// being dropped by `set_pixel`. Edge positions computed from the ORIGINAL
+/// extent (a rect's right-hand column at `x + w - 1`) are deliberately left
+/// alone for the same reason - off glass then, off glass now.
+pub fn on_glass(x: usize, y: usize, w: usize, h: usize) -> (usize, usize) {
+    (w.min(WIDTH.saturating_sub(x)), h.min(HEIGHT.saturating_sub(y)))
+}
+
 pub fn hline(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize) {
+    let (w, _) = on_glass(x, y, w, 0);
     for i in 0..w { set_pixel(bits, x + i, y); }
 }
 
 pub fn vline(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, h: usize) {
+    let (_, h) = on_glass(x, y, 0, h);
     for i in 0..h { set_pixel(bits, x, y + i); }
 }
 
 /// Every other pixel - the separator Maschine draws under its tab row.
 pub fn dotted_hline(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize) {
+    let (w, _) = on_glass(x, y, w, 0);
     let mut i = 0;
     while i < w { set_pixel(bits, x + i, y); i += 2; }
 }
 
 pub fn fill_rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize, h: usize) {
+    let (w, h) = on_glass(x, y, w, h);
     for dy in 0..h { for dx in 0..w { set_pixel(bits, x + dx, y + dy); } }
 }
 
@@ -385,15 +414,17 @@ pub fn rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize, h: u
 /// box, distinct from a solid one at a glance.
 pub fn dashed_rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize, h: usize) {
     if w == 0 || h == 0 { return; }
+    let (cw, ch) = on_glass(x, y, w, h);
     let mut i = 0;
-    while i < w { set_pixel(bits, x + i, y); set_pixel(bits, x + i, y + h - 1); i += 2; }
+    while i < cw { set_pixel(bits, x + i, y); set_pixel(bits, x + i, y + h - 1); i += 2; }
     let mut j = 0;
-    while j < h { set_pixel(bits, x, y + j); set_pixel(bits, x + w - 1, y + j); j += 2; }
+    while j < ch { set_pixel(bits, x, y + j); set_pixel(bits, x + w - 1, y + j); j += 2; }
 }
 
 /// Swap lit and unlit inside a box. Drawing text first and inverting after is
 /// how a label becomes dark-on-light without a second draw path.
 pub fn invert_rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize, h: usize) {
+    let (w, h) = on_glass(x, y, w, h);
     for dy in 0..h {
         for dx in 0..w {
             let (px, py) = (x + dx, y + dy);
@@ -783,5 +814,64 @@ mod render_dump {
             println!("{}", line);
         }
         println!("char_w(1)={} text_w(\"AB C\",1)={}", char_w(1), text_w("AB C", 1));
+    }
+
+    // --- extents from a socket, 2026-09-03 ---------------------------------
+
+    #[test]
+    fn on_glass_clips_to_the_panel() {
+        assert_eq!(on_glass(0, 0, 1000, 1000), (WIDTH, HEIGHT));
+        assert_eq!(on_glass(250, 60, 1000, 1000), (WIDTH - 250, HEIGHT - 60));
+        assert_eq!(on_glass(0, 0, 10, 10), (10, 10));
+    }
+
+    #[test]
+    fn on_glass_of_an_offscreen_origin_is_nothing() {
+        assert_eq!(on_glass(WIDTH, 0, 10, 10), (0, 10));
+        assert_eq!(on_glass(0, HEIGHT, 10, 10), (10, 0));
+        assert_eq!(on_glass(usize::MAX, usize::MAX, 10, 10), (0, 0));
+    }
+
+    #[test]
+    fn an_absurd_rectangle_terminates() {
+        // THIS TEST IS THE FIX. Every extent below arrives as an OSC integer,
+        // `set_pixel` clips per pixel, and the loops used to run w * h times
+        // regardless - so `/maschine/display/rect 0 0 0 2000000000 2000000000 1`
+        // was memory-safe and hung the daemon forever. The daemon is single
+        // threaded: that takes the input watchdog with it, and since nothing
+        // panics, systemd never restarts anything. A test that finishes is the
+        // whole assertion.
+        let big = i32::MAX as usize;
+        let mut bits = [0u8; HEIGHT * STRIDE];
+        fill_rect(&mut bits, 0, 0, big, big);
+        invert_rect(&mut bits, 0, 0, big, big);
+        rect(&mut bits, 0, 0, big, big);
+        dashed_rect(&mut bits, 0, 0, big, big);
+        hline(&mut bits, 0, 0, big);
+        vline(&mut bits, 0, 0, big);
+        dotted_hline(&mut bits, 0, 0, big);
+    }
+
+    #[test]
+    fn a_clipped_fill_still_covers_the_panel() {
+        // The clip must not lose a pixel that was on glass before it.
+        let mut clipped = [0u8; HEIGHT * STRIDE];
+        fill_rect(&mut clipped, 0, 0, i32::MAX as usize, i32::MAX as usize);
+        let mut exact = [0u8; HEIGHT * STRIDE];
+        fill_rect(&mut exact, 0, 0, WIDTH, HEIGHT);
+        assert_eq!(clipped, exact);
+    }
+
+    #[test]
+    fn a_clipped_rect_draws_the_same_pixels_as_before() {
+        // A rect's right-hand column is at x + w - 1, computed from the
+        // ORIGINAL extent - off glass then, off glass now. The clip may only
+        // shorten the loops.
+        let mut bits = [0u8; HEIGHT * STRIDE];
+        rect(&mut bits, 4, 4, 1000, 1000);
+        let mut want = [0u8; HEIGHT * STRIDE];
+        hline(&mut want, 4, 4, WIDTH);        // the top edge, clipped
+        vline(&mut want, 4, 4, HEIGHT);       // the left edge, clipped
+        assert_eq!(bits, want);
     }
 }

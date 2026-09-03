@@ -18,3 +18,5 @@
 mod mikro;
 
 pub use self::mikro::Mikro;
+#[cfg(test)]
+pub use self::mikro::BUTTON_REPORT_TO_MIKROBUTTONS_MAP;

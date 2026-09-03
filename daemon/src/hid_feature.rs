@@ -132,6 +132,10 @@ pub const BRIGHTNESS_BYTE: usize = 8;
 pub const CONTRAST_BYTE: usize = 9;
 /// Byte 10, usage `0xE8`: eight writable bits nobody has identified. Echoed,
 /// never authored.
+/// The eight unidentified flag bits, echoed back untouched by `patch()`.
+/// Named and asserted by the tests rather than read by the writer, so that a
+/// change to `patch()` which stopped echoing them fails the build.
+#[allow(dead_code)]
 pub const FLAGS_BYTE: usize = 10;
 
 /// `Logical Maximum (100)` straight off the descriptor.
