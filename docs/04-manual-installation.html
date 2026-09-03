@@ -99,13 +99,18 @@ cd Generative-Techno-ZynthianMaschine-MKII</code></pre>
 <h3 id="step-1--build-the-daemon">Step 1 — Build the daemon</h3>
 <p><strong>What.</strong> Compiles the Rust HID daemon that speaks to the Maschine. <strong>Why.</strong> No binary is shipped; the daemon is built where it runs. <strong>How to confirm.</strong> <code>daemon/target/release/maschine</code> exists and is executable.</p>
 <pre><code class="language-bash">apt install -y rustc cargo
-cd daemon &amp;&amp; cargo build --release &amp;&amp; cp picturetest.png target/release/ &amp;&amp; cd ..</code></pre>
+cd daemon &amp;&amp; cargo build --release &amp;&amp; cd ..</code></pre>
 <p>Minutes on a Pi 4. Do not interrupt it.</p>
 <h3 id="step-2--put-the-daemon-config-in-place">Step 2 — Put the daemon config in place</h3>
 <p><strong>What.</strong> Installs pad note offsets, encoder CC numbers, and <code>external_pad_leds</code>. <strong>Why.</strong> Without <code>"external_pad_leds": true</code> the daemon repaints the pads itself in its own global colour, and the first pad you touch destroys the driver's per-channel picture. <strong>How to confirm.</strong> The <code>grep</code> prints the flag as <code>true</code>.</p>
 <pre><code class="language-bash">cp system/maschine.json daemon/maschine.json
 grep external_pad_leds daemon/maschine.json
 # → "external_pad_leds": true</code></pre>
+<p>Two more keys in that file are worth knowing about before the Pi sits on a network you share.</p>
+<table><thead><tr><th>Key</th><th>Ships as</th><th>What it decides</th></tr></thead><tbody>
+<tr><td><code>ws_bind</code></td><td><code>"0.0.0.0"</code></td><td>Where the daemon's web editor listens. <strong>That socket has no password and the daemon runs as root</strong>, so anything on the same network can remap what the pads send and save it to disk. Wide is what the daemon has always done, and it is what lets you open the editor from a laptop at <code>http://&lt;pi&gt;:9000</code>. Set it to <code>"127.0.0.1"</code> and the port closes to everything but the Pi itself. The daemon prints a warning on every start that is not loopback, so you are always told which one you are running.</td></tr>
+<tr><td><code>internal_sequencer</code></td><td><code>false</code></td><td>Whether SHIFT + PAD MODE may hand the pads to the daemon's <em>own</em> sixteen-step sequencer. Leave it off. On this instrument the sequencer is Zynthian's, and entering the daemon's takes the pads, PLAY, STOP and the Group buttons away from it with nothing on the panel to say so.</td></tr>
+</tbody></table>
 <h3 id="step-3--install-the-udev-rule">Step 3 — Install the udev rule</h3>
 <p><strong>What.</strong> Creates the stable <code>/dev/maschine</code> symlink and restarts the daemon on replug. <strong>Why.</strong> Otherwise the daemon must be pointed at a <code>/dev/hidrawN</code> number that moves between boots. <strong>How to confirm.</strong> <code>/dev/maschine</code> exists and points at a <code>hidraw</code> node.</p>
 <pre><code class="language-bash">install -m 0644 system/99-maschine.rules /etc/udev/rules.d/99-maschine.rules
