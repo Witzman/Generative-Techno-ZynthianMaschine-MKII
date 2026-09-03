@@ -22,7 +22,7 @@ you through it, and **Changelog** says when each of them arrived.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![1616 tests](https://img.shields.io/badge/tests-1616%20passing-b4b4bc)
+![1835 tests](https://img.shields.io/badge/tests-1835%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -130,10 +130,10 @@ is authoritative; `install.sh` is only a wrapper over it.
 Every test in this repository runs without a Pi and without the controller:
 
 ```bash
-cd ctrldev && python3 -m unittest discover -s tests -q   # → 1201  the driver
-cd daemon  && cargo test                                 # →  179  the HID daemon
+cd ctrldev && python3 -m unittest discover -s tests -q   # → 1307  the driver
+cd daemon  && cargo test                                 # →  181  the HID daemon
 bash system/tests/test-system-files.sh                   # →   55  units, udev, helpers
-python3 -m unittest discover -s tools/tests -q           # →   95  the offline tools
+python3 -m unittest discover -s tools/tests -q           # →  206  the offline tools
 bash system/tests/test-dry-run.sh                        # →   86  what each installer PRINTS
 ```
 
