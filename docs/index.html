@@ -414,6 +414,11 @@ input[type=range]::-moz-range-thumb{
 .shotfig figcaption{margin-top:.85rem;font-size:.9rem;color:var(--ink-2);max-width:66ch;line-height:1.55}
 .shotfig figcaption b{color:#fff;font-weight:600}
 
+/* the trailer: same frame as the photograph, held at 16:9 so nothing jumps
+   while the iframe loads */
+.shotfig .frame.vid{aspect-ratio:16/9}
+.shotfig .frame.vid iframe{width:100%;height:100%;display:block;border:0}
+
 /* ---------- channel strip ---------- */
 .chan{display:grid;grid-template-columns:repeat(8,1fr);gap:.45rem;margin:1.6rem 0 0}
 @media (max-width:860px){ .chan{grid-template-columns:repeat(4,1fr)} }
@@ -561,6 +566,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
 <!-- ===================== READOUT NAV ===================== -->
 <nav class="groups" aria-label="Sections">
   <div class="wrap groups-in">
+    <a class="rdg" href="#s-v"><span class="v">VIDEO</span></a>
     <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
     <a class="rdg" href="#s-b"><span class="v">HITS</span></a>
     <a class="rdg" href="#s-m"><span class="v">MOD</span></a>
@@ -570,6 +576,36 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     <a class="rdg" href="#s-h"><span class="v">DOCS</span></a>
   </div>
 </nav>
+
+<!-- ===================== THE TRAILER ===================== -->
+<section class="sec" id="s-v">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-mark"><span class="v">VIDEO</span></span>
+      <h2>Watch it play,<br><em>with nobody touching it</em></h2>
+    </div>
+    <p>
+      Eight channels building themselves out of silence: euclidean drums dialled in, a shift register
+      writing a bassline and then locking it, six bar-synced LFOs moving the sound, and cellular
+      automata taking over the rhythm. The two chord parts are hand-played takes the generator refuses
+      to overwrite.
+    </p>
+    <figure class="shotfig">
+      <div class="frame vid">
+        <iframe src="https://www.youtube-nocookie.com/embed/VJs85sTF880?rel=0"
+                title="Generative Techno ZynthianMaschine MKII — trailer"
+                loading="lazy" allowfullscreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+      <figcaption><b>No hands.</b> The performance was driven by a script, and the panel in the video is
+      that same run played back — the pads, both displays and every lamp are what the hardware actually
+      showed, not a mock-up. For an instrument whose whole argument is that it plays itself, that seemed
+      the honest way to film it.
+      <a href="https://youtu.be/VJs85sTF880">Watch on YouTube</a> if the embed is blocked.</figcaption>
+    </figure>
+  </div>
+</section>
 
 <!-- ===================== INSTALL ===================== -->
 <section class="sec" id="s-c">

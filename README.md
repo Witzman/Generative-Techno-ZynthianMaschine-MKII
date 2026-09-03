@@ -8,6 +8,12 @@ Turing-machine voices**, running on Zynthian on a Raspberry Pi 4, played entirel
 from a Native Instruments Maschine MK2 — its pads, its encoders, its two displays
 and its LEDs.
 
+### ▶ &nbsp;[**Watch it play →**](https://youtu.be/VJs85sTF880)
+
+No hands: the run was scripted and the panel in the video is that same run
+played back, so the pads, both displays and every lamp are what the hardware
+actually showed.
+
 ### 📖 &nbsp;[**Read the Build Guide →**](https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/)
 
 **<https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/>**
