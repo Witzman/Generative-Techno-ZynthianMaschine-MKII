@@ -103,8 +103,11 @@ hasnt "--no-restart issues no restart" "$R" '\[dry-run\] ssh .*systemctl restart
 has   "--no-restart hands the order back to the reader" "$R" \
       'restart maschine-mk2.*sleep 8.*restart zynthian'
 
-# --with-daemon exists because install.sh SKIPS the cargo build when a binary
-# is already there, so nothing in the project refreshed a daemon change. The
+# --with-daemon exists because a driver deploy alone leaves the daemon as it
+# was, and the daemon is half the instrument. (It used to exist for a worse
+# reason: install.sh SKIPPED the cargo build whenever a binary was already
+# there, so nothing in the project refreshed a daemon change at all. That was
+# fixed 2026-09-03 - install.sh always builds now.) The
 # properties worth pinning are that it changes nothing on a dry run (cargo is a
 # poison stub, so a real build here fails the run), that it finds the daemon's
 # path by ASKING the unit rather than guessing, and that it still withholds

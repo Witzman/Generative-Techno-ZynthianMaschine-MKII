@@ -22,7 +22,7 @@ you through it, and **Changelog** says when each of them arrived.
 
 ![GPL-3.0](https://img.shields.io/badge/licence-GPL--3.0-b4b4bc)
 ![ZynthianOS Oram-2601-1](https://img.shields.io/badge/ZynthianOS-Oram--2601--1-b4b4bc)
-![1835 tests](https://img.shields.io/badge/tests-1835%20passing-b4b4bc)
+![1910 tests](https://img.shields.io/badge/tests-1910%20passing-b4b4bc)
 [![Support this project](https://img.shields.io/badge/support-PayPal-b4b4bc)](https://paypal.me/ChristianWitzel)
 
 ---
@@ -127,22 +127,43 @@ a driver that never binds and says so nowhere, a daemon restarted in the wrong
 order, a missing config flag that destroys the pad LEDs on first touch. The guide
 is authoritative; `install.sh` is only a wrapper over it.
 
+**One thing to decide before this sits on a network you share.** The daemon's
+pad-and-encoder editor listens on port 9001 on every interface, with no
+authentication, while the daemon runs as root — its commands remap what the pads
+send and save that to disk. That is the shipped default because the editor is
+meant to be opened from another machine; `"ws_bind": "127.0.0.1"` in
+`daemon/maschine.json` closes it to the Pi itself, and the daemon says which one
+you are running on every start.
+
 Every test in this repository runs without a Pi and without the controller:
 
 ```bash
-cd ctrldev && python3 -m unittest discover -s tests -q   # → 1307  the driver
-cd daemon  && cargo test                                 # →  181  the HID daemon
-bash system/tests/test-system-files.sh                   # →   55  units, udev, helpers
-python3 -m unittest discover -s tools/tests -q           # →  206  the offline tools
-bash system/tests/test-dry-run.sh                        # →   86  what each installer PRINTS
+cd ctrldev && python3 -m unittest discover -s tests -q   # → 1333  the driver
+cd daemon  && cargo test                                 # →  203  the HID daemon
+bash system/tests/test-system-files.sh                   # →   57  units, udev, helpers
+python3 -m unittest discover -s tools/tests -q           # →  216  the offline tools
+bash system/tests/test-dry-run.sh                        # →  101  what each installer PRINTS
 ```
 
-That is what the badge counts. The driver itself cannot be imported off a Pi —
-`zynlibs.zynseq` exists only there — so behaviour is pushed down into
-`techno_lib.py` where it can be tested, and the driver keeps a compile check.
-The dry-run suite shadows `ssh`, `scp` and `systemctl` with stubs that fail if
-called, so a dry run that actually executes something breaks the build rather
-than someone's rig.
+That is what the badge counts. Three kinds of test sit behind it.
+
+**The libraries** are ordinary unit tests, and as much behaviour as possible is
+pushed down into `techno_lib.py` so that it can be one.
+
+**The driver is 10,000 lines and needs both of the others.** Twelve AST guards
+read its *source* and answer questions no instance can — is a name defined
+twice, does every LED name it sends exist in the daemon, is every key the
+snapshot saves one the load reads back. And since September 2026 it is also
+*constructed*: `tests/rig_stub.py` stands in for the four Zynthian imports in a
+few dozen lines, so `midi_event` can be driven byte by byte and the thing that
+had no test at all — which overlay owns a pad, which press is swallowed — has
+one. No CC number is written down in those tests; every one is looked up in the
+driver's own tables at run time, because that map is measured hardware fact.
+
+**The installers are tested by what they PRINT.** The dry-run suite shadows
+`ssh`, `scp`, `systemctl` and `cargo` with stubs that fail if called, so a dry
+run that actually executes something breaks the build rather than someone's
+rig.
 
 ## Credits
 

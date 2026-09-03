@@ -168,11 +168,13 @@ fi
 
 # --- 4b. the Rust daemon, on request ------------------------------------------
 # There is no cross-compile in this project: the daemon is built ON the Pi, by
-# install.sh on a fresh one. But install.sh SKIPS the build when a binary
-# already exists, so it will not refresh a daemon change - which is why this
-# section exists, and why it verifies the binary actually moved. A failed build
-# leaves the old binary in place and every check after a restart would then be
-# testing the PREVIOUS daemon while looking like a pass.
+# install.sh on a fresh one and here on an existing one. This section verifies
+# the binary actually MOVED, because a failed build leaves the old one in place
+# and every check after a restart would then be testing the PREVIOUS daemon
+# while looking like a pass.
+#
+# install.sh no longer skips its own build (2026-09-03), but that only helps
+# somebody re-running the installer; a deploy from a laptop still needs this.
 if [ "$DAEMON" = 1 ]; then
     say "Daemon source -> the Pi, then build THERE"
     if [ "$DRY" = 1 ]; then
