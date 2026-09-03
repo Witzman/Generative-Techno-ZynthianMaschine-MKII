@@ -107,6 +107,8 @@ print("ccs", ",".join(str(c) for c in ccs))
 print("ext_leds", d["external_pad_leds"])
 print("bright", d["screen_brightness"])
 print("contrast", d["screen_contrast"])
+print("wsbind", d["ws_bind"])
+print("intseq", d["internal_sequencer"])
 PY
 )   || { bad "maschine.json parses as JSON" "$out"; out=""; }
     if [ -n "$out" ]; then
@@ -130,6 +132,18 @@ PY
         # power cycle, which is why the shipped pair must stay the factory pair.
         assert_eq "screen_brightness is the factory 72" 72 "$(awk '/^bright/{print $2}'   <<<"$out")"
         assert_eq "screen_contrast is the factory 50"   50 "$(awk '/^contrast/{print $2}' <<<"$out")"
+        # The WebSocket editor's socket has NO authentication and the daemon
+        # runs as root, so this key decides whether the whole network can remap
+        # the pads. It is in the template to be FOUND - the daemon also warns on
+        # every start that is not loopback. The value here must match the
+        # daemon's own default (config.rs default_ws_bind): a template shipping
+        # a different one would split the fleet by install date, since an
+        # existing rig's maschine.json predates the key entirely.
+        assert_eq "ws_bind matches the daemon's default" "0.0.0.0" "$(awk '/^wsbind/{print $2}' <<<"$out")"
+        # SHIFT + PAD MODE used to hand the pads, the transport and the Group
+        # buttons to the daemon's own step sequencer with nothing on the panel
+        # saying so. Off, and it must stay off on a rig that plays zynseq.
+        assert_eq "internal_sequencer is off"           False   "$(awk '/^intseq/{print $2}' <<<"$out")"
     fi
 else
     skip "maschine.json checks (no python3)"

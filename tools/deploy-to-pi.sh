@@ -9,6 +9,7 @@
 #   ./tools/deploy-to-pi.sh --with-system   also the helper scripts in /usr/local/bin
 #   ./tools/deploy-to-pi.sh --with-daemon   also the Rust daemon: send src, build ON the Pi
 #   ./tools/deploy-to-pi.sh --no-restart    copy only, restart yourself
+#   ./tools/deploy-to-pi.sh --rollback      put the .prev driver files back
 #   ./tools/deploy-to-pi.sh --dry-run       print every command, change nothing
 #
 # Host defaults to root@192.168.2.123 - mDNS .local does not resolve from WSL2.
@@ -28,6 +29,7 @@ RESTART=1
 SYSTEM=0
 DAEMON=0
 TESTS=1
+ROLLBACK=0
 
 for arg in "$@"; do
     case "$arg" in
@@ -36,11 +38,28 @@ for arg in "$@"; do
         --with-system) SYSTEM=1 ;;
         --with-daemon) DAEMON=1 ;;
         --skip-tests)  TESTS=0 ;;
+        # A rollback runs no tests: it is a recovery, and what it puts back
+        # is whatever was on the rig before - not something this repository is
+        # in a position to vouch for anyway.
+        --rollback)    ROLLBACK=1; TESTS=0 ;;
         -h|--help)     sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *@*)           PI="$arg" ;;
         *)             echo "unknown argument: $arg" >&2; exit 2 ;;
     esac
 done
+
+# `run` builds a command line as a STRING and evals it, because most steps here
+# are an ssh whose remote command needs its own quoting. That is safe exactly as
+# long as the paths and the host going into it cannot re-quote the line, so it
+# is checked rather than hoped about.
+case "$REPO$PI" in
+    *[\'\"\`\$\ ]*)
+        echo "Refusing to run: the repository path or the target contains a" >&2
+        echo "space or a shell metacharacter, and this script builds command" >&2
+        echo "lines as text.  repo: $REPO  target: $PI" >&2
+        exit 1
+        ;;
+esac
 
 say() { printf "\n== %s\n" "$1"; }
 run() {
@@ -74,6 +93,35 @@ if [ "$DRY" = 0 ]; then
     ssh "$PI" 'head -1 /zynthian/build_info.txt' | sed 's/^/  ZynthianOS: /'
 fi
 
+# --- 2b. the way back ---------------------------------------------------------
+# THE .prev FILES WERE WRITE-ONLY until 2026-09-03. Every deploy took them and
+# nothing could put them back, so recovering from a bad driver meant a hand
+# `cp` over ssh under whatever pressure had just made it necessary. Same order
+# as a deploy - daemon first, UI second - because the reason for that order has
+# nothing to do with which files moved.
+if [ "$ROLLBACK" = 1 ]; then
+    say "Roll back to the .prev driver files on $PI"
+    for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
+        run "ssh '$PI' 'test -f $CTRLDEV/$f.prev'" \
+            || { echo "no $f.prev on the Pi - nothing to roll back to" >&2; exit 1; }
+    done
+    for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
+        # The current file becomes .rej rather than being thrown away: whatever
+        # is being rolled back is also what somebody will want to look at.
+        run "ssh '$PI' 'cp $CTRLDEV/$f $CTRLDEV/$f.rej && cp $CTRLDEV/$f.prev $CTRLDEV/$f'"
+        echo "  restored $f  (the rejected one is now $f.rej)"
+    done
+    if [ "$RESTART" = 1 ]; then
+        say "Restart: daemon first, UI second"
+        run "ssh '$PI' 'systemctl restart maschine-mk2'"
+        run "sleep 8"
+        run "ssh '$PI' 'systemctl restart zynthian'"
+    fi
+    echo
+    echo "Rolled back. The .prev files are unchanged, so this is repeatable."
+    exit 0
+fi
+
 # --- 3. the driver ------------------------------------------------------------
 # install.sh keeps a one-time .bak as the pre-Maschine baseline. Do not disturb
 # it - keep a separate .prev holding whatever was running before this deploy.
@@ -83,6 +131,26 @@ for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
     run "scp -q '$REPO/ctrldev/$f' '$PI:$CTRLDEV/$f'"
     echo "  sent $f"
 done
+
+# CHECKSUMS, since 2026-09-03. scp reports its own success and that is not the
+# same as the rig running what is in this repository: a deploy that half
+# happened, or a file edited on the Pi and forgotten, both look like a clean
+# send. Finding that out cost a checksum hunt against five commits on
+# 2026-08-31, by hand, after the fact.
+if [ "$DRY" = 0 ]; then
+    say "Checksums (the repo's copy against the Pi's)"
+    for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
+        here=$(md5sum "$REPO/ctrldev/$f" | cut -d' ' -f1)
+        there=$(ssh "$PI" "md5sum $CTRLDEV/$f" | cut -d' ' -f1)
+        if [ "$here" = "$there" ]; then
+            printf '  ok   %-38s %s\n' "$f" "$here"
+        else
+            printf '  FAIL %-38s repo %s  pi %s\n' "$f" "$here" "$there" >&2
+            echo "The Pi is not running what this repository holds. Not restarting." >&2
+            exit 1
+        fi
+    done
+fi
 
 # --- 4. helper scripts, on request --------------------------------------------
 # maschine.json is deliberately NOT deployed: it lives in daemon/ on the Pi and

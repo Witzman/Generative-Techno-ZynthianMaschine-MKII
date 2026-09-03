@@ -4,11 +4,22 @@ After=jack2.service a2jmidid.service
 Requires=jack2.service
 
 [Service]
-ExecStart=/root/Generative-Techno-ZynthianMaschine-MKII/daemon/target/release/maschine /dev/maschine any
+ExecStart=/root/Generative-Techno-ZynthianMaschine-MKII/daemon/target/release/maschine /dev/maschine
 ExecStartPost=/usr/local/bin/maschine-jack-connect.sh
 Restart=always
 RestartSec=5
 WorkingDirectory=/root/Generative-Techno-ZynthianMaschine-MKII/daemon
+# HARDENING, 2026-09-03, and it is deliberately only this one line.
+#
+# The daemon runs as root because it needs the hidraw node, the ALSA sequencer
+# and write access to its own working directory; dropping it to a user is a
+# change that has to be verified at the rig rather than guessed here.
+#
+# PrivateTmp is specifically WRONG for this unit. ExecStartPost runs
+# maschine-jack-connect.sh, jackd's server socket lives in /tmp, and a private
+# /tmp would leave the rig connected to nothing with no error in any log -
+# which is the exact silent failure this project spends a watchdog avoiding.
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target

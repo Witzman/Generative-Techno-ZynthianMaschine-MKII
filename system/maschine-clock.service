@@ -9,6 +9,9 @@ ExecStart=/usr/bin/python3 /usr/local/bin/maschine-clock-bridge.py
 ExecStartPost=/usr/local/bin/maschine-clock-connect.sh
 Restart=always
 RestartSec=5
+# No PrivateTmp here either: this talks to JACK, whose socket is in /tmp. See
+# maschine-mk2.service.
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target

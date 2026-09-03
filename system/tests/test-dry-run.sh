@@ -123,6 +123,28 @@ has   "--with-daemon says why maschine.json is withheld" "$W" \
 before "--with-daemon builds BEFORE any restart"    "$W" 'cargo build --release' 'systemctl restart maschine-mk2'
 hasnt "a plain deploy has no daemon section"        "$D" 'Daemon source -> the Pi'
 
+# --rollback exists because the .prev files were write-only: every deploy took
+# one and nothing could put it back, so recovering from a bad driver meant a
+# hand cp over ssh under exactly the wrong kind of pressure.
+head_ "deploy-to-pi.sh --rollback"
+V=$(PATH="$BIN:$PATH" bash "$REPO/tools/deploy-to-pi.sh" --dry-run --rollback 2>&1)
+rc=$?
+if [ $rc -eq 0 ]; then ok "exits 0"; else bad "exits 0" "rc=$rc
+$V"; fi
+for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
+    has "$f: refuses unless .prev exists" "$V" "\[dry-run\] ssh .*test -f $CD/$f\.prev"
+    has "$f: .prev is copied back"         "$V" "\[dry-run\] ssh .*cp $CD/$f\.prev $CD/$f'"
+    has "$f: the rejected one is kept"     "$V" "cp $CD/$f $CD/$f\.rej"
+done
+hasnt "a rollback sends nothing"           "$V" '\[dry-run\] scp'
+hasnt "a rollback runs no unit tests"      "$V" 'Unit tests and compile check'
+before "it checks for .prev BEFORE restoring anything" "$V" \
+       "test -f $CD/zynthian_ctrldev_maschine_mk2\.py\.prev" \
+       "cp $CD/zynthian_ctrldev_maschine_mk2\.py\.prev"
+has    "it restarts the daemon"            "$V" 'systemctl restart maschine-mk2'
+before "daemon before the UI, on a rollback too" "$V" \
+       'systemctl restart maschine-mk2' 'systemctl restart zynthian'
+
 PATH="$BIN:$PATH" bash "$REPO/tools/deploy-to-pi.sh" --dry-run --wat >/dev/null 2>&1
 rc=$?
 if [ $rc -eq 2 ]; then ok "an unknown flag exits 2"; else bad "an unknown flag exits 2" "rc=$rc"; fi

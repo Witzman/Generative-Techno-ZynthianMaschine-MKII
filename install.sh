@@ -18,6 +18,21 @@ ZYNTHIAN_ROOT="${ZYNTHIAN_ROOT:-/zynthian}"
 CTRLDEV=$ZYNTHIAN_ROOT/zynthian-ui/zyngine/ctrldev
 AUTOCONNECT=$ZYNTHIAN_ROOT/zynthian-ui/zynautoconnect/zynthian_autoconnect.py
 
+# `run` builds a command line as a STRING and evals it, because several steps
+# need a redirect or a `cd &&`. That is safe exactly as long as the paths going
+# into it cannot re-quote the line, so it is checked once here rather than
+# hoped about: a repository path containing a space, a quote, a backtick or a $
+# would either break the eval or, worse, execute part of itself.
+case "$REPO$ZYNTHIAN_ROOT" in
+    *[\'\"\`\$\ ]*)
+        echo "Refusing to run: a path here contains a space or a shell" >&2
+        echo "metacharacter, and this script builds command lines as text." >&2
+        echo "  repo:     $REPO" >&2
+        echo "  zynthian: $ZYNTHIAN_ROOT" >&2
+        exit 1
+        ;;
+esac
+
 say() { printf "\n== %s\n" "$1"; }
 run() {
     if [ "$DRY" = 1 ]; then printf "  [dry-run] %s\n" "$*"; else printf "  %s\n" "$*"; eval "$@"; fi
@@ -49,13 +64,13 @@ for pkg in obxd-lv2 padthv1-lv2 tap-lv2; do
 done
 
 # --- 2. build the daemon -------------------------------------------------------
-say "Build the HID daemon (minutes - do not interrupt)"
-if [ -x "$REPO/daemon/target/release/maschine" ]; then
-    echo "  already built: daemon/target/release/maschine"
-else
-    run "cd '$REPO/daemon' && cargo build --release"
-    run "cp '$REPO/daemon/picturetest.png' '$REPO/daemon/target/release/'"
-fi
+# ALWAYS, since 2026-09-03. This used to skip the build when a binary already
+# existed and print "already built", so re-running the installer after a git
+# pull left the OLD daemon in place and said nothing - the reason
+# deploy-to-pi.sh needed a --with-daemon of its own. cargo is incremental: with
+# nothing to do this costs a second and prints "Finished".
+say "Build the HID daemon (minutes on a fresh clone - do not interrupt)"
+run "cd '$REPO/daemon' && cargo build --release"
 
 # --- 3. daemon config ----------------------------------------------------------
 say "Daemon config (external_pad_leds must be true)"
@@ -81,8 +96,15 @@ done
 # The unit ships with an absolute path. Rewrite it to wherever this repository
 # actually is, so a clone anywhere works rather than only under /root.
 say "systemd units (daemon paths rewritten to $REPO)"
+# A PRIVATE DIRECTORY, not /tmp/<unit>.gtzm. That name was predictable and
+# world-writable, and root then installed whatever was at it into
+# /etc/systemd/system - so any local account could have pre-created it (or won
+# the race) and had its own unit file installed as a system service. mktemp -d
+# makes a 0700 directory nobody else can reach.
+UNITDIR=$(mktemp -d)
+trap 'rm -rf "$UNITDIR"' EXIT
 for f in maschine-mk2.service maschine-web.service maschine-clock.service; do
-    tmp="/tmp/$f.gtzm"
+    tmp="$UNITDIR/$f"
     run "sed -e 's#^ExecStart=.*/daemon/target/release/maschine#ExecStart=$REPO/daemon/target/release/maschine#' \
              -e 's#^WorkingDirectory=.*/daemon\$#WorkingDirectory=$REPO/daemon#' \
              -e 's#--directory .*/web#--directory $REPO/daemon/web#' \
