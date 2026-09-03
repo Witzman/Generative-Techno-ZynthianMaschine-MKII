@@ -1524,10 +1524,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """The voice chain's current preset, for the CONTROL page's first
         column. Returns None when the chain has no synth processor."""
 
-        chain_ids = self.chain_manager.midi_chan_2_chain_ids[tlib.CHANNELS[channel][5]]
-        if not chain_ids:
-            return None
-        chain = self.chain_manager.chains.get(chain_ids[0])
+        chain = self._chain_of(channel)
         if chain is None:
             return None
         for proc in chain.get_processors():
@@ -1862,7 +1859,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # mutex between threads and clears itself after every write,
                 # so it cannot carry an ownership that survives a snapshot.
                 return
-            if self.writer_token[channel] not in (None, "turing"):
+            if self.writer_token[channel] is not None:
+                # EXCLUSIVE, since 2026-09-03. This used to accept "turing" as
+                # free, which is the token this very function sets - so two
+                # turing writers could both claim the pattern, and the two lock
+                # holds below leave a real window between them: the second
+                # writer's clear() discards the notes the first had just
+                # written. A pad tap on the MIDI thread and the wrap rewrite on
+                # the poll thread are exactly those two writers.
+                #
+                # There is no re-entrant caller to break: this function is the
+                # only thing that sets the token, and it never calls itself.
                 return                    # someone else owns this pattern
             self.writer_token[channel] = "turing"
         try:
@@ -2320,10 +2327,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         kind = tlib.CHANNELS[channel][2]
         if kind != "voice":
             return kind
-        chain_ids = self.chain_manager.midi_chan_2_chain_ids[tlib.CHANNELS[channel][5]]
-        if not chain_ids:
-            return kind
-        chain = self.chain_manager.chains.get(chain_ids[0])
+        chain = self._chain_of(channel)
         if chain is None:
             return kind
         for proc in chain.get_processors():
@@ -2900,10 +2904,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """The chain's synth processor - the one that is neither of the two
         inserts."""
 
-        chain_ids = self.chain_manager.midi_chan_2_chain_ids[tlib.CHANNELS[channel][5]]
-        if not chain_ids:
-            return None
-        chain = self.chain_manager.chains.get(chain_ids[0])
+        chain = self._chain_of(channel)
         if chain is None:
             return None
         for proc in chain.get_processors():
@@ -3068,10 +3069,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 if "RezFilter" in str(name):
                     return proc
             return None
-        chain_ids = self.chain_manager.midi_chan_2_chain_ids[tlib.CHANNELS[channel][5]]
-        if not chain_ids:
-            return None
-        chain = self.chain_manager.chains.get(chain_ids[0])
+        chain = self._chain_of(channel)
         if chain is None:
             return None
         want = "TAP Reverberator" if which == "reverb" else "TAP Stereo Echo"
@@ -3180,6 +3178,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             zynsigman.S_STATE_MAN, self.state_manager.SS_LOAD_SNAPSHOT,
             self._on_snapshot)
         self.light_off()
+        # BOTH HANDLES, and neither was ever closed. A driver is unbound and
+        # rebound by every snapshot load that changes the MIDI device list, so
+        # this leaked a UDP socket and an open file per cycle - and the log
+        # handle keeps its tmpfs file alive after the file has been rotated
+        # away underneath it.
+        #
+        # Closed AFTER light_off(), which is the last thing that sends OSC.
+        try:
+            self.osc.close()
+        except OSError as e:
+            logging.debug(f"Maschine: OSC socket close: {e}")
+        if self._slog_fh is not None:
+            fh, self._slog_fh = self._slog_fh, None
+            try:
+                fh.close()
+            except (OSError, ValueError):
+                pass
         super().end()
 
     def _force_swing_div(self):
@@ -6266,13 +6281,28 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                       f"hits={self.hits[group]} rot={self.rot[group]}")
         self._render_pads()
 
+    def _chain_of(self, channel):
+        """The chain behind a channel, or None when it has none.
+
+        ONE ACCESSOR, since 2026-09-03. Five call sites resolved this as
+        `midi_chan_2_chain_ids[tlib.CHANNELS[channel][5]]` and a sixth as
+        `midi_chan_2_chain_ids[group]`, which agree only because that sixth
+        field of the channel table happens to be the identity - so the two
+        idioms were one table edit away from disagreeing, in the accessor every
+        page render goes through. It is also the one place that has to know the
+        map is a list of sixteen lists rather than a dict."""
+
+        chain_ids = self.chain_manager.midi_chan_2_chain_ids[
+            tlib.CHANNELS[channel][5]]
+        if not chain_ids:
+            return None
+        return self.chain_manager.chains.get(chain_ids[0])
+
     def _mixer_chan(self, group):
         """The mixer strip behind a group, or None if it has no chain."""
 
-        chain_ids = self.chain_manager.midi_chan_2_chain_ids[group]
-        if not chain_ids:
-            return None
-        return self.chain_manager.chains[chain_ids[0]].mixer_chan
+        chain = self._chain_of(group)
+        return None if chain is None else chain.mixer_chan
 
     def _f_button(self, index, down):
         """F1-F8. Mute by default, solo while SOLO is held or latched.
@@ -8596,8 +8626,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # LinuxSampler over a socket and can block.
                 self._commit_kit()
                 self._commit_preset()
-                if self._record_due:
-                    self._record_due = False
+                # READ AND CLEARED UNDER THE LOCK, since 2026-09-03. All three
+                # of these flags are set on the MIDI thread and consumed here,
+                # and "if it is set, clear it, then act" is two statements: a
+                # gesture arriving between them was cleared without ever being
+                # acted on. The lock is an RLock and the MIDI thread holds it
+                # for the whole event, so taking it here is what makes the
+                # hand-off a single step. The WORK stays outside it - a capture
+                # toggle and a repeat both reach zynseq and take it themselves.
+                with self.lock:
+                    record_due, self._record_due = self._record_due, False
+                if record_due:
                     self._toggle_capture()
                 if self.arm_down or self.erase_down:
                     # Held: the daemon may re-base under us at any moment, so
@@ -8623,11 +8662,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # rate that can starve the daemon's reader.
                     self._send_osc(lib.note_base_osc(
                         GROUP_NOTE_BASE[self.group]))
-                if self._repeat_due is not None:
+                with self.lock:
                     want, self._repeat_due = self._repeat_due, None
-                    self._repeat_apply(want)
-                if self._break_due is not None:
                     bars, self._break_due = self._break_due, None
+                if want is not None:
+                    self._repeat_apply(want)
+                if bars is not None:
                     self._break_fire(bars)
                 # Drain queued note-map rebuilds here, never on the MIDI
                 # thread: the scan takes the lock for a whole pattern.
