@@ -280,6 +280,7 @@ class maschine_mk2_lib:
     TAB_H = 12
     RULE_Y = 13
     LABEL_Y = 15             # mode + page position, 5x8
+    LABEL_H = 8              # the 5x8 font's cell - the band label_packets erases
     NAME_Y = 24              # encoder name, 5x8
     VALUE_Y = 32             # encoder value, double height
     BAR_Y = 52
@@ -592,6 +593,50 @@ class maschine_mk2_lib:
                 out.append(cls.display_text_osc(
                     screen, x, cls.VALUE_Y, size, False, str(value)[:budget]))
             out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod, tick))
+        return out
+
+    @staticmethod
+    def label_packets(screen, label):
+        """The page-indicator row alone, with no clear and no other widget.
+
+        WHAT IT IS FOR. Opening a pad overlay changes exactly one line of
+        text on each screen and nothing else: DUPLICATE puts the bank on the
+        indicator, ARM the countdown, FREEZE the word HELD, MOD the legend.
+        Every one of them went through screen_packets, which opens with a
+        CLEAR - so a press cost a full both-screen redraw and the release cost
+        another. Measured on the rig 2026-09-02 with notes/tools/gesture-cost:
+        DUPLICATE + a group peaked at 204 OSC messages a second with
+        `rect x110` - two lots of 55 - against 20 at idle, and it was the most
+        expensive gesture on the panel. MOD was 151 and SELECT 138.
+
+        THE CLEAR IS THE EXPENSIVE PART, not the messages. The daemon keeps a
+        dirty-rectangle list per screen and blits only what changed, so a
+        clear marks all 32 rows and costs 8 reports of 265 bytes where this
+        band costs one of 73.
+
+        THE ERASE IS FILL THEN INVERT over the same box, which leaves every
+        pixel dark. Both styles have shipped since the displays did, so this
+        needs NO daemon change and lands with a driver copy. Text drawing in
+        the daemon is additive - draw_char only ever calls set_pixel - so
+        without an erase a shorter label leaves the tail of the longer one
+        behind, which is how "STEP 1/3" would read as "STEP 1/33".
+
+        An empty label erases and draws nothing, so an indicator that goes
+        away takes its pixels with it."""
+
+        cls = maschine_mk2_lib
+        out = [
+            cls.display_rect_osc(screen, 0, cls.LABEL_Y, cls.SCREEN_W,
+                                 cls.LABEL_H, cls.RECT_FILL),
+            cls.display_rect_osc(screen, 0, cls.LABEL_Y, cls.SCREEN_W,
+                                 cls.LABEL_H, cls.RECT_INVERT),
+        ]
+        if label:
+            # The same coordinates screen_packets uses, and a test binds the
+            # two: if the indicator ever moves, one of them would draw it in
+            # the old place and the row would land twice.
+            out.append(cls.display_text_osc(
+                screen, 3, cls.LABEL_Y, 1, False, label))
         return out
 
     led_cache = None  # bound below to avoid a forward reference

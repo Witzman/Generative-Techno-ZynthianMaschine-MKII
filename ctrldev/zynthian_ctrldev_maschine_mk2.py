@@ -9866,13 +9866,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if stall != label and tlib.stalled(time.monotonic(), self._beat_at):
             label = stall
         for screen in (0, 1):
-            # The label joins the cached tuple deliberately: paging with no
-            # other change must still repaint.
+            # THE LABEL IS COMPARED SEPARATELY FROM THE BODY, since
+            # 2026-09-02, and that is the whole of the overlay fix. It used to
+            # sit in one tuple with the tabs and the columns, so a change to
+            # ONE LINE OF TEXT cleared and redrew the whole screen - and the
+            # things that only move the label are the ones a player holds
+            # constantly: DUPLICATE puts the bank there, ARM the countdown,
+            # FREEZE the word HELD, a take its owner. Measured on the rig with
+            # notes/tools/gesture-cost.py: DUPLICATE + a group peaked at 204
+            # OSC messages a second, `rect x110`, which is two lots of 55 -
+            # one repaint on the press and one on the release - against 20 at
+            # idle, and it was the most expensive gesture on the panel.
             #
-            # So does mod: without it both _render_display() calls in
-            # _act_mod() were literal no-ops, because nothing else in the
-            # tuple moves when MOD goes down, and a latched MOD made the pads
-            # inert and the encoders mean something else with no indication.
+            # BOTH `changed` CALLS MUST RUN, whichever branch is taken: they
+            # are what stores the new value, so short-circuiting one leaves
+            # its cache stale and the next real change to it draws nothing.
+            #
+            # mod stays in the BODY key deliberately. It repurposes every
+            # encoder on whatever page is showing, so the columns mean
+            # something different while it is on - that is a body change even
+            # in the cases where the text of them happens not to move. Before
+            # it was in the key at all, both _render_display() calls in
+            # _act_mod() were literal no-ops and a latched MOD made the pads
+            # inert with no indication anywhere.
             cols = self._columns(screen)
             # THE LIVE TICK IS DRAWN BUT DOES NOT TRIGGER A REDRAW. It is the
             # marker showing where a modulator's wave is RIGHT NOW, and it was
@@ -9890,15 +9906,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # So the tick redraws when something ELSE does. What is lost is
             # its animation; what is kept is a controller that answers.
             key = tuple(c[:5] + (None,) + c[6:] for c in cols)
-            state = (self._tabs(screen), key, label, mod,
-                     frozenset(self._reroll_pending),
-                     self._phrase_bar if phrase_shown else None)
-            if not self.leds.changed(f"disp{screen}", state):
-                continue
-            # Drawn from `cols`, which still carries the live tick - only the
-            # comparison above ignores it.
-            for packet in lib.screen_packets(screen, state[0], cols, state[2]):
-                self._send_osc(packet)
+            tabs = self._tabs(screen)
+            body = (tabs, key, mod, frozenset(self._reroll_pending))
+            # The phrase bar rides with the label because that is the only
+            # place it is drawn - and it is in a key at all only while a
+            # gesture is pending, for the reason written above phrase_shown.
+            label_key = (label, self._phrase_bar if phrase_shown else None)
+            body_changed = self.leds.changed(f"disp{screen}", body)
+            label_changed = self.leds.changed(f"displabel{screen}", label_key)
+            if body_changed:
+                # Drawn from `cols`, which still carries the live tick - only
+                # the comparison above ignores it. The full repaint draws the
+                # label too, which is why the label branch is an elif.
+                for packet in lib.screen_packets(screen, tabs, cols, label):
+                    self._send_osc(packet)
+            elif label_changed:
+                for packet in lib.label_packets(screen, label):
+                    self._send_osc(packet)
 
     def _render_all(self):
         self._render_groups()

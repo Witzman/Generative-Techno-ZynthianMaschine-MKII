@@ -676,6 +676,86 @@ class TestPageLabelRow(unittest.TestCase):
         self.assertLessEqual(cls.BAR_Y + cls.BAR_H, 64)
 
 
+class TestLabelOnlyRepaint(unittest.TestCase):
+    """The page-indicator row, redrawn WITHOUT clearing the screen.
+
+    WHY IT EXISTS. Opening a pad overlay changes one line of text - DUPLICATE
+    puts the bank on the indicator, ARM the countdown, FREEZE the word HELD -
+    and nothing else on either screen. It cost a full clear-and-redraw of BOTH
+    screens on press AND another on release: measured 2026-09-02 at 204 OSC
+    messages a second, `rect x110`, which is two lots of 55 and the most
+    expensive gesture on the panel.
+    """
+
+    def _tabs(self):
+        return [("A", "KICK", True, False)] * 4
+
+    def _cols(self):
+        return [("HITS", "0004", "u", 0.25)] * 4
+
+    def test_the_band_is_erased_before_the_text(self):
+        # Text drawing is ADDITIVE in the daemon - draw_char only ever calls
+        # set_pixel - so a shorter label leaves the tail of the old one on
+        # glass unless the row is cleared first.
+        packets = lib.label_packets(0, "STEP 1/3")
+        self.assertEqual(packets[0], lib.display_rect_osc(
+            0, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H, lib.RECT_FILL))
+        self.assertEqual(packets[1], lib.display_rect_osc(
+            0, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H, lib.RECT_INVERT))
+
+    def test_the_erase_needs_no_daemon_change(self):
+        # FILL then INVERT over the same box leaves every pixel dark, and both
+        # styles have shipped since the displays did. A style 5 "erase" would
+        # have been one message instead of two and a daemon deploy instead of
+        # none; the daemon's own `_ =>` arm draws an OUTLINE for an unknown
+        # style, so an old daemon would have boxed the label instead.
+        styles = [lib.RECT_FILL, lib.RECT_INVERT]
+        for style in styles:
+            self.assertIn(style, (0, 1, 2, 3, 4))
+
+    def test_the_text_is_the_same_packet_the_full_repaint_draws(self):
+        # Bound to screen_packets on purpose: if the indicator ever moves, one
+        # of these two draws it in the old place and the row lands twice.
+        full = lib.screen_packets(0, self._tabs(), self._cols(), "STEP 1/3")
+        part = lib.label_packets(0, "STEP 1/3")
+        text = [p for p in part if b"/maschine/display/text" in p]
+        self.assertEqual(len(text), 1)
+        self.assertIn(text[0], full)
+
+    def test_an_empty_label_still_erases(self):
+        # A label that GOES AWAY - the overlay released, the stall cleared -
+        # has to take its pixels with it.
+        packets = lib.label_packets(0, "")
+        self.assertEqual(len(packets), 2)
+        self.assertNotIn(lib.display_clear_osc(0), packets)
+
+    def test_it_never_clears_the_screen(self):
+        # The whole point. A clear marks all 32 rows dirty, and the daemon
+        # then blits the screen whole - 8 reports of 265 bytes - where the
+        # label band alone is one 73-byte report.
+        packets = lib.label_packets(0, "STEP 1/3")
+        self.assertNotIn(lib.display_clear_osc(0), packets)
+
+    def test_it_is_an_order_of_magnitude_cheaper(self):
+        full = lib.screen_packets(0, self._tabs(), self._cols(), "STEP 1/3")
+        part = lib.label_packets(0, "STEP 1/3")
+        self.assertLess(len(part) * 10, len(full))
+
+    def test_the_band_touches_neither_the_rule_nor_the_names(self):
+        # LABEL_H is what makes the erase safe, so it is asserted against the
+        # rows either side rather than left as a bare 8.
+        self.assertLess(lib.RULE_Y, lib.LABEL_Y)
+        self.assertLessEqual(lib.LABEL_Y + lib.LABEL_H, lib.NAME_Y)
+
+    def test_both_screens_are_reachable(self):
+        for screen in (0, 1):
+            packets = lib.label_packets(screen, "X")
+            self.assertTrue(all(p for p in packets))
+            self.assertEqual(packets[0], lib.display_rect_osc(
+                screen, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H,
+                lib.RECT_FILL))
+
+
 class TestQuarterNoteDivision(unittest.TestCase):
 
     def test_quarter_division_is_appended_last(self):
@@ -1612,3 +1692,91 @@ class EveryPatternWriterAsksWhoOwnsTheChannel(unittest.TestCase):
             "these reach _write_pattern, which begins with clear(), without "
             "asking who owns the channel - so they delete a take rather than "
             f"refusing, handing back, or editing in place: {unasked}")
+
+
+class TheLabelIsNotInTheBodyChangeKey(unittest.TestCase):
+    """`_render_display` compares the page-indicator row SEPARATELY from the
+    tabs and the columns, and putting it back in one key is a silent
+    regression.
+
+    THE DEFECT, measured at the rig 2026-09-02 by
+    notes/tools/gesture-cost.py. One tuple held the tabs, the columns AND the
+    label, so anything that moved one line of text cleared and redrew the
+    whole screen - and the things that only move the label are exactly the
+    ones a player holds constantly: DUPLICATE puts the bank there, ARM the
+    countdown, FREEZE the word HELD, a take its owner. DUPLICATE + a group
+    peaked at 204 OSC messages a second with `rect x110` - two lots of 55,
+    one repaint on the press and one on the release - against 20 at idle, and
+    it was the most expensive gesture on the panel.
+
+    WHY A GUARD AND NOT A COMMENT. This is the fourth perf defect in this one
+    function, and every previous fix left a long comment beside the line that
+    caused it - which is precisely what did not stop the next one. A comment
+    cannot fail a build.
+
+    Static, like the other eleven: the driver does not import off the Pi."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _body_names(self, source=None):
+        """Every bare name read inside the tuple assigned to `body` in
+        _render_display, or None if there is no such assignment."""
+        import ast
+        if source is None:
+            with open(self.DRIVER, encoding="utf-8") as fh:
+                source = fh.read()
+        for func in ast.walk(ast.parse(source)):
+            if not isinstance(func, ast.FunctionDef):
+                continue
+            if func.name != "_render_display":
+                continue
+            for node in ast.walk(func):
+                if not isinstance(node, ast.Assign):
+                    continue
+                targets = [t.id for t in node.targets
+                           if isinstance(t, ast.Name)]
+                if "body" not in targets:
+                    continue
+                return {n.id for n in ast.walk(node.value)
+                        if isinstance(n, ast.Name)}
+        return None
+
+    def _calls(self, source=None):
+        import ast
+        if source is None:
+            with open(self.DRIVER, encoding="utf-8") as fh:
+                source = fh.read()
+        return {n.func.attr for n in ast.walk(ast.parse(source))
+                if isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)}
+
+    def test_the_guard_can_see_the_body_key(self):
+        # A guard that found nothing would pass by checking nothing.
+        names = self._body_names()
+        self.assertIsNotNone(
+            names, "_render_display no longer assigns a `body` change key - "
+            "the label-only repaint has been restructured, so re-read this "
+            "guard before deleting it")
+        self.assertIn("mod", names)
+
+    def test_the_label_is_compared_on_its_own(self):
+        names = self._body_names()
+        for banned in ("label", "label_key"):
+            self.assertNotIn(
+                banned, names,
+                f"`{banned}` is back in the body change key, so a one-line "
+                "text change clears and redraws the whole screen again - "
+                "204 msg/s on DUPLICATE when this was last measured")
+
+    def test_the_cheap_path_is_still_wired_up(self):
+        # The split is only worth anything if something draws the band alone.
+        self.assertIn("label_packets", self._calls())
+
+    def test_the_check_can_fail(self):
+        self.assertEqual(
+            self._body_names(
+                "class D:\n"
+                "    def _render_display(self):\n"
+                "        body = (tabs, key, label, mod)\n"),
+            {"tabs", "key", "label", "mod"})
