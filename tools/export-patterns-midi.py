@@ -44,6 +44,7 @@ import sys
 # filenames have dashes in them. Without it the import works from the command
 # line and fails in the suite, which is the worst of both.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomic_write  # noqa: E402
 from zss_riff import parse_blocks, build_blocks  # noqa: E402
 
 # Measured on the rig's v10 riff, 2026-08-18. Neither number is in the v11
@@ -178,8 +179,7 @@ def main():
     patterns = read_patterns(blocks)
 
     out = args.out or (args.snapshot.rsplit(".", 1)[0] + ".mid")
-    with open(out, "wb") as fh:
-        fh.write(build_midi(patterns, tempo))
+    atomic_write.write_bytes(out, build_midi(patterns, tempo))
 
     total = sum(len(p) for p in patterns)
     print(f"{out}: {total} notes across 8 channels at {tempo} BPM")

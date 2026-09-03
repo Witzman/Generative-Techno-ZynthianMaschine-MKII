@@ -64,9 +64,11 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "ctrldev"))
+sys.path.insert(0, HERE)
 
 from maschine_mk2_lib import maschine_mk2_lib as lib      # noqa: E402
 from techno_lib import techno_lib as tlib                 # noqa: E402
+import atomic_write                                       # noqa: E402
 
 
 def _sibling(name):
@@ -635,8 +637,9 @@ def main(argv=None):
     d, report = build(base, manifest, kit_notes)
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, manifest["file"] + ".zss")
-    with open(path, "w") as fh:
-        json.dump(d, fh, indent=2)
+    # Atomically: this is pointed at the snapshot directory the rig boots
+    # from, where a half-written file is the only copy. See tools/atomic_write.
+    atomic_write.write_json(path, d)
 
     print(f"base     {base_path}")
     for line in report:

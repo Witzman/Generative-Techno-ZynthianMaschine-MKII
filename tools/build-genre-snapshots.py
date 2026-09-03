@@ -77,6 +77,7 @@ import sys
 # line and fails in the suite, which is the worst of both.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zss_riff import parse_blocks, build_blocks  # noqa: E402
+import atomic_write  # noqa: E402
 
 SFZ_BANK = "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines"
 DRUM_CHAINS = ["1", "2", "3", "4", "5"]      # Kick, Snare, Clap, Closed Hat, Open Hat
@@ -306,8 +307,7 @@ def main():
         # See tools/fix-snapshot-identity.py, which repaired the shipped files.
         d["last_snapshot_fpath"] = (
             "/zynthian/zynthian-my-data/snapshots/000/" + entry["file"] + ".zss")
-        with open(path, "w") as fh:
-            json.dump(d, fh, indent=2)
+        atomic_write.write_json(path, d)
         written += 1
         print(f"  {entry['file']:28} {entry['genre']:11} {entry['tempo']:3} BPM  "
               f"{'/'.join(e.split('/')[-1] for e in entry['voices']['engines'])}")

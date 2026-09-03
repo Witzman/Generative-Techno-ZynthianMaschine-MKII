@@ -18,8 +18,12 @@ is Zynthian's own output rather than this script's.
 
 import copy
 import json
+import os
 import shutil
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomic_write  # noqa: E402
 
 SNAP = sys.argv[1] if len(sys.argv) > 1 else \
     "/zynthian/zynthian-my-data/snapshots/000/017-generative-techno.zss"
@@ -79,7 +83,7 @@ def main():
         print(f"chain {cid} '{chain['title']}': inserts cloned, "
               f"fader_pos {chain['fader_pos']}")
 
-    json.dump(d, open(SNAP, "w"), indent=2)
+    atomic_write.write_json(SNAP, d)
     print(f"\n{cloned} chains cloned. Backup at {SNAP}.bak")
     print("Now load the snapshot on the touchscreen and save it again.")
 

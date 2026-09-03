@@ -43,6 +43,7 @@ import sys
 # line and fails in the suite, which is the worst of both.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zss_riff import parse_blocks, build_blocks  # noqa: E402
+import atomic_write  # noqa: E402
 
 TICKS_PER_BEAT = 1920
 PPQN = 96
@@ -178,8 +179,7 @@ def main():
                   file=sys.stderr)
             return 1
 
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(new_text)
+        atomic_write.write_text(path, new_text)
 
         # The guard above proves nothing EXTRA changed. This proves the two
         # things that were supposed to change actually did - read back off

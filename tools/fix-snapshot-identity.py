@@ -35,6 +35,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomic_write  # noqa: E402
+
 # Where a snapshot lives on the Pi. The field is an absolute path on the
 # target, not a path in this repo - bank 000 is where every installer puts
 # them, and a snapshot at the snapshots root is invisible in the UI.
@@ -52,8 +55,7 @@ def read(path):
 
 
 def write(path, doc):
-    with open(path, "w") as fh:
-        json.dump(doc, fh, indent=2)
+    atomic_write.write_json(path, doc)
 
 
 def check_one(path):
@@ -80,12 +82,15 @@ def fix_one(path):
 
     # The proof: put it back and require byte-identity with what we started
     # from. Anything else this write touched shows up here.
+    #
+    # IN MEMORY, since 2026-09-03. This used to write the comparison to
+    # `<path>.verify` and unlink it, which left that file behind on any
+    # interruption - beside the snapshot, matching no gitignore rule, and
+    # looking exactly like a real one. `json.dumps` is the same serialiser
+    # `write` uses, so the comparison is unchanged.
     again = read(path)
     again[FIELD] = old
-    write(path + ".verify", again)
-    with open(path + ".verify", "rb") as fh:
-        round_trip = fh.read()
-    os.unlink(path + ".verify")
+    round_trip = json.dumps(again, indent=2).encode()
     if round_trip != original:
         # Restore and refuse: a file we cannot round-trip is a file we do not
         # understand well enough to edit.

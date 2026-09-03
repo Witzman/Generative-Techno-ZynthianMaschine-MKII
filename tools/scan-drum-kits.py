@@ -54,7 +54,7 @@ FALLBACK = {"clap": ["snare"], "ohat": ["chat"], "chat": ["ohat"], "snare": ["cl
 
 
 def normalise(name):
-    """Fold the separators the sample names actually use into one space.
+    r"""Fold the separators the sample names actually use into one space.
 
     **U+00A0 IS IN HERE ON PURPOSE.** NI's filenames contain NO-BREAK SPACES,
     and a no-break space is not `\x20`: a classifier that folds `_` and `-`

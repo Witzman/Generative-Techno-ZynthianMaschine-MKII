@@ -81,8 +81,12 @@ import copy
 import hashlib
 import json
 import math
+import os
 import struct
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomic_write  # noqa: E402
 
 # --- what a distribution looks like ----------------------------------------
 
@@ -590,8 +594,7 @@ def _write(entries, path):
         json.dump(entries, sys.stdout, indent=2)
         sys.stdout.write("\n")
     else:
-        with open(path, "w") as fh:
-            json.dump(entries, fh, indent=2)
+        atomic_write.write_json(path, entries)
         print(f"{len(entries)} entries -> {path}")
 
 

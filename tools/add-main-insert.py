@@ -37,6 +37,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import atomic_write  # noqa: E402
+
 ENGINE = "JV/MDA RezFilter"
 MAIN_CHAIN = "0"
 
@@ -150,8 +153,7 @@ def main(argv):
     snapshot["last_snapshot_fpath"] = (
         "/zynthian/zynthian-my-data/snapshots/000/"
         + os.path.basename(argv[2]))
-    with open(argv[2], "w") as handle:
-        json.dump(snapshot, handle, indent=2)
+    atomic_write.write_json(argv[2], snapshot)
     print(f"wrote {argv[2]}: {ENGINE} on chain 0 as processor {pid}")
 
 
