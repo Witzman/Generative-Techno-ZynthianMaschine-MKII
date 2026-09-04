@@ -8703,3 +8703,161 @@ class TheModDepthMultiplierIsVisible(unittest.TestCase):
 
     def test_nothing_is_drawn_when_mod_is_not_active(self):
         self.assertEqual(tl.mod_rate_label("STEP", False, 1.0, 0.5), "STEP")
+
+
+# --------------------------------------------------------------- FX_ROLES
+#
+# The table that replaced resolving REVERB and DELAY by plugin NAME. The
+# guards here are the ones that would have caught the original defect: an
+# insert that appears in a shipped manifest and is in NEITHER the role table
+# nor the explicit no-role set is a plugin whose knobs silently do nothing.
+
+class FXRolesCase(unittest.TestCase):
+    def test_every_entry_declares_a_role_and_a_blend(self):
+        for plugin, spec in tl.FX_ROLES.items():
+            self.assertIn(spec.get("role"), ("reverb", "delay"), plugin)
+            self.assertIn(spec.get("blend"), ("send", "crossfade"), plugin)
+
+    def test_every_entry_has_at_least_one_wet_port(self):
+        for plugin, spec in tl.FX_ROLES.items():
+            self.assertTrue(spec.get("WET"), plugin)
+            for port in spec["WET"]:
+                symbol, kind, lo, hi = port
+                self.assertTrue(symbol, plugin)
+                self.assertIn(kind, ("db", "lin"), plugin)
+                self.assertLess(lo, hi, plugin)
+
+    def test_a_crossfade_has_no_dry_port(self):
+        # That IS what makes it a crossfade: there is nothing separate to
+        # leave alone, which is why the wet is ceilinged.
+        for plugin, spec in tl.FX_ROLES.items():
+            if spec["blend"] == "crossfade":
+                self.assertNotIn("DRY", spec, plugin)
+
+    def test_a_send_has_a_dry_port(self):
+        for plugin, spec in tl.FX_ROLES.items():
+            if spec["blend"] == "send":
+                self.assertIn("DRY", spec, plugin)
+
+    def test_revtype_exists_on_exactly_one_plugin(self):
+        # `mode` 0..42 is TAP Reverberator's alone. If a second plugin ever
+        # claims REVTYPE, somebody has mapped it onto a port that is not a
+        # room list and the global will pick rooms nobody asked for.
+        have = [p for p, s in tl.FX_ROLES.items() if "REVTYPE" in s]
+        self.assertEqual(have, ["TAP Reverberator"])
+
+    def test_a_dlytime_entry_declares_its_unit(self):
+        # Three unit systems exist and only milliseconds can take a
+        # tempo-derived value. An entry without the unit would be written to
+        # as if it were ms.
+        for plugin, spec in tl.FX_ROLES.items():
+            if "DLYTIME" not in spec:
+                continue
+            entry = spec["DLYTIME"]
+            self.assertEqual(len(entry), 4, plugin)
+            self.assertEqual(entry[3], "ms", plugin)
+
+    def test_no_plugin_is_in_both_the_table_and_the_no_role_set(self):
+        self.assertEqual(set(tl.FX_ROLES) & set(tl.FX_NO_ROLE), set())
+
+    def test_lookup_tolerates_the_engine_name_prefix(self):
+        self.assertIsNone(tl.fx_role_of(""))
+        self.assertIsNone(tl.fx_role_of(None))
+        self.assertIsNone(tl.fx_role_of("JV/Nothing At All"))
+        for name in ("TAP Reverberator", "JV/TAP Reverberator",
+                     "Jalv/TAP Reverberator x"):
+            found = tl.fx_role_of(name)
+            self.assertIsNotNone(found, name)
+            self.assertEqual(found[1]["role"], "reverb")
+
+    def test_a_db_wet_is_the_audio_taper(self):
+        spec = tl.FX_ROLES["TAP Reverberator"]
+        got = dict(tl.fx_wet_values(spec, 100))
+        self.assertAlmostEqual(got["wetlevel"], 0.0, places=2)
+        got = dict(tl.fx_wet_values(spec, 50))
+        self.assertAlmostEqual(got["wetlevel"], -6.02, places=2)
+        got = dict(tl.fx_wet_values(spec, 0))
+        self.assertAlmostEqual(got["wetlevel"], tl.WET_OFF, places=2)
+
+    def test_a_linear_wet_spans_its_own_range(self):
+        spec = tl.FX_ROLES["Tal-Reverb-III"]
+        self.assertAlmostEqual(dict(tl.fx_wet_values(spec, 100))["wet"], 1.0)
+        self.assertAlmostEqual(dict(tl.fx_wet_values(spec, 50))["wet"], 0.5)
+        self.assertAlmostEqual(dict(tl.fx_wet_values(spec, 0))["wet"], 0.0)
+
+    def test_dragonflys_two_wet_ports_are_early_and_late(self):
+        # NOT a stereo pair, which is the reason WET is a tuple of ports
+        # rather than a symbol plus an optional WET_R.
+        spec = tl.FX_ROLES["Dragonfly Hall Reverb"]
+        got = dict(tl.fx_wet_values(spec, 100))
+        self.assertEqual(sorted(got), ["early_level", "late_level"])
+
+    def test_a_crossfade_never_reaches_full_wet(self):
+        # A full knob on a plugin with no dry port would delete the channel's
+        # dry signal, and a channel that vanishes without saying why is the
+        # one thing this surface may not do.
+        for plugin, spec in tl.FX_ROLES.items():
+            if spec["blend"] != "crossfade":
+                continue
+            for symbol, value in tl.fx_wet_values(spec, 100):
+                _sym, _kind, lo, hi = next(
+                    p for p in spec["WET"] if p[0] == symbol)
+                self.assertLess(value, hi, f"{plugin}.{symbol}")
+                self.assertAlmostEqual(
+                    value, lo + (hi - lo) * tl.CROSSFADE_CEILING, places=4,
+                    msg=f"{plugin}.{symbol}")
+
+    def test_every_wet_value_stays_inside_its_port(self):
+        for plugin, spec in tl.FX_ROLES.items():
+            for percent in (-50, 0, 1, 37, 100, 250):
+                for symbol, value in tl.fx_wet_values(spec, percent):
+                    _s, _k, lo, hi = next(
+                        p for p in spec["WET"] if p[0] == symbol)
+                    self.assertGreaterEqual(value, lo, f"{plugin} {percent}")
+                    self.assertLessEqual(value, hi, f"{plugin} {percent}")
+
+
+class EveryShippedInsertIsAccountedForCase(unittest.TestCase):
+    """THE GUARD THAT WOULD HAVE CAUGHT THE ORIGINAL DEFECT.
+
+    An insert plugin named by a shipped manifest must be in FX_ROLES or in
+    FX_NO_ROLE. Anything else is a chain whose REVERB and DELAY knobs do
+    nothing, whose reverb and delay modulators are inert, and whose four FX
+    globals are dead - in silence, which is how 41 of 71 presets shipped that
+    way for weeks."""
+
+    def manifests(self):
+        import glob
+        import json
+        import os
+        root = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.abspath(__file__))))
+        found = []
+        for path in sorted(glob.glob(os.path.join(root, "snapshot",
+                                                  "*-manifest.json"))):
+            with open(path) as fh:
+                doc = json.load(fh)
+            # THE FACTORY MANIFEST IS ONE ENTRY, NOT A LIST, and it names no
+            # inserts at all - it builds on 018, which already carries them.
+            # Normalising here rather than filtering by filename, so a third
+            # shape shows up as a failure instead of being skipped in silence.
+            entries = doc if isinstance(doc, list) else [doc]
+            found.append((os.path.basename(path), entries))
+        return found
+
+    def test_there_is_at_least_one_manifest_to_check(self):
+        self.assertTrue(self.manifests())
+
+    def test_every_insert_is_in_the_table_or_named_as_roleless(self):
+        known = set(tl.FX_ROLES) | set(tl.FX_NO_ROLE)
+        unknown = {}
+        for name, entries in self.manifests():
+            for entry in entries:
+                for plugin in entry.get("fx") or ():
+                    bare = str(plugin).split("/")[-1]
+                    if bare not in known:
+                        unknown.setdefault(bare, []).append(
+                            f"{name}:{entry.get('file')}")
+        self.assertEqual(unknown, {},
+                         "insert plugins in no FX table: "
+                         + ", ".join(sorted(unknown)))

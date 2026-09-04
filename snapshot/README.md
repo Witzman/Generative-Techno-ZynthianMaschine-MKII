@@ -190,20 +190,44 @@ python3 tools/build-genre-snapshots.py \
 
 ## What they are
 
-These are **fixed arrangements, not generative patches.** Every voice is at
-`random 0` and `rhythm 0`, so the melody and the rhythm are locked; `mods` is
-empty, so nothing is being modulated. Load one and it plays the same bar until
-you change it. That is the point of the pack: the rest of the instrument is
-about evolution, and these are the starting places.
+**REBUILT 2026-09-04, and the reason is worth stating: the first version of
+this pack was fifty-one files holding about thirty-one arrangements, on a flat
+mixing board, and twenty of them could not reach a reverb or a delay at all.**
+The scan that found it is `notes/findings/2026-09-04-the-preset-packs-are-one-preset.md`
+and the plan is beside it. What changed:
+
+| Was | Is |
+|---|---|
+| every fader at **0.19** on all eight channels | a staged mix per family — drums forward, voices 8-10 dB down, the way `019` does it |
+| every channel a **one-bar loop at 1/16** | the pad runs at 1/8, so it is a two-bar layer over a one-bar groove |
+| `chord` **0** everywhere — no preset made a chord | chords on the mid and pad channels: sevenths in house, ninths in deep, a real triad in dub |
+| drum grooves as **literal step lists**, with no `drums` block — so HITS and ROT on the panel were whatever it last held, and the first encoder turn wiped the groove | grooves written as **euclid + rotation + mask**, with the `drums` block saved, so the panel and the pattern agree |
+| **nineteen** presets had a bass playing the flat seventh or the fifth on **every** step and never the root | 2-4 bass onsets a bar, and the first note of the bar is the root |
+| swing and humanisation **zero** everywhere | per-channel swing (house 0.16, deep 0.20, dub 0.08) and humanised clap, snare and hats |
+| `061`–`080` were **twenty different effect pairs over eleven duplicated arrangements** | the **SPACE series**: twenty rooms, each with its own key and its own chord register |
 
 | Files | What varies | Effects |
 |---|---|---|
-| `031`–`060` | thirty different instrumentations across five genres | the factory pair: TAP Stereo Echo + TAP Reverberator |
-| `061`–`080` | twenty more | a different effect pair on every one, no pair repeated |
+| `031`–`060` | thirty arrangements across five genres | TAP Stereo Echo + TAP Reverberator |
+| `061`–`080` | **twenty rooms** — plate, chamber, hall, cathedral, tile, cavern, spring, gated, ambience, slapback, canyon, studio, basement, stairwell, glass, tunnel, chapel, hangar, closet, observatory | the same pair, driven to twenty different `revtype`/`revsize`/`dlytime`/`dlyfbk` settings |
+| `101` | an eleventh dub, every voice a Mutated Instrument | the same pair |
 
-Ten each of **house**, **deep house**, **minimal**, **dub** and **trance**, 118
-to 140 BPM, plus `101` as an eleventh dub. 21 distinct synth engines, 24
-distinct drum kits, 21 distinct effect pairs.
+Six each of **house**, **deep house**, **minimal**, **dub** and **trance** at
+120-140 BPM, twenty **space** presets at 120, plus `101`.
+
+**Why one effect pair on all fifty-one now.** Not a narrowing — the opposite.
+`revtype` alone is **43 distinct rooms**, and until 2026-09-04 not one of them
+was reachable on the twenty-one presets that carried a different pair, because
+the driver resolved REVERB and DELAY by plugin NAME. The knobs, both modulator
+kinds and all four space globals were dead on those files, in silence. The
+driver resolves by ROLE now, so the whole palette works — and the pack takes
+the one pair that supplies both roles on every chain, because that is what
+makes `revtype`, `revsize`, `dlytime` and `dlyfbk` live on every preset.
+See `notes/specs/2026-09-04-role-based-fx-resolution.md`.
+
+**These are still fixed arrangements, not generative patches** — `random` and
+`rhythm` are 0 on every genre voice, so the melody and the rhythm are locked.
+The drone pack is the opposite instrument; see below.
 
 **The five drum channels keep their roles.** A is always the kick, E always the
 open hat; what changes is the kit — TR909 for house, TR808 and CR78 for dub,
@@ -244,25 +268,34 @@ scp snapshot/genre-pack/*.zss \
 
 ## How the pack was verified
 
+**Every one of the fifty-one now crosses `tools/validate-manifest.py`**, which
+is a check on the MUSIC rather than the structure: it renders every channel's
+notes and refuses two sustained notes closer than the critical band at their
+register, a unison between channels, more channels attacking one instant than
+the family's budget, a bass whose first note of the bar is not the root, a flat
+mixing board, a kit note two channels share, and a `level` modulator whose base
+disagrees with its fader. All 71 entries of both packs pass; all 71 of the
+version before the rebuild fail.
+
 **Every one of the fifty-one was checked structurally** — the RIFF re-parses with no
 trailing bytes, all eight patterns present, every drum step list matching the
 manifest, every drum note matching that kit's scanned map, every voice's steps
 matching its `rhythm_reg`, evolution off, `mods` and `stash` empty, the engines
 and the effect pair actually applied to all eight chains.
 
-**Three were loaded on the rig**, through the real boot path, and the engines
-that came up were confirmed as JACK clients — one from each transform the
-builder performs:
+**Three were loaded on the rig** on 2026-08-22, through the real boot path,
+and the engines that came up were confirmed as JACK clients — one from each
+transform the builder performs. **Two of those three files no longer exist**:
+`061-fx-tape-chorus` and `080-fx-chorus-plate` were part of the fx-* series the
+2026-09-04 rebuild replaced, and the record is kept because what it proved —
+that the builder's engine and effect swaps reach the rig — is still true of the
+tool. Zero driver errors on all three, one `LinuxSampler` serving the five drum
+chains in each.
 
-| Loaded | Voices that came up | Effects that came up |
-|---|---|---|
-| `031-house-classic` | JC303, Obxd, padthv1 | 8 × TAP Stereo Echo, 8 × TAP Reverberator |
-| `061-fx-tape-chorus` | JC303, Obxd, padthv1 | 8 × CHOWTapeModel, 8 × YK Chorus |
-| `080-fx-chorus-plate` | amsynth, Surge XT, String machine | 8 × YK Chorus, 8 × Tal-Reverb-III |
-
-Zero driver errors on all three, and one `LinuxSampler` serving the five drum
-chains in each. That covers the untouched-effects case, the swapped-effects
-case and the swapped-synths case.
+**THE REBUILT PACK HAS NOT BEEN LOADED ON THE RIG.** Every entry passes
+`tools/validate-manifest.py`, which renders the notes and refuses a collision,
+a rootless bass, a flat board or a drone that cannot sustain — but that is a
+floor, not a verdict.
 
 **Staging a snapshot to test it must stop the UI first.** Zynthian rewrites
 `last_state.zss` on a clean shutdown, so copying a snapshot over it while the UI
@@ -284,23 +317,27 @@ separates the voices by register, octave and gate instead.
 
 | | |
 |---|---|
-| Tempo | **120 BPM — chosen because it is EXACT** (see the tempo note in the factory
-snapshot section above). Of the dub entries only this one and `050` sit on a zero-error tempo |
-| Key | root 10, scale 5 — B♭ pentatonic, the only dub entry in that pair |
-| Drums | TR808 across all five, sparse: kick four-on-floor, snare on 4 and 12, one clap on 12, offbeat hats |
-| Voices | sub on the one and the and (`rhythm_reg` 16705), the stab strictly offbeat (17476), one sustained pad per bar (1, gate 800) |
-| Effects | **`JV/Tal-Dub-3` → `JV/Tal-Reverb-III`** — the dub delay proper into a plate. A pair used nowhere else: `073` is Tal-Dub-3 into Tal-Reverb-II, `076` is Modulay into Tal-Reverb-III |
+| Tempo | **120 BPM — chosen because it is EXACT** (see the tempo note in the factory snapshot section above) |
+| Key | root 10, scale 5 — B♭ pentatonic |
+| Drums | TR909 across all five, and dub-sparse: kick four-on-floor, one rimshot on the four, a closed hat on 2 and 10, no clap and no open hat |
+| Voices | bass on the one and the offbeat (`rhythm_reg` 65) doubled at the octave, the triad stab strictly offbeat, a fifth held above it |
+| Effects | TAP Stereo Echo → TAP Reverberator, with `dlytime` 1/2 and `dlyfbk` 35 |
 
-**Why those effects.** The insert pair sits on **all eight chains**, so an
-effect costs eight times what it looks like — Tal-Reverb-III is the reverb this
-project moved to when Roboverb was measured unusable at eight instances, and
-Tal-Dub-3 is already proven at eight in `073` and `074`. Neither is on the
-banned list.
+**Its effect pair changed in the 2026-09-04 rebuild, and not for taste.** It
+used to carry `JV/Tal-Dub-3` → `JV/Tal-Reverb-III`, which reads like the right
+choice for a dub preset and was in fact a preset with **no reachable delay and
+no reachable reverb**: the driver resolved both verbs by plugin name, so the
+knobs, the modulators and all four space globals were dead. The driver resolves
+by role now and Tal-Dub-3 works — but the dub character comes from `dlytime`,
+`dlyfbk` and `revtype`, which are live on every preset only when the pair
+supplies both roles. See the note in the genre-pack section above.
 
-**Measured on the rig, 2026-08-21**: loads with 8 × Tal-Dub-3 and
-8 × Tal-Reverb-III instantiated, **JACK DSP mean 23.9%, p95 24.1%, zero
-xruns** over 60 s with the transport running — level with the factory
-snapshot's own 23.5-25.4% baseline. `JV/Mutated Instruments` is the zynMI
+**Measured on the rig, 2026-08-21, on the version that carried Tal-Dub-3 and
+Tal-Reverb-III**: 8 × each instantiated, **JACK DSP mean 23.9%, p95 24.1%,
+zero xruns** over 60 s with the transport running — level with the factory
+snapshot's own 23.5-25.4% baseline. The rebuilt file carries the TAP pair
+instead, which is the cheaper of the two, so that figure is an upper bound
+rather than a current reading. `JV/Mutated Instruments` is the zynMI
 engine and does **not** appear as a `jalv` process, so do not look for it
 there; `053-dub-rimshot` behaves the same way.
 
@@ -311,17 +348,70 @@ there; `053-dub-rimshot` behaves the same way.
 **Twenty snapshots**, `081`–`100`, in [`drone-ambient/`](drone-ambient/), built
 by the same tool from [`drone-ambient-manifest.json`](drone-ambient-manifest.json).
 
-Where the genre pack is fixed arrangements with no modulation, this pack is the
-inverse: **barely any rhythm, and twelve modulators per preset.** 240 in total.
+**REBUILT 2026-09-04, and this pack was the owner's stated priority:** *"they
+just sound like a mess."* It was, and the reasons were measurable.
+
+**All twenty shared ONE arrangement** — identical voice registers `(219, 147,
+201)`, identical rhythm registers `(4097, 1, 17)`, identical lengths. Twenty
+files, one piece, twenty reverbs.
+
+**All eight channels attacked step 0 together.** `081` rendered as
+`D1 D2 D#2 D#2 D3 D3 F3 C5` in G minor: no G anywhere, so the chord had no
+root and its lowest note was the fifth; D2 against D#2 is a **minor second at
+73 Hz**, which the ear hears as one rough tone beating four times a second, not
+as two notes; and two pairs were in **exact unison** — two voices spent on no
+extra harmony.
+
+**And they were not drones.** `note_duration` clamps a note to the loop point,
+so on the 1/16 grid all twenty used, the longest note the instrument can hold
+is **eight of sixteen steps — half a bar**. Every one sat at `gate 800`, the
+maximum, which is exactly that. So each "drone" played half a bar of sound,
+half a bar of silence, and then all eight re-attacked together: a one-bar
+unison chug at 52-90 BPM. The lever nobody had pulled is DIVISION, and it was
+not expressible from a manifest until the builder grew it the same day.
+
+## What they are now
+
+**Five sustained layers, none of them attacking at the same instant, over a
+four-bar cycle.**
+
+| ch | role | division | holds | chord |
+|---|---|---|---|---|
+| A | sub anchor | **1/4 — four bars** | two bars per note | — |
+| B | bass | **1/4** | two bars | root only |
+| C | the chords | **1/8 — two bars** | to the next chord | triad, or a fifth in pentatonic |
+| D, E | silent, fader 0.00 | — | — | — |
+| F | upper voice | **1/4** | two bars | seventh |
+| G | air | **1/8** | to the next | — |
+| H | silent | — | — | — |
+
+`gate` is 800 on every layer and it is now **exact rather than maximal**: with
+the hits eight steps apart the binding clamp is the gap to the next note, so
+every note butts against the one after it. Continuous sound, with the harmony
+changing underneath. That is a drone.
+
+Sixteen attacks over the four-bar cycle and **no two channels ever share
+one** — the bar line is deliberately impossible to hear. Three layers run four
+bars and two run two, so the picture is never the same two bars running.
+
+The interval rule that governs it: an octave or wider is always safe, and below
+that, keyed on the lower note — nothing closer than an **octave** below MIDI
+36, a **fifth** from 36 to 47, a **minor third** to 59, a **whole tone** to 71,
+and anything above that. `tools/validate-manifest.py` enforces it, and every
+one of the twenty passes at all twelve roots.
+
+**Pentatonic gets four layers, not five.** PENT has five degrees to the octave
+instead of seven, so a triad spans 1.6 octaves and the chord channel reaches
+into the one above it. No combination of shape, octave or register fixes it
+with five layers — it was searched exhaustively. `088-drone-thaw` and
+`093-ambient-solstice` drop the upper voice and take a fifth on the chords, and
+that four-layer form is clean in **all seventy-two** root-and-scale
+combinations.
 
 | Files | Layout | Channels |
 |---|---|---|
-| `081`–`090` | **drone** | all eight play as voices, each on its own synth engine |
-| `091`–`100` | **ambient** | A–D stay drums, E–H are voices |
-
-Tempos 52–90. Every voice is `gate 800` — an eight-step note — with a
-`rhythm_reg` of one or two bits, so a drone voice sounds once or twice a bar and
-holds.
+| `081`–`090` | **drone** | A, B, C overridden to voices; F, G voices; D, E, H silent |
+| `091`–`100` | **ambient** | the same, plus a brushed percussion channel on E |
 
 ## SHIFT + GRID is what makes them work
 
@@ -331,28 +421,47 @@ cosmetic: `_chain_kind()` returns `drum` for channels A–E straight off the
 channel table and **never looks at the loaded engine**, so putting a synth on
 chain 1 does not make channel A a voice. The override does.
 
-So a drone snapshot carries `kinds` for channels 0–4, and the ambient ones carry
-it for channel 4 alone. On the panel, GRID blinks on those channels and the page
-indicator reads `VOX` — the instrument telling you the channel is not itself.
+So a rebuilt snapshot carries `kinds` for channels 0, 1 and 2. On the panel,
+GRID blinks on those channels and the page indicator reads `VOX` — the
+instrument telling you the channel is not itself.
 
-Four ambient presets leave channel E on **LinuxSampler with no synth**, so the
-Turing register walks the kit's own samples rather than a scale. That is the
-factory snapshot's trick, and it is a genuinely different colour from a synth
-pad: `092`, `094`, `097`, `099`.
+## The modulators — seven, not twelve
 
-## The modulators
+**Five of the old twelve were inert.** They were bound to `reverb` and `delay`
+on chains whose insert pair was not TAP + TAP, and the driver resolved those
+two verbs by plugin NAME — so on all twenty presets the reverb and delay
+modulators did nothing, and so did `revsize`, `revtype`, `dlytime` and
+`dlyfbk`. What actually moved was four `level` LFOs, one of them a
+sample-and-hold at depth 60, and three `cutoff` LFOs. That is why they read as
+static but lurching rather than drifting.
 
-Twelve per preset, bound to `level`, `reverb`, `delay`, `cutoff` and `reso`.
-Rates are **bar-synced and slow** — indices 0–5 only, which is 16 bars down to
-2 bars per cycle. At 60 BPM, index 0 is a 64-second sweep.
+Seven per preset now, nine on the ambient ones, and every one resolves:
 
-`level`, `reverb` and `delay` carry 180 of the 240 because **they always
-resolve**: level is the mixer strip, reverb and delay are the two insert wets
-every chain has. `cutoff` and `reso` are placed only on channels running JC303,
-Obxd or padthv1, whose ports this project has actually measured. That matters
-because a modulator on a port the loaded synth does not publish is **inert, not
-an error** — `_mod_write()` treats a missing span as "skip" — so it would be
-silent weight in the file rather than a fault you could hear and fix.
+- **`tri` only.** `s&h` is an event generator and a drone has no events; a
+  random filter jump on a sustained pad is the sound of a broken synth.
+- **`level` depth 18-30, never more.** Depth 22 on a 0-100 span is about ±3 dB
+  — a breath. The old depth 55 was a channel disappearing and returning.
+- **Nothing on the anchor.** Channel A never moves; that is what an anchor is.
+- **Rates 16, 8, 6, 4 and 3 bars — an LCM of 48 bars**, so at 60 BPM the
+  modulation picture takes 192 seconds to repeat. That is where the long form
+  comes from, and it has to, because a voice's loop cannot be longer than four
+  bars: `_write_voice_pattern` re-stamps the beat count from the division table
+  on every rewrite, so coprime polymeter is not available on a sustained layer.
+- **Never above rate index 5.** The modulator runs on the poll thread at about
+  200 ms, so at 60 BPM index 11 is 1.25 samples per cycle — noise, not a shape.
+
+**A `level` modulator's `base` must equal 100× its channel's fader**, because
+it overwrites the strip within 200 ms of load. The old pack had bases of 22-32
+against faders of 0.19, with four channels on one system and four on the other;
+`validate-manifest.py` refuses that now.
+
+**`random` is 0 on every pitched layer, and that is a proof rather than a
+preference.** A bit flip moves the top bits of the pitch register, so an
+evolving register walks anywhere in its band and destroys the voicing above
+within a minute. Harmonic motion comes from the global key walker instead —
+`walk` 8 bars for drone, 4 for ambient — which adds the same offset to every
+voice and therefore preserves every interval exactly. `rhythm` is 4-10 on the
+upper layers and 0 on the anchor and the bass.
 
 ## What the cost measurement changed
 

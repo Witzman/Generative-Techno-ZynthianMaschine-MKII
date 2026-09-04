@@ -328,8 +328,27 @@ WHOLE_GROUPS = {
     # A register is written for a scale. Splitting these two is how a blend
     # produces a melody in a key nothing else in the entry is in.
     "tonality": ("root", "scale", "voices.register"),
-    # Step lists and the voice rhythm bits: sets and bit patterns.
-    "rhythm": ("drums.steps", "voices.rhythm_reg"),
+    # Step lists and the voice rhythm bits: sets and bit patterns. `hits` and
+    # `rotate` join them because a rotation is written FOR its hit count -
+    # blending 4 hits with a rotation chosen for 2 moves the groove somewhere
+    # neither parent was - and the two registers are masks over that line.
+    "rhythm": ("drums.steps", "drums.hits", "drums.rotate",
+               "drums.rhythm_reg", "drums.hand_reg", "voices.rhythm_reg"),
+    # A DIVISION AND A GATE ARE ONE DECISION. `gate` is hundredths of a STEP,
+    # and a step is a 1/16 at one division and a whole beat at another - so
+    # taking `div` from A and `gate` from B changes every note length by up to
+    # four times, in a file where nothing says why.
+    "time": ("div", "voices.gate", "drums.gate", "groove"),
+    # The board is one statement about what the record is about; half of one
+    # mix and half of another is neither. The level MODULATORS travel with it
+    # for a harder reason: a level modulator overwrites its fader within
+    # 200 ms of load, so a mix taken from A with modulators from B is a mix
+    # that is silently replaced a fifth of a second after it loads.
+    "board": ("mix", "main"),
+    # Chord shapes are written against a scale's degree count - a triad spans
+    # 1.6 octaves in PENT and one in the rest - so they travel with tonality's
+    # coin rather than their own.
+    "harmony": ("voices.chord", "globals"),
     "kits": ("drums.kits",),
     "engines": ("voices.engines",),
     # One coin, because the pair lands on all eight chains - see the header.
@@ -507,21 +526,74 @@ def validate_entry(entry):
         raise ValueError(f"{name}: still holds odds at {leftovers} - sample it first")
 
     d, v = entry["drums"], entry["voices"]
-    for key in ("kits", "steps", "velo", "gate"):
+
+    # TWO DRUM FORMS SINCE 2026-09-04, and `hits` is the switch. The euclid
+    # form (hits/rotate/rhythm_reg) is the one the rebuilt packs use, because
+    # the packs carried no `drums` block at all and so the panel's HITS and
+    # ROT were whatever it last held - the first encoder turn discarded a
+    # hand-written step list. The literal `steps` form still builds, so an
+    # older style is still a valid style.
+    euclid = "hits" in d
+    per_channel = ("kits", "velo", "gate") + (
+        ("hits",) if euclid else ("steps",))
+    for key in per_channel:
         if len(d[key]) != 5:
             raise ValueError(f"{name}: drums.{key} has {len(d[key])}, expected 5")
     for key in ("engines", "rhythm_reg", "register", "length", "octave", "range",
                 "velo", "gate"):
         if len(v[key]) != 3:
             raise ValueError(f"{name}: voices.{key} has {len(v[key])}, expected 3")
-    for i, steps in enumerate(d["steps"]):
-        for s in steps:
-            if not 0 <= s < 16:
-                raise ValueError(f"{name}: drums.steps.{i} has step {s} outside 0..15")
-        if len(set(steps)) != len(steps):
-            raise ValueError(f"{name}: drums.steps.{i} repeats a step")
+    # The optional per-voice lists are three long too when present, or the
+    # builder reads one voice's value onto another.
+    for key in ("chord", "random", "rhythm"):
+        if key in v and len(v[key]) != 3:
+            raise ValueError(f"{name}: voices.{key} has {len(v[key])}, expected 3")
+    if euclid:
+        steps_in_bar = 16
+        for i, hits in enumerate(d["hits"]):
+            if not 0 <= hits <= steps_in_bar:
+                raise ValueError(
+                    f"{name}: drums.hits.{i} is {hits}, outside 0..{steps_in_bar}")
+        for i, rot in enumerate(d.get("rotate") or [0] * 5):
+            if not 0 <= rot < steps_in_bar:
+                raise ValueError(
+                    f"{name}: drums.rotate.{i} is {rot}, outside "
+                    f"0..{steps_in_bar - 1}")
+    else:
+        for i, steps in enumerate(d["steps"]):
+            for s in steps:
+                if not 0 <= s < 16:
+                    raise ValueError(
+                        f"{name}: drums.steps.{i} has step {s} outside 0..15")
+            if len(set(steps)) != len(steps):
+                raise ValueError(f"{name}: drums.steps.{i} repeats a step")
     if not 0 <= entry["root"] <= 11:
         raise ValueError(f"{name}: root {entry['root']} outside 0..11")
+
+    # THE EIGHT-ENTRY LEVERS. `div` and `mix` are per CHANNEL, not per
+    # section: the drum five and the voice three take one key between them,
+    # and an overridden drum channel is a voice living at its own index.
+    for key in ("div", "mix"):
+        if key in entry and len(entry[key]) != 8:
+            raise ValueError(
+                f"{name}: {key} has {len(entry[key])}, expected 8")
+    if "mix" in entry:
+        for i, level in enumerate(entry["mix"]):
+            if not 0.0 <= level <= 1.0:
+                raise ValueError(f"{name}: mix.{i} is {level}, outside 0.0..1.0")
+    for key in ("swing", "human_time", "human_velo"):
+        groove = entry.get("groove") or {}
+        if key in groove and len(groove[key]) != 8:
+            raise ValueError(
+                f"{name}: groove.{key} has {len(groove[key])}, expected 8")
+    # A NEGATIVE SWING CANNOT BE WRITTEN. The riff field is unsigned fixed
+    # point, so it would land as a very large positive and the pattern would
+    # fall apart - the builder refuses it too, and this says so earlier.
+    for i, swing in enumerate((entry.get("groove") or {}).get("swing") or ()):
+        if swing < 0:
+            raise ValueError(
+                f"{name}: groove.swing.{i} is {swing} - a negative swing "
+                f"cannot be written to the riff")
 
     if len(entry["fx"]) != 2:
         raise ValueError(f"{name}: fx is a pair, got {entry['fx']}")

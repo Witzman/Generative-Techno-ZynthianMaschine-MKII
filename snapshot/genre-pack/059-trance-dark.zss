@@ -153,7 +153,7 @@
       "cc_route": [],
       "slots": [
         {
-          "26": "JV/Monique"
+          "26": "JV/JC303"
         },
         {
           "20": "JV/TAP Stereo Echo"
@@ -197,7 +197,7 @@
       "cc_route": [],
       "slots": [
         {
-          "8": "JV/Mutated Instruments"
+          "8": "JV/padthv1"
         },
         {
           "24": "JV/TAP Stereo Echo"
@@ -370,11 +370,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR808.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Roland TR808",
+            "Roland TR909",
             "sfz",
-            "Roland TR808.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -697,11 +697,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Simmons.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Simmons",
+            "Roland TR909",
             "sfz",
-            "Simmons.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -906,11 +906,68 @@
           }
         },
         "26": {
-          "bank_info": null,
+          "bank_info": [
+            "",
+            null,
+            "None",
+            null
+          ],
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "freeWheeling": {
+              "value": 0.0
+            },
+            "enabled": {
+              "value": 1.0
+            },
+            "_cutoff": {
+              "value": 0.5984251968503937
+            },
+            "_accentDecay": {
+              "value": 0.10000000149011612
+            },
+            "_decay": {
+              "value": 0.0
+            },
+            "_resonance": {
+              "value": 0.10236220472440945
+            },
+            "_envmod": {
+              "value": 0.08661417322834646
+            },
+            "_tuning": {
+              "value": 0.5
+            },
+            "_volume": {
+              "value": 0.8500000238418579
+            },
+            "_waveform": {
+              "value": 1.0
+            },
+            "_accent": {
+              "value": 0.5
+            },
+            "_normalDecay": {
+              "value": 0.30000001192092896
+            },
+            "_slideTime": {
+              "value": 0.550000011920929
+            },
+            "_sqrDriver": {
+              "value": 0.25
+            },
+            "_switchModState": {
+              "value": 0
+            },
+            "_softAttack": {
+              "value": 0.10000000149011612
+            },
+            "_feedbackFilter": {
+              "value": 0.5400000214576721
+            }
+          }
         },
         "20": {
           "bank_info": [
@@ -1337,11 +1394,307 @@
           }
         },
         "8": {
-          "bank_info": null,
+          "bank_info": [
+            "file:///zynthian/zynthian-data/presets/lv2/padthv1_67Padthv1Patches.presets.lv2/padthv1_bank_67Padthv1Patches",
+            null,
+            "67Padthv1Patches",
+            null
+          ],
           "bank_subdir_info": null,
-          "preset_info": null,
+          "preset_info": [
+            "file:///zynthian/zynthian-data/presets/lv2/padthv1_67Padthv1Patches.presets.lv2/67Padthv1Patches_DexKeys02.ttl",
+            null,
+            "DexKeys02",
+            "file:///zynthian/zynthian-data/presets/lv2/padthv1_67Padthv1Patches.presets.lv2/padthv1_bank_67Padthv1Patches"
+          ],
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "GEN1_SAMPLE1": {
+              "value": 60
+            },
+            "GEN1_WIDTH1": {
+              "value": 2.0
+            },
+            "GEN1_SCALE1": {
+              "value": 0.03
+            },
+            "GEN1_NH1": {
+              "value": 9.0
+            },
+            "GEN1_APOD1": {
+              "value": 4
+            },
+            "GEN1_DETUNE1": {
+              "value": -0.08
+            },
+            "GEN1_GLIDE1": {
+              "value": 0.0
+            },
+            "GEN1_SAMPLE2": {
+              "value": 60
+            },
+            "GEN1_WIDTH2": {
+              "value": 32.0
+            },
+            "GEN1_SCALE2": {
+              "value": 0.0
+            },
+            "GEN1_NH2": {
+              "value": 8.0
+            },
+            "GEN1_APOD2": {
+              "value": 4
+            },
+            "GEN1_DETUNE2": {
+              "value": 0.0
+            },
+            "GEN1_GLIDE2": {
+              "value": 0.0
+            },
+            "GEN1_BALANCE": {
+              "value": -0.74
+            },
+            "GEN1_PHASE": {
+              "value": 0.49
+            },
+            "GEN1_RINGMOD": {
+              "value": 0.0
+            },
+            "GEN1_OCTAVE": {
+              "value": 0.0
+            },
+            "GEN1_TUNING": {
+              "value": 0.0
+            },
+            "GEN1_ENVTIME": {
+              "value": 0.6
+            },
+            "DCF1_ENABLED": {
+              "value": 1.0
+            },
+            "DCF1_CUTOFF": {
+              "value": 0.6
+            },
+            "DCF1_RESO": {
+              "value": 0.13
+            },
+            "DCF1_TYPE": {
+              "value": 0
+            },
+            "DCF1_SLOPE": {
+              "value": 1
+            },
+            "DCF1_ENVELOPE": {
+              "value": 0.72
+            },
+            "DCF1_ATTACK": {
+              "value": 0.06
+            },
+            "DCF1_DECAY": {
+              "value": 0.57
+            },
+            "DCF1_SUSTAIN": {
+              "value": 0.14
+            },
+            "DCF1_RELEASE": {
+              "value": 0.4
+            },
+            "LFO1_ENABLED": {
+              "value": 1.0
+            },
+            "LFO1_SHAPE": {
+              "value": 2
+            },
+            "LFO1_WIDTH": {
+              "value": 1.0
+            },
+            "LFO1_BPM": {
+              "value": 72.0
+            },
+            "LFO1_RATE": {
+              "value": 0.69
+            },
+            "LFO1_SYNC": {
+              "value": 0.0
+            },
+            "LFO1_SWEEP": {
+              "value": 0.06
+            },
+            "LFO1_PITCH": {
+              "value": 0.0
+            },
+            "LFO1_BALANCE": {
+              "value": 0.03
+            },
+            "LFO1_RINGMOD": {
+              "value": 0.0
+            },
+            "LFO1_CUTOFF": {
+              "value": 0.05
+            },
+            "LFO1_RESO": {
+              "value": -0.03
+            },
+            "LFO1_PANNING": {
+              "value": 0.0
+            },
+            "LFO1_VOLUME": {
+              "value": 0.0
+            },
+            "LFO1_ATTACK": {
+              "value": 0.0
+            },
+            "LFO1_DECAY": {
+              "value": 0.08
+            },
+            "LFO1_SUSTAIN": {
+              "value": 0.068
+            },
+            "LFO1_RELEASE": {
+              "value": 0.5
+            },
+            "DCA1_VOLUME": {
+              "value": 0.5
+            },
+            "DCA1_ATTACK": {
+              "value": 0.0
+            },
+            "DCA1_DECAY": {
+              "value": 0.57
+            },
+            "DCA1_SUSTAIN": {
+              "value": 0.5
+            },
+            "DCA1_RELEASE": {
+              "value": 0.41
+            },
+            "OUT1_WIDTH": {
+              "value": 0.0
+            },
+            "OUT1_PANNING": {
+              "value": 0.0
+            },
+            "OUT1_FXSEND": {
+              "value": 0.56
+            },
+            "OUT1_VOLUME": {
+              "value": 0.28
+            },
+            "DEF1_PITCHBEND": {
+              "value": 0.18
+            },
+            "DEF1_MODWHEEL": {
+              "value": 0.78
+            },
+            "DEF1_PRESSURE": {
+              "value": 0.79
+            },
+            "DEF1_VELOCITY": {
+              "value": 0.63
+            },
+            "DEF1_CHANNEL": {
+              "value": 0
+            },
+            "DEF1_MONO": {
+              "value": 0
+            },
+            "CHO1_WET": {
+              "value": 0.29
+            },
+            "CHO1_DELAY": {
+              "value": 0.5
+            },
+            "CHO1_FEEDB": {
+              "value": 0.5
+            },
+            "CHO1_RATE": {
+              "value": 0.55
+            },
+            "CHO1_MOD": {
+              "value": 0.22
+            },
+            "FLA1_WET": {
+              "value": 0.0
+            },
+            "FLA1_DELAY": {
+              "value": 0.5
+            },
+            "FLA1_FEEDB": {
+              "value": 0.5
+            },
+            "FLA1_DAFT": {
+              "value": 0.0
+            },
+            "PHA1_WET": {
+              "value": 0.0
+            },
+            "PHA1_RATE": {
+              "value": 0.5
+            },
+            "PHA1_FEEDB": {
+              "value": 0.5
+            },
+            "PHA1_DEPTH": {
+              "value": 0.5
+            },
+            "PHA1_DAFT": {
+              "value": 0.0
+            },
+            "DEL1_WET": {
+              "value": 0.0
+            },
+            "DEL1_DELAY": {
+              "value": 0.5
+            },
+            "DEL1_FEEDB": {
+              "value": 0.5
+            },
+            "DEL1_BPM": {
+              "value": 67.0
+            },
+            "REV1_WET": {
+              "value": 0.2
+            },
+            "REV1_ROOM": {
+              "value": 0.5
+            },
+            "REV1_DAMP": {
+              "value": 0.5
+            },
+            "REV1_FEEDB": {
+              "value": 0.5
+            },
+            "REV1_WIDTH": {
+              "value": 0.0
+            },
+            "DYN1_COMPRESS": {
+              "value": 1.0
+            },
+            "DYN1_LIMITER": {
+              "value": 1.0
+            },
+            "KEY1_LOW": {
+              "value": 0
+            },
+            "KEY1_HIGH": {
+              "value": 127
+            },
+            "P203_TUNING_REF_NOTE": {
+              "value": 69
+            },
+            "P204_TUNING_SCALE_FILE": {
+              "value": ""
+            },
+            "P202_TUNING_REF_PITCH": {
+              "value": 440.0
+            },
+            "P201_TUNING_ENABLED": {
+              "value": 0.0
+            },
+            "P205_TUNING_KEYMAP_FILE": {
+              "value": ""
+            }
+          }
         },
         "24": {
           "bank_info": [
@@ -1426,32 +1779,32 @@
       },
       "mixer": {
         "chan_00": {
-          "level": 0.19
+          "level": 0.76
         },
         "midi_learn": {},
         "chan_01": {
-          "level": 0.19
+          "level": 0.5
         },
         "chan_02": {
-          "level": 0.19
+          "level": 0.6
         },
         "chan_03": {
-          "level": 0.19
+          "level": 0.46
         },
         "chan_04": {
-          "level": 0.19
+          "level": 0.4
         },
         "chan_05": {
-          "level": 0.19
+          "level": 0.56
         },
         "chan_06": {
-          "level": 0.19
+          "level": 0.4
         },
         "chan_07": {
-          "level": 0.19
+          "level": 0.34
         },
         "chan_16": {
-          "level": 0.774264705882353
+          "level": 0.82
         }
       },
       "midi_capture": {
@@ -1536,12 +1889,14 @@
             "globals": {
               "root": 3,
               "scale": 3,
-              "bpm": 136,
+              "bpm": 140,
               "master": 80,
-              "revsize": 25,
-              "revtype": 3,
-              "dlytime": 1,
-              "dlyfbk": 35
+              "revsize": 45,
+              "revtype": 21,
+              "dlytime": 2,
+              "dlyfbk": 35,
+              "walk": 0,
+              "wspan": 2
             },
             "mode": "CONTROL",
             "pages": {
@@ -1567,44 +1922,131 @@
             },
             "voices": {
               "5": {
-                "register": 4354,
-                "length": 16,
-                "rhythm_reg": 65535,
-                "random": 0,
-                "rhythm": 0,
-                "gate": 30,
-                "octave": -1,
-                "range": 1,
-                "velo": 116,
-                "ring": []
-              },
-              "6": {
-                "register": 4276,
-                "length": 16,
-                "rhythm_reg": 21845,
-                "random": 0,
-                "rhythm": 0,
-                "gate": 35,
-                "octave": 0,
-                "range": 2,
-                "velo": 94,
-                "ring": []
-              },
-              "7": {
-                "register": 49866,
+                "register": 234,
                 "length": 16,
                 "rhythm_reg": 4369,
                 "random": 0,
                 "rhythm": 0,
-                "gate": 700,
+                "gate": 70,
                 "octave": 0,
-                "range": 2,
-                "velo": 78,
+                "range": 1,
+                "velo": 110,
                 "ring": []
+              },
+              "6": {
+                "register": 111,
+                "length": 8,
+                "rhythm_reg": 17476,
+                "random": 0,
+                "rhythm": 0,
+                "gate": 60,
+                "octave": 2,
+                "range": 1,
+                "velo": 96,
+                "ring": []
+              },
+              "7": {
+                "register": 183,
+                "length": 8,
+                "rhythm_reg": 8,
+                "random": 0,
+                "rhythm": 0,
+                "gate": 700,
+                "octave": 3,
+                "range": 1,
+                "velo": 80,
+                "ring": [],
+                "chord": 2
               }
             },
-            "mods": {},
-            "mod_seed": 0
+            "drums": {
+              "0": {
+                "hits": 4,
+                "rotate": 0,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "1": {
+                "hits": 2,
+                "rotate": 4,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "2": {
+                "hits": 2,
+                "rotate": 4,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "3": {
+                "hits": 8,
+                "rotate": 1,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "4": {
+                "hits": 4,
+                "rotate": 2,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              }
+            },
+            "mods": {
+              "7|cutoff": {
+                "depth": 45,
+                "rate": 3,
+                "shape": "ramp",
+                "phase0": 0.0,
+                "base": 55,
+                "seed": 1
+              },
+              "6|level": {
+                "depth": 20,
+                "rate": 2,
+                "shape": "tri",
+                "phase0": 0.2,
+                "base": 40,
+                "seed": 2
+              },
+              "5|cutoff": {
+                "depth": 25,
+                "rate": 5,
+                "shape": "tri",
+                "phase0": 0.45,
+                "base": 70,
+                "seed": 3
+              },
+              "2|reverb": {
+                "depth": 20,
+                "rate": 4,
+                "shape": "tri",
+                "phase0": 0.65,
+                "base": 35,
+                "seed": 4
+              },
+              "3|level": {
+                "depth": 18,
+                "rate": 4,
+                "shape": "tri",
+                "phase0": 0.3,
+                "base": 46,
+                "seed": 2
+              },
+              "0|level": {
+                "depth": -20,
+                "rate": 6,
+                "shape": "squ",
+                "phase0": 0.0,
+                "base": 76,
+                "seed": 1
+              }
+            },
+            "mod_seed": 6
           }
         },
         "zynsmf:midi_out": {
@@ -1696,5 +2138,5 @@
     }
   },
   "last_zs3_id": null,
-  "zynseq_riff_b64": "dmVycwAAABAAAAAKAIgABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkdiQAAAFkAAAAAAQAAAAAAAAAAZAkdiQAAAFkAAAAAAgAAAAAAAAAAZAkdiQAAAFkAAAAAAwAAAAAAAAAAZAkdiQAAAFkAHBhdG4AAABKAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAEAAAAAAAAAAGQKGQoAAABZAAAAAAMAAAAAAAAAAGQKGQoAAABZABwYXRuAAAASgAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAABAAAAAAAAAABkDJmMgAAAWQAAAAADAAAAAAAAAABkDJmMgAAAWQAcGF0bgAAAXAAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAqSioAAAFkAAAAAAEAAAAAAAAAAZAqSioAAAFkAAAAAAIAAAAAAAAAAZAqSioAAAFkAAAAAAMAAAAAAAAAAZAqSioAAAFkAAAAAAQAAAAAAAAAAZAqSioAAAFkAAAAAAUAAAAAAAAAAZAqSioAAAFkAAAAAAYAAAAAAAAAAZAqSioAAAFkAAAAAAcAAAAAAAAAAZAqSioAAAFkAAAAAAgAAAAAAAAAAZAqSioAAAFkAAAAAAkAAAAAAAAAAZAqSioAAAFkAAAAAAoAAAAAAAAAAZAqSioAAAFkAAAAAAsAAAAAAAAAAZAqSioAAAFkAAAAAAwAAAAAAAAAAZAqSioAAAFkAAAAAA0AAAAAAAAAAZAqSioAAAFkAAAAAA4AAAAAAAAAAZAqSioAAAFkAAAAAA8AAAAAAAAAAZAqSioAAAFkAHBhdG4AAAB0AAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAACAAAAAAAAAAGQLlouAAABZAAAAAAGAAAAAAAAAAGQLlouAAABZAAAAAAKAAAAAAAAAAGQLlouAAABZAAAAAAOAAAAAAAAAAGQLlouAAABZABwYXRuAAABcAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDx0PAAAAWQAAAAAAQAAAAAAAAABkDx0PAAAAWQAAAAAAgAAAAAAAAABkDx0PAAAAWQAAAAAAwAAAAAAAAABkDx0PAAAAWQAAAAABAAAAAAAAAABkDx0PAAAAWQAAAAABQAAAAAAAAABkDx0PAAAAWQAAAAABgAAAAAAAAABkDx0PAAAAWQAAAAABwAAAAAAAAABkDx0PAAAAWQAAAAACAAAAAAAAAABkDx0PAAAAWQAAAAACQAAAAAAAAABkDx0PAAAAWQAAAAACgAAAAAAAAABkDx0PAAAAWQAAAAACwAAAAAAAAABkDx0PAAAAWQAAAAADAAAAAAAAAABkDx0PAAAAWQAAAAADQAAAAAAAAABkDx0PAAAAWQAAAAADgAAAAAAAAABkDx0PAAAAWQAAAAADwAAAAAAAAABkDx0PAAAAWQAcGF0bgAAAMgAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZA8XjwAAAFkAAAAAAIAAAAAAAAAAZA8XjwAAAFkAAAAAAQAAAAAAAAAAZA8XjwAAAFkAAAAAAYAAAAAAAAAAZA8XjwAAAFkAAAAAAgAAAAAAAAAAZA8XjwAAAFkAAAAAAoAAAAAAAAAAZA8XjwAAAFkAAAAAAwAAAAAAAAAAZA8XjwAAAFkAAAAAA4AAAAAAAAAAZA8XjwAAAFkAHBhdG4AAAB0AAAAEQAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAGQPE48AAABZAAAAAAEAAAAAAAAAAGQPE48AAABZAAAAAAIAAAAAAAAAAGQPE48AAABZAAAAAAMAAAAAAAAAAGQPE48AAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
+  "zynseq_riff_b64": "dmVycwAAABAAAAAKAIwABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkdiQAAAFkAAAAAAQAAAAAAAAAAZAkdiQAAAFkAAAAAAgAAAAAAAAAAZAkdiQAAAFkAAAAAAwAAAAAAAAAAZAkdiQAAAFkAHBhdG4AAABKAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAFAAAAAQAAAAAEAAAAAAAAAAGQKGQoAAABZAAAAAAMAAAAAAAAAAGQKGQoAAABZABwYXRuAAAASgAAAAwAAAAEAAQAADwAAQAAAAAAyAAAAAAABQAAAAEAAAAABAAAAAAAAAABkDJmMgAAAWQAAAAADAAAAAAAAAABkDJmMgAAAWQAcGF0bgAAAMgAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAYAAAABAAAAAAEAAAAAAAAAAZAqSioAAAFkAAAAAAMAAAAAAAAAAZAqSioAAAFkAAAAAAUAAAAAAAAAAZAqSioAAAFkAAAAAAcAAAAAAAAAAZAqSioAAAFkAAAAAAkAAAAAAAAAAZAqSioAAAFkAAAAAAsAAAAAAAAAAZAqSioAAAFkAAAAAA0AAAAAAAAAAZAqSioAAAFkAAAAAA8AAAAAAAAAAZAqSioAAAFkAHBhdG4AAAB0AAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAGAAAAAQAAAAACAAAAAAAAAAGQLlouAAABZAAAAAAGAAAAAAAAAAGQLlouAAABZAAAAAAKAAAAAAAAAAGQLlouAAABZAAAAAAOAAAAAAAAAAGQLlouAAABZABwYXRuAAAAdAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDxuPAAAAWQAAAAABAAAAAAAAAABkDxuPAAAAWQAAAAACAAAAAAAAAABkDxuPAAAAWQAAAAADAAAAAAAAAABkDxuPAAAAWQAcGF0bgAAAHQAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZA8YDwAAAFkAAAAAAYAAAAAAAAAAZA8YDwAAAFkAAAAAAoAAAAAAAAAAZA8YDwAAAFkAAAAAA4AAAAAAAAAAZA8YDwAAAFkAHBhdG4AAAA1AAAAEQAAAAgAAgAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAADAAAAAAAAAAGQPFA8AAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
 }

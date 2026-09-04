@@ -3082,6 +3082,193 @@ class techno_lib:
         "DLYFBK":  ("lfeedback", 0.0, 100.0),
     }
 
+    # ------------------------------------------------- the role table, 2026-09-04
+    #
+    # FX_REVERB and FX_DELAY above are TAP Reverberator's and TAP Stereo Echo's
+    # port lists with role names on them, and `fx_handle` used to look the
+    # plugin up BY NAME - so on any chain carrying a different insert pair the
+    # REVERB and DELAY verbs did nothing, both modulator kinds were inert, and
+    # `revsize`/`revtype`/`dlytime`/`dlyfbk` were dead. Measured across the
+    # shipped packs: 21 of 51 genre presets and 20 of 20 drone/ambient ones.
+    # `_set_wet` returned silently and `_set_ganged` did `continue`, so nothing
+    # anywhere said a word.
+    #
+    # OWNER'S DECISION, 2026-09-04: make the knobs find any effect. This table
+    # is that - keyed by the plugin's own name, giving the role it can serve
+    # and the ports that serve it.
+    #
+    # THREE THINGS IT CANNOT FIX, and they are recorded here rather than
+    # papered over:
+    #
+    #  * REVTYPE exists on TAP Reverberator ALONE. No other reverb here has a
+    #    43-room mode, so on every other chain that global is inert. An entry
+    #    without the key means the column draws dead - which is the honest
+    #    answer and the one this instrument's law demands.
+    #  * SIX OF THE FOURTEEN ARE CROSSFADES, NOT SENDS. They have no separable
+    #    dry port, so the G3 contract - "the dry survives a full sweep" -
+    #    cannot hold. `blend` says which, and a crossfade's wet is mapped onto
+    #    the lower CROSSFADE_CEILING of its range so a full knob cannot delete
+    #    the channel's dry signal. A silent channel must say why; a knob that
+    #    silences one without saying so is the same fault wearing a different
+    #    hat.
+    #  * DLYTIME HAS THREE UNIT SYSTEMS - milliseconds, normalised 0..1, and
+    #    absent. `delay_ms()` computes milliseconds from the live tempo and can
+    #    only drive the first. The normalised pair carry host-sync ports that
+    #    have NOT been measured, so they are left out and DLYTIME skips them
+    #    rather than writing a number that means something else.
+    #
+    # Every symbol and every range below was read off the rig with `lv2info` on
+    # 2026-09-04; the raw dump is kept beside the notes. Do NOT retype one from
+    # a plugin's documentation - Dragonfly's wet is TWO ports and they are
+    # early and late reflections, not left and right.
+    #
+    # WET is a tuple of (symbol, kind) because a wet can be one port or two,
+    # and the two are not always a stereo pair. kind is:
+    #   "db"    the port takes decibels      -> tlib.wet_db(percent)
+    #   "lin"   linear amplitude over lo..hi -> percent maps straight across
+    # Both are the same law - amplitude IS the percent - which is why there is
+    # no third taper.
+    CROSSFADE_CEILING = 0.75
+
+    FX_ROLES = {
+        # ---- reverbs
+        "TAP Reverberator": {
+            "role": "reverb", "blend": "send",
+            "WET": (("wetlevel", "db", -70.0, 10.0),),
+            "DRY": ("drylevel", -70.0, 10.0),
+            "REVSIZE": ("decay", 0.0, 10000.0),
+            "REVTYPE": ("mode", 0.0, 42.0),
+        },
+        "Dragonfly Hall Reverb": {
+            "role": "reverb", "blend": "send",
+            "WET": (("early_level", "lin", 0.0, 100.0),
+                    ("late_level", "lin", 0.0, 100.0)),
+            "DRY": ("dry_level", 0.0, 100.0),
+            "REVSIZE": ("size", 10.0, 60.0),
+        },
+        "Dragonfly Room Reverb": {
+            "role": "reverb", "blend": "send",
+            "WET": (("early_level", "lin", 0.0, 100.0),
+                    ("late_level", "lin", 0.0, 100.0)),
+            "DRY": ("dry_level", 0.0, 100.0),
+            "REVSIZE": ("size", 8.0, 32.0),
+        },
+        "Dragonfly Early Reflections": {
+            "role": "reverb", "blend": "send",
+            "WET": (("early_level", "lin", 0.0, 100.0),),
+            "DRY": ("dry_level", 0.0, 100.0),
+            "REVSIZE": ("size", 10.0, 60.0),
+        },
+        "Tal-Reverb-II": {
+            "role": "reverb", "blend": "send",
+            "WET": (("wet", "lin", 0.0, 1.0),),
+            "DRY": ("dry", 0.0, 1.0),
+            "REVSIZE": ("room_size", 0.0, 1.0),
+        },
+        "Tal-Reverb-III": {
+            "role": "reverb", "blend": "send",
+            "WET": (("wet", "lin", 0.0, 1.0),),
+            "DRY": ("dry", 0.0, 1.0),
+            "REVSIZE": ("room_size", 0.0, 1.0),
+        },
+        "Shiroverb": {
+            "role": "reverb", "blend": "crossfade",
+            "WET": (("mix", "lin", 0.0, 100.0),),
+            "REVSIZE": ("roomsize", 1.0, 300.0),
+        },
+        "Roomy": {
+            "role": "reverb", "blend": "crossfade",
+            "WET": (("dry_wet", "lin", 0.0, 1.0),),
+            "REVSIZE": ("time", 0.0, 1.0),
+        },
+        # ---- delays
+        "TAP Stereo Echo": {
+            "role": "delay", "blend": "send",
+            "WET": (("lecholevel", "db", -70.0, 10.0),
+                    ("recholevel", "db", -70.0, 10.0)),
+            "DRY": ("dryLevel", -70.0, 10.0),
+            "DLYTIME": ("ldelay", 0.0, 2000.0, "ms"),
+            "DLYTIME_ALSO": ("rhaasdelay",),
+            "DLYFBK": ("lfeedback", 0.0, 100.0),
+        },
+        "Tal-Dub-3": {
+            "role": "delay", "blend": "send",
+            "WET": (("wet", "lin", 0.0, 1.0),),
+            "DRY": ("dry", 0.0, 1.0),
+            # delaytime is normalised 0..1 and `delaytimesync` is unmeasured,
+            # so no DLYTIME key: the division skips this plugin rather than
+            # writing milliseconds into a 0..1 port.
+            "DLYFBK": ("feedback", 0.0, 1.0),
+        },
+        "GxEcho-Stereo": {
+            "role": "delay", "blend": "crossfade",
+            "WET": (("level_l", "lin", 0.0, 100.0),
+                    ("level_r", "lin", 0.0, 100.0)),
+            "DLYTIME": ("timt_l", 1.0, 2000.0, "ms"),
+            "DLYTIME_ALSO": ("timt_r",),
+        },
+        "Regrader": {
+            "role": "delay", "blend": "crossfade",
+            "WET": (("DelayMix", "lin", 0.0, 1.0),),
+            # DelayTime is normalised; DelayHostSync is unmeasured.
+            "DLYFBK": ("DelayFeedback", 0.0, 1.0),
+        },
+        "Modulay": {
+            "role": "delay", "blend": "crossfade",
+            "WET": (("mix", "lin", 0.0, 100.0),),
+            "DLYTIME": ("time", 20.0, 1000.0, "ms"),
+        },
+        "Gxdigital_delay_st": {
+            "role": "delay", "blend": "crossfade",
+            "WET": (("LEVEL", "lin", 1.0, 100.0),),
+            # No time port at all - only MODE 0..3, whose four settings are
+            # unmeasured. DLYTIME therefore cannot reach this plugin.
+            "DLYFBK": ("FEEDBACK", 1.0, 100.0),
+        },
+    }
+
+    # Plugins that appear in a shipped manifest and can serve NEITHER role.
+    # Named rather than left to fall through, so the test that every insert is
+    # accounted for can tell "we know this one has no wet" from "somebody
+    # added a plugin and forgot the table".
+    FX_NO_ROLE = frozenset((
+        "3 Band EQ", "Calf Tape Simulator", "Calf Vinyl", "MDA RingMod",
+        "Multivoice Chorus", "Ping Pong Pan", "TAP AutoPanner", "YK Chorus",
+        "ZamCompX2", "ZamEQ2",
+    ))
+
+    @staticmethod
+    def fx_role_of(engine_name):
+        """The FX_ROLES entry whose plugin name appears in `engine_name`, or
+        None. Substring rather than equality because an engine's name arrives
+        with a prefix on it, which is the same test `fx_handle` always used."""
+        if not engine_name:
+            return None
+        name = str(engine_name)
+        for plugin, spec in techno_lib.FX_ROLES.items():
+            if plugin in name:
+                return plugin, spec
+        return None
+
+    @staticmethod
+    def fx_wet_values(spec, percent):
+        """[(symbol, value), ...] for one plugin's wet at `percent`.
+
+        A crossfade is held below CROSSFADE_CEILING of its travel: those
+        plugins have no separate dry port, so a full knob would delete the
+        channel's dry signal and the channel would vanish with nothing saying
+        why."""
+        out = []
+        ceiling = (techno_lib.CROSSFADE_CEILING
+                   if spec.get("blend") == "crossfade" else 1.0)
+        for symbol, kind, lo, hi in spec["WET"]:
+            if kind == "db":
+                value = techno_lib.wet_db(percent * ceiling)
+            else:
+                value = lo + (hi - lo) * (percent / 100.0) * ceiling
+            out.append((symbol, max(lo, min(hi, value))))
+        return out
+
     # label, fraction of a beat
     DELAY_DIVISIONS = (
         ("1/16", 0.25), ("1/8", 0.5), ("3/16", 0.75),

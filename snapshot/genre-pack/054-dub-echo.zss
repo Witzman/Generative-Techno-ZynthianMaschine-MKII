@@ -153,7 +153,7 @@
       "cc_route": [],
       "slots": [
         {
-          "26": "JV/MiMi-d"
+          "26": "JV/Monique"
         },
         {
           "20": "JV/TAP Stereo Echo"
@@ -175,7 +175,7 @@
       "cc_route": [],
       "slots": [
         {
-          "7": "JV/Obxd"
+          "7": "JV/Mutated Instruments"
         },
         {
           "22": "JV/TAP Stereo Echo"
@@ -370,11 +370,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR606.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Roland TR606",
+            "Roland TR909",
             "sfz",
-            "Roland TR606.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -479,11 +479,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Korg DDM110.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Korg DDM110",
+            "Roland TR909",
             "sfz",
-            "Korg DDM110.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -588,11 +588,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Korg DDM110.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Korg DDM110",
+            "Roland TR909",
             "sfz",
-            "Korg DDM110.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -697,11 +697,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR606.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Roland TR606",
+            "Roland TR909",
             "sfz",
-            "Roland TR606.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -806,11 +806,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Korg DDM110.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Korg DDM110",
+            "Roland TR909",
             "sfz",
-            "Korg DDM110.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -993,268 +993,11 @@
           }
         },
         "7": {
-          "bank_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/Obxd_bank_002-KVR_Bass",
-            null,
-            "002-KVR_Bass",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
-          "preset_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/002-KVR_Bass_BA_001_ng.ttl",
-            null,
-            "BA 001 ng",
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/Obxd_bank_002-KVR_Bass"
-          ],
+          "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "modulation wheel": {
-              "value": 0
-            },
-            "lv2_freewheel": {
-              "value": 0.0
-            },
-            "lv2_port_1": {
-              "value": 0.0
-            },
-            "unused_1": {
-              "value": 0.0
-            },
-            "volume": {
-              "value": 0.5
-            },
-            "voicecount": {
-              "value": 0.25
-            },
-            "tune": {
-              "value": 0.512
-            },
-            "octave": {
-              "value": 0.404
-            },
-            "bendrange": {
-              "value": 0.0
-            },
-            "bendosc2only": {
-              "value": 0.0
-            },
-            "legatomode": {
-              "value": 0.0
-            },
-            "vibratorate": {
-              "value": 0.0
-            },
-            "vfltfactor": {
-              "value": 0.244
-            },
-            "vampfactor": {
-              "value": 0.064
-            },
-            "asplayedallocation": {
-              "value": 0.0
-            },
-            "portamento": {
-              "value": 0.0
-            },
-            "unison": {
-              "value": 1.0
-            },
-            "voicedetune": {
-              "value": 0.108
-            },
-            "oscillator2detune": {
-              "value": 0.12
-            },
-            "lfofrequency": {
-              "value": 0.404
-            },
-            "lfosinewave": {
-              "value": 1.0
-            },
-            "lfosquarewave": {
-              "value": 0.0
-            },
-            "lfosampleholdwave": {
-              "value": 0.0
-            },
-            "lfoamount1": {
-              "value": 0.236
-            },
-            "lfoamount2": {
-              "value": 0.152
-            },
-            "lfoosc1": {
-              "value": 0.0
-            },
-            "lfoosc2": {
-              "value": 0.0
-            },
-            "lfofilter": {
-              "value": 1.0
-            },
-            "lfopw1": {
-              "value": 1.0
-            },
-            "lfopw2": {
-              "value": 0.0
-            },
-            "osc2hardsync": {
-              "value": 1.0
-            },
-            "xmod": {
-              "value": 0.0
-            },
-            "osc1pitch": {
-              "value": 0.0
-            },
-            "osc2pitch": {
-              "value": 0.0
-            },
-            "pitchquant": {
-              "value": 0.0
-            },
-            "osc1saw": {
-              "value": 0.0
-            },
-            "osc1pulse": {
-              "value": 1.0
-            },
-            "osc2saw": {
-              "value": 0.0
-            },
-            "osc2pulse": {
-              "value": 1.0
-            },
-            "pulsewidth": {
-              "value": 0.224
-            },
-            "brightness": {
-              "value": 1.0
-            },
-            "envelopetopitch": {
-              "value": 0.092
-            },
-            "osc1mix": {
-              "value": 1.0
-            },
-            "osc2mix": {
-              "value": 1.0
-            },
-            "noisemix": {
-              "value": 0.0
-            },
-            "filterkeyfollow": {
-              "value": 0.0
-            },
-            "cutoff": {
-              "value": 0.42
-            },
-            "resonance": {
-              "value": 0.34
-            },
-            "multimode": {
-              "value": 0.044
-            },
-            "filter_warm": {
-              "value": 1.0
-            },
-            "bandpassblend": {
-              "value": 0.0
-            },
-            "fourpole": {
-              "value": 1.0
-            },
-            "filterenvamount": {
-              "value": 0.14
-            },
-            "attack": {
-              "value": 0.064
-            },
-            "decay": {
-              "value": 0.4
-            },
-            "sustain": {
-              "value": 0.0
-            },
-            "release": {
-              "value": 0.328
-            },
-            "filterattack": {
-              "value": 0.0
-            },
-            "filterdecay": {
-              "value": 0.12
-            },
-            "filtersustain": {
-              "value": 0.052
-            },
-            "filterrelease": {
-              "value": 0.16
-            },
-            "envelopedetune": {
-              "value": 0.12
-            },
-            "filterdetune": {
-              "value": 0.0
-            },
-            "portamentodetune": {
-              "value": 0.14
-            },
-            "pan1": {
-              "value": 0.5
-            },
-            "pan2": {
-              "value": 0.5
-            },
-            "pan3": {
-              "value": 0.5
-            },
-            "pan4": {
-              "value": 0.5
-            },
-            "pan5": {
-              "value": 0.5
-            },
-            "pan6": {
-              "value": 0.5
-            },
-            "pan7": {
-              "value": 0.5
-            },
-            "pan8": {
-              "value": 0.5
-            },
-            "unused_2": {
-              "value": 0.0
-            },
-            "economymode": {
-              "value": 1.0
-            },
-            "lfosync": {
-              "value": 0.0
-            },
-            "pwenv": {
-              "value": 0.0
-            },
-            "pwenvboth": {
-              "value": 0.0
-            },
-            "envpitchboth": {
-              "value": 0.0
-            },
-            "fenvinvert": {
-              "value": 0.0
-            },
-            "pwofs": {
-              "value": 0.0
-            },
-            "leveldif": {
-              "value": 0.3
-            },
-            "selfoscpush": {
-              "value": 0.0
-            }
-          }
+          "controllers": {}
         },
         "22": {
           "bank_info": [
@@ -1722,32 +1465,32 @@
       },
       "mixer": {
         "chan_00": {
-          "level": 0.19
+          "level": 0.72
         },
         "midi_learn": {},
         "chan_01": {
-          "level": 0.19
+          "level": 0.38
         },
         "chan_02": {
-          "level": 0.19
+          "level": 0.0
         },
         "chan_03": {
-          "level": 0.19
+          "level": 0.34
         },
         "chan_04": {
-          "level": 0.19
+          "level": 0.28
         },
         "chan_05": {
-          "level": 0.19
+          "level": 0.64
         },
         "chan_06": {
-          "level": 0.19
+          "level": 0.42
         },
         "chan_07": {
-          "level": 0.19
+          "level": 0.36
         },
         "chan_16": {
-          "level": 0.774264705882353
+          "level": 0.78
         }
       },
       "midi_capture": {
@@ -1832,12 +1575,14 @@
             "globals": {
               "root": 9,
               "scale": 0,
-              "bpm": 123,
+              "bpm": 120,
               "master": 80,
-              "revsize": 25,
-              "revtype": 3,
-              "dlytime": 1,
-              "dlyfbk": 35
+              "revsize": 45,
+              "revtype": 10,
+              "dlytime": 4,
+              "dlyfbk": 65,
+              "walk": 0,
+              "wspan": 2
             },
             "mode": "CONTROL",
             "pages": {
@@ -1863,44 +1608,133 @@
             },
             "voices": {
               "5": {
-                "register": 73,
+                "register": 883,
                 "length": 16,
-                "rhythm_reg": 21845,
+                "rhythm_reg": 65,
                 "random": 0,
                 "rhythm": 0,
-                "gate": 45,
-                "octave": -1,
-                "range": 1,
-                "velo": 104,
-                "ring": []
-              },
-              "6": {
-                "register": 24222,
-                "length": 16,
-                "rhythm_reg": 17476,
-                "random": 0,
-                "rhythm": 0,
-                "gate": 50,
+                "gate": 180,
                 "octave": 0,
                 "range": 1,
-                "velo": 88,
-                "ring": []
+                "velo": 110,
+                "ring": [],
+                "chord": 1
               },
-              "7": {
-                "register": 49866,
-                "length": 16,
-                "rhythm_reg": 257,
+              "6": {
+                "register": 170,
+                "length": 8,
+                "rhythm_reg": 1028,
                 "random": 0,
                 "rhythm": 0,
-                "gate": 1300,
+                "gate": 180,
                 "octave": 1,
                 "range": 1,
-                "velo": 70,
-                "ring": []
+                "velo": 96,
+                "ring": [],
+                "chord": 3
+              },
+              "7": {
+                "register": 183,
+                "length": 8,
+                "rhythm_reg": 8,
+                "random": 0,
+                "rhythm": 0,
+                "gate": 700,
+                "octave": 2,
+                "range": 1,
+                "velo": 80,
+                "ring": [],
+                "chord": 2
               }
             },
-            "mods": {},
-            "mod_seed": 0
+            "drums": {
+              "0": {
+                "hits": 4,
+                "rotate": 0,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "1": {
+                "hits": 1,
+                "rotate": 12,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "2": {
+                "hits": 0,
+                "rotate": 0,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "3": {
+                "hits": 2,
+                "rotate": 2,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              },
+              "4": {
+                "hits": 0,
+                "rotate": 6,
+                "rhythm": 0,
+                "rhythm_reg": 65535,
+                "hand_reg": 0
+              }
+            },
+            "mods": {
+              "6|delay": {
+                "depth": 35,
+                "rate": 3,
+                "shape": "tri",
+                "phase0": 0.0,
+                "base": 45,
+                "seed": 1
+              },
+              "6|reverb": {
+                "depth": 30,
+                "rate": 0,
+                "shape": "tri",
+                "phase0": 0.35,
+                "base": 40,
+                "seed": 2
+              },
+              "7|level": {
+                "depth": 25,
+                "rate": 2,
+                "shape": "tri",
+                "phase0": 0.6,
+                "base": 36,
+                "seed": 3
+              },
+              "5|cutoff": {
+                "depth": 22,
+                "rate": 5,
+                "shape": "tri",
+                "phase0": 0.8,
+                "base": 62,
+                "seed": 4
+              },
+              "3|level": {
+                "depth": 18,
+                "rate": 4,
+                "shape": "tri",
+                "phase0": 0.3,
+                "base": 34,
+                "seed": 2
+              },
+              "0|level": {
+                "depth": -12,
+                "rate": 6,
+                "shape": "squ",
+                "phase0": 0.0,
+                "base": 72,
+                "seed": 6
+              }
+            },
+            "mod_seed": 6
           }
         },
         "zynsmf:midi_out": {
@@ -1992,5 +1826,5 @@
     }
   },
   "last_zs3_id": null,
-  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHsABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkaCQAAAFkAAAAAAQAAAAAAAAAAZAkaCQAAAFkAAAAAAgAAAAAAAAAAZAkaCQAAAFkAAAAAAwAAAAAAAAAAZAkaCQAAAFkAHBhdG4AAAAgAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBwYXRuAAAAIAAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAcGF0bgAAAHQAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZAqQCoAAAFkAAAAAAYAAAAAAAAAAZAqQCoAAAFkAAAAAAoAAAAAAAAAAZAqQCoAAAFkAAAAAA4AAAAAAAAAAZAqQCoAAAFkAHBhdG4AAABKAAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAGAAAAAAAAAAGQLkouAAABZAAAAAAOAAAAAAAAAAGQLkouAAABZABwYXRuAAAAyAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDxoPAAAAWQAAAAAAgAAAAAAAAABkDxoPAAAAWQAAAAABAAAAAAAAAABkDxoPAAAAWQAAAAABgAAAAAAAAABkDxoPAAAAWQAAAAACAAAAAAAAAABkDxoPAAAAWQAAAAACgAAAAAAAAABkDxoPAAAAWQAAAAADAAAAAAAAAABkDxoPAAAAWQAAAAADgAAAAAAAAABkDxoPAAAAWQAcGF0bgAAAHQAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZA8WDwAAAFkAAAAAAYAAAAAAAAAAZA8WDwAAAFkAAAAAAoAAAAAAAAAAZA8WDwAAAFkAAAAAA4AAAAAAAAAAZA8WDwAAAFkAHBhdG4AAABKAAAAEQAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAGQPEY8AAABZAAAAAAIAAAAAAAAAAGQPEY8AAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
+  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHgABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkcCQAAAFkAAAAAAQAAAAAAAAAAZAkcCQAAAFkAAAAAAgAAAAAAAAAAZAkcCQAAAFkAAAAAAwAAAAAAAAAAZAkcCQAAAFkAHBhdG4AAAA1AAAACwAAAAQABAAAPAABAyAAAADIAAAAAAAFAAAAAQAAAAAMAAAAAAAAAAGQKEYoAAABZABwYXRuAAAAIAAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAcGF0bgAAAEoAAAANAAAABAAEAAA8AAEDIAAAASwAAAAAAAgAAAABAAAAAAIAAAAAAAAAAZAqSCoAAAFkAAAAAAoAAAAAAAAAAZAqSCoAAAFkAHBhdG4AAAAgAAAADgAAAAQABAAAPAABAAAAAAEsAAAAAAAIAAAAAQBwYXRuAAAASgAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDxuPAAAAWQAAAAABgAAAAAAAAABkDxuPAAAAWQAcGF0bgAAAEoAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZA8YDwAAAFkAAAAAAoAAAAAAAAAAZA8YDwAAAFkAHBhdG4AAAA1AAAAEQAAAAgAAgAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAADAAAAAAAAAAGQPFA8AAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
 }

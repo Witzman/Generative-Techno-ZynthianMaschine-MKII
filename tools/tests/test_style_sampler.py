@@ -309,8 +309,10 @@ class WhatMayNotBeAveraged(unittest.TestCase):
             self.assertIsNotNone(ss.group_for(path), path)
 
     def test_the_ordered_scalars_are_averageable(self):
-        for path in ("tempo", "drums.velo.0", "drums.gate.4", "voices.velo.1",
-                     "voices.gate.2", "voices.octave.0", "voices.range.1",
+        # `drums.gate` and `voices.gate` LEFT this list on 2026-09-04 - they
+        # travel with `div` now, because a step is not a fixed length any more.
+        for path in ("tempo", "drums.velo.0", "voices.velo.1",
+                     "voices.octave.0", "voices.range.1",
                      "voices.length.0"):
             self.assertIsNone(ss.group_for(path), path)
 
@@ -372,19 +374,42 @@ class TheBlendNeverInventsAValue(unittest.TestCase):
         # The pair sits on ALL EIGHT chains and six plugins are banned at that
         # count, two Dragonfly reverbs stacked among them. A per-slot coin
         # could assemble a banned pair out of two legal parents.
-        pairs = [(a, b) for a in self.genre for b in self.genre
-                 if a["fx"][0] != b["fx"][0] and a["fx"][1] != b["fx"][1]]
-        # Thirty of the fifty-one entries share one pair, so a test that took
-        # any two entries would mostly compare a pair with itself and prove
-        # nothing. Only pairs that differ in BOTH slots can expose a mix.
-        self.assertGreater(len(pairs), 100)
+        # EVERY SHIPPED ENTRY IS TAP + TAP SINCE 2026-09-04 - the role change
+        # made the whole plugin palette reachable and the rebuild took the one
+        # pair that supplies both roles on every chain - so no two shipped
+        # entries differ in either slot and this has to build its parents.
+        # That is the point of the test, not a weakness of it: the coin must
+        # hold for pairs a future style could produce.
+        left = ["JV/TAP Stereo Echo", "JV/Modulay", "JV/GxEcho-Stereo"]
+        right = ["JV/TAP Reverberator", "JV/Tal-Reverb-III",
+                 "JV/Dragonfly Room Reverb"]
+        pairs = [({"fx": [la, ra]}, {"fx": [lb, rb]})
+                 for la in left for ra in right
+                 for lb in left for rb in right
+                 if la != lb and ra != rb]
+        self.assertGreater(len(pairs), 20)
         for a, b in pairs:
             for seed in (0, 3, 8):
                 out = ss.blend(a, b, 0.5, seed)
                 self.assertIn(out["fx"], (a["fx"], b["fx"]))
 
-    def test_a_step_list_is_taken_whole_not_unioned_or_averaged(self):
-        a, b = self.genre[0], self.genre[1]
+    def test_a_groove_is_taken_whole_not_unioned_or_averaged(self):
+        # THE SHIPPED PACKS CARRY THE EUCLID FORM SINCE 2026-09-04 - hits and
+        # rotate rather than a literal step list - so this is the same
+        # assertion on the field that now holds the groove. A rotation is
+        # written FOR its hit count, which is why they share one coin.
+        a, b = self.genre[0], self.genre[6]
+        for seed in range(30):
+            out = ss.blend(a, b, 0.5, seed)
+            self.assertIn(out["drums"]["hits"],
+                          (a["drums"]["hits"], b["drums"]["hits"]))
+            self.assertIn(out["drums"]["rotate"],
+                          (a["drums"]["rotate"], b["drums"]["rotate"]))
+
+    def test_a_literal_step_list_is_still_taken_whole(self):
+        # The legacy form still builds, so it still has to blend correctly.
+        a = {"drums": {"steps": [[0, 4], [], [], [], []]}}
+        b = {"drums": {"steps": [[2, 6, 10], [], [], [], []]}}
         for seed in range(30):
             out = ss.blend(a, b, 0.5, seed)
             self.assertIn(out["drums"]["steps"],
@@ -462,11 +487,27 @@ class TheBlendEndpointsAndTheAverages(unittest.TestCase):
                 self.assertEqual(out, entry, entry["file"])
 
     def test_an_ordered_scalar_lands_between_the_parents(self):
-        a = {"drums": {"velo": [100]}, "voices": {"gate": [40]}}
-        b = {"drums": {"velo": [80]}, "voices": {"gate": [800]}}
+        a = {"drums": {"velo": [100]}, "voices": {"octave": [0]}}
+        b = {"drums": {"velo": [80]}, "voices": {"octave": [2]}}
         out = ss.blend(a, b, 0.5, 0)
         self.assertEqual(out["drums"]["velo"], [90])
-        self.assertEqual(out["voices"]["gate"], [420])
+        self.assertEqual(out["voices"]["octave"], [1])
+
+    def test_a_gate_travels_with_its_division(self):
+        # GATE STOPPED BEING AVERAGEABLE ON 2026-09-04, when `div` became a
+        # manifest field. `gate` is hundredths of a STEP, and a step is a 1/16
+        # at one division and a whole BEAT at another - so taking `div` from
+        # one parent and averaging `gate` between two changes every note
+        # length by up to four times, in a file where nothing says why. They
+        # share one coin now, which is the same argument the module already
+        # makes for a register and its scale.
+        a = {"div": ["1/16"] * 8, "voices": {"gate": [40, 40, 40]}}
+        b = {"div": ["1/4"] * 8, "voices": {"gate": [800, 800, 800]}}
+        for seed in range(20):
+            out = ss.blend(a, b, 0.5, seed)
+            self.assertIn((out["div"], out["voices"]["gate"]),
+                          ((a["div"], a["voices"]["gate"]),
+                           (b["div"], b["voices"]["gate"])))
 
     def test_an_interpolated_integer_stays_an_integer(self):
         out = ss.blend({"drums": {"velo": [100]}}, {"drums": {"velo": [81]}}, 0.5, 0)
@@ -535,6 +576,16 @@ class Validation(unittest.TestCase):
     def setUp(self):
         self.entry = copy.deepcopy(load(GENRE)[0])
 
+    def legacy(self):
+        """The same entry in the pre-2026-09-04 literal-step form. The shipped
+        packs are all euclid now, so a test about `steps` has to build one."""
+        e = copy.deepcopy(self.entry)
+        d = e["drums"]
+        for key in ("hits", "rotate", "rhythm_reg", "hand_reg"):
+            d.pop(key, None)
+        d["steps"] = [[0, 4, 8, 12], [4, 12], [4, 12], [2, 6, 10, 14], [6, 14]]
+        return e
+
     def test_a_banned_insert_is_refused(self):
         # Six plugins are banned at eight instances and the pair is on every
         # chain. notes/traps/PLUGINS.md
@@ -571,12 +622,39 @@ class Validation(unittest.TestCase):
             ss.validate_entry(self.entry)
 
     def test_a_step_outside_the_sixteen_is_refused(self):
-        self.entry["drums"]["steps"][0] = [0, 16]
+        e = self.legacy()
+        e["drums"]["steps"][0] = [0, 16]
+        with self.assertRaises(ValueError):
+            ss.validate_entry(e)
+
+    def test_a_repeated_step_is_refused(self):
+        e = self.legacy()
+        e["drums"]["steps"][0] = [0, 0, 4]
+        with self.assertRaises(ValueError):
+            ss.validate_entry(e)
+
+    def test_a_hit_count_past_the_bar_is_refused(self):
+        self.entry["drums"]["hits"][0] = 17
         with self.assertRaises(ValueError):
             ss.validate_entry(self.entry)
 
-    def test_a_repeated_step_is_refused(self):
-        self.entry["drums"]["steps"][0] = [0, 0, 4]
+    def test_a_rotation_past_the_bar_is_refused(self):
+        self.entry["drums"]["rotate"][0] = 16
+        with self.assertRaises(ValueError):
+            ss.validate_entry(self.entry)
+
+    def test_a_negative_swing_is_refused(self):
+        self.entry.setdefault("groove", {})["swing"] = [-0.1] + [0.0] * 7
+        with self.assertRaises(ValueError):
+            ss.validate_entry(self.entry)
+
+    def test_a_mix_that_is_not_eight_long_is_refused(self):
+        self.entry["mix"] = [0.5] * 7
+        with self.assertRaises(ValueError):
+            ss.validate_entry(self.entry)
+
+    def test_a_fader_outside_unity_is_refused(self):
+        self.entry["mix"] = [1.4] + [0.5] * 7
         with self.assertRaises(ValueError):
             ss.validate_entry(self.entry)
 

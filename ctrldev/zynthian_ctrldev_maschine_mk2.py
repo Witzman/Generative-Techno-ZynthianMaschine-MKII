@@ -1816,18 +1816,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         most of the way to a coherent space, and per-channel divergence is a
         later opt-in that nothing here forecloses."""
 
-        table = tlib.FX_REVERB if which == "reverb" else tlib.FX_DELAY
-        symbol, lo, hi = table[role]
-        if role == "REVTYPE":
-            # A reverb type is an index into the plugin's 43 rooms, not a
-            # percentage - scaling it would silently pick the wrong room.
-            target = max(lo, min(hi, float(value)))
-        else:
-            target = lo + (hi - lo) * (value / 100.0)
+        # PER PLUGIN, since 2026-09-04. Eight chains can now hold eight
+        # different reverbs, so the port and its range are looked up per
+        # channel rather than once - and a plugin that does not publish this
+        # role at all is SKIPPED rather than written to.
+        #
+        # REVTYPE is the sharp case: `mode` 0..42 exists on TAP Reverberator
+        # ALONE. On every other reverb the key is absent and this loop writes
+        # nothing, which is why the column has to draw dead there. Faking it
+        # onto `size` would silently pick a room nobody asked for.
         for channel in range(len(tlib.CHANNELS)):
-            proc = self.fx_handle(channel, which)
-            if proc is None:
+            proc, spec = self.fx_spec(channel, which)
+            if proc is None or role not in spec:
                 continue
+            symbol, lo, hi = spec[role][0], spec[role][1], spec[role][2]
+            if role == "REVTYPE":
+                # An index into the plugin's rooms, not a percentage - scaling
+                # it would silently pick the wrong room.
+                target = max(lo, min(hi, float(value)))
+            else:
+                target = lo + (hi - lo) * (value / 100.0)
             zctrl = proc.controllers_dict.get(symbol)
             if zctrl is not None:
                 zctrl.set_value(target, True)
@@ -1845,15 +1853,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 abs(ms - self._last_delay_ms) < 0.5:
             return
         self._last_delay_ms = ms
-        symbol = tlib.FX_DELAY["DLYTIME"][0]
+        # ONLY THE MILLISECOND DELAYS, since 2026-09-04. Three unit systems
+        # exist across the shipped inserts: milliseconds (the TAPs, GxEcho,
+        # Modulay), normalised 0..1 (Tal-Dub-3, Regrader) and ABSENT
+        # (Gxdigital_delay_st, which has only a MODE 0..3). Writing a
+        # tempo-derived millisecond count into a 0..1 port would set the delay
+        # to its maximum and call it a division. The normalised pair carry
+        # host-sync ports that have not been measured, so they have no DLYTIME
+        # key and this skips them - a division that does nothing on those two
+        # chains, said once here rather than discovered by ear.
         for channel in range(len(tlib.CHANNELS)):
-            proc = self.fx_handle(channel, "delay")
-            if proc is None:
+            proc, spec = self.fx_spec(channel, "delay")
+            if proc is None or "DLYTIME" not in spec:
                 continue
-            for sym in (symbol, "rhaasdelay"):
+            entry = spec["DLYTIME"]
+            if len(entry) < 4 or entry[3] != "ms":
+                continue
+            lo, hi = entry[1], entry[2]
+            target = max(lo, min(hi, ms))
+            symbols = [entry[0]] + list(spec.get("DLYTIME_ALSO", ()))
+            for sym in symbols:
                 zctrl = proc.controllers_dict.get(sym)
                 if zctrl is not None:
-                    zctrl.set_value(ms, True)
+                    zctrl.set_value(target, True)
 
     # --- the Turing voices ---------------------------------------------
 
@@ -3118,32 +3140,57 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         chain = self._chain_of(channel)
         if chain is None:
             return None
-        want = "TAP Reverberator" if which == "reverb" else "TAP Stereo Echo"
+        # BY ROLE, NOT BY NAME, since 2026-09-04. This used to be
+        #     want = "TAP Reverberator" if which == "reverb" else "TAP Stereo Echo"
+        # so on any chain carrying a different insert pair BOTH verbs did
+        # nothing, both modulator kinds were inert and all four FX globals were
+        # dead - 21 of 51 genre presets and 20 of 20 drone/ambient ones, in
+        # silence, because _set_wet returns on None and _set_ganged continues.
+        # Owner's decision: make the knobs find any effect.
+        #
+        # Position is NEVER consulted. The shipped packs put a reverb in slot 1
+        # on eight presets and a delay or a chorus in slot 2 on four, so
+        # "slot 1 is the delay" would have been wrong for twelve of them.
         for proc in chain.get_processors():
             name = getattr(proc.engine, "name", "") if proc.engine else ""
-            if want in str(name):
+            found = tlib.fx_role_of(name)
+            if found is not None and found[1]["role"] == which:
                 return proc
         return None
 
-    def _set_wet(self, channel, which, percent):
-        """0-100 on the surface onto the plugin's dB range. Gate G3 measured
-        these as true wet levels: the dry survives a full sweep, which is the
-        contract encoders 7 and 8 rest on."""
-
+    def fx_spec(self, channel, which):
+        """(processor, FX_ROLES entry) for this channel's reverb or delay, or
+        (None, None). The two always travel together: the processor says WHERE
+        to write and the entry says WHICH PORTS and on what scale, and reading
+        one without the other is how a value lands on the wrong port."""
         proc = self.fx_handle(channel, which)
         if proc is None:
+            return None, None
+        found = tlib.fx_role_of(
+            getattr(proc.engine, "name", "") if proc.engine else "")
+        return (proc, found[1]) if found else (None, None)
+
+    def _set_wet(self, channel, which, percent):
+        """0-100 on the surface onto whatever ports this plugin's wet uses.
+
+        THE PORTS COME FROM THE PLUGIN, not from a role-named constant -
+        changed 2026-09-04 with fx_handle. A wet can be one port or two, and
+        the two are not always a stereo pair: Dragonfly's are EARLY and LATE
+        reflections. Ranges differ too - dB on the TAPs, 0..1 on the TALs,
+        0..100 on the Dragonflys - so the scale travels in the table.
+
+        AN AUDIO TAPER, NOT A LINE THROUGH THE dB RANGE. The old law was
+        `lo + (hi - lo) * percent / 100`, which put 30% at -46 dB and needed
+        75% of the knob to reach -10 dB; the owner could not hear the dub
+        factory's clap echo and the reason was arithmetic rather than the mix.
+        `tlib.wet_db` carries it, and `tlib.fx_wet_values` also holds the
+        crossfade ceiling - six of these plugins have no separable dry, so a
+        full knob there would delete the channel."""
+
+        proc, spec = self.fx_spec(channel, which)
+        if proc is None:
             return
-        table = tlib.FX_REVERB if which == "reverb" else tlib.FX_DELAY
-        symbols = [table["WET"][0]]
-        if "WET_R" in table:                  # the echo's two sides are ganged
-            symbols.append(table["WET_R"][0])
-        # AN AUDIO TAPER, NOT A LINE THROUGH THE dB RANGE - changed 2026-09-04.
-        # This used to be `lo + (hi - lo) * percent / 100`, which put 30% at
-        # -46 dB and needed 75% of the knob to reach -10 dB. The owner could
-        # not hear the dub factory's clap echo, and the reason was arithmetic
-        # rather than the mix. tlib.wet_db carries the law and the numbers.
-        value = tlib.wet_db(percent)
-        for symbol in symbols:
+        for symbol, value in tlib.fx_wet_values(spec, percent):
             zctrl = proc.controllers_dict.get(symbol)
             if zctrl is not None:
                 zctrl.set_value(value, True)
