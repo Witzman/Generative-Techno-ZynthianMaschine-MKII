@@ -638,6 +638,33 @@ class techno_lib:
         return tuple(bool(rhythm_reg >> i & 1) for i in range(steps))
 
     @staticmethod
+    def step_force_off(rhythm_reg, hand_reg, bit):
+        """Make a step silent and KEEP it silent. Returns (rhythm_reg, hand_reg).
+
+        ERASE + pad, todo item 7. A tap TOGGLES; this only ever removes, which
+        is what the gesture's name promises and the reason it is not just a
+        tap.
+
+        BOTH REGISTERS, because a step can be lit for two different reasons.
+        `hand_reg` is a hit the player added, so its bit is cleared; the
+        subtractive `rhythm_reg` masks the euclidean line, so its bit is
+        cleared too - clearing only the hand register would leave a euclid hit
+        sounding and the pad still lit.
+
+        WHY THIS EXISTS AT ALL: `_erase_step` used to remove the NOTES from the
+        pattern and nothing else, while a tap wrote the register. So an erased
+        step came back at the next rewrite - any turn of HITS, ROTATE, DIV,
+        LENGTH or RHYTHM, a drift tick, a reroll, or a wrap with RHYTHM above
+        LOCK. Two gestures on the same pads writing to two different places,
+        one of which the machine overwrites.
+
+        A VOICE HAS NO HAND REGISTER - its `rhythm_reg` is additive and is the
+        whole truth - so the caller passes 0 and ignores the second result.
+        """
+        mask = ~(1 << bit)
+        return rhythm_reg & mask, hand_reg & mask
+
+    @staticmethod
     def drum_tap(rhythm_reg, hand_reg, bit, lit):
         """One pad tap on a drum step. Returns (rhythm_reg, hand_reg, added).
 

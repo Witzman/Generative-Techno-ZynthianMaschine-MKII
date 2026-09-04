@@ -7473,8 +7473,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
     def _erase_step(self, step):
         """ERASE + pad. Removes that step's note if it has one; a pad that is
-        already empty is left alone rather than toggled on."""
+        already empty is left alone rather than toggled on.
 
+        TWO PATHS SINCE 2026-09-04, todo item 7, and the split is OWNERSHIP.
+
+        On a channel the PLAYER owns, the notes in the pattern are the truth -
+        the generator returns early on a take and will not rewrite them - so
+        removing the notes IS the erase, and that is what the branch below
+        does. This was always right for that case.
+
+        On a channel the MACHINE owns it was wrong, and quietly: the notes came
+        straight back at the next rewrite - any turn of HITS, ROTATE, DIV,
+        LENGTH or RHYTHM, a drift tick, a reroll, or a wrap with RHYTHM above
+        LOCK. A tap writes the persistent register; ERASE wrote the pattern. Two
+        gestures on the same pads writing to two different places, one of which
+        the machine overwrites within a bar.
+
+        SO IT WRITES THE REGISTER THERE, through the same rotation mapping the
+        tap uses. The gesture keeps its job - a tap TOGGLES and this only ever
+        removes - and it now survives everything a tap survives.
+
+        The entry asked whether ERASE + pad had a job left at all now that a
+        tap both adds and removes. It has: on a take it is the only way to
+        remove a note, because the register is not what is sounding there."""
+
+        channel = self.group
+        if self.owner[channel] != tlib.OWNER_PLAYER:
+            self._erase_step_register(channel, step)
+            return
         with self.lock:
             self._select_pattern(self.group)
             if step >= self.libseq.getSteps():
@@ -7490,6 +7516,49 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     self.libseq.removeNote(step, note)
                 self.libseq.updateSequenceInfo()
                 self._render_pads()
+
+    def _erase_step_register(self, channel, step):
+        """The machine-owned half of ERASE + pad: clear the step's bit.
+
+        Deliberately the same shape as the tap - the same step-count rule, the
+        same unrotate for a drum, the same two writers - because the two
+        gestures address the same picture and a second way of computing the
+        bit is a second way of getting it wrong."""
+
+        # ASKED HERE TOO, not only at the caller. The register is not what
+        # sounds on a take - the generator returns early there and will not
+        # rewrite it - so writing the register on an owned channel would move a
+        # bit and change no sound, which is the silent refusal this surface may
+        # not commit. Belt and braces, and it makes this function safe to call
+        # from anywhere rather than only from the one place that checks first.
+        if self.owner[channel] == tlib.OWNER_PLAYER:
+            return
+        st = self.state[channel]
+        voice = self.channel_kind(channel) == "voice"
+        steps = lib.step_count(self.div[channel]) if voice \
+            else self._steps(channel)
+        if not 0 <= step < steps:
+            return
+        # The register is stored UNROTATED and rotated onto the grid when the
+        # pattern is written, so a press on grid step `step` has to come back
+        # the other way. A drum only: a voice's rotation is applied to the
+        # rendered line rather than to the mask.
+        bit = step if voice else (step - self.rot[channel]) % steps
+        reg, hand = tlib.step_force_off(
+            int(st["rhythm_reg"]), int(st.get("hand_reg", 0) or 0), bit)
+        if reg == int(st["rhythm_reg"]) and hand == int(st.get("hand_reg", 0) or 0):
+            # Already silent. A pad that is empty is left alone rather than
+            # toggled on, which is this gesture's own promise.
+            return
+        st["rhythm_reg"] = reg
+        if not voice:
+            st["hand_reg"] = hand
+        if voice:
+            self._write_voice_pattern(channel, by_hand=True)
+        else:
+            with self.lock:
+                self._write_pattern(channel)
+        self._render_pads()
 
     def _kit_centre(self, channel):
         """The note SP8's kit window centres on: the drum this channel plays.

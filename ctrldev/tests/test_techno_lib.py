@@ -2322,6 +2322,46 @@ class TheLens(unittest.TestCase):
             self.assertEqual(tl.lens_verb(verb), verb, verb)
 
 
+class EraseForcesAStepOffAndKeepsItOff(unittest.TestCase):
+    """ITEM 7. `_erase_step` removed the NOTES and nothing else, while a tap
+    writes the persistent register - so on a machine-owned channel an erased
+    step came straight back at the next rewrite: any turn of HITS, ROTATE,
+    DIV, LENGTH or RHYTHM, a drift tick, a reroll, or a wrap with RHYTHM above
+    LOCK. Two gestures on the same pads writing to two different places, one
+    of which the machine overwrites within a bar."""
+
+    def test_it_clears_the_bit_in_both_registers(self):
+        # A step can be lit for two reasons: the player added it (hand_reg) or
+        # euclid placed it and the subtractive mask let it through. Clearing
+        # only one leaves it sounding.
+        reg, hand = tl.step_force_off(0xFFFF, 0b1000, 3)
+        self.assertEqual(reg & (1 << 3), 0)
+        self.assertEqual(hand & (1 << 3), 0)
+
+    def test_it_only_ever_removes(self):
+        # NOT a toggle. That is the whole difference from a tap, and it is
+        # what the gesture's name promises.
+        for _ in range(3):
+            reg, hand = tl.step_force_off(0xFFF7, 0, 3)
+            self.assertEqual(reg & (1 << 3), 0)
+            self.assertEqual(hand & (1 << 3), 0)
+
+    def test_it_touches_no_other_step(self):
+        reg, hand = tl.step_force_off(0xFFFF, 0xFFFF, 5)
+        for bit in range(16):
+            if bit == 5:
+                continue
+            self.assertTrue(reg & (1 << bit), bit)
+            self.assertTrue(hand & (1 << bit), bit)
+
+    def test_a_voice_passes_no_hand_register(self):
+        # A voice's rhythm_reg is additive and is the whole truth, so the
+        # caller passes 0 and ignores the second result.
+        reg, hand = tl.step_force_off(0b1010, 0, 1)
+        self.assertEqual(reg, 0b1000)
+        self.assertEqual(hand, 0)
+
+
 class ThePageLabelSaysWhenItWasCut(unittest.TestCase):
     """ITEM 12. The panel renders the indicator row at 42 characters and drops
     the rest in silence, and the composer appends up to eleven suffixes - so
