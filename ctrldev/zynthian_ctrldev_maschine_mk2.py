@@ -3681,8 +3681,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             rate = entry.get("rate")
             if shape not in tlib.MOD_SHAPES:
                 continue
-            if not isinstance(rate, int) or not 0 <= rate < len(tlib.MOD_RATES):
+            if not isinstance(rate, int) or rate < 0:
                 continue
+            if rate >= len(tlib.MOD_RATES):
+                # AN OLDER SNAPSHOT'S FASTEST RATES. MOD_RATES went from
+                # twelve entries to nine on 2026-09-04 because the three
+                # fastest aliased against the ~200 ms writer. Dropping the
+                # modulator would be a silent refusal - a snapshot that used
+                # to move would load still - so it is CLAMPED to the fastest
+                # surviving rate and the change is logged. No shipped snapshot
+                # is affected; this is for one somebody saved by hand.
+                self._slog("mod", event="rate_clamped", key=key,
+                           was=rate, now=len(tlib.MOD_RATES) - 1)
+                rate = len(tlib.MOD_RATES) - 1
             depth = entry.get("depth", 0)
             if not isinstance(depth, int) or depth == 0:
                 continue
@@ -5330,10 +5341,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Not the same pointer as the big encoder's 'last-touched parameter'
         (SP10 step 2) - keep the two names apart or they will be conflated.
 
-        Pads 0-11 (the top three rows) pick a rate from techno_lib.MOD_RATES
-        (twelve entries, slowest first, so the rate speeds up left to right
-        and top to bottom). Pads 12-15 - the bottom row alone - are the four
-        techno_lib.MOD_SHAPES in order, one shape per pad."""
+        Pads 0-8 pick a rate from techno_lib.MOD_RATES (nine entries, slowest
+        first, so the rate speeds up left to right and top to bottom). Pads
+        12-15 - the bottom row alone - are the four techno_lib.MOD_SHAPES in
+        order, one shape per pad. **Pads 9-11 are DARK and inert**: they are
+        where the three aliasing rates were until 2026-09-04.
+
+        THE SHAPES ARE PINNED TO THE BOTTOM ROW rather than placed after the
+        last rate. Both this and the legend used to read `len(MOD_RATES)` as
+        "where the shapes start", which was only correct while there were
+        exactly twelve rates - dropping three would have slid the shapes onto
+        pads 9-12 and indexed MOD_SHAPES[4] off the end."""
         if self.mod_last is None:
             # NOTHING IS BOUND, so there is nothing to give a rate to. The pads
             # already say so - they draw at LIGHT_DIM under `bound=False` - and
@@ -5355,15 +5373,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                        pad=pad)
             self.mod_last = None
             return
-        if pad < len(tlib.MOD_RATES):
-            entry["rate"] = pad
-            if entry.get("once"):
-                # Re-arm. A new length must restart the sweep from here rather
-                # than leave a finished one clamped at its old span, which
-                # would look like a dead pad.
-                self._arm_once(entry)
-        else:
-            entry["shape"] = tlib.MOD_SHAPES[pad - len(tlib.MOD_RATES)]
+        if pad >= tlib.MOD_SHAPE_PAD_FIRST:
+            entry["shape"] = tlib.MOD_SHAPES[pad - tlib.MOD_SHAPE_PAD_FIRST]
             if self.arm_down:
                 # MOD + ARM on a shape pad: that shape now runs ONCE. The rate
                 # pads need no branch at all - they already write
@@ -5371,6 +5382,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # sweep LENGTH instead of a cycle time. Same table, new
                 # meaning, no second table to drift.
                 self._arm_once(entry)
+        elif pad < len(tlib.MOD_RATES):
+            entry["rate"] = pad
+            if entry.get("once"):
+                # Re-arm. A new length must restart the sweep from here rather
+                # than leave a finished one clamped at its old span, which
+                # would look like a dead pad.
+                self._arm_once(entry)
+        else:
+            # THE DARK GAP between the last rate and the bottom row. The pad
+            # draws at PAD_OFF, so this is a press on an unlit pad and the
+            # only correct answer is nothing - but it is logged, because
+            # "I pressed it and nothing happened" is the most expensive
+            # sentence in this project's history.
+            self._slog("mod", event="pad_inert", reason="no rate on this pad",
+                       pad=pad)
+            return
         # BOTH, and the pads are not optional. The legend used to be repainted
         # by its own 30 Hz animation, so the "selected" highlight followed a
         # tap as a side effect. With the animation gone - it wedged the
@@ -8356,6 +8383,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return
         if self._frozen("walk"):
             return
+        # MOVE IS HONOURED WHEN EVERY VOICE ASKS FOR IT, 2026-09-04, todo
+        # item 11.
+        #
+        # THE SCOPE MISMATCH, stated so it is not read as a half-fix: the
+        # walker moves ROOT, which is ONE global for all three voices, and
+        # MOVE is a per-channel lock. A global cannot be gated per channel
+        # without a per-channel root, and that is separate work the entry
+        # already names. So the honest rule is the unanimous one - when NO
+        # voice would accept the machine moving it, nothing wants the key to
+        # move, and the walker holds.
+        #
+        # A LOCKED CHANNEL IS NOT LOCKED AGAINST THE WALKER when its
+        # neighbours are open, and that remains true. It is the residue of the
+        # same mismatch, and it is written down here rather than left to be
+        # rediscovered as a defect.
+        #
+        # Asked of the VOICES only: a drum channel has no key, so its MOVE
+        # says nothing about whether the key should walk.
+        voices = [ch for ch in range(len(tlib.CHANNELS))
+                  if self.channel_kind(ch) == "voice"]
+        if voices and all(self._move_of(ch) == 0 for ch in voices):
+            self._slog("walk", bar=bar, result="held",
+                       reason="every voice is locked")
+            return
         if self.walk_base is None:
             # First move of the session: the root the player left on the knob
             # is the base, and every degree is measured from it.
@@ -10110,6 +10161,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             label = tlib.scope_label(label, name, moved, asked)
         if stall != label and tlib.stalled(time.monotonic(), self._beat_at):
             label = stall
+        # THE LAST THING DONE TO THE LINE, because everything above appends to
+        # it. The panel draws 42 characters and drops the rest in silence, and
+        # what goes first is whatever was appended last - which is always the
+        # newest thing somebody added because it had to be read. An ellipsis
+        # costs one column and turns a silent loss into a visible one.
+        #
+        # It cannot recover the text; the row is 42 characters wide and that is
+        # the hardware. What it buys is a player who can SEE that something
+        # was cut, which is law L4 applied to a line of type.
+        label = tlib.page_label_fit(label)
         for screen in (0, 1):
             # THE LABEL IS COMPARED SEPARATELY FROM THE BODY, since
             # 2026-09-02, and that is the whole of the overlay fix. It used to

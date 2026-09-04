@@ -1670,13 +1670,47 @@ class TestModulatorMaths(unittest.TestCase):
         lo, hi = tl.mod_span(64, 0, 0, 127)
         self.assertAlmostEqual(lo, hi)
 
-    def test_twelve_rates_and_four_shapes_fill_the_sixteen_pads(self):
-        # Every table entry must be reachable from a pad. A table with more
-        # entries than pads is a table that lies about what the surface can do.
-        self.assertEqual(len(tl.MOD_RATES), 12)
+    def test_every_rate_and_shape_is_reachable_from_a_pad(self):
+        # A table with more entries than pads is a table that lies about what
+        # the surface can do. NINE rates since 2026-09-04, not twelve: the
+        # three fastest were 2.4, 1.2 and 0.6 samples of the ~200 ms writer
+        # per cycle, so they could not produce the shape they named.
+        self.assertEqual(len(tl.MOD_RATES), 9)
         self.assertEqual(len(tl.MOD_SHAPES), 4)
-        self.assertEqual(
-            len(tl.MOD_RATES) + len(tl.MOD_SHAPES), 16)
+        self.assertLessEqual(len(tl.MOD_RATES), tl.MOD_SHAPE_PAD_FIRST)
+        self.assertEqual(tl.MOD_SHAPE_PAD_FIRST + len(tl.MOD_SHAPES), 16)
+
+    def test_the_legend_depicts_exactly_the_rates_that_exist(self):
+        # The legend has its own period table. A tenth period would be a pad
+        # depicting a rate the instrument no longer has.
+        self.assertEqual(len(tl.MOD_LEGEND_PERIODS), len(tl.MOD_RATES))
+
+    def test_no_rate_is_faster_than_the_writer_can_render(self):
+        # THE DEFECT THIS CLOSED, kept as arithmetic so it cannot come back.
+        # The modulator writer runs on the ~200 ms poll tick, so a period
+        # needs several multiples of that to be a wave rather than an alias.
+        tick = 0.200
+        for rate in tl.MOD_RATES:
+            period = rate * 4.0 * 60.0 / 125.0        # bars -> seconds at 125
+            self.assertGreater(period / tick, 4.0,
+                               f"{rate} bars is {period / tick:.1f} samples")
+
+    def test_the_shapes_do_not_move_when_a_rate_is_dropped(self):
+        # Both _mod_pad and the legend used to read len(MOD_RATES) as "where
+        # the shapes start", which was correct only while there were exactly
+        # twelve. Dropping three would have slid the shapes onto pads 9-12 and
+        # indexed MOD_SHAPES[4] off the end.
+        self.assertEqual(tl.MOD_SHAPE_PAD_FIRST, 12)
+        for pad in range(tl.MOD_SHAPE_PAD_FIRST, 16):
+            shape = tl.MOD_SHAPES[pad - tl.MOD_SHAPE_PAD_FIRST]
+            self.assertIn(shape, tl.MOD_SHAPES)
+
+    def test_the_gap_between_the_rates_and_the_shapes_is_dark(self):
+        # A lit pad that does nothing is the fault this surface must never
+        # commit, so the three pads the dropped rates vacated are not lit.
+        for pad in range(len(tl.MOD_RATES), tl.MOD_SHAPE_PAD_FIRST):
+            _colour, level = tl.mod_legend_pad(pad, 0.0, 3, "tri", bound=True)
+            self.assertEqual(level, tl.PAD_OFF, f"pad {pad}")
 
     def test_rates_run_slowest_first_and_are_all_positive(self):
         self.assertEqual(sorted(tl.MOD_RATES, reverse=True),
@@ -2257,11 +2291,68 @@ class TheLens(unittest.TestCase):
                     self.assertEqual(tl.lens_verb(verb), verb,
                                      f"{mode}/{kind} {desc['title']}: {verb}")
 
+    def test_a_verb_whose_unit_changes_names_both_units(self):
+        # ITEM 10. LENGTH is pattern BEATS on a drum and register BITS on a
+        # voice, so eight columns under one heading invite the reading that 4
+        # and 16 are the same quantity - which laying one verb across eight
+        # channels is exactly the thing the lens exists to do honestly.
+        #
+        # REFUSING IT WAS THE FIRST ATTEMPT AND THE TEST BELOW CAUGHT IT: the
+        # lens replaced five deleted spread pages, so a verb it cannot hold is
+        # a control the redesign lost. The title carries the units instead.
+        self.assertEqual(tl.lens_verb("length"), "length")
+        self.assertEqual(tl.lens_desc("length")["title"], "ALL LENGTH BEATS/BITS")
+
+    def test_a_verb_with_one_unit_says_nothing_extra(self):
+        self.assertEqual(tl.lens_desc("cutoff")["title"], "ALL CUTOFF")
+
+    def test_every_lens_title_fits_the_indicator_row(self):
+        # The row is 42 characters and drops the rest. A unit note that pushed
+        # a title past it would be the item-12 defect wearing item 10.
+        for verb in tl.VERB_COLS:
+            if tl.lens_verb(verb) is None:
+                continue
+            title = tl.lens_desc(verb)["title"]
+            self.assertLessEqual(len(title), tl.PAGE_LABEL_CHARS, verb)
+
     def test_the_five_deleted_spread_verbs_are_all_reachable(self):
         for verb in ("level", "reverb", "delay", "cutoff", "reso",
                      "swing", "chance", "rhythm", "move", "lane",
                      "exit", "phrase", "fill"):
             self.assertEqual(tl.lens_verb(verb), verb, verb)
+
+
+class ThePageLabelSaysWhenItWasCut(unittest.TestCase):
+    """ITEM 12. The panel renders the indicator row at 42 characters and drops
+    the rest in silence, and the composer appends up to eleven suffixes - so
+    the first thing lost is whatever was appended LAST, which is always the
+    newest thing somebody added because it had to be read."""
+
+    def test_a_short_label_is_untouched(self):
+        for label in ("", "STEP", "CONTROL 2/4", "x" * tl.PAGE_LABEL_CHARS):
+            self.assertEqual(tl.page_label_fit(label), label)
+
+    def test_a_long_label_is_cut_to_the_row(self):
+        out = tl.page_label_fit("y" * 80)
+        self.assertEqual(len(out), tl.PAGE_LABEL_CHARS)
+
+    def test_a_cut_label_SAYS_it_was_cut(self):
+        # The whole point. An ellipsis costs one column and turns a silent
+        # loss into a visible one - it cannot recover the text, because the
+        # row is 42 characters and that is the hardware.
+        out = tl.page_label_fit("z" * 80)
+        self.assertTrue(out.endswith(tl.PAGE_LABEL_CUT))
+
+    def test_an_exactly_full_label_is_not_marked(self):
+        # Nothing was lost, so nothing should claim it was.
+        out = tl.page_label_fit("w" * tl.PAGE_LABEL_CHARS)
+        self.assertFalse(out.endswith(tl.PAGE_LABEL_CUT))
+
+    def test_the_base_label_is_not_fitted_early(self):
+        # page_label builds only the BASE; the suffixes are appended after it,
+        # so fitting there would measure a line nobody draws.
+        long_title = "T" * 60
+        self.assertEqual(tl.page_label(long_title, 0, 1), long_title)
 
 
 class NoFeatureLostItsWayIn(unittest.TestCase):
@@ -3993,7 +4084,14 @@ class TestModLegend(unittest.TestCase):
         a = [tl.mod_legend_pad(i, 0.0, 3, "tri", bound=False) for i in range(16)]
         b = [tl.mod_legend_pad(i, 0.7, 3, "tri", bound=False) for i in range(16)]
         self.assertEqual(a, b)
-        self.assertEqual(len({x[1] for x in a}), 1)
+        # ONE level across every pad that is a control, and the dark gap is
+        # not one - the three pads the dropped rates vacated draw at PAD_OFF
+        # whether anything is bound or not.
+        live = [x[1] for i, x in enumerate(a)
+                if i < len(tl.MOD_RATES) or i >= tl.MOD_SHAPE_PAD_FIRST]
+        self.assertEqual(len(set(live)), 1)
+        for i in range(len(tl.MOD_RATES), tl.MOD_SHAPE_PAD_FIRST):
+            self.assertEqual(a[i][1], tl.PAD_OFF)
 
     def test_bound_rate_pads_move(self):
         over_time = {tl.mod_legend_pad(0, t / 10.0, 3, "tri", bound=True)[1]

@@ -321,6 +321,57 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class TheKeyWalkerHoldsWhenEveryVoiceIsLocked(DispatchCase):
+    """ITEM 11. The walker moves ROOT, which is ONE global for all three
+    voices; MOVE is a per-channel lock. A global cannot be gated per channel
+    without a per-channel root, so the honest rule is the unanimous one."""
+
+    def voices(self):
+        return [i for i, ch in enumerate(self.mod.tlib.CHANNELS)
+                if ch[2] == "voice"]
+
+    def arm_walk(self):
+        self.d.globals["walk"] = 1
+        self.d.globals["root"] = 0
+        self.d.walk_base = None
+        self.d.walk_degree = 0
+
+    def test_it_walks_when_the_voices_are_open(self):
+        self.arm_walk()
+        for ch in self.voices():
+            self.d.state[ch]["move"] = 100
+        self.d._walk_tick(bar=1)
+        self.assertNotEqual(self.d.walk_degree, 0)
+
+    def test_it_HOLDS_when_every_voice_is_locked(self):
+        self.arm_walk()
+        for ch in self.voices():
+            self.d.state[ch]["move"] = 0
+        self.d._walk_tick(bar=1)
+        self.assertEqual(self.d.walk_degree, 0)
+
+    def test_one_open_voice_is_enough_to_walk(self):
+        # The residue of the scope mismatch, pinned deliberately: a LOCKED
+        # channel is not locked against the walker while its neighbours are
+        # open, because there is only one root between them.
+        self.arm_walk()
+        voices = self.voices()
+        for ch in voices:
+            self.d.state[ch]["move"] = 0
+        self.d.state[voices[0]]["move"] = 100
+        self.d._walk_tick(bar=1)
+        self.assertNotEqual(self.d.walk_degree, 0)
+
+    def test_freeze_still_holds_it(self):
+        # The GLOBAL lock was already honoured and must stay so.
+        self.arm_walk()
+        for ch in self.voices():
+            self.d.state[ch]["move"] = 100
+        self.d.frozen = True
+        self.d._walk_tick(bar=1)
+        self.assertEqual(self.d.walk_degree, 0)
+
+
 class TheRigGateOf20260904(DispatchCase):
     """Seven defects the owner found by playing, 2026-09-04.
 

@@ -2416,10 +2416,20 @@ class techno_lib:
     # jitter rather than reading as speed. So the fades run on a compressed band
     # instead. "Further right and further down is faster" stays TRUE; the
     # absolute rate does not. Never quote these as what a modulator does.
+    # NINE, to stay in step with MOD_RATES - the legend depicts that table and
+    # a tenth period would be a pad depicting a rate that no longer exists.
     MOD_LEGEND_PERIODS = (2.00, 1.70, 1.45, 1.25, 1.05, 0.90,
-                          0.78, 0.66, 0.56, 0.48, 0.41, 0.35)
+                          0.78, 0.66, 0.56)
 
-    # One hue for the twelve rate pads, another for the four shape pads. Neither
+    # THE SHAPES ARE PINNED TO THE BOTTOM ROW, not placed after the last rate.
+    # They coincided while there were exactly twelve rates, so `_mod_pad` and
+    # the legend both read `len(MOD_RATES)` as "where the shapes start" - and
+    # dropping three rates would have slid the four shapes onto pads 9-12 and
+    # walked the last one off the end of MOD_SHAPES. The bottom row is where a
+    # player's hand knows they are; it does not move because a rate went.
+    MOD_SHAPE_PAD_FIRST = 12
+
+    # One hue for the rate pads, another for the four shape pads. Neither
     # is white - that is the playhead, drawn over the top.
     COLOR_MOD_RATE = 0x00D0FF        # cyan
     COLOR_MOD_SHAPE = 0xC000FF       # violet
@@ -2468,15 +2478,26 @@ class techno_lib:
     def mod_legend_pad(index, elapsed, selected_rate, selected_shape, bound=True):
         """(colour, brightness) for one pad of the MOD legend.
 
-        `index` 0-11 are the rate pads, 12-15 the shapes - the same order
-        _mod_pad already reads them in, and step 0 is the top-left pad, so the
-        twelve rates fill the top three rows and the shapes the bottom one.
+        `index` 0-8 are the rate pads, 12-15 the shapes, and **9-11 are DARK**
+        - the same order _mod_pad reads them in. Step 0 is the top-left pad, so
+        the nine rates fill the top two rows and one pad of the third, and the
+        shapes have the bottom row to themselves.
+
+        The three dark pads are where the three aliasing rates used to be. A
+        pad that is lit and does nothing is the fault this surface must never
+        commit, so they are not lit.
 
         `elapsed` is seconds. The legend is a display of what a rate FEELS like
         and is deliberately not tempo-locked to the modulator it depicts."""
 
         rates = len(techno_lib.MOD_LEGEND_PERIODS)
         is_rate = index < rates
+        is_shape = index >= techno_lib.MOD_SHAPE_PAD_FIRST
+        if not (is_rate or is_shape):
+            # The gap between the last rate and the bottom row: no rate, no
+            # shape, nothing to press. Dark, because a lit pad that does
+            # nothing is the one thing this grid may not show.
+            return (techno_lib.COLOR_MOD_RATE, techno_lib.PAD_OFF)
         colour = techno_lib.COLOR_MOD_RATE if is_rate else techno_lib.COLOR_MOD_SHAPE
         if not bound:
             return (colour, techno_lib.MOD_LEGEND_INERT)
@@ -2486,7 +2507,7 @@ class techno_lib:
             shape = "tri"
             selected = index == selected_rate
         else:
-            shape = techno_lib.MOD_SHAPES[index - rates]
+            shape = techno_lib.MOD_SHAPES[index - techno_lib.MOD_SHAPE_PAD_FIRST]
             # A fixed, middling period so the four shapes are compared by their
             # SHAPE and not by their speed.
             period = 1.20
@@ -4221,11 +4242,47 @@ class techno_lib:
             return not techno_lib.synth_ctrl_flags(state)[index]
         return False
 
+    # The panel renders the indicator row at 42 characters and DROPS the rest.
+    # Everything appended to that line - a bank, a countdown, HELD, an
+    # overlay's name, a take's owner - is appended precisely because somebody
+    # has to read it, so silent truncation loses exactly the thing that was
+    # added.
+    PAGE_LABEL_CHARS = 42
+    # The character that says "there was more". One column, and it cannot be
+    # confused with a letter or a digit.
+    PAGE_LABEL_CUT = "\u2026"
+
     @staticmethod
     def page_label(title, index, count):
         """What the indicator row draws. A one-page ring says only its name -
         showing 1/1 on a ring that cannot move is noise."""
         return title if count <= 1 else f"{title} {index + 1}/{count}"
+
+    @staticmethod
+    def page_label_fit(label):
+        """Cut a label to the row's real width, and SAY that it was cut.
+
+        CALLED ONCE, AT THE END OF THE SUFFIX CHAIN, and that placement is the
+        whole of it. `page_label` builds only the base; eleven `*_label`
+        helpers append after it, so fitting in `page_label` would measure a
+        line nobody draws and cut nothing that overflows.
+
+        The composer appends up to eleven suffixes onto a line the panel draws
+        at 42 characters and silently drops the overflow. That is latent only
+        while nothing important is last: the stall banner and any
+        pending-state word are appended at the END, so the first thing to go
+        is the newest thing anyone added.
+
+        An ellipsis costs one column and turns a silent loss into a visible
+        one. It cannot fix the loss - the row is 42 characters wide and that is
+        the panel - but a player who can see something was cut can go and look
+        for it, which is the whole of law L4 applied to text."""
+
+        label = str(label)
+        if len(label) <= techno_lib.PAGE_LABEL_CHARS:
+            return label
+        keep = techno_lib.PAGE_LABEL_CHARS - len(techno_lib.PAGE_LABEL_CUT)
+        return label[:keep] + techno_lib.PAGE_LABEL_CUT
 
     @staticmethod
     def quantise_frac(frac, steps):
@@ -4252,8 +4309,28 @@ class techno_lib:
     # Bar-synced rather than free-running so a modulator lines up with the
     # pattern it is colouring - this instrument already lands structure on
     # the bar everywhere else.
+    # NINE, NOT TWELVE, since 2026-09-04. The three fastest were dropped
+    # because they could not produce the shape they named.
+    #
+    # The modulator writer runs on the ~200 ms poll tick, so a rate's period
+    # has to be several multiples of that to be a WAVE rather than an alias.
+    # At 125 BPM the three that went were 480, 240 and 120 ms - **2.4, 1.2 and
+    # 0.6 samples per cycle**, at or below Nyquist. They were on the pad
+    # legend, fully lit, and what they produced was an aliased shape.
+    #
+    # DROPPED RATHER THAN DRIVEN FASTER, which was the other option in the
+    # entry. Writing those verbs from a faster thread means a second writer
+    # into the mixer and the plugin ports; dropping them is honest, costs
+    # nothing, and the slowest survivor (0.5 bars, 960 ms, 4.8 samples) is
+    # still the fastest anything on this surface has ever asked for.
+    #
+    # THE INDICES OF THE SURVIVORS DID NOT MOVE, which is what makes this safe
+    # for every snapshot already written: `rate` is stored as an index, 0-8
+    # still mean what they meant, and no shipped snapshot used 9-11 (checked
+    # across all 75). An old snapshot that did is clamped on load, not
+    # dropped - see set_state.
     MOD_RATES = (16.0, 8.0, 6.0, 4.0, 3.0, 2.0,
-                 1.0, 0.75, 0.5, 0.25, 0.125, 0.0625)
+                 1.0, 0.75, 0.5)
 
     # Verbs an LFO may drive. This set contains ONLY verbs that do not rewrite
     # a pattern: each one lands on a mixer strip or a plugin port, where a
@@ -5178,6 +5255,24 @@ class techno_lib:
             return None
         return last
 
+    # A VERB WHOSE UNIT CHANGES WITH THE CHANNEL, and what the lens does about
+    # it. Added 2026-09-04 for todo item 10.
+    #
+    # LENGTH is pattern BEATS on a drum channel and shift-register BITS on a
+    # voice. Both knobs act correctly; the fault is that eight columns under
+    # one heading invite the reading that 4 and 16 are the same quantity, and
+    # laying ONE verb across eight channels is the whole purpose of the lens.
+    #
+    # REFUSING IT WAS THE FIRST ATTEMPT AND IT WAS WRONG. `lens_verb` returning
+    # None would have removed LENGTH from the lens entirely - and the lens is
+    # what replaced five deleted spread pages, so every verb they carried has
+    # to stay reachable through it or the redesign lost a control. There is a
+    # test that says exactly that, and it caught this.
+    #
+    # So the title says the units instead. It costs nothing, loses no control,
+    # and a row that names two units cannot be misread as one.
+    LENS_UNITS = {"length": "BEATS/BITS"}
+
     # The verbs that belong to the instrument rather than to a channel. The
     # lens refuses them; there is nothing to lay side by side.
     GLOBAL_VERBS = frozenset(("root", "scale", "bpm", "master", "revsize",
@@ -5193,8 +5288,9 @@ class techno_lib:
         second branch in every painter that reads one."""
 
         label = techno_lib.VERB_COLS.get(verb, (verb.upper(),))[0]
-        return techno_lib.page_desc(techno_lib.SHAPE_SPREAD,
-                                    f"ALL {label}", verb=verb)
+        units = techno_lib.LENS_UNITS.get(verb)
+        title = f"ALL {label} {units}" if units else f"ALL {label}"
+        return techno_lib.page_desc(techno_lib.SHAPE_SPREAD, title, verb=verb)
 
     @staticmethod
     def lens_verbs(ring):
