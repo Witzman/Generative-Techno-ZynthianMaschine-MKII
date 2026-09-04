@@ -3070,16 +3070,55 @@ class techno_lib:
     #      fact about these three and not a reason to trust the next one.
     CCS_MEASURED_SINGLE = frozenset({10, 35, 8, 9, 36})
 
-    CCS_MEASURED = CCS_MEASURED_G4 | CCS_MEASURED_G5 | CCS_MEASURED_SINGLE
+    # THE WHOLE PANEL, 2026-09-04. The capture round todo item 15 had owed
+    # since 2026-08-21 was finally run with the owner at the rig: every
+    # physical button pressed one at a time, both edges, read off the daemon's
+    # ALSA output port with aseqdump. FORTY-EIGHT BUTTONS AND EVERY ONE MATCHED
+    # THE TABLES ABOVE - after a project history in which the daemon's token
+    # names were repeatedly attached to the wrong physical buttons.
+    #
+    # This set is what makes "free" mean measured-and-free for the whole
+    # surface rather than for the 24 numbers gate G4 happened to catch.
+    #
+    # TWO DAEMON TOKENS HAVE NO BUTTON BEHIND THEM on this hardware, blinked
+    # one at a time and named by nobody: `view` (which emits CC 28) and `nav`.
+    # So CC 28 is emitted by NOTHING and is genuinely free.
+    #
+    # AND `nav` IS THE BIG ENCODER'S PRESS. main.rs:1103 is the "nav" arm and
+    # it carries CC 12, which is HOME. The token name is a lie in this
+    # project's usual direction - do not read a physical button off one.
+    CCS_MEASURED_PANEL = frozenset(
+        {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+        | {25, 26, 27, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38}
+        | set(range(39, 47))          # F1-F8
+        | {47, 48, 49, 50, 51}
+        | set(range(80, 88))          # Group A-H
+    )
+
+    # Measured as EMITTED BY NOTHING: the daemon's `view` token sends it and no
+    # button on this panel is wired to that token.
+    CCS_MEASURED_UNEMITTED = frozenset({28})
+
+    CCS_MEASURED = (CCS_MEASURED_G4 | CCS_MEASURED_G5 | CCS_MEASURED_SINGLE
+                    | CCS_MEASURED_PANEL | CCS_MEASURED_UNEMITTED)
 
     # No capture log exists for these, and that is NOT a hazard: a button that
     # visibly does its job every session is verified by use, which is stronger
     # evidence than a log. Listed separately so "it is in a capture log" is
     # never confused with "it is verified".
     #   1 PLAY - 2 ERASE - 7 RESTART - 39..46 F1..F8 - 80..87 Groups A..H
-    CCS_VERIFIED_BY_USE = (frozenset({1, 2, 7})
-                           | frozenset(range(39, 47))
-                           | frozenset(range(80, 88)))
+    # EMPTY SINCE 2026-09-04, and that is the point rather than an oversight.
+    # This set held CCs whose evidence was "the instrument works, so the
+    # binding must be right" - PLAY, ERASE, RESTART, F1-F8 and the eight Group
+    # buttons. The panel capture round MEASURED every one of them, and a
+    # measurement supersedes an inference, so they moved to
+    # CCS_MEASURED_PANEL and nothing is left behind.
+    #
+    # The set stays, named and empty, because the DISTINCTION is what the
+    # tests enforce: "it is in a capture log" must never be confused with "it
+    # is verified". A future binding made without a capture belongs here, and
+    # having nowhere to put it is how a guess gets promoted by accident.
+    CCS_VERIFIED_BY_USE = frozenset()
 
     # Anything a binding may legitimately sit on.
     CCS_KNOWN = CCS_MEASURED | CCS_VERIFIED_BY_USE

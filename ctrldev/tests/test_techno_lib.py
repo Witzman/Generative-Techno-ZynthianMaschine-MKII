@@ -1438,6 +1438,36 @@ class TestButtonTables(unittest.TestCase):
         # so that "it is in a capture log" is never confused with "it is verified".
         self.assertEqual(tl.CCS_MEASURED & tl.CCS_VERIFIED_BY_USE, frozenset())
 
+    def test_the_whole_panel_was_captured_2026_09_04(self):
+        # THE ROUND todo item 15 OWED SINCE 2026-08-21. Every physical button
+        # pressed one at a time with the owner at the rig, both edges, read off
+        # the daemon's ALSA output port. Forty-eight buttons and every one
+        # matched the tables - so this test is the record of that, and it turns
+        # red if anybody edits a CC without a fresh capture.
+        self.assertEqual(len(tl.CCS_MEASURED_PANEL), 48)
+        # Every bound CC is now a measured one. This is the assertion the
+        # provenance machinery existed to make possible.
+        for cc in set(tl.BUTTONS_STATEFUL) | set(tl.BUTTONS_PRESS):
+            self.assertIn(cc, tl.CCS_MEASURED_PANEL,
+                          f"CC {cc} is bound but was not in the panel round")
+        # The big encoder's PRESS is CC 12 and it is HOME. The daemon emits it
+        # from its "nav" token (main.rs:1103), which is why blinking `nav` lit
+        # nothing: the big encoder has no LED at all.
+        self.assertEqual(tl.BUTTONS_PRESS[12], "home")
+        self.assertIn(12, tl.CCS_MEASURED_PANEL)
+        # CC 28 is emitted by the daemon's `view` token, and NO button on this
+        # panel is wired to it - blinked and named by nobody. Measured as
+        # unemitted is a stronger statement than unknown, and it must not be
+        # confused with a button nobody happened to press.
+        self.assertEqual(tl.CCS_MEASURED_UNEMITTED, frozenset({28}))
+        self.assertNotIn(28, tl.CCS_MEASURED_PANEL)
+        self.assertNotIn(28, tl.BUTTONS_STATEFUL)
+        self.assertNotIn(28, tl.BUTTONS_PRESS)
+        # Verified-by-use is empty now: the round measured everything that had
+        # only been inferred. The set stays so a future uncaptured binding has
+        # somewhere honest to sit.
+        self.assertEqual(tl.CCS_VERIFIED_BY_USE, frozenset())
+
     def test_the_unclaimed_ccs_are_measured_and_really_unclaimed(self):
         # The only numbers a new feature may take without a fresh capture.
         for cc in tl.CCS_MEASURED_AND_UNCLAIMED:
