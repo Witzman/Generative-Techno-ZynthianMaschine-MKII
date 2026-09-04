@@ -4191,11 +4191,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         return True
 
     def _arm_pad(self, step):
-        """A pad while ARM is held: 0-1 pick the macro, 8-15 the length.
+        """A pad while ARM is held: 0-6 pick the macro, 8-15 the length.
 
-        Pads 2-7 are DARK and do nothing - a lit pad that does nothing is the
-        fault this surface must never commit, so they are not lit either.
-        They are where the later payloads land.
+        **PAD 7 IS THE ONLY DARK ONE.** This docstring said "0-1 pick the
+        macro ... pads 2-7 are DARK" until 2026-09-04, which was true when
+        `ARM_MACROS` held two entries. It holds SEVEN - drop, chance, half,
+        double, break, ratchet, gate - and the code is
+        `if step < len(tlib.ARM_MACROS)`, so six of the pads it called dark are
+        macros. **The error was in the direction that matters**: it made the
+        free budget look like six slots when it is one, and the entry that
+        reported the staleness said six macros rather than seven, so it
+        understated it a second time.
+
+        Do not write the count here again. `len(tlib.ARM_MACROS)` is the
+        number, the code already reads it, and a docstring that repeats a
+        length is a docstring that goes stale the next time the tuple grows.
+
+        A lit pad that does nothing is the fault this surface must never
+        commit, so pad 7 is not lit either. It is where the next payload
+        lands.
 
         While something is pending the grid is the COUNTDOWN RULER, not a
         picker. Reading it must not also change it, so every pad is inert."""
