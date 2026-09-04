@@ -184,7 +184,11 @@ a{color:inherit}
 @media (max-width:760px){ .feat{grid-template-columns:1fr} }
 
 .feat-screen{display:flex;align-items:center;justify-content:center;padding:1rem;min-height:190px}
-.feat-screen svg{width:100%;height:auto;max-height:190px;display:block}
+/* 210, not 190: the GEN slide is 560x200 - three writers and the machine they
+   all land on - and at 190 the clamp cropped the width instead, shrinking the
+   pad face until a flash was hard to read. Every other slide is wider than it
+   is tall and never reaches this bound. */
+.feat-screen svg{width:100%;height:auto;max-height:210px;display:block}
 
 .feat-facts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;justify-content:center;gap:.7rem}
 .feat-facts li{
@@ -952,8 +956,8 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
 
   /* --- the drawn screens -------------------------------------------- */
 
-  function svg(inner, w){
-    return '<svg viewBox="0 0 '+(w||300)+' 150" preserveAspectRatio="xMidYMid meet" '
+  function svg(inner, w, h){
+    return '<svg viewBox="0 0 '+(w||300)+' '+(h||150)+'" preserveAspectRatio="xMidYMid meet" '
          + 'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+inner+'</svg>';
   }
   function spin(dur){
@@ -962,118 +966,243 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       + 'from="0 150 78" to="360 150 78" dur="'+dur+'s" repeatCount="indefinite"/>';
   }
 
-  /* 1. The three generators, in one picture, sharing one bar.
-        This slide used to be the euclid ring alone. It is three panels now
-        because the instrument has THREE writers running at once and naming
-        only one of them undersold it: euclid on the five drum channels, a
-        shift register on each of the three voices, and cellular automata
-        evolving the rhythm register a generation per loop.
+  /* 1. The three generators, in one picture, feeding one machine.
 
-        Drawn at 400 wide, not 300. The glass is a 2.7:1 box, so a 300-wide
-        viewBox letterboxes and a third of the screen goes to waste - which
-        three panels cannot afford.
+        This slide used to be the euclid ring alone. It is three panels and a
+        controller now, because the instrument has THREE writers running at
+        once and naming only one of them undersold it: euclid on the five drum
+        channels, a shift register on each of the three voices, and cellular
+        automata evolving the rhythm register a generation per loop.
 
-        The rule 110 triangle is COMPUTED here, not drawn to look plausible:
-        nine real generations from a single lit cell. If the picture is going
-        to claim an algorithm by name it can afford to run it. Its cells never
-        animate to zero, so the triangle is whole in a still frame - a
-        screenshot, a reduced-motion browser, or the moment before the loop
-        restarts. */
+        THE FOURTH BLOCK IS THE POINT. The three writers do not each own a
+        corner of the machine - they all land on the SAME sixteen pads, so the
+        picture ends where the hand is. Pads flash in step order: solid where
+        euclid put a hit, hollow where the automaton added one, and a pale dot
+        where a voice is sounding. Two colours, because the automaton drives
+        the DRUM rhythm register - it is not a fourth voice and must not read
+        as one.
+
+        Drawn at 560 x 200. The glass is a wide box, so three panels plus a
+        controller need the width; the height is what a 4x4 pad face costs
+        once it is big enough to read a flash on.
+
+        The rule 110 field is COMPUTED here, not drawn to look plausible, and
+        it MOVES. Sixteen cells wide - the register's own width, wrapped the
+        way ca_step() wraps it - run from a single lit cell. On a 16-wide
+        torus rule 110 settles into a 32-generation CYCLE after a 49-step
+        transient, so the panel scrolls the cycle and repeats it exactly:
+        endless movement with no jump, and every row on screen is a real
+        generation rather than a texture. It advances one row per bar, in one
+        snap at the bar line, because one generation per loop is what the
+        instrument does and the caption says so. */
   function artGenerators(ac){
-    var o='', i, g, a, x, y, lab=124, foot=143;
+    var o='', i, g, a, x, y, k;
+
+    /* ONE BAR, and every clock in this picture is derived from it. They ran
+       at 8s, 1.1s and 5s when this was first drawn, which made the picture
+       contradict its own caption. */
+    var BAR=8, STEPS=16, STEP=BAR/STEPS;
+    var C1=66, C2=198, C3=330, CM=480;   /* the four column centres */
+    var HEAD=20, FOOT=166, BUS=186;
 
     function head(cx,t){
-      return '<text x="'+cx+'" y="22" text-anchor="middle" fill="'+DIM+'" '
+      return '<text x="'+cx+'" y="'+HEAD+'" text-anchor="middle" fill="'+DIM+'" '
            + 'font-family="Share Tech Mono,monospace" font-size="8" letter-spacing="2">'+t+'</text>';
     }
-    function foot1(cx,y,t,col,sz){
+    function lab(cx,y,t,col,sz){
       return '<text x="'+cx+'" y="'+y+'" text-anchor="middle" fill="'+col+'" '
            + 'font-family="Share Tech Mono,monospace" font-size="'+sz+'" letter-spacing="1.4">'+t+'</text>';
     }
 
-    /* -- panel 1, x 0-132: euclid. Five hits in sixteen, placed the way the
+    /* -- panel 1, x 4-128: euclid. Five hits in sixteen, placed the way the
           generator places them: hit i lands at floor(i*steps/hits). -- */
-    var HITS=5, STEPS=16, hit={};
+    var HITS=5, hit={};
     for(i=0;i<HITS;i++) hit[Math.floor(i*STEPS/HITS)]=1;
-    o += head(66,'EUCLID');
-    o += '<circle cx="66" cy="72" r="34" fill="none" stroke="'+DIMMER+'" stroke-width="1" opacity=".55"/>';
+    o += head(C1,'EUCLID');
+    o += '<circle cx="'+C1+'" cy="86" r="42" fill="none" stroke="'+DIMMER+'" stroke-width="1" opacity=".55"/>';
     for(i=0;i<STEPS;i++){
       a=(i/STEPS)*Math.PI*2 - Math.PI/2;
-      x=66+Math.cos(a)*34; y=72+Math.sin(a)*34;
+      x=C1+Math.cos(a)*42; y=86+Math.sin(a)*42;
       o += hit[i]
-        ? '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5" fill="'+ac+'"/>'
-        : '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.8" fill="none" stroke="'+DIMMER+'" stroke-width="1.2"/>';
+        ? '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5.4" fill="'+ac+'"/>'
+        : '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="none" stroke="'+DIMMER+'" stroke-width="1.2"/>';
     }
     o += '<g>' + (reduce ? '' :
-         '<animateTransform attributeName="transform" type="rotate" from="0 66 72" to="360 66 72" dur="8s" repeatCount="indefinite"/>')
-       + '<line x1="66" y1="72" x2="66" y2="34" stroke="'+INK+'" stroke-width="1.5" opacity=".85"/>'
-       + '<circle cx="66" cy="34" r="3.6" fill="'+INK+'"/></g>';
-    o += '<text x="66" y="76" text-anchor="middle" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="13">5/16</text>';
-    o += foot1(66,lab,'FIVE DRUMS',DIM,7.5);
+         '<animateTransform attributeName="transform" type="rotate" from="0 '+C1+' 86" to="360 '+C1+' 86" dur="'+BAR+'s" repeatCount="indefinite"/>')
+       + '<line x1="'+C1+'" y1="86" x2="'+C1+'" y2="47" stroke="'+INK+'" stroke-width="1.5" opacity=".85"/>'
+       + '<circle cx="'+C1+'" cy="47" r="3.8" fill="'+INK+'"/></g>';
+    o += '<text x="'+C1+'" y="90" text-anchor="middle" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="14">5/16</text>';
+    o += lab(C1,FOOT,'FIVE DRUMS',DIM,7.5);
 
-    /* -- panel 2, x 140-262: the shift register. Sixteen bits, drawn
-          seventeen wide and slid left by one cell per cycle behind a clip, so
+    /* -- panel 2, x 136-260: the shift register. Sixteen bits, drawn
+          seventeen wide and slid left by one cell per step behind a clip, so
           the row really shifts and a new bit really arrives at the right. -- */
-    var BITS=[1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,1,1], CW=7.2, RX=141;
-    o += head(201,'TURING');
-    o += '<clipPath id="regclip"><rect x="'+RX+'" y="56" width="'+(16*CW).toFixed(1)+'" height="20"/></clipPath>';
+    var BITS=[1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,1,1], CW=7.4, RX=139;
+    o += head(C2,'TURING');
+    /* the feedback path: the bit that falls off the end is what comes back in */
+    o += '<path d="M254 60 L254 44 L144 44 L144 60" fill="none" stroke="'+DIM+'" stroke-width="1" opacity=".8"/>';
+    o += '<path d="M140.2 55 L144 61 L147.8 55 Z" fill="'+DIM+'"/>';
+    o += '<clipPath id="regclip"><rect x="'+RX+'" y="64" width="'+(16*CW).toFixed(1)+'" height="22"/></clipPath>';
     o += '<g clip-path="url(#regclip)"><g>'
-       + (reduce ? '' : '<animateTransform attributeName="transform" type="translate" from="0 0" to="'+(-CW).toFixed(1)+' 0" dur="0.5s" repeatCount="indefinite"/>');
+       + (reduce ? '' : '<animateTransform attributeName="transform" type="translate" from="0 0" to="'+(-CW).toFixed(1)+' 0" dur="'+STEP+'s" repeatCount="indefinite"/>');
     for(i=0;i<17;i++){
       x=RX+i*CW;
       o += BITS[i]
-        ? '<rect x="'+x.toFixed(1)+'" y="58" width="5.6" height="16" fill="'+ac+'"/>'
-        : '<rect x="'+x.toFixed(1)+'" y="58" width="5.6" height="16" fill="none" stroke="'+DIMMER+'" stroke-width="1"/>';
+        ? '<rect x="'+x.toFixed(1)+'" y="66" width="5.8" height="18" fill="'+ac+'"/>'
+        : '<rect x="'+x.toFixed(1)+'" y="66" width="5.8" height="18" fill="none" stroke="'+DIMMER+'" stroke-width="1"/>';
     }
     o += '</g></g>';
-    /* the feedback path: the bit that falls off the end is what comes back in */
-    o += '<path d="M255 52 L255 42 L145 42 L145 52" fill="none" stroke="'+DIM+'" stroke-width="1" opacity=".8"/>';
-    o += '<path d="M141.6 47 L145.4 53 L149.2 47 Z" fill="'+DIM+'"/>';
-    o += foot1(201,92,'RANDOM 0032',INK,8);
-    o += foot1(201,105,'0 LOCKS THE LINE',DIMMER,7.5);
-    o += foot1(201,lab,'THREE VOICES',DIM,7.5);
+    o += lab(C2,106,'RANDOM 0032',INK,8);
+    o += lab(C2,120,'0 LOCKS THE LINE',DIMMER,7.5);
+    o += lab(C2,FOOT,'THREE VOICES',DIM,7.5);
 
-    /* -- panel 3, x 270-400: rule 110, actually run. One lit cell, nine
-          generations, each row arriving after the one above it. -- */
-    /* Seeded at 13 of 15, not in the middle: rule 110 grows LEFTWARD, so a
-       centre seed runs off the left edge and its wrap drops two orphan cells
-       back on the right, which reads as noise rather than as an automaton.
-       From 13 the triangle fills the panel and never wraps in nine
-       generations. */
-    var W=15, GENS=9, CX=8.0, CY=8.4, X0=272, Y0=32, row=[], nxt, k, op;
-    for(i=0;i<W;i++) row.push(i===13?1:0);
-    o += head(333,'RULE 110');
-    for(g=0;g<GENS;g++){
-      op = (0.45+0.55*g/(GENS-1)).toFixed(2);
-      for(i=0;i<W;i++){
-        if(!row[i]) continue;
-        x=X0+i*CX; y=Y0+g*CY;
-        o += '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="6.2" height="6.8" rx="1" fill="'+ac+'" opacity="'+op+'">'
-           + (reduce ? '' : '<animate attributeName="opacity" values="'+op+';1;'+op+'" '
-             + 'keyTimes="0;'+(0.05+g*0.09).toFixed(2)+';1" dur="8s" repeatCount="indefinite"/>')
-           + '</rect>';
-      }
-      nxt=[];
-      for(i=0;i<W;i++){
-        k=(row[(i-1+W)%W]<<2)|(row[i]<<1)|row[(i+1)%W];
+    /* -- panel 3, x 268-392: rule 110, actually run, and scrolling.
+
+          Sixteen cells and a WRAPPED neighbourhood, which is what ca_step()
+          does - the pattern is a loop, so a shape that travels has to leave
+          one end and arrive at the other. From one lit cell this reaches a
+          repeating 32-generation cycle, so the window scrolls that cycle and
+          the loop is seamless: no jump, no invented rows.
+
+          It snaps one row per BAR rather than gliding, because a generation
+          is an event on this instrument and a glide would draw it as a
+          continuous thing. -- */
+    var CAW=16, ROWS=13, CX=7.4, CYH=8.5, X0=271, Y0=30;
+    var row=[], seen={}, hist=[], t0=-1, key;
+    for(i=0;i<CAW;i++) row.push(i===11?1:0);
+    for(g=0; g<4000; g++){
+      key=row.join('');
+      if(seen[key]!==undefined){ t0=seen[key]; break; }
+      seen[key]=g; hist.push(row.slice());
+      var nxt=[];
+      for(i=0;i<CAW;i++){
+        k=(row[(i-1+CAW)%CAW]<<2)|(row[i]<<1)|row[(i+1)%CAW];
         nxt.push((110>>k)&1);
       }
       row=nxt;
     }
-    o += foot1(333,lab,'ONE GEN A LOOP',DIM,7.5);
+    /* the cycle only - the transient is dropped, or the scroll would have to
+       jump back to it once and that is the one thing this panel must not do */
+    var cyc = (t0<0) ? hist : hist.slice(t0);
+    var CN = cyc.length;
 
-    /* -- the dividers, and the line that ties the three together.
+    o += head(C3,'RULE 110');
+    o += '<clipPath id="caclip"><rect x="'+(X0-2)+'" y="'+Y0+'" width="'+(CAW*CX+4).toFixed(1)+'" height="'+(ROWS*CYH).toFixed(1)+'"/></clipPath>';
 
-          THE THREE CLOCKS ARE THE SAME CLOCK, and that is not decoration: the
-          caption says "one bar", so the ring turns once in 8s, the register
-          shifts one bit every 0.5s - sixteen steps to that bar - and the
-          automaton advances one generation per revolution. They ran at 8s,
-          1.1s and 5s when this was first drawn, which made the picture
-          contradict its own caption. -- */
-    o += '<line x1="133" y1="14" x2="133" y2="130" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
-    o += '<line x1="269" y1="14" x2="269" y2="130" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
-    o += foot1(200,foot,'THREE WRITERS, ONE BAR',INK,8);
-    return svg(o,400);
+    /* CN + ROWS rows drawn, the tail repeating the head, so translating by
+       exactly CN rows lands on identical content */
+    var caRows='';
+    for(g=0; g<CN+ROWS; g++){
+      var r=cyc[g%CN];
+      for(i=0;i<CAW;i++){
+        if(!r[i]) continue;
+        caRows += '<rect x="'+(X0+i*CX).toFixed(1)+'" y="'+(Y0+g*CYH).toFixed(1)+'" '
+                + 'width="5.6" height="6.2" rx="1" fill="'+ac+'" opacity=".8"/>';
+      }
+    }
+    /* the stepped scroll: hold a bar, then snap one row in a tenth of it */
+    var v2=[], k2=[];
+    for(g=0; g<CN; g++){
+      v2.push('0 '+(-g*CYH).toFixed(1)); k2.push((g/CN).toFixed(6));
+      v2.push('0 '+(-g*CYH).toFixed(1)); k2.push(((g+0.88)/CN).toFixed(6));
+    }
+    v2.push('0 '+(-CN*CYH).toFixed(1)); k2.push('1');
+
+    o += '<g clip-path="url(#caclip)"><g'+(reduce?' transform="translate(0 '+(-Math.floor(CN/2)*CYH).toFixed(1)+')"':'')+'>'
+       + (reduce ? '' :
+          '<animateTransform attributeName="transform" type="translate" values="'+v2.join(';')+'" '
+          + 'keyTimes="'+k2.join(';')+'" dur="'+(CN*BAR)+'s" repeatCount="indefinite"/>')
+       + caRows + '</g></g>';
+    /* Rule 110 on a 16-wide torus runs at 59% density, which as a flat block
+       of equal cells reads as a slab rather than as an automaton. The fade is
+       at the TOP, where the OLD generations are: new rows arrive at the bottom
+       at full strength and dim as they scroll away, so the eye is given the
+       direction of time. */
+    o += '<rect x="'+(X0-3)+'" y="'+(Y0-1)+'" width="'+(CAW*CX+6).toFixed(1)+'" height="'+(4.2*CYH).toFixed(1)+'" fill="url(#cafade)"/>';
+    o += lab(C3,FOOT,'ONE GEN A LOOP',DIM,7.5);
+
+    /* -- the machine: sixteen pads, and every writer above lands on them.
+
+          Step 0 is the TOP-LEFT pad and the grid fills row-major, which is
+          what PAD_OFFSETS does on the instrument - a picture that ran them
+          bottom-left would teach the wrong pad. -- */
+    var PC=24, PG=4, PX=CM-(4*PC+3*PG)/2, PY=40, DIMOP='0.14';
+
+    /* which pads a source lights. The automaton evolves the DRUM rhythm
+       register, so its steps are drum-coloured: it is not a fourth voice and
+       must not read as one. */
+    var caRow=cyc[0], vbits=BITS.slice(0,STEPS);
+
+    o += '<rect x="404" y="14" width="152" height="156" rx="4" fill="none" stroke="'+DIMMER+'" stroke-width="1.2"/>';
+    o += head(CM,'MASCHINE');
+
+    function flash(t, dimOp){
+      /* a spike at step time t, decaying over a fifth of a step */
+      if(reduce) return '';
+      var d=0.055, s=t.toFixed(4);
+      if(t<=0.0001)
+        return '<animate attributeName="opacity" values="1;'+dimOp+';'+dimOp+'" '
+             + 'keyTimes="0;'+d+';1" dur="'+BAR+'s" repeatCount="indefinite"/>';
+      return '<animate attributeName="opacity" values="'+dimOp+';'+dimOp+';1;'+dimOp+';'+dimOp+'" '
+           + 'keyTimes="0;'+(t-0.0005).toFixed(4)+';'+s+';'+Math.min(0.999,t+d).toFixed(4)+';1" '
+           + 'dur="'+BAR+'s" repeatCount="indefinite"/>';
+    }
+
+    for(i=0;i<STEPS;i++){
+      var px=PX+(i%4)*(PC+PG), py=PY+Math.floor(i/4)*(PC+PG), t=i/STEPS;
+      /* the pad itself is always there, dark - a machine with lights off is
+         still a machine */
+      o += '<rect x="'+px.toFixed(1)+'" y="'+py.toFixed(1)+'" width="'+PC+'" height="'+PC+'" rx="3" '
+         + 'fill="none" stroke="'+DIM+'" stroke-width="1.1" opacity=".55"/>';
+      if(hit[i]){
+        o += '<rect x="'+(px+2).toFixed(1)+'" y="'+(py+2).toFixed(1)+'" width="'+(PC-4)+'" height="'+(PC-4)+'" rx="2" '
+           + 'fill="'+ac+'" opacity="'+(reduce?'0.6':DIMOP)+'">'+flash(t,DIMOP)+'</rect>';
+      } else if(caRow[i]){
+        o += '<rect x="'+(px+3.5).toFixed(1)+'" y="'+(py+3.5).toFixed(1)+'" width="'+(PC-7)+'" height="'+(PC-7)+'" rx="2" '
+           + 'fill="none" stroke="'+ac+'" stroke-width="2" opacity="'+(reduce?'0.6':DIMOP)+'">'+flash(t,DIMOP)+'</rect>';
+      }
+      if(vbits[i]){
+        o += '<circle cx="'+(px+PC/2).toFixed(1)+'" cy="'+(py+PC/2).toFixed(1)+'" r="3.2" '
+           + 'fill="'+INK+'" opacity="'+(reduce?'0.7':DIMOP)+'">'+flash(t,DIMOP)+'</circle>';
+      }
+    }
+    o += lab(CM,162,'ONE BAR, THREE WRITERS',INK,7.4);
+
+    /* -- the feeds. Each writer drops to a shared bus and runs into the pads
+          from below; a pulse travels each path once a beat, which is the
+          same clock as everything else in the picture. -- */
+    var paths=[
+      'M'+C1+' 172 L'+C1+' '+BUS+' L'+CM+' '+BUS+' L'+CM+' 174',
+      'M'+C2+' 172 L'+C2+' '+BUS+' L'+CM+' '+BUS+' L'+CM+' 174',
+      'M'+C3+' 172 L'+C3+' '+BUS+' L'+CM+' '+BUS+' L'+CM+' 174'
+    ];
+    for(i=0;i<3;i++){
+      o += '<path id="feed'+i+'" d="'+paths[i]+'" fill="none" stroke="'+DIMMER+'" stroke-width="1" opacity=".75"/>';
+    }
+    o += '<path d="M'+(CM-4)+' 178 L'+CM+' 170 L'+(CM+4)+' 178 Z" fill="'+DIM+'"/>';
+    if(!reduce){
+      for(i=0;i<3;i++){
+        /* opacity 0 on the ELEMENT, not only in the animation: a dot whose
+           begin has not arrived yet is still drawn, and animateMotion has not
+           placed it - so it sits at 0,0 in the corner of the glass. */
+        o += '<circle r="2.6" fill="'+INK+'" opacity="0">'
+           + '<animateMotion dur="'+(BAR/4)+'s" repeatCount="indefinite" begin="'+(i*0.12).toFixed(2)+'s" '
+           + 'keyPoints="0;1" keyTimes="0;1" calcMode="linear">'
+           + '<mpath href="#feed'+i+'"/></animateMotion>'
+           + '<animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.8;1" '
+           + 'dur="'+(BAR/4)+'s" repeatCount="indefinite" begin="'+(i*0.12).toFixed(2)+'s"/></circle>';
+      }
+    }
+
+    /* the dividers */
+    o += '<line x1="132" y1="14" x2="132" y2="170" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
+    o += '<line x1="264" y1="14" x2="264" y2="170" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
+    o += '<line x1="396" y1="14" x2="396" y2="170" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
+
+    var defs = '<defs><linearGradient id="cafade" x1="0" y1="0" x2="0" y2="1">'
+             + '<stop offset="0" stop-color="#0d2136" stop-opacity=".95"/>'
+             + '<stop offset="1" stop-color="#0d2136" stop-opacity="0"/></linearGradient></defs>';
+    return svg(defs+o, 560, 200);
   }
 
   /* 2. Modulation. The value bar, the dashed span it sweeps between,
@@ -1209,12 +1338,13 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   var SLIDES=[
     { tab:'GEN', ac:'var(--ch-a)', raw:'#e03a2f', art:artGenerators,
       title:'Three generators.<br><em>You never draw a step.</em>',
-      alt:'Three screens side by side: a euclidean ring of sixteen steps with a playhead, a sixteen-bit shift register sliding one bit at a time with its feedback path drawn, and eight computed generations of cellular automaton rule 110.',
+      alt:'Four panels. A euclidean ring of sixteen steps with a playhead, a sixteen-bit shift register sliding one bit at a time with its feedback path drawn, and a scrolling field of computed cellular automaton rule 110 \u2014 all three feeding a drawn Maschine pad grid whose sixteen pads flash in step order.',
       facts:['Euclid on the five drum channels — hits spread over the bar, rotated, with chance',
              'A shift register on each of the three voices, rewriting its own line until you lock it',
              'Cellular automata — rules 30, 90 and 110 — evolving the rhythm a generation per loop',
+             'All three land on the same sixteen pads, and the pads are the only place you watch it happen',
              'All of it is written into Zynthian\u2019s own sequencer, so the touchscreen editor shows the same pattern the pads do'],
-      cap:'<b>Generation.</b> Euclid, Turing machines and cellular automata, all writing at once. You set hits, rotation and randomness; they keep going.' },
+      cap:'<b>Generation.</b> Euclid, Turing machines and cellular automata, all writing at once, all arriving on the same pads. You set hits, rotation and randomness; they keep going.' },
 
     { tab:'MOD', ac:'var(--ch-g)', raw:'#8b5cf0', art:artMod,
       title:'Bind a knob to a wave.<br><em>Then take your hand off.</em>',
