@@ -4,6 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from maschine_mk2_lib import maschine_mk2_lib as lib  # noqa: E402
+from techno_lib import techno_lib as tlib  # noqa: E402
 
 
 class TestDivisions(unittest.TestCase):
@@ -1616,6 +1617,55 @@ class AHandEditNeverGoesThroughTheGenerator(unittest.TestCase):
         self.assertNotIn(
             "_step_note", names,
             "_step_note is the root alone - that is the defect this guards")
+
+
+class NoPacketTheDriverBuildsCanOverflowTheDaemon(unittest.TestCase):
+    """ITEM 29. The daemon reads OSC into a fixed 128-byte buffer
+    (`daemon/src/main.rs`, `let mut buf = [0u8; 128]`). A longer packet is
+    dropped with one line in the journal and NOTHING on the panel - which is
+    the silent refusal this instrument may not commit, wearing a transport.
+
+    It was a "possible risk, measure first" item: the longest packet anyone
+    had measured was 84 bytes, but nothing BOUNDED it, and the page-indicator
+    label was free to grow. Item 12 capped that label at
+    `techno_lib.PAGE_LABEL_CHARS`, which turns the measurement into a bound -
+    so this asserts the bound instead of sampling the traffic."""
+
+    OSC_BUF = 128
+
+    def widest(self):
+        """The largest packet the driver can build, over every bar kind and
+        with every text field at its maximum width."""
+        label = "W" * tlib.PAGE_LABEL_CHARS
+        name = "N" * tlib.NAME_CHARS
+        tabs = [("A", name, True, False)] * 8
+        biggest = 0
+        for kind in (None, "meter", "seg", "bi"):
+            cols = [(name, "VVVVVVVV", kind, 1.0, None, None)] * 4
+            try:
+                packets = lib.screen_packets(0, tabs, cols, label)
+            except ValueError:
+                continue          # a kind this build does not draw
+            biggest = max([biggest] + [len(p) for p in packets])
+        biggest = max([biggest] + [len(p) for p in lib.label_packets(0, label)])
+        return biggest
+
+    def test_the_measurement_sees_something(self):
+        # A guard that measured nothing would pass by checking nothing.
+        self.assertGreater(self.widest(), 40)
+
+    def test_the_widest_packet_fits_the_daemon_buffer(self):
+        widest = self.widest()
+        self.assertLess(
+            widest, self.OSC_BUF,
+            f"the driver can build a {widest}-byte packet and the daemon reads "
+            f"into {self.OSC_BUF} bytes - a longer one is dropped with nothing "
+            f"on the panel")
+
+    def test_the_label_cap_is_what_bounds_it(self):
+        # If the cap goes, this guard stops being a bound and becomes a
+        # sample - so the two are pinned together deliberately.
+        self.assertLessEqual(tlib.PAGE_LABEL_CHARS, 42)
 
 
 class EveryPatternWriterAsksWhoOwnsTheChannel(unittest.TestCase):
