@@ -213,7 +213,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "The reference 909 groove: rolling bass, a seventh stab, one pad"
   },
@@ -431,7 +431,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "Harder rim, the stab pushed, the same four kicks"
   },
@@ -649,7 +649,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "Dorian, softer hats, a longer room"
   },
@@ -867,7 +867,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "Dry and tight, the shortest reverb in the pack"
   },
@@ -1085,7 +1085,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "Shuffled hats, a suspended top"
   },
@@ -1303,7 +1303,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "Loud and forward, the least space"
   },
@@ -1531,7 +1531,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Ninths over a bass that walks root, fifth, flat seventh"
   },
@@ -1759,7 +1759,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Later, darker, the clap on two only"
   },
@@ -1987,7 +1987,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "An electric-piano voicing, wide"
   },
@@ -2215,7 +2215,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "The bass is the arrangement"
   },
@@ -2443,7 +2443,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Maximum swing on the hats, straight everywhere else"
   },
@@ -2671,7 +2671,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Quiet, long, unresolved"
   },
@@ -2879,7 +2879,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "Three kicks, one clap, one tick"
   },
@@ -3087,7 +3087,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "Phrygian, and mostly silence"
   },
@@ -3295,7 +3295,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "Dry to the point of rudeness"
   },
@@ -3503,7 +3503,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "No reverb worth the name"
   },
@@ -3711,7 +3711,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "One slow filter and nothing else moves"
   },
@@ -3919,7 +3919,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "Sixteen bars before anything repeats"
   },
@@ -4156,8 +4156,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "The offbeat triad into a long delay - and it really is a chord now"
   },
@@ -4394,8 +4394,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Pentatonic, enormous, slow"
   },
@@ -4632,8 +4632,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Hiss, a rimshot, and the chord"
   },
@@ -4870,8 +4870,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Half the hits, twice the room"
   },
@@ -5108,8 +5108,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "The snare is the only transient"
   },
@@ -5346,8 +5346,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Feedback high enough to be an instrument"
   },
@@ -5585,7 +5585,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Sixteenth offbeats and a triad pad"
   },
@@ -5823,7 +5823,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "The riser is a four-bar ramp on the pad's cutoff"
   },
@@ -6071,7 +6071,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Harmonic minor, and the one legitimate sample-and-hold"
   },
@@ -6309,7 +6309,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "The bass never leaves the floor"
   },
@@ -6547,7 +6547,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Phrygian - the flat second is a colour, never the bass"
   },
@@ -6785,7 +6785,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Major, bright, the widest pad"
   },
@@ -12182,8 +12182,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Every voice is a Mutated Instrument"
   }

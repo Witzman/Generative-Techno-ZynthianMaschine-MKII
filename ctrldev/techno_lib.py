@@ -3240,15 +3240,28 @@ class techno_lib:
     @staticmethod
     def fx_role_of(engine_name):
         """The FX_ROLES entry whose plugin name appears in `engine_name`, or
-        None. Substring rather than equality because an engine's name arrives
-        with a prefix on it, which is the same test `fx_handle` always used."""
+        None.
+
+        Substring rather than equality because an engine's name arrives with a
+        prefix on it - `JV/TAP Reverberator` - which is the same test
+        `fx_handle` always used.
+
+        **THE LONGEST MATCH WINS, and that is not a nicety.** One plugin name
+        here is a PREFIX OF ANOTHER: `Tal-Reverb-II` is a substring of
+        `Tal-Reverb-III`, so a first-match scan resolved Tal-Reverb-III as
+        Tal-Reverb-II, in dictionary order, silently. The two happen to share
+        their port symbols so nothing sounded wrong - which is exactly why it
+        would have sat there - but the ranges are free to diverge and every
+        message naming the plugin was already wrong. Found 2026-09-04 by a
+        report that printed the resolved name beside the asked-for one."""
         if not engine_name:
             return None
         name = str(engine_name)
+        best = None
         for plugin, spec in techno_lib.FX_ROLES.items():
-            if plugin in name:
-                return plugin, spec
-        return None
+            if plugin in name and (best is None or len(plugin) > len(best[0])):
+                best = (plugin, spec)
+        return best
 
     @staticmethod
     def fx_wet_values(spec, percent):

@@ -208,21 +208,36 @@ and the plan is beside it. What changed:
 
 | Files | What varies | Effects |
 |---|---|---|
-| `031`–`060` | thirty arrangements across five genres | TAP Stereo Echo + TAP Reverberator |
-| `061`–`080` | **twenty rooms** — plate, chamber, hall, cathedral, tile, cavern, spring, gated, ambience, slapback, canyon, studio, basement, stairwell, glass, tunnel, chapel, hangar, closet, observatory | the same pair, driven to twenty different `revtype`/`revsize`/`dlytime`/`dlyfbk` settings |
-| `101` | an eleventh dub, every voice a Mutated Instrument | the same pair |
+| `031`–`060` | thirty arrangements across five genres | **one pair per family** — house into a Dragonfly room, deep into a Dragonfly hall, minimal into Tal-Reverb-II, dub through Tal-Dub-3 into Tal-Reverb-III, trance into a hall on a millisecond delay |
+| `061`–`080` | **twenty rooms** — plate, chamber, hall, cathedral, tile, cavern, spring, gated, ambience, slapback, canyon, studio, basement, stairwell, glass, tunnel, chapel, hangar, closet, observatory | TAP Stereo Echo + TAP Reverberator, driven to twenty `revtype`/`revsize`/`dlytime`/`dlyfbk` settings |
+| `101` | an eleventh dub, every voice a Mutated Instrument | the dub pair |
 
 Six each of **house**, **deep house**, **minimal**, **dub** and **trance** at
 120-140 BPM, twenty **space** presets at 120, plus `101`.
 
-**Why one effect pair on all fifty-one now.** Not a narrowing — the opposite.
-`revtype` alone is **43 distinct rooms**, and until 2026-09-04 not one of them
-was reachable on the twenty-one presets that carried a different pair, because
-the driver resolved REVERB and DELAY by plugin NAME. The knobs, both modulator
-kinds and all four space globals were dead on those files, in silence. The
-driver resolves by ROLE now, so the whole palette works — and the pack takes
-the one pair that supplies both roles on every chain, because that is what
-makes `revtype`, `revsize`, `dlytime` and `dlyfbk` live on every preset.
+**Why the pairs vary again, and what each one costs.** Until 2026-09-04 the
+driver resolved REVERB and DELAY by plugin NAME, so on the twenty-one presets
+carrying a different pair the knobs, both modulator kinds and all four space
+globals were dead — in silence. It resolves by ROLE now.
+
+For one afternoon in between, every preset in both packs was given TAP Stereo
+Echo + TAP Reverberator, because **that is the only pair supplying all six FX
+controls**. That was the right call while the alternative was a dead knob and
+the wrong one the moment the knobs worked: one reverb across seventy-one
+presets is a narrowing nobody asked for. **Nineteen pairs ship now.**
+
+What a non-TAP pair gives up, exactly:
+
+| Lost | Why | Who accepts it |
+|---|---|---|
+| `revtype` | the 43-room list is on **TAP Reverberator alone** | every family but the space series — a reverb that already IS a room needs no room selector |
+| `dlytime` | Tal-Dub-3 and Regrader take a **normalised** 0..1 time, so a tempo-derived millisecond count cannot drive them | dub, where the delay's character matters more than dialling its division; `dlyfbk` still works and feedback is the dub control |
+| a separable dry | six of the fourteen are **crossfades**, so their wet knob is a blend | the four presets that use one, where a blend is the intent |
+
+`tools/validate-manifest.py` prints the exact list per entry as a **warning**,
+so the trade is always visible and never silent — and a test asserts that a
+dead CONTROL is the only warning a shipped preset may carry. A pair that cannot
+supply both ROLES is the original defect returning and fails the build.
 See `notes/specs/2026-09-04-role-based-fx-resolution.md`.
 
 **These are still fixed arrangements, not generative patches** — `random` and

@@ -46,10 +46,10 @@
           "2": "JV/amsynth"
         },
         {
-          "10": "JV/TAP Stereo Echo"
+          "10": "JV/Tal-Dub-3"
         },
         {
-          "11": "JV/TAP Reverberator"
+          "11": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -68,10 +68,10 @@
           "3": "JV/String machine"
         },
         {
-          "12": "JV/TAP Stereo Echo"
+          "12": "JV/Tal-Dub-3"
         },
         {
-          "13": "JV/TAP Reverberator"
+          "13": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -90,10 +90,10 @@
           "4": "JV/Mutated Instruments"
         },
         {
-          "14": "JV/TAP Stereo Echo"
+          "14": "JV/Tal-Dub-3"
         },
         {
-          "15": "JV/TAP Reverberator"
+          "15": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -112,10 +112,10 @@
           "5": "LS"
         },
         {
-          "16": "JV/TAP Stereo Echo"
+          "16": "JV/Tal-Dub-3"
         },
         {
-          "17": "JV/TAP Reverberator"
+          "17": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -134,10 +134,10 @@
           "6": "LS"
         },
         {
-          "18": "JV/TAP Stereo Echo"
+          "18": "JV/Tal-Dub-3"
         },
         {
-          "19": "JV/TAP Reverberator"
+          "19": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -156,10 +156,10 @@
           "26": "JV/Surge XT"
         },
         {
-          "20": "JV/TAP Stereo Echo"
+          "20": "JV/Tal-Dub-3"
         },
         {
-          "21": "JV/TAP Reverberator"
+          "21": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -178,10 +178,10 @@
           "7": "JV/Kars"
         },
         {
-          "22": "JV/TAP Stereo Echo"
+          "22": "JV/Tal-Dub-3"
         },
         {
-          "23": "JV/TAP Reverberator"
+          "23": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -200,10 +200,10 @@
           "8": "JV/padthv1"
         },
         {
-          "24": "JV/TAP Stereo Echo"
+          "24": "JV/Tal-Dub-3"
         },
         {
-          "25": "JV/TAP Reverberator"
+          "25": "JV/Tal-Reverb-III"
         }
       ],
       "fader_pos": 0,
@@ -368,84 +368,18 @@
           "controllers": {}
         },
         "10": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "11": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "3": {
           "bank_info": null,
@@ -455,84 +389,18 @@
           "controllers": {}
         },
         "12": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "13": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "4": {
           "bank_info": null,
@@ -542,84 +410,18 @@
           "controllers": {}
         },
         "14": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "15": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "5": {
           "bank_info": [
@@ -651,84 +453,18 @@
           }
         },
         "16": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "17": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "6": {
           "bank_info": [
@@ -760,84 +496,18 @@
           }
         },
         "18": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "19": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "26": {
           "bank_info": null,
@@ -847,84 +517,18 @@
           "controllers": {}
         },
         "20": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "21": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "7": {
           "bank_info": null,
@@ -934,84 +538,18 @@
           "controllers": {}
         },
         "22": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "23": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         },
         "8": {
           "bank_info": [
@@ -1317,84 +855,18 @@
           }
         },
         "24": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "25": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "decay": {
-              "value": 6700.0
-            },
-            "drylevel": {
-              "value": 0.0
-            },
-            "wetlevel": {
-              "value": -70.0
-            },
-            "combs_en": {
-              "value": 1
-            },
-            "allps_en": {
-              "value": 1
-            },
-            "bandpass_en": {
-              "value": 1
-            },
-            "stereo_enh": {
-              "value": 1
-            },
-            "mode": {
-              "value": 8
-            }
-          }
+          "controllers": {}
         }
       },
       "mixer": {

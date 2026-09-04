@@ -342,16 +342,53 @@ class TheShippedPacksAllPassCase(unittest.TestCase):
                     broke[f"{name}:{entry['file']}"] = msgs
         self.assertEqual(broke, {})
 
-    def test_no_shipped_entry_even_warns(self):
-        # A warning is a dead knob or an unrecoverable value - fine in a
-        # one-off, not in a pack somebody is meant to play through.
-        warned = {}
+    # A DEAD FX CONTROL IS AN ACCEPTED TRADE; ANYTHING ELSE IS NOT.
+    #
+    # Only TAP Stereo Echo + TAP Reverberator supplies all six FX controls, so
+    # every preset carrying a different pair for its CHARACTER gives one up -
+    # usually REVTYPE, whose 43-room list exists on that one reverb. That is a
+    # choice, and the warning exists to keep it visible rather than to forbid
+    # it. Every OTHER warning - a gate the encoder cannot restore, a chain with
+    # no reverb at all, a write burst past the documented worst case - is a
+    # fault and must not be in a shipped pack.
+    ACCEPTED_WARNING = "this pair cannot reach:"
+
+    def test_the_only_warnings_are_accepted_fx_trades(self):
+        unexpected = {}
         for name, entries, kits in self.packs():
             for entry in entries:
-                msgs = [m for sev, m in vm.check(entry, kits) if sev == "WARN"]
+                msgs = [m for sev, m in vm.check(entry, kits)
+                        if sev == "WARN"
+                        and not m.startswith(self.ACCEPTED_WARNING)]
                 if msgs:
-                    warned[f"{name}:{entry['file']}"] = msgs
-        self.assertEqual(warned, {})
+                    unexpected[f"{name}:{entry['file']}"] = msgs
+        self.assertEqual(unexpected, {})
+
+    def test_every_chain_can_still_reach_both_a_reverb_and_a_delay(self):
+        # The trade above is a lost CONTROL, never a lost verb. A pair that
+        # cannot supply both roles is the original defect returning.
+        broken = []
+        for name, entries, kits in self.packs():
+            for entry in entries:
+                roles = set()
+                for plugin in entry.get("fx") or ():
+                    found = tlib.fx_role_of(str(plugin).split("/")[-1])
+                    if found:
+                        roles.add(found[1]["role"])
+                if roles != {"reverb", "delay"}:
+                    broken.append(f"{name}:{entry['file']} -> {sorted(roles)}")
+        self.assertEqual(broken, [])
+
+    def test_the_pack_uses_more_than_one_insert_pair(self):
+        # For one afternoon all 71 carried the same pair, because the two verbs
+        # resolved by plugin NAME and every other pair was dead. They resolve
+        # by role now, so one reverb across 71 presets is a narrowing nobody
+        # asked for.
+        pairs = set()
+        for _n, entries, _k in self.packs():
+            for entry in entries:
+                pairs.add(tuple(entry.get("fx") or ()))
+        self.assertGreater(len(pairs), 8)
 
     def test_every_entry_has_a_distinct_file_and_title(self):
         files, titles = [], []

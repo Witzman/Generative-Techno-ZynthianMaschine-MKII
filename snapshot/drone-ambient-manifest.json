@@ -494,8 +494,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Two chords grinding past each other"
   },
@@ -745,7 +745,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "A slow plagal fall, immense room"
   },
@@ -994,8 +994,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/GxEcho-Stereo",
+      "JV/Shiroverb"
     ],
     "notes": "Metallic, the raised seventh biting"
   },
@@ -1244,8 +1244,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Modulay",
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "The top layer breathing in and out"
   },
@@ -1495,7 +1495,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-II"
     ],
     "notes": "Almost no motion, maximum decay"
   },
@@ -1744,8 +1744,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "One fifth, no third, ever"
   },
@@ -1975,7 +1975,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Roomy"
     ],
     "notes": "Five notes, no dissonance possible"
   },
@@ -2224,8 +2224,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/GxEcho-Stereo",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Phrygian second as colour, never in the bass"
   },
@@ -2474,8 +2474,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Modulay",
+      "JV/Dragonfly Early Reflections"
     ],
     "notes": "High shimmer over a still root"
   },
@@ -2745,7 +2745,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Room Reverb"
     ],
     "notes": "Warm, major, a slow walk"
   },
@@ -3014,8 +3014,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Shiroverb"
     ],
     "notes": "Dorian, plucked air, brushes underneath"
   },
@@ -3265,7 +3265,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Early Reflections"
     ],
     "notes": "Pentatonic bells, no chords at all"
   },
@@ -3534,8 +3534,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/GxEcho-Stereo",
+      "JV/Tal-Reverb-II"
     ],
     "notes": "Dry, close, short room, delay-led"
   },
@@ -3804,8 +3804,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Modulay",
+      "JV/Tal-Reverb-III"
     ],
     "notes": "A pulse under stillness"
   },
@@ -4055,7 +4055,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Ninths, very quiet, very wide"
   },
@@ -4324,8 +4324,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Dub-3",
+      "JV/Roomy"
     ],
     "notes": "Suspended throughout, never resolving"
   },
@@ -4594,8 +4594,8 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/GxEcho-Stereo",
+      "JV/Dragonfly Hall Reverb"
     ],
     "notes": "Dark, one bright note on top"
   },
@@ -4865,7 +4865,7 @@
     ],
     "fx": [
       "JV/TAP Stereo Echo",
-      "JV/TAP Reverberator"
+      "JV/Tal-Reverb-III"
     ],
     "notes": "Rhythmic ambient, the key walking"
   },
@@ -5134,7 +5134,7 @@
       }
     ],
     "fx": [
-      "JV/TAP Stereo Echo",
+      "JV/Tal-Dub-3",
       "JV/TAP Reverberator"
     ],
     "notes": "The delay is the instrument"

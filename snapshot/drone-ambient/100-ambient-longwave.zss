@@ -46,7 +46,7 @@
           "2": "JV/amsynth"
         },
         {
-          "10": "JV/TAP Stereo Echo"
+          "10": "JV/Tal-Dub-3"
         },
         {
           "11": "JV/TAP Reverberator"
@@ -68,7 +68,7 @@
           "3": "JV/String machine"
         },
         {
-          "12": "JV/TAP Stereo Echo"
+          "12": "JV/Tal-Dub-3"
         },
         {
           "13": "JV/TAP Reverberator"
@@ -90,7 +90,7 @@
           "4": "JV/Mutated Instruments"
         },
         {
-          "14": "JV/TAP Stereo Echo"
+          "14": "JV/Tal-Dub-3"
         },
         {
           "15": "JV/TAP Reverberator"
@@ -112,7 +112,7 @@
           "5": "LS"
         },
         {
-          "16": "JV/TAP Stereo Echo"
+          "16": "JV/Tal-Dub-3"
         },
         {
           "17": "JV/TAP Reverberator"
@@ -134,7 +134,7 @@
           "6": "LS"
         },
         {
-          "18": "JV/TAP Stereo Echo"
+          "18": "JV/Tal-Dub-3"
         },
         {
           "19": "JV/TAP Reverberator"
@@ -156,7 +156,7 @@
           "26": "JV/Helm"
         },
         {
-          "20": "JV/TAP Stereo Echo"
+          "20": "JV/Tal-Dub-3"
         },
         {
           "21": "JV/TAP Reverberator"
@@ -178,7 +178,7 @@
           "7": "JV/Kars"
         },
         {
-          "22": "JV/TAP Stereo Echo"
+          "22": "JV/Tal-Dub-3"
         },
         {
           "23": "JV/TAP Reverberator"
@@ -200,7 +200,7 @@
           "8": "JV/padthv1"
         },
         {
-          "24": "JV/TAP Stereo Echo"
+          "24": "JV/Tal-Dub-3"
         },
         {
           "25": "JV/TAP Reverberator"
@@ -368,47 +368,11 @@
           "controllers": {}
         },
         "10": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "11": {
           "bank_info": [
@@ -455,47 +419,11 @@
           "controllers": {}
         },
         "12": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "13": {
           "bank_info": [
@@ -542,47 +470,11 @@
           "controllers": {}
         },
         "14": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "15": {
           "bank_info": [
@@ -651,47 +543,11 @@
           }
         },
         "16": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "17": {
           "bank_info": [
@@ -760,47 +616,11 @@
           }
         },
         "18": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "19": {
           "bank_info": [
@@ -847,47 +667,11 @@
           "controllers": {}
         },
         "20": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "21": {
           "bank_info": [
@@ -934,47 +718,11 @@
           "controllers": {}
         },
         "22": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "23": {
           "bank_info": [
@@ -1317,47 +1065,11 @@
           }
         },
         "24": {
-          "bank_info": [
-            "",
-            null,
-            "None",
-            null
-          ],
+          "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {
-            "ldelay": {
-              "value": 241.93548387096774
-            },
-            "lfeedback": {
-              "value": 73.0
-            },
-            "rhaasdelay": {
-              "value": 241.93548387096774
-            },
-            "rhaasfeedback": {
-              "value": 35.0
-            },
-            "lecholevel": {
-              "value": -70.0
-            },
-            "recholevel": {
-              "value": -70.0
-            },
-            "dryLevel": {
-              "value": 0.0
-            },
-            "crossmode": {
-              "value": 1
-            },
-            "haaseffect": {
-              "value": 0
-            },
-            "swapoutputs": {
-              "value": 0
-            }
-          }
+          "controllers": {}
         },
         "25": {
           "bank_info": [

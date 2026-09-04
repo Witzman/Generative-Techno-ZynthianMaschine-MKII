@@ -429,6 +429,37 @@ def check(entry, kit_notes, budget=None):
             warn(f"no insert can serve as a {role} - that verb, its "
                  f"modulators and its globals are dead on all eight chains")
 
+    # WHICH OF THE SIX FX CONTROLS THIS PAIR CANNOT REACH.
+    #
+    # Only TAP Stereo Echo + TAP Reverberator supplies all six, and for one
+    # afternoon every preset in both packs was given that pair for exactly
+    # that reason - which was right while the two verbs resolved by plugin
+    # NAME and every other pair was dead, and wrong the moment they resolved
+    # by role. Losing REVTYPE on a house preset costs nothing: if the plugin
+    # already IS a different room, a room selector is redundant.
+    #
+    # So this REPORTS rather than refuses. A dead control is a legitimate
+    # trade for a plugin's character; a dead control nobody knew about is the
+    # silent refusal this instrument may not commit.
+    dead = []
+    for plugin in entry.get("fx") or ():
+        found = tlib.fx_role_of(str(plugin).split("/")[-1])
+        if found is None:
+            continue
+        name, spec = found
+        wanted = (("REVSIZE", "REVSIZE"), ("REVTYPE", "REVTYPE")) \
+            if spec["role"] == "reverb" else \
+            (("DLYTIME", "DLYTIME"), ("DLYFBK", "DLYFBK"))
+        for label, key in wanted:
+            if key not in spec:
+                dead.append(f"{label} (not on {name})")
+            elif key == "DLYTIME" and (len(spec[key]) < 4 or spec[key][3] != "ms"):
+                dead.append(f"{label} ({name} takes a normalised time)")
+        if spec.get("blend") == "crossfade":
+            dead.append(f"the dry survives on {name} (it is a crossfade)")
+    if dead:
+        warn("this pair cannot reach: " + "; ".join(dead))
+
     # --- chord and gate ---------------------------------------------------
     for ch in channels:
         if ch.gate > tlib.GATE_MAX:

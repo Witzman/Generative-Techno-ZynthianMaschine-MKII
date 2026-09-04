@@ -8770,6 +8770,25 @@ class FXRolesCase(unittest.TestCase):
             self.assertIsNotNone(found, name)
             self.assertEqual(found[1]["role"], "reverb")
 
+    def test_a_plugin_name_that_is_a_prefix_of_another_resolves_correctly(self):
+        # `Tal-Reverb-II` is a substring of `Tal-Reverb-III`, so a first-match
+        # scan resolved the III as the II - in dictionary order, in silence.
+        # They share port symbols so nothing sounded wrong, which is why it
+        # would have stayed. The longest match wins.
+        for asked in ("Tal-Reverb-III", "JV/Tal-Reverb-III"):
+            got = tl.fx_role_of(asked)
+            self.assertEqual(got[0], "Tal-Reverb-III", asked)
+        for asked in ("Tal-Reverb-II", "JV/Tal-Reverb-II"):
+            got = tl.fx_role_of(asked)
+            self.assertEqual(got[0], "Tal-Reverb-II", asked)
+
+    def test_no_entry_resolves_to_a_different_entry(self):
+        # The general form, so a future name that shadows another fails here
+        # rather than in a message nobody reads.
+        for plugin in tl.FX_ROLES:
+            got = tl.fx_role_of("JV/" + plugin)
+            self.assertEqual(got[0], plugin)
+
     def test_a_db_wet_is_the_audio_taper(self):
         spec = tl.FX_ROLES["TAP Reverberator"]
         got = dict(tl.fx_wet_values(spec, 100))
