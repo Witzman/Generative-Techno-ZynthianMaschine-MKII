@@ -1344,6 +1344,44 @@ class EverythingTheSnapshotSavesIsSomethingTheLoadReadsBack(unittest.TestCase):
         self.assertIn("rotate", self._saved_keys("drums"))
         self.assertIn("rotate", self._restored_names("drums"))
 
+    # --- the TOP LEVEL, 2026-09-04 -------------------------------------
+    #
+    # The guard above only ever looked inside the "drums" and "voices" blocks,
+    # so a whole top-level key could be saved and never read and nothing would
+    # say so. That gap was found while costing item 35, whose whole proposal is
+    # a new top-level key - and the entry assumed this guard already covered
+    # it. It did not. Everything the driver saves at the top level is a
+    # separate dict from those two: owners, kinds, stash, mods, and now played.
+
+    def _top_level_saved(self):
+        """The keys of the dict get_state RETURNS."""
+        import ast
+        for node in self._function("get_state").body:
+            if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict):
+                return {k.value for k in node.value.keys
+                        if isinstance(k, ast.Constant)
+                        and isinstance(k.value, str)}
+        self.fail("get_state does not return a dict literal")
+
+    def _set_state_names(self):
+        """Every string constant anywhere in set_state. Coarse for the same
+        reason `_restored_names` is: the question is whether the load has
+        HEARD of the key, not how it stores it."""
+        import ast
+        return {leaf.value for leaf in ast.walk(self._function("set_state"))
+                if isinstance(leaf, ast.Constant)
+                and isinstance(leaf.value, str)}
+
+    def test_the_top_level_guard_can_see_both_halves(self):
+        self.assertIn("owners", self._top_level_saved())
+        self.assertIn("owners", self._set_state_names())
+
+    def test_every_top_level_key_is_read_back(self):
+        missing = sorted(self._top_level_saved() - self._set_state_names())
+        self.assertEqual(missing, [],
+                         "get_state saves these top-level keys and set_state "
+                         f"never names them: {missing}")
+
 
 class EveryBranchOfTheWritePathIsReachable(unittest.TestCase):
     """The SEVENTH AST guard, 2026-09-02, and it exists because this project

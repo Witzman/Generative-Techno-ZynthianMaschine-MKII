@@ -27,12 +27,76 @@ pub fn accumulate_encoder(current: i32, delta: i32) -> u8 {
 
 /// The most an encoder can genuinely move between two reports.
 ///
-/// Measured on the hardware at ~750 reports/s: real movement is 0-4 units per
-/// report, while a wrap of the hardware counter shows up as -38 to -40. The
-/// original guard of 40 caught only the largest of those, so a wrap every ~40
-/// units of travel reached the host as a real backwards movement and yanked
-/// whatever parameter the knob was driving.
+/// THE COMMENT THIS REPLACES WAS INHERITED PROSE, NOT A MEASUREMENT - corrected
+/// 2026-09-04. It read "real movement is 0-4 units per report, while a wrap of
+/// the hardware counter shows up as -38 to -40", it arrived whole with the
+/// vendoring commit, and -38 to -40 is a quantity this arithmetic cannot
+/// produce at any hand speed. Nothing in notes/ ever captured it. The 2026-08-30
+/// project survey quotes the same sentence back as `[CODE]`, which is what it
+/// always was.
+///
+/// WHAT THE RECONSTRUCTION REALLY PRODUCES. The descriptor declares report 1
+/// bytes 8-23 as eight 16-bit fields with Logical Maximum 999, and
+/// `accumulate_raw` is `floor(counter / 4)`. Simulated over that layout at hand
+/// speeds from 1 to 32 counts per report:
+///
+/// | event                                   | delta seen  |
+/// |-----------------------------------------|-------------|
+/// | real movement of m counts per report    | m / 4       |
+/// | the counter wrapping 999 -> 0           | -249        |
+///
+/// A wrap of an N-value counter reads as N/4, and the descriptor pins N at no
+/// fewer than 1000 - so 249 is the SMALLEST artefact this guard can ever be
+/// asked to catch, and 8 sits 31 times below it.
+///
+/// A DROPPED REPORT CANNOT BE DISTINGUISHED FROM A FAST TURN, and no threshold
+/// will ever separate them: a drop is not a different KIND of delta, it is the
+/// same movement measured over a longer interval. Only a timestamp could tell
+/// them apart, and this path has none. So the only defence against a drop is
+/// headroom, and the headroom here is the gap between m/4 and 249 - which is
+/// why the number below can move a long way without ever passing a wrap, and
+/// why moving it is a tuning decision rather than a correctness one.
+///
+/// AT 8, A DROP COSTS THE KNOB. At a fast turn of 16 counts per report the real
+/// delta is 4, so ONE dropped report between two processed ones already reads
+/// as 8 and is discarded; at a slow 4 counts per report seven consecutive drops
+/// are survived. What is NOT at risk is a stall: the MK2 stops delivering
+/// altogether, so the knob is dead for the stall's duration whatever this says,
+/// and the guard costs exactly one report on recovery.
+///
+/// ANY CHANGE TO THIS NUMBER IS PAIRED WITH THE HIGH-BYTE ORDERING FIX in
+/// `mikro.rs::read_buttons`. While the high half of the field was read one
+/// report late, every 256-count boundary produced a spurious -63 and a spurious
+/// +64, four times a revolution - so the artefact floor was 57, not 249, and a
+/// threshold above it would have passed a 64-unit yank straight through.
+/// `the_high_half_of_an_encoder_field_is_in_force_when_it_is_dispatched` is
+/// what holds that half up.
 pub const ENC_MAX_DELTA: i32 = 8;
+
+/// The values the encoder counter can take, from the descriptor's Logical
+/// Maximum of 999. Only used to derive the bound the threshold must stay under.
+///
+/// The three constants here are read by the tests and by a reader, never by the
+/// input path - they exist so the threshold above is a stated bound rather than
+/// a number, and so a future session cannot move it without meeting the
+/// arithmetic that fixes it.
+#[allow(dead_code)]
+const ENC_COUNTER_SPAN: i32 = 1000;
+
+/// The delta a counter wrap produces, in reported units: `accumulate_raw` is a
+/// floor-divide by four, and 4 divides the span exactly.
+#[allow(dead_code)]
+pub const ENC_WRAP_DELTA: i32 = ENC_COUNTER_SPAN / 4 - 1;
+
+/// The fastest turn this threshold can carry, in counter counts per report.
+///
+/// Not a hand's limit - a hand's nowhere near it. At the MK2's ~750 reports a
+/// second and 999 counts a revolution, 31 counts per report is about 23
+/// revolutions a second. It is the DROP budget wearing a speed's clothes: the
+/// same 31 counts is one report of a 6 rev/s turn with seven of its
+/// neighbours lost.
+#[allow(dead_code)]
+pub const ENC_MAX_TRACKED_COUNTS: i32 = ENC_MAX_DELTA * 4 - 1;
 
 pub fn is_encoder_jump(delta: i32) -> bool {
     delta.abs() >= ENC_MAX_DELTA
@@ -196,9 +260,85 @@ mod tests {
 
     #[test]
     fn counter_wraps_are_jumps() {
-        for d in [-38, -39, -40] {
+        // THE NUMBERS USED TO BE -38, -39, -40, and they were fiction: they
+        // came from the inherited comment, and no arrangement of a 16-bit
+        // field with Logical Maximum 999 divided by four produces them. The
+        // wrap is -249, and -248/-246 are the same wrap taken at speed - the
+        // faster the turn, the further past zero the first post-wrap report
+        // lands.
+        for d in [-ENC_WRAP_DELTA, -248, -246, -234, ENC_WRAP_DELTA] {
             assert!(is_encoder_jump(d), "delta {} should be rejected", d);
         }
+    }
+
+    #[test]
+    fn the_threshold_is_a_bound_and_not_a_number_somebody_liked() {
+        // THE DERIVATION, KEPT EXECUTABLE. Walk the descriptor's own field - a
+        // counter of ENC_COUNTER_SPAN values, low half at report byte 2n+8 and
+        // high half at 2n+9, reconstructed by accumulate_raw - at hand speeds
+        // from a crawl to far past one, and separate what the guard sees into
+        // the two populations it exists to tell apart.
+        //
+        // The claim is that they do not overlap and are nowhere near
+        // overlapping: a turn this threshold can carry never reaches it, and a
+        // wrap never falls to it, at any speed at all. The gap between them is
+        // the whole budget for DROPPED reports, and it is that gap - not a
+        // measurement of a hand - that says whether this number may move.
+        for m in [1, 2, 4, 8, 16, 32, 64, 128] {
+            let mut counter = 0i32;
+            let mut prev_counter = -1i32;
+            let mut prev_acc = 0i32;
+            let mut real_max = 0i32;
+            let mut wrap_min = i32::MAX;
+            let mut wraps = 0;
+            for _ in 0..(ENC_COUNTER_SPAN * 4 / m) {
+                let (low, high) = (counter & 0xFF, counter >> 8);
+                let wrapped = counter < prev_counter;
+                if prev_counter < 0 || low != (prev_counter & 0xFF) {
+                    let acc = accumulate_raw(low, high as usize);
+                    let d = (acc - prev_acc).abs();
+                    prev_acc = acc;
+                    if wrapped {
+                        wraps += 1;
+                        wrap_min = wrap_min.min(d);
+                    } else if prev_counter >= 0 {
+                        real_max = real_max.max(d);
+                    }
+                }
+                prev_counter = counter;
+                counter = (counter + m) % ENC_COUNTER_SPAN;
+            }
+            assert!(wraps >= 3, "at {m} counts/report only {wraps} wraps were \
+                                 exercised - the sweep proves nothing");
+            assert!(wrap_min > ENC_MAX_DELTA,
+                "at {m} counts/report the wrap fell to {wrap_min} - the guard \
+                 would let a full-sweep yank through");
+            if m <= ENC_MAX_TRACKED_COUNTS {
+                assert!(real_max < ENC_MAX_DELTA,
+                    "at {m} counts/report a real turn reached {real_max} - the \
+                     guard would reject the hand");
+            }
+        }
+    }
+
+    #[test]
+    fn the_gap_between_a_turn_and_a_wrap_is_the_whole_drop_budget() {
+        // Stated as the quantity item 28 asked about: how many consecutive
+        // reports may be lost before a turn at a given speed stops reaching
+        // the host. A drop multiplies the interval, and the delta with it.
+        //
+        // THESE THREE NUMBERS MOVE WITH ENC_MAX_DELTA, on purpose. The bound
+        // test above will accept a much larger threshold; this one will not
+        // accept one silently. Whoever raises it restates here what it bought.
+        let survivable = |counts_per_report: i32| {
+            ENC_MAX_DELTA * 4 / counts_per_report - 1
+        };
+        assert_eq!(survivable(4), 7);       // a brisk turn, 3 rev/s
+        assert_eq!(survivable(16), 1);      // a fast one, 12 rev/s
+        assert_eq!(survivable(32), 0);      // faster than a hand: none at all
+        // And what the guard is protecting: a wrap is 249 away, so the budget
+        // could be thirty times larger before anything real was at risk.
+        assert!(ENC_WRAP_DELTA / ENC_MAX_DELTA > 30);
     }
 
     #[test]

@@ -837,6 +837,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # step -> (note, velocity, duration) for player-owned channels. A
         # cache, never the truth: rebuilt from the pattern, never assumed.
         self.notes = {i: {} for i in range(len(tlib.CHANNELS))}
+        # Steps a hand played on a channel whose provenance CANNOT be
+        # reconstructed, staged by set_state for the poll thread to validate.
+        # Only drums reach it: a drum overdub is the SAME PITCH as the euclid
+        # hits it lands among - claim_clears is False there on purpose, since
+        # clearing would silence the channel on the first tap - so the probe
+        # in _rebuild_notes has nothing to tell them apart by. See get_state's
+        # "played" key for why the step index is all that is kept.
+        self._played_seed = {}
         # Channels whose note map needs rebuilding. Drained by the poll
         # thread: the scan takes the lock and must never run on the MIDI
         # thread, for the same reason _commit_kit and _commit_preset do not.
@@ -3447,6 +3455,39 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # is rebuilt from the pattern rather than trusted.
             "owners": {str(i): self.owner[i]
                        for i in range(len(tlib.CHANNELS))},
+            # WHICH STEPS A HAND PLAYED - THE STEP INDICES, AND NOTHING ELSE.
+            #
+            # The one thing on this surface with no truth in zynseq to read
+            # back, which is exactly why it is right to persist it and was
+            # wrong to persist CHANCE and SWING. `owners` says a channel is
+            # the player's; this says which of its hits are.
+            #
+            # ON A VOICE IT IS DERIVABLE and _rebuild_notes derives it - a
+            # keyboard pitch is not a Turing pitch. ON A DRUM IT IS NOT, at
+            # all: the overdub and the generated hit are one pitch, so the
+            # probe returned {} for every drum channel that has ever been
+            # rebuilt. The notes survived a reload and the ownership survived
+            # it; the colour that says WHICH ONES ARE YOURS did not.
+            #
+            # THE NOTE IS NOT SAVED, ONLY THE STEP. Pitch, velocity and
+            # duration are already in the .zss, and mirroring them here would
+            # be the CHANCE/SWING mistake of 2026-08-11 in a new place - two
+            # truths, one of them stale. The step index is the only part
+            # zynseq has no opinion about, so it is the only part that is ours
+            # to keep, and _validate_played reads the rest back out of the
+            # pattern.
+            #
+            # ABSENT IS NOT EMPTY. A snapshot written before this key restores
+            # with no amber at all, which is what those snapshots honestly
+            # know: they recorded that a channel was the player's and never
+            # recorded which of its steps were.
+            #
+            # list() FIRST, for the reason the "mods" entry below gives: this
+            # runs on whichever thread is saving while the MIDI thread can add
+            # a step through _capture_note or _take_tap, and a bare iteration
+            # raises RuntimeError and takes the whole snapshot save with it.
+            "played": {str(i): sorted(list(self.notes[i]))
+                       for i in range(len(tlib.CHANNELS)) if self.notes[i]},
             # SP10: modulators. Their own key, and saved from the first
             # version deliberately - adding it later leaves every existing
             # snapshot missing it with no way to tell.
@@ -3669,6 +3710,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 continue
             if channel in self.owner and who in ("gen", "player"):
                 self.owner[channel] = who
+
+        # STAGED, NOT APPLIED. Validating it reads the pattern, which takes
+        # the lock, and set_state runs on the manager's thread - the same
+        # reason the snapshot handler queues _rebuild_notes rather than
+        # calling it. The seed is consumed there, on the thread allowed to
+        # look, and checked against the notes that actually loaded.
+        #
+        # Validated on the way IN as well: these indices come out of a file a
+        # hand can edit, and they end up indexing a pattern.
+        self._played_seed = {}
+        for key, played in (state.get("played") or {}).items():
+            try:
+                channel = int(key)
+            except (TypeError, ValueError):
+                continue
+            if channel in self.notes and isinstance(played, (list, tuple)):
+                self._played_seed[channel] = {
+                    int(step) for step in played
+                    if isinstance(step, int) and not isinstance(step, bool)}
 
         # THE OUTGOING SNAPSHOT'S SCENES DO NOT SURVIVE A LOAD - fixed
         # 2026-09-04. `_bank_state` existed at three sites and none of them
@@ -7410,6 +7470,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # sounds while the pad reads empty.
                 for note in existing:
                     self.libseq.removeNote(step, note)
+                # THE MAP FOLLOWS THE EDIT. On a voice _rebuild_notes derives
+                # this back; on a drum nothing can, so a step this removed
+                # would keep its amber and a step it added would come back in
+                # the group colour. Both are the surface lying about who owns
+                # a hit, on the one channel kind where the player cannot hear
+                # the difference.
+                self.notes[channel].pop(step, None)
             else:
                 sounding = self._pattern_notes(steps)
                 mask = [other in sounding for other in range(steps)]
@@ -7431,9 +7498,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # the player cannot set is the same lie from the other side.
                 # A pad NoteOn always carries one; a zero is a note-off and is
                 # filtered long before this.
-                self.libseq.addNote(
-                    step, pitch, max(1, min(127, int(velocity or 100))),
-                    tlib.note_duration(gate, step, steps, mask), 0.0)
+                vel = max(1, min(127, int(velocity or 100)))
+                duration = tlib.note_duration(gate, step, steps, mask)
+                self.libseq.addNote(step, pitch, vel, duration, 0.0)
+                self.notes[channel][step] = (pitch, vel, duration)
             self.libseq.updateSequenceInfo()
             self._render_pads()
         # The pad colours are derived from a scan this has just invalidated.
@@ -7858,9 +7926,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         Cheap because the candidate set is small - one note on a drum, the
         keyboard plus the generated line on a voice. Not 128 per step.
 
-        Known and accepted limit: a played note that lands on the same step
-        with the same pitch the generator would have written there is
-        indistinguishable, and shows in the group colour rather than amber."""
+        Known and accepted limit ON A VOICE: a played note that lands on the
+        same step with the same pitch the generator would have written there
+        is indistinguishable, and shows in the group colour rather than amber.
+        On a DRUM that is not a limit but the whole case, which is why the
+        non-voice branch below remembers instead of probing."""
 
         kind = self.channel_kind(channel)
         with self.lock:
@@ -7868,6 +7938,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             steps = self.libseq.getSteps()
             if steps <= 0:
                 self.notes[channel] = {}
+                self._played_seed.pop(channel, None)
+                return
+            if kind != "voice":
+                # THE PROBE IS BLIND HERE AND ALWAYS HAS BEEN. A drum's only
+                # candidate note is the one the generator writes, so the
+                # `continue` below fired on every step and this returned {}
+                # for every drum channel ever rebuilt. That did not merely
+                # fail to reconstruct the colour, it DELETED it: _take_tap
+                # queues a rebuild, so one tap on a channel holding a REC take
+                # took the amber off every step of that take, in the same
+                # session, while the notes went on sounding.
+                #
+                # So remember rather than reconstruct - and VALIDATE rather
+                # than trust, which is the half that keeps this honest.
+                seed = self._played_seed.pop(channel, None)
+                self.notes[channel] = self._validate_played(
+                    channel, steps,
+                    set(self.notes[channel]) if seed is None else seed)
                 return
             # THE WHOLE CHORD IS "GENERATED", NOT JUST ITS ROOT, 2026-09-02.
             # This used to skip one note per step, which was the same thing
@@ -7879,20 +7967,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # and amber is the surface's one signal for "there is a take here,
             # the generator will not touch it". No test on WSL can see this;
             # it needs the pads.
-            if kind == "voice":
-                chords, _mask = self._voice_line(channel, steps)
-                mine = [set(chords[i % len(chords)]) if chords else set()
-                        for i in range(steps)]
-                cands = tlib.candidate_notes(
-                    kind, self._group_note(channel),
-                    pads=tlib.pad_notes(self.globals["root"],
-                                        self.globals["scale"],
-                                        self.state[channel]["octave"]),
-                    line=[n for chord in chords for n in chord])
-            else:
-                generated = self._step_notes(channel, steps)
-                mine = [{generated[i]} for i in range(steps)]
-                cands = tlib.candidate_notes(kind, self._group_note(channel))
+            chords, _mask = self._voice_line(channel, steps)
+            mine = [set(chords[i % len(chords)]) if chords else set()
+                    for i in range(steps)]
+            cands = tlib.candidate_notes(
+                kind, self._group_note(channel),
+                pads=tlib.pad_notes(self.globals["root"],
+                                    self.globals["scale"],
+                                    self.state[channel]["octave"]),
+                line=[n for chord in chords for n in chord])
             out = {}
             for step in range(steps):
                 for note in cands:
@@ -7903,6 +7986,36 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         out[step] = (note, vel, self._note_duration(step, note))
                         break
             self.notes[channel] = out
+
+    def _validate_played(self, channel, steps, played):
+        """Which of `played` still sounds, with everything but the step index
+        read back out of the pattern.
+
+        THE VALIDATION IS A LIVENESS CHECK, NOT A PROVENANCE ONE, and the
+        difference is worth stating where somebody will read it. It can prove
+        a remembered step no longer sounds - erased, shortened out of the
+        pattern, or deleted from the touchscreen editor - and it drops those,
+        because amber on a silent step is a lie the pads cannot explain. It
+        cannot prove the note that sounds is the one the hand put there.
+        Nothing can: a drum overdub and the euclid hit beside it are the same
+        pitch, which is the entire reason this record has to be kept at all.
+
+        That is also why only the STEP is remembered. Pitch, velocity and
+        duration come from zynseq here, every time, so the map cannot drift
+        away from what is actually sounding - the CHANCE/SWING law applied to
+        the half of this that zynseq does own.
+
+        The caller holds the lock and has already selected the pattern."""
+
+        note = self._group_note(channel)
+        out = {}
+        for step in sorted(played):
+            if not 0 <= step < steps:
+                continue
+            vel = self.libseq.getNoteVelocity(step, note)
+            if vel:
+                out[step] = (note, vel, self._note_duration(step, note))
+        return out
 
     def _group_note(self, group):
         """The single note a group's pattern uses, cached per group so LED

@@ -642,3 +642,171 @@ class TheHitsColumnIsPinnedToWhatTheWriterWrote(DispatchCase):
         self.assertNotIn("sounding", self.d.state[self.ch])
         state = self.d.get_state()
         self.assertNotIn("sounding", state["drums"]["0"])
+
+
+class ADrumTakesAmberSurvivesWhatCannotReconstructIt(DispatchCase):
+    """ITEM 35, decided 2026-09-04: PERSIST, because nothing can derive it.
+
+    Amber is the surface's one signal for "this hit is yours, and handing the
+    channel back destroys it". On a VOICE it is derived - a keyboard pitch is
+    not a Turing pitch, so `_rebuild_notes` finds the take by probing. On a
+    DRUM it cannot be, ever: `claim_clears` is False there deliberately, so an
+    overdub sits AMONG the euclid hits at the same pitch, and the probe's
+    candidate note is the only note the channel plays.
+
+    THE ITEM SAID THE COLOUR DID NOT SURVIVE A RELOAD. It did not survive
+    anything: the drum branch of `_rebuild_notes` returned `{}` for every
+    channel it was ever called on, and `_take_tap` queues a rebuild - so one
+    pad tap took the amber off a REC take in the same session, with the notes
+    still sounding. These tests pin both halves.
+    """
+
+    ch = 0
+
+    def setUp(self):
+        super().setUp()
+        self.libseq = self.d.libseq
+        self.libseq.getSteps = lambda: 16
+        self.note = self.d._group_note(self.ch)
+        self.d.owner[self.ch] = "player"
+
+    def sound(self, *steps):
+        for step in steps:
+            self.libseq.notes[step] = [(self.note, 100)]
+
+    def test_the_kind_this_is_for_is_a_drum(self):
+        # If a future change makes channel 0 a voice, every assertion below
+        # would pass by testing the derivable half instead.
+        self.assertEqual(self.d.channel_kind(self.ch), "drum")
+
+    def test_a_rebuild_keeps_a_take_it_cannot_reconstruct(self):
+        self.sound(3, 7)
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0)}
+        self.d._rebuild_notes(self.ch)
+        self.assertEqual(sorted(self.d.notes[self.ch]), [3],
+                         "the rebuild deleted a take it had no way to rebuild")
+
+    def test_a_remembered_step_that_no_longer_sounds_is_dropped(self):
+        # THE VALIDATION, and its exact reach: it proves a step still SOUNDS,
+        # never who wrote it. Amber over silence is a lie the pads cannot
+        # explain, so liveness is the one thing worth checking.
+        self.sound(3)
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0),
+                                 9: (self.note, 100, 1.0)}
+        self.d._rebuild_notes(self.ch)
+        self.assertEqual(sorted(self.d.notes[self.ch]), [3])
+
+    def test_a_step_past_the_end_of_the_pattern_is_dropped(self):
+        self.sound(3)
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0)}
+        self.d._played_seed[self.ch] = {3, 99}
+        self.d._rebuild_notes(self.ch)
+        self.assertEqual(sorted(self.d.notes[self.ch]), [3])
+
+    def test_the_velocity_is_read_back_and_not_carried(self):
+        # The half zynseq DOES own. Remembering the note would be the
+        # CHANCE/SWING mistake in a new place; remembering only the step and
+        # re-reading the rest is what keeps one truth.
+        self.libseq.notes[3] = [(self.note, 42)]
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0)}
+        self.d._rebuild_notes(self.ch)
+        self.assertEqual(self.d.notes[self.ch][3][1], 42)
+
+    def restore(self, state):
+        """A second driver, loaded from `state`, with the pattern put back
+        AFTER the load.
+
+        `rig_stub`'s libseq is one shared note store for all eight patterns -
+        `selectPattern` is a recorder - so `set_state` rewriting the seven
+        generator-owned channels overwrites whatever channel 0 was holding.
+        Seeding afterwards is the fake's constraint, not the driver's."""
+
+        fresh = rig_stub.make_driver()
+        fresh.libseq.getSteps = lambda: 16
+        fresh.set_state(state)
+        fresh.libseq.notes.clear()
+        for step in (3, 11):
+            fresh.libseq.notes[step] = [(fresh._group_note(self.ch), 100)]
+        fresh._rebuild_notes(self.ch)
+        return fresh
+
+    def test_a_take_survives_the_snapshot_it_is_saved_into(self):
+        self.sound(3, 11)
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0),
+                                 11: (self.note, 100, 1.0)}
+        state = self.d.get_state()
+        self.assertEqual(state["played"][str(self.ch)], [3, 11])
+
+        fresh = self.restore(state)
+        self.assertEqual(sorted(fresh.notes[self.ch]), [3, 11])
+        self.assertEqual(fresh.owner[self.ch], "player")
+
+    def test_a_snapshot_written_before_the_key_restores_no_amber(self):
+        # ABSENT IS NOT EMPTY, and here the two happen to look the same on the
+        # pads - which is the point. An old snapshot recorded that a channel
+        # was the player's and never recorded which of its steps were, so the
+        # honest answer is to claim nothing rather than to claim all of it.
+        self.sound(3, 11)
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0)}
+        state = self.d.get_state()
+        state.pop("played")
+        self.assertEqual(self.restore(state).notes[self.ch], {})
+
+    def test_a_hand_edited_played_list_cannot_reach_the_pattern(self):
+        # These indices come out of a file a hand can edit and end up indexing
+        # a pattern. Same class as every other set_state validation.
+        self.d.set_state({"played": {"0": [3, "x", None, 4.5, True, -1],
+                                     "not a channel": [1]}})
+        self.libseq.notes.clear()
+        self.sound(3)
+        self.d._rebuild_notes(self.ch)
+        self.assertEqual(sorted(self.d.notes[self.ch]), [3])
+
+    def test_a_handback_still_takes_the_colour_with_the_take(self):
+        # _handback clears the map, and the rebuild must not put it back.
+        self.sound(3)
+        self.d.notes[self.ch] = {3: (self.note, 100, 1.0)}
+        self.d._handback(self.ch)
+        self.d._rebuild_notes(self.ch)
+        self.assertEqual(self.d.notes[self.ch], {})
+
+    def test_a_voice_still_derives_and_ignores_the_seed(self):
+        # The seed exists for the branch that cannot probe. A voice can, so a
+        # stale or wrong seed must not survive its rebuild.
+        ch = 5
+        self.assertEqual(self.d.channel_kind(ch), "voice")
+        self.d._played_seed[ch] = {0, 1, 2, 3}
+        self.d._rebuild_notes(ch)
+        self.assertEqual(self.d.notes[ch], {})
+
+
+class ATakeTapMovesTheColourWithTheNote(DispatchCase):
+    """The other half of item 35. `_take_tap` writes the pattern and queues a
+    rebuild, and on a drum that rebuild can only keep what the map already
+    says - so the tap has to say it."""
+
+    ch = 0
+
+    def setUp(self):
+        super().setUp()
+        self.libseq = self.d.libseq
+        self.libseq.getSteps = lambda: 16
+        self.note = self.d._group_note(self.ch)
+        self.d.owner[self.ch] = "player"
+
+    def test_a_tap_that_adds_a_step_makes_it_amber(self):
+        self.d._take_tap(4, velocity=100)
+        self.assertIn(4, self.d.notes[self.ch])
+        self.d._rebuild_notes(self.ch)
+        self.assertIn(4, self.d.notes[self.ch],
+                      "the tap's own step lost its colour on the next rebuild")
+
+    def test_a_tap_that_removes_a_step_takes_its_colour_too(self):
+        self.libseq.notes[4] = [(self.note, 100)]
+        self.d.notes[self.ch] = {4: (self.note, 100, 1.0)}
+        self.d._take_tap(4)
+        self.assertNotIn(4, self.d.notes[self.ch])
+
+    def test_the_tap_records_the_velocity_it_wrote(self):
+        self.d._take_tap(4, velocity=63)
+        self.assertEqual(self.d.notes[self.ch][4][1], 63)

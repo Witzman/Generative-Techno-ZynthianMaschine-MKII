@@ -487,6 +487,20 @@ impl Mikro {
                     };
                 } else {
                         if idx % 2 == 0  {
+                            // THE HIGH HALF OF THIS FIELD IS THE NEXT BYTE, and
+                            // the loop has not reached it yet. Bytes 8-23 are
+                            // eight 16-bit encoder fields (descriptor, report 1,
+                            // Logical Maximum 999), low half at 2n+8 and high
+                            // half at 2n+9 - so dispatching the low byte first
+                            // and stashing the high one afterwards handed
+                            // send_encoder_cc the PREVIOUS report's high byte.
+                            // Every 256-count boundary therefore arrived as a
+                            // spurious -63 and then a spurious +64: two reports
+                            // rejected by is_encoder_jump, four times a
+                            // revolution. `report_is_complete` guarantees 24
+                            // payload bytes and the even branch tops out at
+                            // idx 22, so buf[idx + 1] is always in range.
+                            self.set_roller_state(buf[idx + 1] as usize, (idx - 7) / 2);
                             handler.encoder_step(self, (idx - 7) / 2 ,byte as i32 );
                         } else {
                             self.set_roller_state(byte as usize, (idx - 8) / 2 as usize);
@@ -1451,6 +1465,7 @@ impl Maschine for Mikro {
 mod tests {
     use super::*;
     use crate::base::Maschine;
+    use crate::cc_math;
 
     fn make_mikro() -> Mikro { Mikro::new(0) }
 
@@ -1582,6 +1597,80 @@ mod tests {
         m.set_roller_status(5, 99);
         assert_eq!(m.get_roller_state(99), 0);
         assert_eq!(m.get_roller_status(99), 0);
+    }
+
+    /// Records what `send_encoder_cc` would see: the encoder index, the low
+    /// byte it was handed, and the roller_state that was in force AT THE
+    /// MOMENT OF DISPATCH. That last one is the whole point - it is the value
+    /// `accumulate_raw` multiplies by 64.
+    #[derive(Default)]
+    struct RecordingHandler {
+        steps: Vec<(usize, i32, usize)>,
+    }
+
+    impl MaschineHandler for RecordingHandler {
+        fn encoder_step(&mut self, m: &mut dyn Maschine, idx: usize, raw: i32) {
+            self.steps.push((idx, raw, m.get_roller_state(idx)));
+        }
+    }
+
+    /// One report-1 payload with encoder `n` at `counter`.
+    fn encoder_report(n: usize, counter: u16) -> [u8; BUTTON_REPORT_BYTES] {
+        let mut buf = [0u8; BUTTON_REPORT_BYTES];
+        buf[8 + n * 2] = (counter & 0xFF) as u8;
+        buf[9 + n * 2] = (counter >> 8) as u8;
+        buf
+    }
+
+    #[test]
+    fn the_high_half_of_an_encoder_field_is_in_force_when_it_is_dispatched() {
+        // THE 256-COUNT BOUNDARY. The descriptor declares bytes 8-23 as eight
+        // 16-bit fields, so byte 2n+9 is the high half of the SAME field byte
+        // 2n+8 is the low half of - but the loop walks the report in index
+        // order, so the low byte was dispatched while roller_state still held
+        // the PREVIOUS report's high byte. Every crossing of a 256-count
+        // boundary therefore reached send_encoder_cc as a spurious -63,
+        // followed by a spurious +64 once the high byte caught up: two
+        // rejected reports, four times a revolution, for the daemon's whole
+        // life.
+        let mut m = make_mikro();
+        let mut h = RecordingHandler::default();
+
+        m.read_buttons(&mut h, &encoder_report(0, 250));
+        m.read_buttons(&mut h, &encoder_report(0, 258));
+
+        let (_, raw, state) = *h.steps.last().expect("the crossing must dispatch");
+        assert_eq!(raw, 2, "the low byte of 258");
+        assert_eq!(state, 1, "the high byte of 258, not of 250");
+        assert_eq!(
+            cc_math::accumulate_raw(raw, state)
+                - cc_math::accumulate_raw(250, 0),
+            2,
+            "eight counts of real movement is two reported units, not -62");
+    }
+
+    #[test]
+    fn a_boundary_crossing_is_no_longer_rejected_as_a_jump() {
+        // The same crossing, stated in the guard's own terms. This is the
+        // pairing ENC_MAX_DELTA's comment names: the artefact this removes is
+        // the ONLY thing between the real ceiling and the counter wrap, so
+        // nothing may raise that threshold while this test is absent.
+        let mut m = make_mikro();
+        let mut h = RecordingHandler::default();
+
+        let mut prev = cc_math::accumulate_raw(0, 0);
+        for counter in (0u16..600).step_by(8) {
+            h.steps.clear();
+            m.read_buttons(&mut h, &encoder_report(0, counter));
+            if let Some(&(_, raw, state)) = h.steps.last() {
+                let acc = cc_math::accumulate_raw(raw, state);
+                assert!(
+                    !cc_math::is_encoder_jump(acc - prev),
+                    "counter {counter} produced a delta of {} - a hand cannot",
+                    acc - prev);
+                prev = acc;
+            }
+        }
     }
 
     #[test]
