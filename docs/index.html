@@ -86,7 +86,7 @@ a{color:inherit}
 .rail{
   border-bottom:1px solid var(--hairline);
   background:linear-gradient(180deg,#101114,#191a1e);
-  position:relative;z-index:30;
+  position:sticky;top:0;z-index:30;
 }
 .rail-in{display:flex;align-items:center;gap:1.25rem;min-height:52px;padding:.5rem 0;flex-wrap:wrap}
 .mark{
@@ -234,23 +234,29 @@ a{color:inherit}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--hairline);box-shadow:none}
 .btn.ghost:hover{border-color:var(--lcd-dim);color:var(--lcd-ink);transform:none}
 
-/* ---------- readout nav ---------- */
-.groups{
-  border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);
-  background:#121317;position:sticky;top:0;z-index:20;
+/* ---------- the group row, inside the plate ----------
+   These eight are the instrument's Group A-H buttons: that is why there are
+   eight of them and why one of them is dead. They used to sit below the hero
+   as a second sticky bar, 100px under the rail, and two stacked bars read as
+   two navigations however differently they behave. So they live ON the device
+   now - the rail is the page's only bar, and this is part of the plate. */
+.panel-groups{
+  display:flex;gap:.4rem;overflow-x:auto;scrollbar-width:thin;
+  margin-top:1.1rem;padding-top:.9rem;border-top:1px solid rgba(0,0,0,.16);
 }
-.groups-in{display:flex;gap:.4rem;overflow-x:auto;padding:.55rem 0;scrollbar-width:thin}
 .rdg{
-  flex:1 0 auto;min-width:98px;text-decoration:none;
+  flex:1 0 auto;min-width:74px;text-decoration:none;
   background:linear-gradient(180deg,#0d2b50,var(--lcd-bg));
   border:1px solid rgba(79,131,176,.45);border-radius:3px;
-  padding:.34rem .55rem .38rem;display:block;
+  padding:.3rem .5rem .34rem;display:block;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 1px 2px rgba(0,0,0,.28);
   font-family:var(--mono);
   transition:border-color .15s ease, box-shadow .15s ease;
 }
-.rdg .v{font-size:.98rem;line-height:1.1;letter-spacing:.08em;color:var(--lcd-ink)}
+.rdg .v{font-size:.82rem;line-height:1.1;letter-spacing:.08em;color:var(--lcd-ink)}
 .rdg.dead .v{color:var(--lcd-dim)}
 .rdg:hover{border-color:var(--lcd-ink);box-shadow:0 0 18px rgba(80,170,255,.3)}
+@media (max-width:640px){ .rdg{min-width:66px} .rdg .v{font-size:.74rem} }
 
 /* ---------- sections ---------- */
 .sec{padding:4.2rem 0 0}
@@ -522,7 +528,7 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   <div class="wrap rail-in">
     <a class="mark" href="#top"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="34" height="34" class="rail-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span class="mark-txt">Generative Techno<span>ZynthianMaschine MKII</span></span></a>
     <nav class="rail-nav" aria-label="Primary">
-      <a href="01-fast-installation.html">Guide</a>
+      <a href="00-start.html">Guide</a>
       <a href="01-fast-installation.html">Install</a>
       <a href="02-features.html">Features</a>
       <a href="03-playing.html">Playing</a>
@@ -559,23 +565,20 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
         <div class="feat-tabs" id="featTabs" role="tablist" aria-label="Features"></div>
         <p class="cap" id="pageCap"></p>
       </div>
+
+      <nav class="panel-groups" aria-label="Sections">
+        <a class="rdg" href="#s-v"><span class="v">VIDEO</span></a>
+        <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
+        <a class="rdg" href="#s-b"><span class="v">HITS</span></a>
+        <a class="rdg" href="#s-m"><span class="v">MOD</span></a>
+        <a class="rdg" href="#s-g"><span class="v">CHANS</span></a>
+        <a class="rdg" href="#s-e"><span class="v">PSU</span></a>
+        <a class="rdg dead" href="#s-d" aria-label="No cloud, no account, no subscription"><span class="v" aria-hidden="true">----</span></a>
+        <a class="rdg" href="#s-h"><span class="v">DOCS</span></a>
+      </nav>
     </div>
   </div>
 </section>
-
-<!-- ===================== READOUT NAV ===================== -->
-<nav class="groups" aria-label="Sections">
-  <div class="wrap groups-in">
-    <a class="rdg" href="#s-v"><span class="v">VIDEO</span></a>
-    <a class="rdg" href="#s-c"><span class="v">SETUP</span></a>
-    <a class="rdg" href="#s-b"><span class="v">HITS</span></a>
-    <a class="rdg" href="#s-m"><span class="v">MOD</span></a>
-    <a class="rdg" href="#s-g"><span class="v">CHANS</span></a>
-    <a class="rdg" href="#s-e"><span class="v">PSU</span></a>
-    <a class="rdg dead" href="#s-d" aria-label="No cloud, no account, no subscription"><span class="v" aria-hidden="true">----</span></a>
-    <a class="rdg" href="#s-h"><span class="v">DOCS</span></a>
-  </div>
-</nav>
 
 <!-- ===================== THE TRAILER ===================== -->
 <section class="sec" id="s-v">
@@ -949,8 +952,8 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
 
   /* --- the drawn screens -------------------------------------------- */
 
-  function svg(inner){
-    return '<svg viewBox="0 0 300 150" preserveAspectRatio="xMidYMid meet" '
+  function svg(inner, w){
+    return '<svg viewBox="0 0 '+(w||300)+' 150" preserveAspectRatio="xMidYMid meet" '
          + 'xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+inner+'</svg>';
   }
   function spin(dur){
@@ -959,23 +962,118 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
       + 'from="0 150 78" to="360 150 78" dur="'+dur+'s" repeatCount="indefinite"/>';
   }
 
-  /* 1. The generator. Sixteen steps around a ring, eight of them hits,
-        spaced the way euclid actually spaces them. */
-  function artEuclid(ac){
-    var hits={0:1,2:1,4:1,6:1,8:1,10:1,12:1,14:1}, o='', i, a, x, y;
-    for(i=0;i<16;i++){
-      a=(i/16)*Math.PI*2 - Math.PI/2;
-      x=150+Math.cos(a)*52; y=78+Math.sin(a)*52;
-      o += hits[i]
-        ? '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="6.5" fill="'+ac+'"/>'
-        : '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4" fill="none" stroke="'+DIMMER+'" stroke-width="1.4"/>';
+  /* 1. The three generators, in one picture, sharing one bar.
+        This slide used to be the euclid ring alone. It is three panels now
+        because the instrument has THREE writers running at once and naming
+        only one of them undersold it: euclid on the five drum channels, a
+        shift register on each of the three voices, and cellular automata
+        evolving the rhythm register a generation per loop.
+
+        Drawn at 400 wide, not 300. The glass is a 2.7:1 box, so a 300-wide
+        viewBox letterboxes and a third of the screen goes to waste - which
+        three panels cannot afford.
+
+        The rule 110 triangle is COMPUTED here, not drawn to look plausible:
+        nine real generations from a single lit cell. If the picture is going
+        to claim an algorithm by name it can afford to run it. Its cells never
+        animate to zero, so the triangle is whole in a still frame - a
+        screenshot, a reduced-motion browser, or the moment before the loop
+        restarts. */
+  function artGenerators(ac){
+    var o='', i, g, a, x, y, lab=124, foot=143;
+
+    function head(cx,t){
+      return '<text x="'+cx+'" y="22" text-anchor="middle" fill="'+DIM+'" '
+           + 'font-family="Share Tech Mono,monospace" font-size="8" letter-spacing="2">'+t+'</text>';
     }
-    o += '<circle cx="150" cy="78" r="52" fill="none" stroke="'+DIMMER+'" stroke-width="1" opacity=".55"/>';
-    o += '<g>'+spin(9)+'<line x1="150" y1="78" x2="150" y2="20" stroke="'+INK+'" stroke-width="1.6" opacity=".85"/>'
-       + '<circle cx="150" cy="20" r="4.5" fill="'+INK+'"/></g>';
-    o += '<text x="150" y="74" text-anchor="middle" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="19">0008</text>';
-    o += '<text x="150" y="90" text-anchor="middle" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">HITS OF 16</text>';
-    return svg(o);
+    function foot1(cx,y,t,col,sz){
+      return '<text x="'+cx+'" y="'+y+'" text-anchor="middle" fill="'+col+'" '
+           + 'font-family="Share Tech Mono,monospace" font-size="'+sz+'" letter-spacing="1.4">'+t+'</text>';
+    }
+
+    /* -- panel 1, x 0-132: euclid. Five hits in sixteen, placed the way the
+          generator places them: hit i lands at floor(i*steps/hits). -- */
+    var HITS=5, STEPS=16, hit={};
+    for(i=0;i<HITS;i++) hit[Math.floor(i*STEPS/HITS)]=1;
+    o += head(66,'EUCLID');
+    o += '<circle cx="66" cy="72" r="34" fill="none" stroke="'+DIMMER+'" stroke-width="1" opacity=".55"/>';
+    for(i=0;i<STEPS;i++){
+      a=(i/STEPS)*Math.PI*2 - Math.PI/2;
+      x=66+Math.cos(a)*34; y=72+Math.sin(a)*34;
+      o += hit[i]
+        ? '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5" fill="'+ac+'"/>'
+        : '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.8" fill="none" stroke="'+DIMMER+'" stroke-width="1.2"/>';
+    }
+    o += '<g>' + (reduce ? '' :
+         '<animateTransform attributeName="transform" type="rotate" from="0 66 72" to="360 66 72" dur="8s" repeatCount="indefinite"/>')
+       + '<line x1="66" y1="72" x2="66" y2="34" stroke="'+INK+'" stroke-width="1.5" opacity=".85"/>'
+       + '<circle cx="66" cy="34" r="3.6" fill="'+INK+'"/></g>';
+    o += '<text x="66" y="76" text-anchor="middle" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="13">5/16</text>';
+    o += foot1(66,lab,'FIVE DRUMS',DIM,7.5);
+
+    /* -- panel 2, x 140-262: the shift register. Sixteen bits, drawn
+          seventeen wide and slid left by one cell per cycle behind a clip, so
+          the row really shifts and a new bit really arrives at the right. -- */
+    var BITS=[1,0,1,1,0,0,1,0,1,1,1,0,0,1,0,1,1], CW=7.2, RX=141;
+    o += head(201,'TURING');
+    o += '<clipPath id="regclip"><rect x="'+RX+'" y="56" width="'+(16*CW).toFixed(1)+'" height="20"/></clipPath>';
+    o += '<g clip-path="url(#regclip)"><g>'
+       + (reduce ? '' : '<animateTransform attributeName="transform" type="translate" from="0 0" to="'+(-CW).toFixed(1)+' 0" dur="0.5s" repeatCount="indefinite"/>');
+    for(i=0;i<17;i++){
+      x=RX+i*CW;
+      o += BITS[i]
+        ? '<rect x="'+x.toFixed(1)+'" y="58" width="5.6" height="16" fill="'+ac+'"/>'
+        : '<rect x="'+x.toFixed(1)+'" y="58" width="5.6" height="16" fill="none" stroke="'+DIMMER+'" stroke-width="1"/>';
+    }
+    o += '</g></g>';
+    /* the feedback path: the bit that falls off the end is what comes back in */
+    o += '<path d="M255 52 L255 42 L145 42 L145 52" fill="none" stroke="'+DIM+'" stroke-width="1" opacity=".8"/>';
+    o += '<path d="M141.6 47 L145.4 53 L149.2 47 Z" fill="'+DIM+'"/>';
+    o += foot1(201,92,'RANDOM 0032',INK,8);
+    o += foot1(201,105,'0 LOCKS THE LINE',DIMMER,7.5);
+    o += foot1(201,lab,'THREE VOICES',DIM,7.5);
+
+    /* -- panel 3, x 270-400: rule 110, actually run. One lit cell, nine
+          generations, each row arriving after the one above it. -- */
+    /* Seeded at 13 of 15, not in the middle: rule 110 grows LEFTWARD, so a
+       centre seed runs off the left edge and its wrap drops two orphan cells
+       back on the right, which reads as noise rather than as an automaton.
+       From 13 the triangle fills the panel and never wraps in nine
+       generations. */
+    var W=15, GENS=9, CX=8.0, CY=8.4, X0=272, Y0=32, row=[], nxt, k, op;
+    for(i=0;i<W;i++) row.push(i===13?1:0);
+    o += head(333,'RULE 110');
+    for(g=0;g<GENS;g++){
+      op = (0.45+0.55*g/(GENS-1)).toFixed(2);
+      for(i=0;i<W;i++){
+        if(!row[i]) continue;
+        x=X0+i*CX; y=Y0+g*CY;
+        o += '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="6.2" height="6.8" rx="1" fill="'+ac+'" opacity="'+op+'">'
+           + (reduce ? '' : '<animate attributeName="opacity" values="'+op+';1;'+op+'" '
+             + 'keyTimes="0;'+(0.05+g*0.09).toFixed(2)+';1" dur="8s" repeatCount="indefinite"/>')
+           + '</rect>';
+      }
+      nxt=[];
+      for(i=0;i<W;i++){
+        k=(row[(i-1+W)%W]<<2)|(row[i]<<1)|row[(i+1)%W];
+        nxt.push((110>>k)&1);
+      }
+      row=nxt;
+    }
+    o += foot1(333,lab,'ONE GEN A LOOP',DIM,7.5);
+
+    /* -- the dividers, and the line that ties the three together.
+
+          THE THREE CLOCKS ARE THE SAME CLOCK, and that is not decoration: the
+          caption says "one bar", so the ring turns once in 8s, the register
+          shifts one bit every 0.5s - sixteen steps to that bar - and the
+          automaton advances one generation per revolution. They ran at 8s,
+          1.1s and 5s when this was first drawn, which made the picture
+          contradict its own caption. -- */
+    o += '<line x1="133" y1="14" x2="133" y2="130" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
+    o += '<line x1="269" y1="14" x2="269" y2="130" stroke="'+DIMMER+'" stroke-width="1" opacity=".5"/>';
+    o += foot1(200,foot,'THREE WRITERS, ONE BAR',INK,8);
+    return svg(o,400);
   }
 
   /* 2. Modulation. The value bar, the dashed span it sweeps between,
@@ -1014,23 +1112,68 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
     return svg(o);
   }
 
-  /* 4. Live play. The pad grid, one pad struck, REC lit. */
-  function artPads(ac){
-    var o='', i, x, y, hit=6;
-    for(i=0;i<16;i++){
-      x=96+(i%4)*28; y=30+Math.floor(i/4)*28;
-      if(i===hit){
-        o += '<rect x="'+x+'" y="'+y+'" width="23" height="23" rx="3" fill="'+ac+'">'
-           + (reduce ? '' : '<animate attributeName="opacity" values="1;.35;1" dur="2.4s" repeatCount="indefinite"/>')
-           + '</rect>';
-      } else {
-        o += '<rect x="'+x+'" y="'+y+'" width="23" height="23" rx="3" fill="none" stroke="'+DIMMER+'" stroke-width="1.3"/>';
-      }
+  /* 4. The deep parameter pages: the instrument's own two screens, and the
+        page turn that is the whole feature.
+
+        The names are real. Page 1 is what the guide's deep-parameters page
+        prints; page 2 is the LEAD chain's own synth, read out of the factory
+        snapshot - Obxd publishes 82 controllers there, and three of them
+        (lv2_freewheel, lv2_port_1, unused_1) are the host plumbing the driver
+        drops, which is why the picture can claim the filtering happens.
+
+        LEGATO is drawn as a WORD, not a number, because a switch is the third
+        kind of control a plugin publishes and the surface shows the plugin's
+        own word for it. */
+  function artPages(ac){
+    var o='', SX=[10,204], SW=186, SY=32, SH=74, COLW=44, i, k;
+
+    /* Every reading here is measured against the factory snapshot: chain 7 is
+       midi_chan 6 - channel G - titled LEAD, running JV/Obxd with 82
+       controllers. The PRESET column shows the ENGINE rather than a patch
+       name, because the patch name is not in the snapshot and inventing one
+       would put a made-up string on the landing page. */
+    var P1=[['PRESET','OBXD',0],['CUTOFF','0062',62],['RESO','0028',28],['ENV','0044',44],
+            ['DECAY','0035',35],['LEVEL','0071',71],['REVERB','0018',18],['DELAY','0026',26]];
+    var P2=[['VOLUME','0080',80],['VOICES','0005',55],['TUNE','0051',51],['OCTAVE','0002',33],
+            ['BENDRANGE','0012',12],['LEGATO','ON',100],['VIBRATO','0037',37],['PORTA','0009',9]];
+
+    /* the two screens themselves, drawn once - only the type inside pages */
+    for(k=0;k<2;k++){
+      o += '<rect x="'+SX[k]+'" y="'+SY+'" width="'+SW+'" height="'+SH+'" rx="3" fill="none" '
+         + 'stroke="'+DIMMER+'" stroke-width="1.2"/>';
     }
-    o += '<circle cx="222" cy="36" r="6" fill="#e03a2f"/>';
-    o += '<text x="234" y="40" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="10" letter-spacing="2">REC</text>';
-    o += '<text x="26" y="140" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="9" letter-spacing="2">HOLD REC AND PLAY — THE TAKE IS YOURS</text>';
-    return svg(o);
+
+    function page(cols,label,delay){
+      var g='', n, sc, cx, x, v;
+      for(n=0;n<8;n++){
+        sc=n<4?0:1; cx=n%4;
+        x=SX[sc]+7+cx*COLW;
+        v=cols[n];
+        g += '<text x="'+x+'" y="'+(SY+17)+'" fill="'+INK+'" font-family="Share Tech Mono,monospace" '
+           + 'font-size="7.4" letter-spacing="0.6">'+v[0]+'</text>';
+        /* a column is 44 wide: a four-character reading sits at 9, but a
+           preset NAME has to come down or it runs into its neighbour. */
+        g += '<text x="'+x+'" y="'+(SY+40)+'" fill="'+(v[1]==='ON'?ac:DIM)+'" '
+           + 'font-family="Share Tech Mono,monospace" font-size="'+(v[1].length>4?'6.8':'9')+'">'+v[1]+'</text>';
+        g += '<rect x="'+x+'" y="'+(SY+48)+'" width="34" height="4" fill="none" stroke="'+DIMMER+'" stroke-width="1"/>';
+        g += '<rect x="'+x+'" y="'+(SY+48)+'" width="'+(34*v[2]/100).toFixed(1)+'" height="4" fill="'+ac+'" opacity=".85"/>';
+      }
+      g += '<text x="'+(SX[1]+SW-7)+'" y="'+(SY+66)+'" text-anchor="end" fill="'+DIMMER+'" '
+         + 'font-family="Share Tech Mono,monospace" font-size="7.4" letter-spacing="1.4">'+label+'</text>';
+      return '<g opacity="'+(delay?0:1)+'">'
+           + (reduce ? '' :
+              '<animate attributeName="opacity" values="'+(delay?'0;0;1;1;0':'1;1;0;0;1')
+              + '" keyTimes="0;0.44;0.5;0.94;1" dur="8s" repeatCount="indefinite"/>')
+           + g + '</g>';
+    }
+
+    o += '<text x="10" y="24" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="8" letter-spacing="2">CH G  LEAD</text>';
+    o += '<text x="392" y="24" text-anchor="end" fill="'+DIM+'" font-family="Share Tech Mono,monospace" font-size="8" letter-spacing="1.4">82 PORTS</text>';
+    o += page(P1,'PAGE 1',0);
+    o += page(P2,'PAGE 2',1);
+    o += '<text x="200" y="122" text-anchor="middle" fill="'+INK+'" font-family="Share Tech Mono,monospace" font-size="8" letter-spacing="1.6">THE NAMES ARE THE PLUGIN&#39;S OWN</text>';
+    o += '<text x="200" y="138" text-anchor="middle" fill="'+DIMMER+'" font-family="Share Tech Mono,monospace" font-size="7.4" letter-spacing="1.4">NOTHING IN THE DRIVER KNOWS WHAT THEY ARE</text>';
+    return svg(o,400);
   }
 
   /* 5. Eight channels. The tab row, and ONE tab drawn dashed - which is
@@ -1064,13 +1207,14 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   /* --- the slides ---------------------------------------------------- */
 
   var SLIDES=[
-    { tab:'GEN', ac:'var(--ch-a)', raw:'#e03a2f', art:artEuclid,
-      title:'You steer the pattern.<br><em>You never draw it.</em>',
-      alt:'A ring of sixteen steps with eight hits spaced evenly, and a playhead sweeping round it.',
-      facts:['Euclidean hits, rotation and chance on five drum channels',
-             'Three shift-register voices that mutate as they play',
-             'The notes are written into the sequencer, so the touchscreen editor shows the same pattern the pads do'],
-      cap:'<b>Generation.</b> Set hits, rotation and randomness — the machine writes the beat and keeps writing it.' },
+    { tab:'GEN', ac:'var(--ch-a)', raw:'#e03a2f', art:artGenerators,
+      title:'Three generators.<br><em>You never draw a step.</em>',
+      alt:'Three screens side by side: a euclidean ring of sixteen steps with a playhead, a sixteen-bit shift register sliding one bit at a time with its feedback path drawn, and eight computed generations of cellular automaton rule 110.',
+      facts:['Euclid on the five drum channels — hits spread over the bar, rotated, with chance',
+             'A shift register on each of the three voices, rewriting its own line until you lock it',
+             'Cellular automata — rules 30, 90 and 110 — evolving the rhythm a generation per loop',
+             'All of it is written into Zynthian\u2019s own sequencer, so the touchscreen editor shows the same pattern the pads do'],
+      cap:'<b>Generation.</b> Euclid, Turing machines and cellular automata, all writing at once. You set hits, rotation and randomness; they keep going.' },
 
     { tab:'MOD', ac:'var(--ch-g)', raw:'#8b5cf0', art:artMod,
       title:'Bind a knob to a wave.<br><em>Then take your hand off.</em>',
@@ -1088,13 +1232,14 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
              'Six effects are named and banned — they cost too much at eight instances'],
       cap:'<b>Sound.</b> Every engine and effect here was run on the rig and timed. The <a href="sound-and-presets.html">synths</a> and <a href="mixing-and-effects.html">effects</a> pages carry the numbers.' },
 
-    { tab:'PLAY', ac:'var(--ch-c)', raw:'#f5b21a', art:artPads,
-      title:'Play it live.<br><em>Overdub on top.</em>',
-      alt:'A four by four pad grid with one pad struck and the REC light on.',
-      facts:['Sixteen velocity pads, straight into the running pattern',
-             'Hold REC and what you play is captured, quantised, with its held length',
-             'The channel becomes yours and the generator stands back — it will not overwrite your take'],
-      cap:'<b>Live play.</b> The generator owns a channel until you take it. Then it stops touching it.' },
+    { tab:'KNOBS', ac:'var(--ch-c)', raw:'#f5b21a', art:artPages,
+      title:'Eight knobs.<br><em>The synth has eighty-two.</em>',
+      alt:'The instrument\u2019s two displays showing eight labelled parameter columns, turning from page one to page two as the names change to the plugin\u2019s own.',
+      facts:['Page 1 is the four anyone reaches for first — CUTOFF, RESO, ENV, DECAY',
+             'Every other port the plugin publishes fills further pages, eight to a page, under its own names',
+             'Nothing in the driver knows what they are: it asks the plugin and builds the pages from the answer',
+             'Host plumbing — freewheel flags, latency reports, switches that are not switches — is recognised and dropped'],
+      cap:'<b>Deep parameters.</b> You never assign a knob, and a synth nobody planned for still works. <a href="deep-parameters.html">How the pages are built</a>.' },
 
     { tab:'CHANS', ac:'var(--ch-e)', raw:'#3fbf5f', art:artChannels,
       title:'Eight channels.<br><em>All alive, always.</em>',
