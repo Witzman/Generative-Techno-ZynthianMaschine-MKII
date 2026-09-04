@@ -2014,12 +2014,12 @@
                 "seed": 2
               },
               "5|cutoff": {
-                "depth": 25,
-                "rate": 5,
-                "shape": "tri",
-                "phase0": 0.45,
-                "base": 70,
-                "seed": 3
+                "depth": 35,
+                "rate": 6,
+                "shape": "s&h",
+                "phase0": 0.0,
+                "base": 55,
+                "seed": 7
               },
               "2|reverb": {
                 "depth": 20,

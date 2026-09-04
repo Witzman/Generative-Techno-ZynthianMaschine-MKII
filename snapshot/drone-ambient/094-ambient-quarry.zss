@@ -1511,10 +1511,10 @@
               "scale": 0,
               "bpm": 75,
               "master": 78,
-              "revsize": 55,
+              "revsize": 25,
               "revtype": 1,
               "dlytime": 3,
-              "dlyfbk": 40,
+              "dlyfbk": 60,
               "walk": 4,
               "wspan": 3
             },

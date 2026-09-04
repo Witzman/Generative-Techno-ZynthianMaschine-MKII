@@ -1533,7 +1533,7 @@
       "JV/TAP Stereo Echo",
       "JV/TAP Reverberator"
     ],
-    "notes": "Ninths over a walking bass"
+    "notes": "Ninths over a bass that walks root, fifth, flat seventh"
   },
   {
     "file": "038-deep-dusk",
@@ -6057,6 +6057,16 @@
         "base": 76,
         "phase0": 0.0,
         "seed": 1
+      },
+      {
+        "channel": 5,
+        "verb": "cutoff",
+        "depth": 35,
+        "rate": 6,
+        "shape": "s&h",
+        "base": 55,
+        "phase0": 0.0,
+        "seed": 7
       }
     ],
     "fx": [

@@ -380,5 +380,86 @@ class TheShippedPacksAllPassCase(unittest.TestCase):
                 seen[key] = entry["file"]
 
 
+class ANoteIsAClaimCase(unittest.TestCase):
+    """EVERY FALSIFIABLE SENTENCE IN A `notes` STRING IS CHECKED AGAINST THE
+    DATA.
+
+    The old pack's `049-dub-chord` was named "the offbeat chord stab" and was a
+    single note on step 0 with chords switched off. That is not a cosmetic
+    fault: it teaches the player the instrument cannot do the thing. **And the
+    rebuild committed three of its own** - a promised sample-and-hold that did
+    not exist, a "delay-led" preset on the default feedback, and a "walking
+    bass" whose wording read as a claim about the key walker. This test is what
+    caught them, so it stays.
+
+    Only sentences that can be checked are checked. "Brooding" is not testable
+    and is nobody's business."""
+
+    def entries(self):
+        with open(os.path.join(ROOT, "tools", "drum-kit-notes.json")) as fh:
+            json.load(fh)
+        for path in sorted(glob.glob(os.path.join(ROOT, "snapshot",
+                                                  "*-manifest.json"))):
+            with open(path) as fh:
+                doc = json.load(fh)
+            if isinstance(doc, list):
+                for e in doc:
+                    yield e
+
+    def claims(self, entry):
+        """[(claim, holds)] for every checkable sentence in `notes`."""
+        note = (entry.get("notes") or "").lower()
+        mods = entry.get("mods") or []
+        shapes = {m["shape"] for m in mods}
+        g = entry.get("globals") or {}
+        v = entry["voices"]
+        chords = set(v.get("chord") or [])
+        for o in (entry.get("overrides") or {}).values():
+            chords.add(o.get("chord", 0))
+        swing = max((entry.get("groove") or {}).get("swing") or [0])
+        stab = [s for s in range(16) if v["rhythm_reg"][1] >> s & 1]
+        scale = tlib.SCALES[entry["scale"]][0]
+        out = []
+
+        def claim(trigger, name, holds):
+            if trigger in note:
+                out.append((name, holds))
+
+        claim("sample-and-hold", "an s&h modulator exists", "s&h" in shapes)
+        claim("chord", "some chord shape is on", bool(chords - {0}))
+        claim("offbeat", "the stab avoids the beat positions",
+              all(s % 4 for s in stab))
+        claim("riser", "a ramp modulator exists", "ramp" in shapes)
+        claim("shuffle", "swingAmount is nonzero", swing > 0)
+        claim("swing", "swingAmount is nonzero", swing > 0)
+        claim("no reverb", "the room is short", g.get("revsize", 0) <= 30)
+        claim("delay-led", "the feedback is high", g.get("dlyfbk", 0) >= 50)
+        claim("delay is the instrument", "the feedback is high",
+              g.get("dlyfbk", 0) >= 50)
+        claim("nothing else moves", "at most three modulators", len(mods) <= 3)
+        for word, code in (("pentatonic", "PENT"), ("phrygian", "PHR"),
+                           ("harmonic minor", "HMIN"), ("dorian", "DOR"),
+                           ("major", "MAJ")):
+            claim(word, f"the scale is {code}", scale == code)
+        if "every voice" in note and "mutated" in note:
+            out.append(("every voice is a Mutated Instrument",
+                        set(v["engines"]) == {"JV/Mutated Instruments"}))
+        return out
+
+    def test_there_are_notes_to_check(self):
+        checked = sum(len(self.claims(e)) for e in self.entries())
+        # If this drops to nothing, the notes strings have been rewritten into
+        # prose that says nothing checkable - which is its own kind of lie.
+        self.assertGreater(checked, 20)
+
+    def test_every_checkable_claim_holds(self):
+        broken = []
+        for e in self.entries():
+            for name, holds in self.claims(e):
+                if not holds:
+                    broken.append(f"{e['file']}: {name}")
+        self.assertEqual(broken, [])
+
+
 if __name__ == "__main__":
     unittest.main()
