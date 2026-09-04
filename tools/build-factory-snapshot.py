@@ -95,17 +95,22 @@ DELAY_NAME = "TAP Stereo Echo"
 # 0-100 on the surface onto the plugin's dB range, exactly as the driver's
 # _set_wet does it. Kept as one pair of functions so the tool and the
 # instrument cannot disagree about what "30% wet" means.
-WET_LO, WET_HI = -70.0, 10.0
+# THE WET LAW LIVES IN techno_lib NOW, 2026-09-04. It used to be a linear
+# interpolation across -70..+10 dB duplicated here and in the driver, and the
+# two agreed with each other, which is exactly why nobody noticed that 30% wet
+# was -46 dB and inaudible. One definition, imported, so the tool and the
+# instrument cannot disagree about what "30% wet" means.
+WET_LO, WET_HI = tlib.WET_OFF, tlib.WET_UNITY
 LV2_PRESETS = "file:///zynthian/zynthian-data/presets/lv2"
 PATN_EVENT = 21
 
 
 def wet_db(percent):
-    return WET_LO + (WET_HI - WET_LO) * (percent / 100.0)
+    return tlib.wet_db(percent)
 
 
 def wet_percent(db):
-    return int(round((db - WET_LO) / (WET_HI - WET_LO) * 100.0))
+    return tlib.wet_percent(db)
 
 
 def bcd(value):

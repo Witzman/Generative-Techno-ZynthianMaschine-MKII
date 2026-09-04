@@ -646,9 +646,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # too, or it reaches the latch and is measured against an unrelated
         # earlier press.
         self._chord_swallowed = set()
+        # SOLO JOINED THIS TABLE 2026-09-04, and it is a bug fix rather than
+        # tidying. It used to carry its own `solo_down` / `solo_mode`
+        # attributes and reimplement the duration rule by hand in
+        # `_solo_button`, which meant HOME - whose contract is "every latch
+        # dropped" - walked straight past it: `_act_home` iterates THIS dict.
+        # Found at the rig, the owner pressing HOME with four modifiers
+        # latched and reporting "now only solo blinking".
+        #
+        # There were EIGHT modifiers obeying law L1 and only seven of them
+        # went through tlib.latch. The eighth is why a latched solo could be
+        # walked away from at all.
         self.latches = {name: tlib.latch() for name in
                         ("shift", "mod", "lens", "arm", "bank", "mute",
-                         "navigate")}
+                         "navigate", "solo")}
         # THE LENS, 2026-09-01. ALL held or latched: the eight encoders stop
         # being eight verbs of one channel and become one verb across all
         # eight. It replaced the MIXER and FILTER modes and five spread pages.
@@ -678,6 +689,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # per detent. tlib.DISPLAY_SETTLE_S carries the measurement.
         self._display_due = False
         self._display_hold_until = 0.0
+        # The last (column, verb, channel) whose dead-column refusal was
+        # logged, so a knob held against a dead column writes one line rather
+        # than one per MIDI report.
+        self._dead_column_logged = None
         # REROLL: channels waiting for their own wrap, and the one-deep undo.
         # Pending is per CHANNEL rather than per button so a reroll lands on
         # each channel's OWN bar - the whole point of per-group pattern
@@ -847,8 +862,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # as well.
         self.frozen = False
         self.freeze_deep = False
-        self.solo_down = False
-        self.solo_mode = False           # latched: the F row means solo
+        # solo_down and solo_mode are PROPERTIES over latches["solo"] now -
+        # see the latch table above. Nothing may assign to them.
         # TEMPO held: every encoder returns to the pre-2026-08-16 feel, three
         # twice the default sensitivity. Hold only, no latch - COARSE + an
         # encoder is one finger and one hand, so the latch MOD needs (MOD + a
@@ -928,6 +943,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     @property
     def navigate_down(self):
         return self.latches["navigate"].down
+
+    @property
+    def solo_down(self):
+        """SOLO held by a finger. HELD, not held-or-latched - the LED needs the
+        two apart to draw the latch blink, and `soloing` below is the union."""
+        return self.latches["solo"].held
+
+    @property
+    def solo_mode(self):
+        """SOLO latched: the F row means solos until it is tapped again."""
+        return self.latches["solo"].latched
 
     def _modifier_edge(self, name, down):
         """One button edge for one modifier. True when the state changed.
@@ -2502,8 +2528,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             latch.clear()
         self.frozen = False
         self.freeze_deep = False
-        # Re-anchor: the next turn is measured from where the knob is now.
-        self._big_last = None
+        # THE ANCHOR IS KEPT, 2026-09-04. This used to clear `_big_last` too,
+        # "to re-anchor" - but `_big_last` ALREADY is where the knob is now:
+        # it was written on the last report this driver saw, and nothing moves
+        # an absolute encoder without the driver seeing the report.
+        #
+        # What the clear actually bought was a SWALLOWED DETENT. `_big_encoder`
+        # returns without acting when `_big_last is None`, because the first
+        # report of a session can only establish a reference. Doing that on
+        # every HOME meant the gesture "press HOME to get un-lost, then turn to
+        # find a page" always lost its first detent - on the one button whose
+        # entire job is to be pressed when the player is lost. Reported at the
+        # rig, 2026-09-04: "first click turn was not recognized at all".
+        #
+        # The CARRY still goes, and must: it is a fraction of a detent
+        # belonging to the ring the hand has just left.
         self._big_carry = 0
         self._invalidate_gen_cache()
         self._recentre_encoders()
@@ -2821,7 +2860,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.enc_carry.clear()
             with self.lock:
                 self._render_all()
-                self._render_display()
+            # COALESCED LIKE EVERY OTHER PAGE THIS KNOB WALKS, 2026-09-04.
+            # This branch was the one path that kept the pre-fix shape: a
+            # synchronous both-screen repaint per detent, on the MIDI thread.
+            # The arrows step the lens's VERB here, and the big encoder walks
+            # them the same way it walks a ring - so it can outrun the screens
+            # exactly as the ring branch could, and it is the same ~100 OSC
+            # packets each time.
+            self._display_soon()
             return
 
         ring = self._ring()
@@ -3091,8 +3137,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         symbols = [table["WET"][0]]
         if "WET_R" in table:                  # the echo's two sides are ganged
             symbols.append(table["WET_R"][0])
-        lo, hi = table["WET"][1], table["WET"][2]
-        value = lo + (hi - lo) * (percent / 100.0)
+        # AN AUDIO TAPER, NOT A LINE THROUGH THE dB RANGE - changed 2026-09-04.
+        # This used to be `lo + (hi - lo) * percent / 100`, which put 30% at
+        # -46 dB and needed 75% of the knob to reach -10 dB. The owner could
+        # not hear the dub factory's clap echo, and the reason was arithmetic
+        # rather than the mix. tlib.wet_db carries the law and the numbers.
+        value = tlib.wet_db(percent)
         for symbol in symbols:
             zctrl = proc.controllers_dict.get(symbol)
             if zctrl is not None:
@@ -5120,6 +5170,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the sound moves, which is this project's whole catalogue of quiet
         # bugs in one gesture.
         if self._column_dead(column):
+            # AND IT SAYS WHY, since 2026-09-04. A dead column refusing an
+            # encoder is correct - law L4, the glass says `----` and the knob
+            # agrees with the glass - but until now it refused in SILENCE, and
+            # the owner reported "group f cutoff is not doing anything" with
+            # no way to tell a dead column from a broken one. Four causes were
+            # eliminated at the rig by hand before the shape of it was even
+            # known.
+            #
+            # The reason is worked out only when the refusal actually happens,
+            # and logged only when the (column, verb) changes - this runs on
+            # the MIDI thread for every encoder report, and a knob held
+            # against a dead column would otherwise write a line per report.
+            key = (column, verb, channel)
+            if key != self._dead_column_logged:
+                self._dead_column_logged = key
+                self._slog("encoder", event="dead_column", column=column,
+                           verb=verb, channel=channel,
+                           reason=self._dead_column_reason(channel, verb))
             return
         if self.mod_down:
             self._mod_encoder(verb, channel, cc_num, cc_val)
@@ -5206,9 +5274,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         and top to bottom). Pads 12-15 - the bottom row alone - are the four
         techno_lib.MOD_SHAPES in order, one shape per pad."""
         if self.mod_last is None:
+            # NOTHING IS BOUND, so there is nothing to give a rate to. The pads
+            # already say so - they draw at LIGHT_DIM under `bound=False` - and
+            # this logs it, because "I pressed it and nothing happened" is the
+            # single most expensive sentence in this project's history and the
+            # session log is where the next one gets answered.
+            #
+            # A SNAPSHOT LOAD ALWAYS LANDS HERE: `mod_last` is a pointer into a
+            # dict that the load rebuilds, so it is cleared, and NO GESTURE
+            # SELECTS AN EXISTING MODULATOR. `019` restores six of them and not
+            # one is reachable from this overlay. That gap is a feature request
+            # rather than this defect - see new_features.md.
+            self._slog("mod", event="pad_inert", reason="nothing bound",
+                       pad=pad)
             return
         entry = self.mod.get(self.mod_last)
         if entry is None:
+            self._slog("mod", event="pad_inert", reason="stale pointer",
+                       pad=pad)
             self.mod_last = None
             return
         if pad < len(tlib.MOD_RATES):
@@ -6342,14 +6425,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """Tap latches solo mode, so the F row becomes solos until tapped
         again. Held, it is a modifier: SOLO + Fn is a momentary solo."""
 
-        if down:
-            self._down_at["solo"] = (time.monotonic(), False)
-            self.solo_down = True
-            return
-        went_down, _ = self._down_at.pop("solo", (None, False))
-        self.solo_down = False
-        if went_down is not None and (time.monotonic() - went_down) * 1000.0 < HOLD_MS:
-            self.solo_mode = not self.solo_mode
+        self._modifier_edge("solo", down)
+        # BOTH EDGES REPAINT now. The old hand-rolled version returned on the
+        # press without drawing, so a held SOLO did not light until the poll
+        # thread's next sub-rate tick caught up.
         with self.lock:
             self._render_mutes()
 
@@ -9095,8 +9174,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # SOLO latches, so it wears the latch blink like every other latch on
         # this panel - and it is the one light that says what the eight
         # buttons under your hand currently mean.
+        # A SOLO LEFT BEHIND IS A LATCH, and this light now says so -
+        # 2026-09-04, the owner: "pressing solo again does not bring back all
+        # other channels".
+        #
+        # Leaving the mode restores what the F ROW MEANS and not what the
+        # mixer is doing, so a player could tap out of solo with a channel
+        # still soloed and seven strips silent. The Group buttons DID report
+        # it - _group_light returns 0.0 for a solo-suppressed channel, which
+        # is why this was never a breach of "a silent channel must say why" -
+        # but SOLO's own light, the one whose job is to say what the eight
+        # buttons under your hand mean, said nothing at all.
+        #
+        # Clearing every solo on the way out was the alternative and it is
+        # worse: it destroys a state the player chose. This keeps the state
+        # and reports it, in the alphabet the panel already speaks - a 1 Hz
+        # blink is LATCHED, and a solo you have walked away from is exactly
+        # that.
+        #
+        # _any_soloed() is already called by the Group render on every repaint,
+        # so this costs nothing new.
         solo_state = (COLOR_PAGE, tlib.state_light(
-            self.solo_down, self.solo_mode, time.monotonic()))
+            self.solo_down,
+            self.solo_mode or (not self.solo_down and self._any_soloed()),
+            time.monotonic()))
         if self.leds.changed("solo", solo_state):
             self._send_osc(lib.button_osc("solo", solo_state[0], solo_state[1]))
 
@@ -9501,6 +9602,43 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                             self.state_view(channel), mod, owned,
                             frozen=frozen)
 
+    def _dead_column_reason(self, channel, verb):
+        """Why this column is drawn dead, in words, for the session log.
+
+        NOT used to decide anything - `_column_dead` has already decided. This
+        exists so that "I turned it and nothing happened" has an answer in the
+        log instead of costing an evening at the rig, which is exactly what it
+        cost on 2026-09-04.
+
+        Cheap enough to run on a refusal (never on the hot path) and wrapped,
+        because a diagnostic that raises on the MIDI thread is worse than no
+        diagnostic at all."""
+
+        try:
+            if verb in self.VOICE_CTRL_COLUMNS:
+                if self._chain_of(channel) is None:
+                    return "no chain on this channel"
+                proc = self._voice_processor(channel)
+                if proc is None:
+                    return "no synth processor in the chain"
+                symbols = self._voice_symbols(channel)
+                if not symbols:
+                    return (f"engine {getattr(proc, 'eng_code', '?')} "
+                            "published no usable symbols")
+                sym = symbols[self.VOICE_CTRL_COLUMNS[verb]]
+                if sym is None:
+                    return (f"engine {getattr(proc, 'eng_code', '?')} has no "
+                            f"symbol for the {verb} role")
+                if proc.controllers_dict.get(sym) is None:
+                    return f"processor has no controller {sym!r}"
+                return f"symbol {sym!r} resolves - the column is grey for another reason"
+            if verb in ("reverb", "delay"):
+                if self.fx_handle(channel, verb) is None:
+                    return f"no {verb} insert on this chain"
+            return "the page model greyed this column"
+        except Exception as e:            # never break a refusal with a log
+            return f"reason unavailable ({e.__class__.__name__})"
+
     def _column_dead(self, column):
         """True when this column is drawn dead (law L4): greyed, showing ----,
         with an encoder that does nothing.
@@ -9860,7 +9998,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             entry = self.mod.get(self.mod_last)
             if entry is not None:
                 rate_bars = tlib.MOD_RATES[entry["rate"]]
-        label = tlib.mod_rate_label(label, mod, rate_bars)
+        # THE DEPTH MULTIPLIER IS PASSED INDEPENDENTLY OF mod_last, and that
+        # is the whole fix: the rate needs a bound modulator to talk about,
+        # the multiplier does not - it is a global over all of them. Gating
+        # both on the same pointer is why the big encoder under MOD moved a
+        # value nothing displayed.
+        label = tlib.mod_rate_label(label, mod, rate_bars,
+                                    self.mod_depth_mult if mod else None)
         # A pending reroll says so, and the tabs say which channels.
         label = tlib.reroll_label(label, bool(self._reroll_pending))
         # The bar of the phrase, so every timed gesture has something to

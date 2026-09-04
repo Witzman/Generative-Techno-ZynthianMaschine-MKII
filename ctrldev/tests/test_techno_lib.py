@@ -7720,18 +7720,29 @@ class TheScreensAreCoalescedWhileAControlIsStillMoving(unittest.TestCase):
         self.assertFalse(tl.display_held(0.0, 0.0))
         self.assertFalse(tl.display_held(12345.0, 0.0))
 
-    def test_the_settle_swallows_a_whole_fast_turn(self):
-        # A fast walk through a page ring is about eight detents a second.
-        # A settle shorter than the gap between them would draw every page
-        # the hand passed through, which is the bug.
-        self.assertGreaterEqual(tl.DISPLAY_SETTLE_S, 1.0 / 8.0)
+    def test_the_settle_swallows_a_DELIBERATE_turn_not_just_a_fast_one(self):
+        # REWRITTEN 2026-09-04, and the old bound is the defect.
+        #
+        # This used to assert only `>= 1/8`, because the settle was tuned
+        # against "a fast walk, about eight detents a second". A hold
+        # coalesces only detents that arrive CLOSER TOGETHER than the hold, so
+        # 0.15 bought nothing at all for an ordinary deliberate walk - and the
+        # gesture that wedged the controller in a jam was an ordinary walk.
+        #
+        # Measured at the rig 2026-09-04: three fast ring walks put 934 msg/s
+        # sustained and 3,852 in one second on the wire, against a 43/s idle.
+        # 934/s is above the 674/s that wedged it.
+        #
+        # A third of a second between detents is a deliberate turn. That is
+        # what this now has to cover.
+        self.assertGreaterEqual(tl.DISPLAY_SETTLE_S, 1.0 / 3.0)
 
     def test_the_settle_is_shorter_than_a_page_can_be_read(self):
-        # And it must not become a lag. A page is on the glass for about
-        # 140 ms at a comfortable turn, which is under the time it takes to
-        # focus on a four-character label - so the settle stays inside the
-        # window in which nothing legible was lost anyway.
-        self.assertLessEqual(tl.DISPLAY_SETTLE_S, 0.25)
+        # And it must not become a lag the hand can feel as a broken control.
+        # Half a second is where a page step stops reading as "the panel
+        # answered" - the owner judged the FEEL of the previous value fine at
+        # the rig, so the room being spent here is small on purpose.
+        self.assertLessEqual(tl.DISPLAY_SETTLE_S, 0.5)
 
 
 class ALockedChannelSaysSoFromEveryPage(unittest.TestCase):
@@ -8594,3 +8605,101 @@ class ANoteMayNotReachTheNextSoundingStep(unittest.TestCase):
         # The two that were never in danger keep their full length.
         self.assertEqual(tl.note_duration(150, 7, 16, mask), 1.5)
         self.assertEqual(tl.note_duration(150, 14, 16, mask), 1.5)
+
+
+class TheWetLawIsAnAudioTaper(unittest.TestCase):
+    """2026-09-04, found by ear at the rig: the owner could not hear the dub
+    factory's clap echo, and the reason was arithmetic rather than the mix.
+
+    The old law was linear in dB across the port's -70..+10 range, and BOTH
+    halves of the project implemented it identically - the driver's `_set_wet`
+    and the snapshot builder's `wet_db` - which is exactly why nothing caught
+    it. Two agreeing implementations of one wrong idea look like a verified
+    one.
+    """
+
+    def test_a_wet_percent_is_an_amplitude(self):
+        # The ordinary audio taper: halving the number is -6 dB.
+        self.assertAlmostEqual(tl.wet_db(100), 0.0, places=2)
+        self.assertAlmostEqual(tl.wet_db(50), -6.02, places=2)
+        self.assertAlmostEqual(tl.wet_db(25), -12.04, places=2)
+        self.assertAlmostEqual(tl.wet_db(10), -20.0, places=2)
+
+    def test_the_defect_this_replaced_cannot_come_back(self):
+        # THE NUMBERS FROM THE RIG. Under the old law 30% was -46 dB and -10 dB
+        # needed 75% of the knob, so every reverb and delay in the instrument
+        # was inaudible while the surface claimed otherwise.
+        self.assertGreater(tl.wet_db(30), -12.0)
+        self.assertLess(tl.wet_db(30), -9.0)
+
+    def test_zero_is_off_and_a_hundred_is_unity(self):
+        # An off send must be OFF - the port's floor, which is also what every
+        # existing snapshot stores for a send nobody turned up.
+        self.assertEqual(tl.wet_db(0), tl.WET_OFF)
+        # And the top of the knob is unity, NOT the port's +10. A wet send
+        # louder than the signal feeding it is not something this surface
+        # should be able to ask for by accident, and the top of a knob is
+        # exactly where an accident lands.
+        self.assertEqual(tl.wet_db(100), tl.WET_UNITY)
+
+    def test_the_round_trip_is_exact_on_every_whole_percent(self):
+        for percent in range(101):
+            self.assertEqual(tl.wet_percent(tl.wet_db(percent)), percent)
+
+    def test_a_value_stored_under_the_old_law_reads_honestly(self):
+        # THE MIGRATION IS THAT THERE ISN'T ONE. Nothing rewrites a stored dB;
+        # the read-back is the inverse of the new law, so `019`'s clap - saved
+        # at -56.71 dB and heard as silence - now DISPLAYS as the silence it
+        # always was instead of claiming 30.
+        self.assertEqual(tl.wet_percent(-56.71), 0)
+        self.assertEqual(tl.wet_percent(-46.0), 1)
+
+    def test_it_is_clamped_at_both_ends(self):
+        self.assertEqual(tl.wet_db(-5), tl.WET_OFF)
+        self.assertEqual(tl.wet_db(150), tl.WET_UNITY)
+
+
+class TheModLegendSaysWhenNothingIsBound(unittest.TestCase):
+    """2026-09-04: the owner held MOD after a snapshot load, saw twelve blue
+    pads and four violet, pressed one and nothing happened."""
+
+    def test_the_inert_legend_is_dim_by_the_panels_own_measurement(self):
+        # It was 0.25, and this panel's eye calibration says 0.30 and 0.35 both
+        # read as FULL while 0.12 is "nearly full". So "inert" was painting a
+        # menu indistinguishable from a live one.
+        self.assertLessEqual(tl.MOD_LEGEND_INERT, 0.08)
+
+    def test_an_unbound_pad_is_dimmer_than_a_bound_one(self):
+        inert = tl.mod_legend_pad(0, 0.0, 0, tl.MOD_SHAPES[0], bound=False)
+        live = tl.mod_legend_pad(0, 0.0, 0, tl.MOD_SHAPES[0], bound=True)
+        self.assertLess(inert[1], live[1])
+
+
+class TheModDepthMultiplierIsVisible(unittest.TestCase):
+    """2026-09-04: it scales every live modulator at once, sits on the most
+    prominent control, and had no readout anywhere. One half-revolution
+    out-and-back left it at ~0.84 and nothing said so.
+
+    The three-eyes runbook claimed "you cannot leave this wrong by accident".
+    It was left wrong by accident on the first attempt.
+    """
+
+    def test_unity_is_not_drawn(self):
+        # At 1.0 it is the absence of a setting, and drawing it would put a
+        # word in the change key for nothing. This display has been broken
+        # four times by exactly that.
+        self.assertNotIn("x", tl.mod_rate_label("STEP", True, 1.0, 1.0))
+
+    def test_a_drifted_multiplier_is_drawn(self):
+        label = tl.mod_rate_label("STEP", True, 1.0, 0.84)
+        self.assertIn("x0.84", label)
+
+    def test_it_is_drawn_even_with_no_modulator_bound(self):
+        # THE FIX. The rate needs a bound modulator to talk about; the
+        # multiplier does not - it is a global over all of them. Gating both
+        # on `mod_last` is why the big encoder under MOD moved a value nothing
+        # displayed.
+        self.assertIn("x0.8", tl.mod_rate_label("STEP", True, None, 0.8))
+
+    def test_nothing_is_drawn_when_mod_is_not_active(self):
+        self.assertEqual(tl.mod_rate_label("STEP", False, 1.0, 0.5), "STEP")

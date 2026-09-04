@@ -319,3 +319,81 @@ class PadPressureStoresAndReturns(DispatchCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheRigGateOf20260904(DispatchCase):
+    """Seven defects the owner found by playing, 2026-09-04.
+
+    Every one of these began with a person saying that something did not sound
+    or look right, and none of them was reachable by any test that existed.
+    `notes/findings/2026-09-04-combined-gate.md` carries the measurements.
+    """
+
+    def test_solo_is_a_latch_like_every_other_modifier(self):
+        # ITEM 47. SOLO kept its own attributes and reimplemented the duration
+        # rule by hand, so `_act_home` - which iterates self.latches - walked
+        # straight past it. The owner pressed HOME with four modifiers latched
+        # and reported "now only solo blinking".
+        self.assertIn("solo", self.d.latches)
+
+    def test_home_clears_a_latched_solo(self):
+        self.tap("solo")
+        self.assertTrue(self.d.solo_mode)
+        self.d._act_home()
+        self.assertFalse(self.d.solo_mode)
+
+    def test_home_clears_every_latch_there_is(self):
+        # The general form, so a NINTH modifier added without joining the
+        # table turns this red rather than being found at the rig.
+        for name in self.d.latches:
+            self.tap(name)
+        self.d._act_home()
+        still = [n for n, l in self.d.latches.items() if l.latched]
+        self.assertEqual(still, [])
+
+    def test_a_held_solo_is_not_a_latched_one(self):
+        # The LED needs the two apart: held is bright, latched is a 1 Hz blink.
+        self.press("solo", True)
+        self.assertTrue(self.d.solo_down)
+        self.assertFalse(self.d.solo_mode)
+
+    def test_home_keeps_the_big_encoders_anchor(self):
+        # ITEM 46. `_act_home` used to clear `_big_last`, and `_big_encoder`
+        # returns without acting when it is None - so "press HOME to get
+        # un-lost, then turn to find a page" always lost its first detent, on
+        # the button whose whole job is to be pressed when you are lost.
+        self.cc(15, 64)                      # establish the anchor
+        self.assertIsNotNone(self.d._big_last)
+        self.d._act_home()
+        self.assertIsNotNone(self.d._big_last)
+        # The CARRY still goes: a fraction of a detent belongs to the ring the
+        # hand has just left.
+        self.assertEqual(self.d._big_carry, 0)
+
+    def test_a_dead_column_refusal_is_logged_with_a_reason(self):
+        # ITEM 42. The owner reported "group f cutoff is not doing anything"
+        # and the driver's own number did not move, because `_column_dead`
+        # returned in silence. It still refuses - that is law L4 - but it now
+        # says why.
+        self.d.group = 5
+        self.d.mode = "CONTROL"
+        with patch.object(self.d, "_slog") as slog:
+            self.cc(17, 70)
+            self.cc(17, 80)
+        events = [c for c in slog.call_args_list
+                  if c[1].get("event") == "dead_column"]
+        self.assertTrue(events, "a dead column refused an encoder in silence")
+        self.assertIn("reason", events[0][1])
+        # ONE line per column, not one per MIDI report: this runs on the MIDI
+        # thread and a knob held against a dead column would flood the log.
+        self.assertEqual(len(events), 1)
+
+    def test_the_mod_pad_refusal_is_logged_when_nothing_is_bound(self):
+        # ITEM 43. After every snapshot load `mod_last` is None, and the pad
+        # overlay drew a fully lit sixteen-pad menu that ignored every press.
+        self.d.mod_last = None
+        with patch.object(self.d, "_slog") as slog:
+            self.d._mod_pad(0)
+        events = [c for c in slog.call_args_list
+                  if c[1].get("event") == "pad_inert"]
+        self.assertTrue(events, "MOD + pad refused in silence")

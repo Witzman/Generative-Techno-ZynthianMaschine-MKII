@@ -636,8 +636,31 @@ class TheWetLevelsUseTheDriversOwnScale(unittest.TestCase):
     def test_zero_percent_is_minus_seventy_db(self):
         self.assertEqual(builder.wet_db(0), -70.0)
 
-    def test_a_hundred_percent_is_plus_ten_db(self):
-        self.assertEqual(builder.wet_db(100), 10.0)
+    def test_a_hundred_percent_is_unity_not_the_ports_plus_ten(self):
+        # CHANGED 2026-09-04 with the wet law. The old scale ran a straight
+        # line to the port's +10 dB, which made the top of the knob a BOOST -
+        # a wet send louder than the signal feeding it, reachable by accident
+        # at the one position a hand lands on most easily.
+        self.assertEqual(builder.wet_db(100), 0.0)
+
+    def test_the_taper_is_amplitude_not_a_line_through_the_db_range(self):
+        # THE DEFECT THIS REPLACED, kept as an assertion so it cannot come
+        # back: the old law put 30% at -46 dB and needed 75% of the knob to
+        # reach -10 dB, so every reverb and delay in the instrument was
+        # inaudible and the surface said otherwise. Found by ear at the rig,
+        # 2026-09-04, on `019`'s clap echo.
+        self.assertAlmostEqual(builder.wet_db(50), -6.02, places=1)
+        self.assertAlmostEqual(builder.wet_db(30), -10.46, places=1)
+        self.assertAlmostEqual(builder.wet_db(25), -12.04, places=1)
+        self.assertAlmostEqual(builder.wet_db(10), -20.0, places=1)
+
+    def test_a_value_stored_under_the_old_law_now_reads_honestly(self):
+        # THE MIGRATION, and it is that there isn't one. Nothing rewrites a
+        # stored dB; the read-back is the inverse of the new law, so `019`'s
+        # clap - saved at -56.7 dB and heard as silence - now DISPLAYS as the
+        # silence it always was instead of claiming 30.
+        self.assertEqual(builder.wet_percent(-56.71), 0)
+        self.assertEqual(builder.wet_percent(-46.0), 1)
 
     def test_the_round_trip_returns_the_percentage(self):
         for percent in (0, 8, 22, 30, 35, 100):

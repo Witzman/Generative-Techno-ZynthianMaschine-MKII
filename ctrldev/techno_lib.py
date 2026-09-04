@@ -10,6 +10,7 @@
 #
 # ******************************************************************************
 
+import math
 import random
 import re
 import time
@@ -201,11 +202,41 @@ class techno_lib:
     # focus on a four-character label - so N detents cost one repaint of the
     # page the hand actually stopped on, and nothing legible is lost.
     #
-    # 0.15 s is chosen against the GESTURE, not against the hardware: a fast
-    # walk through a ten-page ring is about eight detents a second, so this
-    # swallows the whole burst, and the page lands within a poll tick (33 ms)
-    # of the hand stopping.
-    DISPLAY_SETTLE_S = 0.15
+    # RAISED 0.15 -> 0.35 ON 2026-09-04, AND THE OLD VALUE WAS TUNED AGAINST
+    # THE WRONG HAND.
+    #
+    # 0.15 was chosen against "a fast walk through a ten-page ring, about
+    # eight detents a second". A hold only coalesces detents that arrive
+    # CLOSER TOGETHER than the hold, so 0.15 bought nothing for any turn
+    # slower than ~7 detents/s - and an ordinary, deliberate page walk is
+    # slower than that. The gesture that wedged the controller in a jam was an
+    # ordinary walk, not a fast one.
+    #
+    # Measured at the rig 2026-09-04 with tools/measure-osc-rate.py, three
+    # windows:
+    #
+    #     idle, hands off          43.1/s   peak    44
+    #     slow deliberate walk     61.3/s   peak   306
+    #     three fast ring walks   934.2/s   peak  3852
+    #
+    # 934/s sustained is ABOVE the 674/s that wedged the controller, and 3,852
+    # in one second is five times the highest rate the 2026-08-31 injection
+    # experiment ever tested. It did not wedge that evening - three reopens,
+    # the watchdog ladder never past 2 - but nothing about that is a margin to
+    # rely on.
+    #
+    # 0.35 s covers a hand putting a third of a second between detents, which
+    # is a deliberate turn rather than a spin. The cost is that the page lands
+    # a third of a second after the hand stops, and the owner has already
+    # judged the FEEL of the previous value acceptable at the rig
+    # ("starting from the second klick turn it was smooth"), so what is being
+    # spent here is latency nobody had complained about against a rate that
+    # has wedged the instrument twice.
+    #
+    # DO NOT LOWER IT WITHOUT RE-MEASURING. The number and the sniff belong
+    # together; the previous value's justification was a sentence about a hand
+    # with no measurement behind it.
+    DISPLAY_SETTLE_S = 0.35
 
     @staticmethod
     def display_held(now, until):
@@ -2405,7 +2436,21 @@ class techno_lib:
     # Nothing bound: _mod_pad returns immediately, so the gesture is inert.
     # Pads dancing while nothing can happen is the sin the dashed tab row
     # exists to prevent. Still, dim, and identical.
-    MOD_LEGEND_INERT = 0.25
+    # DROPPED FROM 0.25 TO THE MEASURED DIM, 2026-09-04. The unbound legend
+    # was drawn at 0.25, and this panel's own eye calibration says 0.30 and
+    # 0.35 both read as FULL and 0.12 is "nearly full" - so "inert" was
+    # painting a menu that looked exactly like a live one. The owner held MOD
+    # after a snapshot load, saw twelve blue pads and four violet, pressed one
+    # and nothing happened: `_mod_pad` returns on its first line when
+    # `mod_last is None`, which is the case after EVERY load.
+    #
+    # A silent refusal that survived the 2026-09-01 sweep built to find silent
+    # refusals - because the refusal was never silent in the code, only on the
+    # glass.
+    #
+    # LIGHT_DIM is the alphabet's word for "available, not acting". It is what
+    # this row means when nothing is bound.
+    MOD_LEGEND_INERT = 0.03
     # Quantised so led_cache.changed() swallows most ticks. Fading twelve pads
     # at 30 Hz is up to 360 pad messages a second, and the daemon has been
     # "flooded off the USB bus once".
@@ -2615,7 +2660,7 @@ class techno_lib:
         return f"1/{int(round(1.0 / rate_bars))}"
 
     @staticmethod
-    def mod_rate_label(label, active, rate_bars=None):
+    def mod_rate_label(label, active, rate_bars=None, depth_mult=None):
         """MOD's label carries the LAST-BOUND modulator's rate.
 
         Owner's idea, 2026-08-20, and it replaces something better than it
@@ -2629,7 +2674,31 @@ class techno_lib:
         if not active:
             return label
         word = techno_lib.rate_word(rate_bars)
-        return f"{label} MOD {word}" if word else f"{label} MOD"
+        # THE DEPTH MULTIPLIER RIDES HERE TOO, since 2026-09-04, and it is a
+        # defect fix rather than an addition.
+        #
+        # The big encoder under MOD scales the depth of EVERY live modulator
+        # at once - the one branch of that knob that is a continuous value
+        # rather than a ring - and it had no readout anywhere on the
+        # instrument. `notes/plans/2026-09-02-THE-THREE-EYES-STEPS.md` said in
+        # so many words that "you cannot leave this wrong by accident", and at
+        # the rig on 2026-09-04 it was left wrong by accident on the first
+        # attempt: one half-revolution-out-and-back put it at ~0.84, measured
+        # off the hats' fader spread (0.3276 -> 0.2752 against a configured
+        # depth of 33). A hand cannot return a continuous knob exactly, and
+        # nothing said it had not.
+        #
+        # DRAWN ONLY WHEN IT IS NOT 1.0. At unity it is the absence of a
+        # setting and does not deserve a word; away from unity it is a global
+        # multiplying six modulators and it must be visible. That also keeps
+        # it out of the change key in the common case, which is the rule this
+        # display has broken four times.
+        parts = [label, "MOD"]
+        if word:
+            parts.append(word)
+        if depth_mult is not None and abs(depth_mult - 1.0) > 0.001:
+            parts.append(f"x{depth_mult:.2f}".rstrip("0").rstrip("."))
+        return " ".join(parts)
 
     # What a latched overlay adds to the indicator. THE NAME THE PANEL USES,
     # not the internal one - a player looking for the button reads BANK off
@@ -2942,6 +3011,68 @@ class techno_lib:
         "REVSIZE": ("decay", 0.0, 10000.0),
         "REVTYPE": ("mode", 0.0, 42.0),
     }
+
+    # THE WET LAW, rewritten 2026-09-04 after the owner could not hear the dub
+    # factory's clap echo.
+    #
+    # IT USED TO BE LINEAR IN dB, and both halves of the project agreed with
+    # each other, which is why nothing caught it for months:
+    #
+    #     value = lo + (hi - lo) * percent / 100.0        # -70 .. +10 dB
+    #
+    # On that law 30% is -46 dB, 35% is -42 dB, and -10 dB needs 75% of the
+    # knob. The entire musically useful range was squashed into the top
+    # quarter, and everything below about 70 was silence with a number
+    # attached. `019`'s clap sits at base 30 with depth 28, so EVERY POINT of
+    # its six-bar sweep was inaudible - measured, then heard, at the rig.
+    #
+    # WHAT IT IS NOW is the ordinary audio taper: the percent is a linear
+    # AMPLITUDE and the port takes its dB.
+    #
+    #     100% ->   0 dB      50% ->  -6 dB      25% -> -12 dB
+    #      30% -> -10.5 dB    10% -> -20 dB       1% -> -40 dB
+    #
+    # so a number on the surface means what a mixer would mean by it.
+    #
+    # TWO EDGES, both deliberate:
+    #   * 0% is WET_OFF (the port's floor), not "-inf clamped" - an off send
+    #     must be off, and the floor is what every existing snapshot already
+    #     stores for a send nobody turned up.
+    #   * 100% is 0 dB - UNITY, not the port's +10. A wet send louder than the
+    #     signal feeding it is not a thing this surface should be able to ask
+    #     for by accident, and the top of a knob is exactly where an accident
+    #     lands.
+    #
+    # THE READ-BACK IS THE INVERSE, so a snapshot written under the old law
+    # now DISPLAYS honestly: 019's -46 dB reads as 0%, which is what it always
+    # sounded like. That is the migration - nothing is rewritten, and the
+    # surface stops lying about what is stored.
+    WET_OFF = -70.0
+    WET_UNITY = 0.0
+    WET_FLOOR_PERCENT = 0.1      # below this a send is off rather than tiny
+
+    @staticmethod
+    def wet_db(percent):
+        """A 0-100 wet setting as the dB the plugin port wants."""
+        percent = max(0.0, min(100.0, float(percent)))
+        if percent < techno_lib.WET_FLOOR_PERCENT:
+            return techno_lib.WET_OFF
+        db = 20.0 * math.log10(percent / 100.0)
+        return max(techno_lib.WET_OFF, min(techno_lib.WET_UNITY, db))
+
+    @staticmethod
+    def wet_percent(db):
+        """The inverse, for reading a stored port value back onto the surface.
+
+        A value at or below the floor reads 0 rather than a fraction of a
+        percent: the surface has one hundred positions and a send that quiet
+        is off.
+        """
+        db = float(db)
+        if db <= techno_lib.WET_OFF:
+            return 0
+        percent = 100.0 * (10.0 ** (min(db, techno_lib.WET_UNITY) / 20.0))
+        return int(round(max(0.0, min(100.0, percent))))
 
     FX_DELAY = {
         "WET":     ("lecholevel", -70.0, 10.0),
