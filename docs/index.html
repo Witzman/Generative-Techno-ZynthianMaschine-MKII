@@ -986,6 +986,15 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
         controller need the width; the height is what a 4x4 pad face costs
         once it is big enough to read a flash on.
 
+        IT IS NOT GAME OF LIFE, AND THAT WAS ASKED FOR. The owner wanted Life
+        in this panel on 2026-09-04. `RULE` on the instrument is rand, r30,
+        r90, r110 - elementary 1D automata, no Life anywhere - so drawing Life
+        beside two panels that name real algorithms would name a third one the
+        machine does not run. Offered as a real feature instead (the 16-bit
+        rhythm register IS a 4x4 pad face, so Conway on it would be honest) and
+        the owner cut it: "i just want movement in the 3rd generator visual".
+        Do not swap the rule here without swapping it in techno_lib first.
+
         The rule 110 field is COMPUTED here, not drawn to look plausible, and
         it MOVES. Sixteen cells wide - the register's own width, wrapped the
         way ca_step() wraps it - run from a single lit cell. On a 16-wide
