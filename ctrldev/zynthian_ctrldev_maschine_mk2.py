@@ -3645,6 +3645,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if channel in self.owner and who in ("gen", "player"):
                 self.owner[channel] = who
 
+        # THE OUTGOING SNAPSHOT'S SCENES DO NOT SURVIVE A LOAD - fixed
+        # 2026-09-04. `_bank_state` existed at three sites and none of them
+        # was here, so it was never cleared: load snapshot A, visit bank 3,
+        # load snapshot B, switch to bank 3, and you get **A's registers over
+        # B's patterns**. Music from a file that is no longer loaded, with
+        # nothing on the surface saying so.
+        #
+        # Measured off the rig 2026-09-04: two banks still in the stash after
+        # a load that carried none.
+        #
+        # A BANK'S STATE IS NOT YET IN THE SNAPSHOT - that is todo item 8 and
+        # it is a bigger change, needing a migration and a correction for the
+        # fact that `zynseq.load()` always lands on bank 1. Until then the
+        # honest behaviour is that other banks come back BLANK rather than
+        # wrong, which is what this line buys.
+        self._bank_state = {}
+
         # SP10: modulators. Validated rather than trusted - the lesson of
         # 2026-08-11, when CHANCE and SWING were assumed on load and a channel
         # saved at chance 0 came back silent while the surface read 100. A
@@ -4518,7 +4535,26 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.bankpin.pin(self.zynseq.bank)
         saved = self._bank_state.get(bank)
         for ch in range(len(tlib.CHANNELS)):
-            kind = tlib.CHANNELS[ch][2]
+            # THE KIND COMES FROM THE CHANNEL, NOT THE TABLE - fixed
+            # 2026-09-04, and it was a CRASH rather than a wrong value.
+            #
+            # `tlib.CHANNELS[ch][2]` is what the channel was BUILT as. A
+            # channel switched with SHIFT + GRID is behaving as the other kind,
+            # so upgrading it against the table builds from the wrong
+            # defaults - `upgrade_state` drops `register` on the way - and the
+            # `_render_all()` at the end of this function then raises
+            # `KeyError: 'register'` out of `tlib.kit_line`.
+            #
+            # THE BANK HAS ALREADY MOVED BY THEN. The raise lands on the poll
+            # thread, whose handler catches and returns, so the switch
+            # half-completes: the bank changes, the caches resync, and the
+            # surface never repaints again - every later 30 Hz repaint raises
+            # in the same place. A dead panel over music that keeps playing.
+            #
+            # `kind_override` is not bank-scoped, so `channel_kind` gives the
+            # same answer in every bank and there is nothing to store. This is
+            # the ENGINE-OR-BEHAVIOUR distinction for the fourth time.
+            kind = self.channel_kind(ch)
             if saved is not None and ch in saved:
                 self.state[ch] = tlib.upgrade_state(kind, saved[ch],
                                                     self._steps(ch))

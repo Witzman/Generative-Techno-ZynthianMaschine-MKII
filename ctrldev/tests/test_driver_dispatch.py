@@ -321,6 +321,66 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class ABankSwitchSurvivesAKindSwitchedChannel(DispatchCase):
+    """`_bank_switch` upgraded a channel against `tlib.CHANNELS[ch][2]` - what
+    it was BUILT as - so a channel switched with SHIFT + GRID was rebuilt from
+    the wrong kind's defaults, `upgrade_state` dropped `register`, and the
+    `_render_all()` at the end of the switch raised `KeyError: 'register'`.
+
+    THE BANK HAS ALREADY MOVED BY THEN. The raise lands on the poll thread,
+    whose handler catches and returns, so the switch half-completes and the
+    surface never repaints again - a dead panel over music that keeps
+    playing."""
+
+    def setUp(self):
+        super().setUp()
+        zs = self.d.zynseq
+        zs.select_bank.side_effect = (
+            lambda b, force=False: setattr(zs, "bank", b))
+
+    def test_a_switched_channel_keeps_its_register_across_a_bank(self):
+        self.d.kind_override[0] = "voice"
+        self.d.state[0] = self.mod.tlib.default_channel_state("voice")
+        self.d._bank_switch(3)              # raised KeyError before the fix
+        self.assertIn("register", self.d.state[0])
+        self.d._bank_switch(1)
+        self.assertIn("register", self.d.state[0])
+
+    def test_an_untouched_channel_is_unaffected(self):
+        self.d._bank_switch(3)
+        self.assertEqual(self.d.channel_kind(0), "drum")
+        self.d._bank_switch(1)
+
+
+class ALoadClearsThePreviousSnapshotsScenes(DispatchCase):
+    """`_bank_state` was never cleared anywhere, so loading a second snapshot
+    left the FIRST one's registers in the stash - and the next switch to a bank
+    that session had visited played music from a file no longer loaded."""
+
+    def setUp(self):
+        super().setUp()
+        zs = self.d.zynseq
+        zs.select_bank.side_effect = (
+            lambda b, force=False: setattr(zs, "bank", b))
+
+    def test_the_stash_is_empty_after_a_load(self):
+        self.d._bank_switch(3)
+        self.assertTrue(self.d._bank_state, "nothing was stashed to clear")
+        self.d.set_state({"globals": {}})
+        self.assertEqual(self.d._bank_state, {})
+
+    def test_a_bank_visited_before_the_load_comes_back_blank(self):
+        # BLANK rather than WRONG. A bank's state is not in the snapshot yet -
+        # that is todo item 8 - so the honest answer after a load is defaults.
+        self.d.state[0]["lean"] = 2
+        self.d._bank_switch(3)
+        self.d._bank_switch(1)
+        self.assertEqual(self.d.state[0]["lean"], 2)
+        self.d.set_state({"globals": {}})
+        self.d._bank_switch(3)
+        self.assertEqual(self.d.state[0]["lean"], self.mod.tlib.LEAN_OFF)
+
+
 class TheKeyWalkerHoldsWhenEveryVoiceIsLocked(DispatchCase):
     """ITEM 11. The walker moves ROOT, which is ONE global for all three
     voices; MOVE is a per-channel lock. A global cannot be gated per channel
