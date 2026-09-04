@@ -508,3 +508,137 @@ class TheRigGateOf20260904(DispatchCase):
         events = [c for c in slog.call_args_list
                   if c[1].get("event") == "pad_inert"]
         self.assertTrue(events, "MOD + pad refused in silence")
+
+
+class TheHitsColumnIsPinnedToWhatTheWriterWrote(DispatchCase):
+    """Todo item 9. HITS is euclid's count; the subtractive rhythm register
+    thins the line under it and the hand register adds to it, so what sounds
+    is a different number - and nothing on the surface said so.
+
+    THIS IS THE TEST THAT STOPS THE TWO DRIFTING. The count the column reads
+    is recorded by `_write_pattern` from the pattern it is about to write, and
+    every assertion below compares it against the steps the writer actually
+    put into the sequencer - `libseq.notes`, counted, not recomputed. A second
+    implementation of the composition (lean, lane, fill, both rotations, both
+    registers) that agreed with the first until it did not is this project's
+    most expensive recurring bug, and a test that recomputed the answer would
+    be exactly that bug wearing a green tick.
+
+    The fake sequencer is a recorder, so this asserts nothing about a note
+    sounding. It asserts that the number on the glass is the number of
+    addNote calls, which is the whole claim."""
+
+    def setUp(self):
+        super().setUp()
+        self.ch = 0
+        self.assertEqual(self.d.channel_kind(self.ch), "drum")
+        self.d.group = self.ch
+        self.d.mode = "STEP"
+
+    def written(self):
+        """How many steps the writer put in the pattern, from the sequencer."""
+        return len(self.d.libseq.notes)
+
+    def shown(self):
+        """What the HITS column draws, through the real render path."""
+        return self.d._page_columns(self.d._page())[0]
+
+    def test_the_recorded_count_is_the_number_of_steps_written(self):
+        self.d.hits[self.ch] = 16
+        self.d.state[self.ch]["rhythm_reg"] = 0b11111
+        self.d.state[self.ch]["hand_reg"] = 0
+        self.d._write_pattern(self.ch)
+        self.assertEqual(self.d._sounding[self.ch], self.written())
+
+    def test_it_stays_the_number_written_across_every_generator_stage(self):
+        # The stages the composition runs through: a lean instead of euclid, a
+        # lane pruning it, a rotation carrying both registers with the line.
+        # Whatever they do between them, the recorded number is the count of
+        # what came out.
+        for lean in tuple(self.mod.tlib.LEANS):
+            for lane in (0, 40, 80):
+                for rot in (0, 3, 7):
+                    with self.subTest(lean=lean, lane=lane, rot=rot):
+                        self.d.hits[self.ch] = 11
+                        self.d.rot[self.ch] = rot
+                        self.d.state[self.ch]["lean"] = lean
+                        self.d.state[self.ch]["lane"] = lane
+                        self.d.state[self.ch]["rhythm_reg"] = 0b1011011101101
+                        self.d.state[self.ch]["hand_reg"] = 0b10
+                        self.d._write_pattern(self.ch)
+                        self.assertEqual(self.d._sounding[self.ch],
+                                         self.written())
+
+    def test_the_column_marks_a_line_the_register_thinned(self):
+        self.d.hits[self.ch] = 16
+        self.d.state[self.ch]["rhythm_reg"] = 0b11111
+        self.d.state[self.ch]["hand_reg"] = 0
+        self.d._write_pattern(self.ch)
+        col = self.shown()
+        self.assertEqual(col["name"], "HITS-")
+        # The value cell still shows what the knob is set to. One detent of
+        # HITS clears the register, so a value cell showing the sounding count
+        # would jump from 5 to 15 on a single click.
+        self.assertEqual(col["value"], "0016")
+        self.assertLess(self.written(), self.d.param_get(self.ch, "hits"))
+
+    def test_the_column_marks_a_line_the_hand_register_added_to(self):
+        self.d.hits[self.ch] = 4
+        self.d.state[self.ch]["rhythm_reg"] = 0xFFFF
+        self.d.state[self.ch]["hand_reg"] = 0b1010
+        self.d._write_pattern(self.ch)
+        self.assertEqual(self.shown()["name"], "HITS+")
+        self.assertGreater(self.written(), self.d.param_get(self.ch, "hits"))
+
+    def test_an_unmasked_channel_draws_exactly_what_it_always_did(self):
+        # The migration property. Every channel that has never been tapped or
+        # evolved is byte for byte the column that shipped before this.
+        self.d.hits[self.ch] = 4
+        self.d.state[self.ch]["rhythm_reg"] = 0xFFFF
+        self.d.state[self.ch]["hand_reg"] = 0
+        self.d._write_pattern(self.ch)
+        self.assertEqual(self.shown()["name"], "HITS")
+        self.assertEqual(self.written(), self.d.param_get(self.ch, "hits"))
+
+    def test_turning_hits_clears_the_mark_because_it_clears_the_register(self):
+        # HITS, DIV and LENGTH are the start-again knobs: _reset_rhythm_mask
+        # puts every step back. DIV and LENGTH only mark the change PENDING,
+        # so the rewrite that would refresh the count does not happen until the
+        # wrap - and the mark must not be shown against the new grid meanwhile.
+        self.d.hits[self.ch] = 16
+        self.d.state[self.ch]["rhythm_reg"] = 0b11111
+        self.d._write_pattern(self.ch)
+        self.assertEqual(self.shown()["name"], "HITS-")
+        self.d._reset_rhythm_mask(self.ch)
+        self.assertIsNone(self.d._sounding[self.ch])
+        self.assertEqual(self.shown()["name"], "HITS")
+
+    def test_a_fill_bar_does_not_move_the_number(self):
+        # THE ONE EXCEPTION, and it is a performance rule. The fill adds steps
+        # for one bar of the phrase and takes them away again, so counting it
+        # would change a value that reaches _render_display's body change key
+        # twice a phrase with nobody touching the panel - and that draw opens
+        # with a CLEAR. It is also honest: the fill has its own column, its own
+        # amount and the phrase counter, so it is not a gap nobody can see.
+        self.d.hits[self.ch] = 4
+        self.d.state[self.ch]["rhythm_reg"] = 0xFFFF
+        self.d.state[self.ch]["hand_reg"] = 0
+        self.d.state[self.ch]["fill"] = 100
+        self.d._write_pattern(self.ch)
+        standing = self.d._sounding[self.ch]
+        self.d._fill_now.add(self.ch)
+        self.d._write_pattern(self.ch)
+        self.assertGreater(self.written(), standing)     # the fill did land
+        self.assertEqual(self.d._sounding[self.ch], standing)
+        self.assertEqual(self.shown()["name"], "HITS")
+
+    def test_the_count_is_not_saved_into_the_snapshot(self):
+        # It is a fact about the last write, derivable from registers the
+        # snapshot already carries. A saved key nothing reads back is one of
+        # the things an AST guard exists to catch.
+        self.d.hits[self.ch] = 16
+        self.d.state[self.ch]["rhythm_reg"] = 0b11111
+        self.d._write_pattern(self.ch)
+        self.assertNotIn("sounding", self.d.state[self.ch])
+        state = self.d.get_state()
+        self.assertNotIn("sounding", state["drums"]["0"])

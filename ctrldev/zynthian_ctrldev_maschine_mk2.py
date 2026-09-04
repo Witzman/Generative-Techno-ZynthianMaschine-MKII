@@ -783,6 +783,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # threading one more parameter through every caller is how a default
         # ends up meaning "no fill" in a path nobody checked.
         self._fill_now = set()
+        # HOW MANY STEPS THE DRUM WRITER LAST WROTE, per channel, or None
+        # when nothing has been written since the registers were cleared.
+        # Todo item 9: HITS is euclid's count and the rhythm register thins
+        # the line under it, so the two are different numbers and nothing on
+        # the surface said so.
+        #
+        # RECORDED BY THE WRITER, never recomputed. Re-deriving it in the view
+        # would be a second copy of _write_pattern's composition - lean, lane,
+        # fill, both rotations and both registers - and two implementations of
+        # one rule that agree until they do not is this project's most
+        # expensive recurring bug. It is also free here: the writer already
+        # holds the finished pattern.
+        #
+        # NOT IN self.state, deliberately. That dict is what the snapshot is
+        # built from and what _duplicate copies; this is a fact about the last
+        # write, derivable from the registers the snapshot already carries, and
+        # a saved key that nothing reads back is one of the things an AST guard
+        # exists to catch.
+        self._sounding = [None] * 8
         # Queued mute changes: channel -> the mute state to take at that
         # channel's next wrap. DELIBERATELY NOT state[ch]["pending"] - that
         # set holds only "div" and "length", and _wrap_channel treats any
@@ -1452,6 +1471,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # scale degrees on a kit walk adds unrelated drums rather than a chord.
         view["owner"] = self.owner.get(channel)
         view["sampler"] = self._is_sampler(channel)
+        # HOW MANY STEPS THE WRITER LAST WROTE. Read, never computed - the
+        # composition lives in _write_pattern and there is exactly one of it.
+        # techno_lib.hits_name turns the gap between this and HITS into the
+        # mark on the HITS column's name row; None is "no gap known" and draws
+        # the plain label.
+        view["sounding"] = self._sounding[channel]
         for param in self._LEGACY:
             if self._legacy_attr(channel, param) is not None:
                 view[param] = self.param_get(channel, param)
@@ -6178,6 +6203,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # and LENGTH reset it - and a bit left behind here would reappear
             # on a step the player never chose.
             state["hand_reg"] = 0
+        # AND THE RECORDED COUNT WITH THEM. With both registers full the
+        # writer's count is euclid's own, so the gap is zero by construction -
+        # but DIV and LENGTH only mark the change PENDING and the rewrite that
+        # would refresh this does not happen until the wrap. Clearing here is
+        # what stops the old channel's mark being shown against the new
+        # grid for a bar. None draws the plain label, which is correct.
+        self._sounding[group] = None
 
     def _encoder(self, cc_num, cc_val, verb, channel=None):
         """The four euclid parameters. They keep their own handler because
@@ -6473,6 +6505,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # with the line under ROTATE exactly as one they took out does.
             tlib.rotate(int(self.state[group].get("hand_reg", 0)),
                         steps, self.rot[group]))
+        # WHAT WAS ACTUALLY WRITTEN, counted here and nowhere else - see the
+        # note beside self._sounding. HITS' column reads it back through
+        # state_view and marks its name row when the two disagree, which is
+        # todo item 9: HITS 16 against a five-bit mask lights five pads, both
+        # numbers correct, and nothing said they were different quantities.
+        #
+        # A FILL BAR IS NOT COUNTED, and that is the one exception. The fill
+        # adds steps for one bar in the phrase and takes them away again, so
+        # counting it would make this number change twice a phrase with nobody
+        # touching the panel - and it reaches _render_display's body change
+        # key, whose draw opens with a CLEAR: 84 OSC packets for both screens,
+        # 21.9 a second at 125 BPM on a four-bar phrase. Four performance
+        # defects in that one function have had exactly this shape. It is also
+        # the honest answer: the fill has its own column, its own amount and
+        # the phrase counter, so it is not a gap the player cannot see. The
+        # standing count from the bar before is what the registers are doing.
+        if group not in self._fill_now:
+            self._sounding[group] = sum(pattern)
         for step, on in enumerate(pattern):
             if on:
                 self.libseq.addNote(step, note, velocity, 1.0, 0.0)
@@ -6485,7 +6535,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     self.libseq.setStutterDur(step, note, stut_dur)
         self.libseq.updateSequenceInfo()
         logging.debug(f"Maschine group {group}: {label} beats={beats} steps={steps} "
-                      f"hits={self.hits[group]} rot={self.rot[group]}")
+                      f"hits={self.hits[group]} rot={self.rot[group]} "
+                      f"sounding={self._sounding[group]}")
         self._render_pads()
 
     def _chain_of(self, channel):

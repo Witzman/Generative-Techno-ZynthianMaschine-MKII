@@ -4051,6 +4051,59 @@ class techno_lib:
         return (v, techno_lib._steps_of(state))
 
     VERB_COLS = None       # built after the class body, see below
+    VERB_NAMES = None      # built after the class body, beside VERB_COLS
+
+    @staticmethod
+    def hits_name(label, hits, sounding):
+        """HITS' name row, marked when the line that was WRITTEN is not the
+        line HITS asked for. Todo item 9.
+
+        THE DEFECT. A drum channel's sounding steps are euclid(steps, hits)
+        put through the subtractive rhythm register and then added to by the
+        hand register. HITS 16 against a five-bit mask lights five pads, and
+        BOTH numbers are correct - there was simply nothing anywhere on the
+        surface saying the two were different quantities. The owner asked
+        "what's wrong with hits" and the honest answer was: nothing, except
+        that the panel never explains it.
+
+        `sounding` is what the WRITER counted, handed through the view. None
+        means nothing has been written since the registers were last cleared,
+        which is also the state in which there is no gap to report - so an
+        absent count and a zero gap draw the identical column, and every
+        channel that has never been masked is byte for byte what it was.
+
+        A SIGN, NOT A NUMBER, and the number is the alternative that was
+        costed and rejected. `HITS-11` is strictly more informative, and it
+        MOVES BY ITSELF: with RHYTHM above LOCK the register mutates at every
+        wrap, so the count wobbles once a bar forever. The column name is in
+        _render_display's body change key and the body draw opens with a
+        CLEAR - measured at 42 OSC packets for one drum STEP screen, 84 for
+        both, which is 43.8 messages a second at 125 BPM with nobody touching
+        the panel. That is the shape of the four performance defects that
+        function has already had, and the 2026-09-02 one was measured at 63/s
+        and stalled the rig twice in a session. The SIGN is stable: an
+        evolving register thins the line every bar and the mark reads `-`
+        throughout.
+
+        SO THE PADS CARRY THE MAGNITUDE and this carries the fact. That
+        division is already the instrument's: drum_steps' own docstring says
+        "the PADS are the truth about what sounds, and they always were".
+
+        THE DIRECTION IS THE MECHANISM, which is why it is a sign rather than
+        a bare flag: `-` is the subtractive rhythm register taking hits off
+        the euclid line, `+` is the hand register putting steps in that euclid
+        never placed. Two different things a player did, told apart in one
+        character."""
+
+        if sounding is None:
+            return label
+        gap = int(sounding) - int(hits)
+        if gap == 0:
+            return label
+        # Clamped for the same reason mark_modulated clamps: screen_packets
+        # does not truncate a name, so an overlong one runs into the next
+        # column instead of being cut.
+        return (label + ("+" if gap > 0 else "-"))[:techno_lib.NAME_CHARS]
 
     @staticmethod
     def verb_col(verb, state, kind, pending=frozenset()):
@@ -4064,6 +4117,24 @@ class techno_lib:
         if spec is None:
             return None
         label, bar, frac, fmt = spec
+        # A VERB WHOSE UNIT CHANGES WITH THE CHANNEL SAYS SO IN ITS NAME.
+        #
+        # LENGTH is pattern BEATS on a drum and shift-register BITS on a voice,
+        # and until 2026-09-04 the column showed `LENGTH` and a bare number
+        # either way - so a player turning it on a voice watched the number
+        # move and heard the pattern stay exactly as long as it was. The owner
+        # reported it as "the LENGTH encoder is not shortening the pattern
+        # anymore", and the encoder was working perfectly.
+        #
+        # IN THE NAME ROW, NOT THE VALUE. The value cell is FOUR characters -
+        # there is a test - and the name row is eight, so the unit fits there
+        # and nowhere else.
+        #
+        # BEHAVIOUR, NOT ENGINE: the view carries it and the argument is the
+        # fallback, because a channel switched with SHIFT + GRID is a voice
+        # however it was built.
+        behaving = (state or {}).get("kind") or kind
+        label = techno_lib.VERB_LABELS_BY_KIND.get((verb, behaving), label)
         value = state.get(verb, techno_lib.VERB_DEFAULTS.get(verb))
         if value is None and verb in techno_lib.NULLABLE_VERBS:
             # FEED alone: None is its OFF, not an absent verb. Everywhere else
@@ -4073,10 +4144,23 @@ class techno_lib:
             # Law L4. A channel that does not carry this verb at all - LANE on
             # a voice, CUTOFF on a drum - draws dead rather than drawing a lie.
             return techno_lib._dead(label.lower())
+        namer = techno_lib.VERB_NAMES.get(verb)
+        if namer is not None:
+            # A VERB WHOSE NAME ROW CARRIES A SECOND FACT. Hits is the only
+            # one, and it is here rather than in the value formatter because
+            # the value cell must go on showing what the KNOB is set to - the
+            # same rule mark_modulated's own test states for a modulated
+            # column.
+            label = namer(label, value, state)
         return techno_lib._col(label, fmt(value, state, kind), bar,
                                frac(value, state, kind),
                                pending=verb in pending,
                                small=verb in techno_lib.NAME_VERBS)
+
+    # The per-channel half of what LENS_UNITS does for the lens. Both exist
+    # because one word carries two quantities - the lens exposed it first, and
+    # the single channel had it all along.
+    VERB_LABELS_BY_KIND = {("length", "voice"): "LEN BITS"}
 
     # Verbs whose value is a NAME rather than a number: single height, nine
     # characters, shortened by short_label. Four characters cannot tell one
@@ -6009,6 +6093,22 @@ techno_lib.VERB_COLS = {
                 lambda v, s=None, k=None: "LOCK" if v <= 0 else "%dbar" % v),
     "wspan":   ("SPAN", "uni", _over(7.0), _plain),
 }
+
+
+def _hits_name(label, value, state):
+    return techno_lib.hits_name(label, value, state.get("sounding"))
+
+
+# WHICH VERBS ANNOTATE THEIR OWN NAME ROW. One entry, and the table exists
+# rather than an `if verb == "hits"` inside verb_col for the reason VERB_COLS
+# itself does: the next such verb adds a row here instead of a branch in the
+# renderer. Absent is the plain label, which is every other verb.
+#
+# `state.get("sounding")` and not a required key: verb_col is handed a channel
+# view, a globals dict, a partial dict built by a test and an old snapshot's
+# state, and every one of those must render. Absent means "no gap known" and
+# draws exactly what shipped before this existed.
+techno_lib.VERB_NAMES = {"hits": _hits_name}
 
 # Rings are built after the class body so page_desc() is callable. Keeping them
 # out of the class body is the only reason they are down here; they are read as

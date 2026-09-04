@@ -3792,10 +3792,36 @@ class TestVerbColumnAlignment(unittest.TestCase):
     # RHYTHM left this page for AUTO, and CHANCE and SWING came back onto it
     # off the spread pages that became the lens.
     VOICE_STEP = (
-        ("div", "DIVIDE"), ("length", "LENGTH"), ("gate", "GATE"),
+        # LEN BITS, not LENGTH - 2026-09-04. On a voice the number is
+        # shift-register BITS, not pattern beats, and the column said neither.
+        # The owner turned it expecting the pattern to shorten, watched the
+        # number move, heard nothing change, and reported the encoder as
+        # broken. It was working perfectly; the surface was silent about which
+        # of two quantities it was showing.
+        ("div", "DIVIDE"), ("length", "LEN BITS"), ("gate", "GATE"),
         ("octave", "OCTAVE"), ("chord", "CHORD"), ("velo", "VELO"),
         ("chance", "CHANCE"), ("swing", "SWING"),
     )
+
+    def test_the_drum_keeps_a_bare_LENGTH(self):
+        # The unit is on the EXCEPTION, not on both. Beats is what LENGTH
+        # means everywhere else on this surface and on every page that
+        # teaches it, so labelling the drum too would be noise.
+        desc = tl.PAGE_RINGS[("STEP", "drum")][0]
+        cols = tl.columns(desc, "drum", _drum_view())
+        names = [c["name"] for c in cols]
+        self.assertIn("LENGTH", names)
+        self.assertNotIn("LEN BITS", names)
+
+    def test_a_kind_switched_channel_gets_the_voice_label(self):
+        # BEHAVIOUR, not engine: a drum switched with SHIFT + GRID is a voice
+        # and its LENGTH is bits, however the channel was built.
+        col = tl.verb_col("length", {"length": 7, "kind": "voice"}, "drum")
+        self.assertEqual(col["name"], "LEN BITS")
+
+    def test_the_label_fits_the_name_row(self):
+        for (verb, kind), label in tl.VERB_LABELS_BY_KIND.items():
+            self.assertLessEqual(len(label), tl.NAME_CHARS, f"{verb}/{kind}")
 
     # The same check on the page the two generators moved to.
     VOICE_AUTO = (
@@ -9018,3 +9044,119 @@ class EveryShippedInsertIsAccountedForCase(unittest.TestCase):
         self.assertEqual(unknown, {},
                          "insert plugins in no FX table: "
                          + ", ".join(sorted(unknown)))
+
+
+class TheHitsColumnSaysWhenTheLineIsNotWhatHitsAsked(unittest.TestCase):
+    """Todo item 9. HITS reads euclid's count while the rhythm register thins
+    the line under it, and nothing on the surface said the two were different
+    numbers.
+
+    HITS 16 against a five-bit mask lights five pads. Both numbers are
+    correct; the owner asked "what's wrong with hits" and the honest answer
+    was nothing, except that the panel never explains it. The instrument's own
+    law is that a channel must say why it sounds as it does.
+
+    A SIGN AND NOT A NUMBER, and this is where that is pinned. `HITS-11` is
+    more informative and it moves by itself: with RHYTHM above LOCK the
+    register mutates at every wrap, the column name is in _render_display's
+    body change key, and the body draw opens with a CLEAR - 84 OSC packets for
+    both screens, 43.8 a second at 125 BPM with nobody touching the panel,
+    which is the shape of the four performance defects that function has
+    already had. The pads carry the magnitude; drum_steps' own docstring
+    already says they are the truth about what sounds."""
+
+    def test_a_line_the_register_thinned_marks_the_name(self):
+        col = tl.verb_col("hits", {"hits": 16, "length": 16, "kind": "drum",
+                                   "sounding": 5}, "drum")
+        self.assertEqual(col["name"], "HITS-")
+
+    def test_a_line_the_hand_register_added_to_marks_the_other_way(self):
+        # The two registers are two things a player did, and the direction is
+        # the mechanism: minus is the subtractive mask taking hits off the
+        # euclid line, plus is a tap putting a step in that euclid never
+        # placed.
+        col = tl.verb_col("hits", {"hits": 4, "length": 16, "kind": "drum",
+                                   "sounding": 6}, "drum")
+        self.assertEqual(col["name"], "HITS+")
+
+    def test_no_gap_draws_exactly_what_shipped_before_this_existed(self):
+        col = tl.verb_col("hits", {"hits": 4, "length": 16, "kind": "drum",
+                                   "sounding": 4}, "drum")
+        self.assertEqual(col["name"], "HITS")
+
+    def test_an_absent_count_draws_the_plain_name(self):
+        # verb_col is handed a channel view, a globals dict, a partial dict
+        # built by a test and an old snapshot's state. Absent is "no gap
+        # known", which is also the state left by _reset_rhythm_mask - where
+        # there is no gap to report.
+        col = tl.verb_col("hits", {"hits": 4, "length": 16, "kind": "drum"},
+                          "drum")
+        self.assertEqual(col["name"], "HITS")
+
+    def test_the_value_cell_still_shows_what_the_knob_is_set_to(self):
+        # The same rule the modulated column obeys: the value is the thing the
+        # knob steers, never where something else has taken the pattern. If
+        # this showed the sounding count instead, one detent of HITS would
+        # jump the number from 5 to 15 - the register resets on that turn.
+        col = tl.verb_col("hits", {"hits": 16, "length": 16, "kind": "drum",
+                                   "sounding": 5}, "drum")
+        self.assertEqual(col["value"], "0016")
+
+    def test_the_bar_still_measures_hits_against_the_pattern(self):
+        col = tl.verb_col("hits", {"hits": 8, "length": 16, "kind": "drum",
+                                   "sounding": 3}, "drum")
+        self.assertEqual(col["bar"], "uni")
+        self.assertAlmostEqual(col["frac"], 0.5)
+
+    def test_the_mark_and_the_modulation_tilde_both_fit_the_name_row(self):
+        # HITS is a drift verb, so it can carry both. screen_packets does not
+        # truncate a name - an overlong one runs into the next column.
+        col = tl.mark_modulated(
+            tl.verb_col("hits", {"hits": 16, "length": 16, "kind": "drum",
+                                 "sounding": 5}, "drum"), (0.2, 0.8))
+        self.assertEqual(col["name"], "HITS-~")
+        self.assertLessEqual(len(col["name"]), tl.NAME_CHARS)
+
+    def test_the_rule_itself_is_pure_and_clamps_to_the_name_row(self):
+        self.assertEqual(tl.hits_name("HITS", 16, None), "HITS")
+        self.assertEqual(tl.hits_name("HITS", 16, 16), "HITS")
+        self.assertEqual(tl.hits_name("HITS", 16, 5), "HITS-")
+        self.assertEqual(tl.hits_name("HITS", 4, 6), "HITS+")
+        self.assertLessEqual(len(tl.hits_name("LONGNAME", 4, 1)),
+                             tl.NAME_CHARS)
+
+    def test_the_page_title_and_the_dead_label_are_not_marked(self):
+        # The lens reads VERB_COLS[verb][0] for its title and _columns_inner
+        # reads it again for a dead column's lower-case label. Both must stay
+        # the bare verb name; only the drawn column is annotated.
+        self.assertEqual(tl.VERB_COLS["hits"][0], "HITS")
+        self.assertEqual(tl.lens_desc("hits")["title"], "ALL HITS")
+        self.assertEqual(tl._dead(tl.VERB_COLS["hits"][0].lower())["name"],
+                         "hits")
+
+    def test_the_lens_keeps_the_channel_name_and_loses_the_mark(self):
+        # A KNOWN AND DELIBERATE LIMIT. spread_columns overwrites the name row
+        # with the channel, because a lens that repeated the verb eight times
+        # would spend the row that says which channel you are reading. So the
+        # mark lives on the channel page, which is the page that has to
+        # explain, and the pads say what sounds either way.
+        views = [(chr(65 + i), tl.CHANNELS[i][1],
+                  {"hits": 16, "length": 16, "kind": "drum", "sounding": 5})
+                 for i in range(8)]
+        cols = tl.columns(tl.lens_desc("hits"), None, views)
+        self.assertEqual(cols[0]["name"], f"A {tl.CHANNELS[0][1]}"[:8])
+        self.assertNotIn("-", cols[0]["name"])
+
+    def test_only_hits_annotates_its_name(self):
+        # One entry in the table, and every other verb draws the label its
+        # own row in VERB_COLS carries.
+        self.assertEqual(set(tl.VERB_NAMES), {"hits"})
+        for verb, spec in tl.VERB_COLS.items():
+            if verb == "hits":
+                continue
+            state = {verb: 4, "kind": "drum", "model": "reg", "length": 16,
+                     "sounding": 99}
+            col = tl.verb_col(verb, state, "drum")
+            if col is None or col["grey"]:
+                continue
+            self.assertEqual(col["name"], spec[0], verb)
