@@ -82,8 +82,24 @@ assert_grep    "sets the JACK alias"  'set_alias\("virtual:maschine\.rs/'  "$SYS
 head_ "udev rule: /dev/maschine, and hotplug both ways"
 RULES="$SYS/99-maschine.rules"
 assert_eq "three rules, one per line" 3 "$(grep -c 'SUBSYSTEM=="hidraw"' "$RULES")"
-assert_eq "every rule matches 17cc:1140" 3 \
-    "$(grep -c 'ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140"' "$RULES")"
+# NARROWED 2026-09-04: matched on idVendor/idProduct alone until then, which
+# claimed EVERY hidraw node the device presents. KERNELS on the HID parent
+# encodes bus, vendor and product in one key on ONE parent - which is what
+# makes it expressible at all, because udev requires every parent-matching key
+# in a rule to resolve on the same parent and bInterfaceNumber does not.
+assert_eq "every rule matches the MK2's HID interface" 3 \
+    "$(grep -v '^#' "$RULES" | grep -c 'KERNELS=="0003:17CC:1140')"
+# THE OLD FORM MUST NOT COME BACK. Reintroducing it would silently re-widen
+# the rule, and nothing about the running rig would look different.
+assert_eq "no rule matches on vendor/product alone" 0 \
+    "$(grep -v '^#' "$RULES" | grep -c 'ATTRS{idVendor}')"
+# AND bInterfaceNumber MUST NOT BE ADDED. Tested on the rig with `udevadm
+# test`: combined with the ATTRS above it matches NOTHING, silently, leaving
+# /dev/maschine absent and the instrument dead with no error anywhere.
+# Comments are excluded on purpose: the rule file EXPLAINS why
+# bInterfaceNumber cannot be used, so the word is in the file deliberately.
+assert_eq "no rule mixes parents with bInterfaceNumber" 0 \
+    "$(grep -v '^#' "$RULES" | grep -c 'bInterfaceNumber')"
 assert_grep "symlink is /dev/maschine"  'SYMLINK\+="maschine"'      "$RULES"
 assert_grep "mode 0664"                 'MODE="0664"'               "$RULES"
 assert_grep "group audio"               'GROUP="audio"'             "$RULES"

@@ -1,3 +1,29 @@
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140", MODE="0664", GROUP="audio", SYMLINK+="maschine"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140", ACTION=="add", RUN+="/bin/systemctl --no-block restart maschine-mk2.service"
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="17cc", ATTRS{idProduct}=="1140", ACTION=="remove", RUN+="/bin/systemctl --no-block stop maschine-mk2.service"
+# The Maschine MK2's HID interface, and ONLY that one.
+#
+# NARROWED 2026-09-04, and the measurement is the point. The rule used to match
+# on idVendor/idProduct alone, so it claimed every hidraw node this device
+# presents and restarted the service on each `add`. Measured on the rig:
+#
+#   1-1.4:1.0  class 01  snd-usb-audio   (audio)
+#   1-1.4:1.1  class 01  snd-usb-audio   (audio)
+#   1-1.4:1.2  class 03  usbhid          -> hidraw1   <- the only HID interface
+#   1-1.4:1.3  class fe  driver          (application specific)
+#
+# So the device presents exactly ONE hidraw node and the old rule's hazard was
+# theoretical for a single controller - but it is real for a second MK2, which
+# would take the symlink and restart the daemon out from under the first.
+#
+# WHY `KERNELS` AND NOT `ATTRS{bInterfaceNumber}`. Every parent-matching key in
+# ONE udev rule must resolve on the SAME parent device, and these two do not:
+# `bInterfaceNumber` lives on the interface (1-1.4:1.2) while `idVendor` and
+# `idProduct` live on the USB device above it (1-1.4). Tested on the rig with
+# `udevadm test` - the combined rule matches NOTHING, silently, which would
+# have left /dev/maschine missing and the instrument dead with no error.
+#
+# `KERNELS=="0003:17CC:1140.*"` matches the HID device that is hidraw's direct
+# parent. It encodes the bus (0003 = USB), the vendor and the product in one
+# key on one parent, so it needs no ATTRS at all - and it cannot match the
+# touchscreen's hidraw0, which was verified the same way.
+SUBSYSTEM=="hidraw", KERNELS=="0003:17CC:1140.*", MODE="0664", GROUP="audio", SYMLINK+="maschine"
+SUBSYSTEM=="hidraw", KERNELS=="0003:17CC:1140.*", ACTION=="add", RUN+="/bin/systemctl --no-block restart maschine-mk2.service"
+SUBSYSTEM=="hidraw", KERNELS=="0003:17CC:1140.*", ACTION=="remove", RUN+="/bin/systemctl --no-block stop maschine-mk2.service"
