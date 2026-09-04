@@ -8,7 +8,7 @@ edition = "2021"
 lto = true
 
 [dependencies]
-nix = "~0.7"
+nix = "0.26"
 hsl = "~0.1"
 # PINNED, 2026-09-03. This was `midi = "*"`: any future upload to crates.io
 # could change what the daemon is built from, and a build without the lock

@@ -24,8 +24,8 @@ use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};
 use std::time::{Duration, Instant};
 
 extern crate nix;
-use nix::fcntl::{O_NONBLOCK, O_RDWR};
-use nix::poll::*;
+use nix::fcntl::OFlag;
+use nix::poll::{poll, PollFd, PollFlags};
 use nix::{fcntl, sys};
 
 extern crate alsa_seq;
@@ -64,9 +64,9 @@ use crate::ws_types::{DeviceEvent, WsCommand};
 
 fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     let mut fds = [
-        PollFd::new(dev.get_fd(), POLLIN, EventFlags::empty()),
-        PollFd::new(mhandler.osc_socket.as_raw_fd(), POLLIN, EventFlags::empty()),
-        PollFd::new(mhandler.seq_in_fd, POLLIN, EventFlags::empty()),
+        PollFd::new(dev.get_fd(), PollFlags::POLLIN),
+        PollFd::new(mhandler.osc_socket.as_raw_fd(), PollFlags::POLLIN),
+        PollFd::new(mhandler.seq_in_fd, PollFlags::POLLIN),
     ];
 
     // INSTANT, NOT SystemTime, since 2026-09-03. `SystemTime::elapsed()`
@@ -102,13 +102,13 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         // `.unwrap()` on that ended the daemon. There is nothing to do about
         // an interrupted wait except take the next lap.
         if let Err(err) = poll(&mut fds, 16) {
-            if err.errno() != nix::errno::Errno::EINTR {
+            if err != nix::errno::Errno::EINTR {
                 println!("poll failed: {} - retrying", err);
             }
             continue;
         }
 
-        if fds[0].revents().unwrap_or_else(EventFlags::empty).contains(POLLIN) {
+        if fds[0].revents().unwrap_or_else(PollFlags::empty).contains(PollFlags::POLLIN) {
             dev.readable(mhandler);
             last_report = Instant::now();
             // Input is flowing. If it has been flowing long enough, the storm
@@ -139,13 +139,13 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             let _ = nix::unistd::close(dev.get_fd());
             match fcntl::open(
                 Path::new(dev_path),
-                O_RDWR | O_NONBLOCK,
+                OFlag::O_RDWR | OFlag::O_NONBLOCK,
                 sys::stat::Mode::empty(),
             ) {
                 Ok(new_fd) => {
                     dev.set_fd(new_fd);
                     dev.invalidate_lights();
-                    fds[0] = PollFd::new(new_fd, POLLIN, EventFlags::empty());
+                    fds[0] = PollFd::new(new_fd, PollFlags::POLLIN);
                     reopens += 1;
                     println!("watchdog: input stalled, reopened {} (reopen #{})", dev_path, reopens);
                 }
@@ -176,12 +176,12 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             last_report = Instant::now();
         }
 
-        if fds[1].revents().unwrap_or_else(EventFlags::empty).contains(POLLIN) {
+        if fds[1].revents().unwrap_or_else(PollFlags::empty).contains(PollFlags::POLLIN) {
             mhandler.recv_osc_msg(dev);
         }
 
         if mhandler.seq_in_fd >= 0
-            && fds[2].revents().unwrap_or_else(EventFlags::empty).contains(POLLIN)
+            && fds[2].revents().unwrap_or_else(PollFlags::empty).contains(PollFlags::POLLIN)
         {
             while let Some(ev) = mhandler.seq_handle.try_receive_event() {
                 match ev {
@@ -1554,10 +1554,10 @@ fn main() {
 
     let dev_fd = match fcntl::open(
         Path::new(&args[1]),
-        O_RDWR | O_NONBLOCK,
+        OFlag::O_RDWR | OFlag::O_NONBLOCK,
         sys::stat::Mode::empty(),
     ) {
-        Err(err) => panic!("couldn't open {}: {}", args[1], err.errno().desc()),
+        Err(err) => panic!("couldn't open {}: {}", args[1], err.desc()),
         Ok(file) => file,
     };
 

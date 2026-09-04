@@ -1020,7 +1020,7 @@ impl Maschine for Mikro {
             let mut buf = [0u8; 512];
 
             let nbytes = match unistd::read(self.dev, &mut buf) {
-                Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => return,
+                Err(nix::errno::Errno::EAGAIN) => return,
                 // NOT a panic, since 2026-09-03. An unplug gives ENODEV here
                 // and the daemon died on it; the input watchdog above is built
                 // to reopen the node, and it cannot do that from a dead
