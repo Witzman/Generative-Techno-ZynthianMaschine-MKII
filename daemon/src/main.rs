@@ -276,135 +276,138 @@ struct MHandler<'a> {
     at_last_sent: [Option<Instant>; 16],
 }
 
+/// THE PANEL, IN ONE TABLE: OSC token, enum variant, and the CC the driver
+/// sees on press and release.
+///
+/// It replaces three hand-maintained things that had to agree and that nothing
+/// checked: `osc_button_to_btn_map`, its hand-written inverse
+/// `btn_to_osc_button_map`, and about forty identical `RPN7` match arms that
+/// differed only in a number. **The CC map is now greppable** - which matters
+/// because this project's rule is that a CC is measured hardware fact and is
+/// never read off a token name, so the one place it is written down should be
+/// a place a person can find.
+///
+/// `None` means the generic sender must NOT fire for that token, because
+/// something else already handles it and does more than send one CC:
+///
+/// * `encoder` has no CC at all - the big encoder's delta path is separate.
+/// * `pad_mode` sends CC 27 only when SHIFT is not held; the chord is eaten.
+/// * `group_a`..`group_h` send `cc_math::group_cc(n)` through `seq_port` AND
+///   move the pad note base, so they are real behaviour, not a table row.
+///
+/// The order is the order the old forward table had, which is roughly the
+/// panel's own reading order. Nothing depends on it - both lookups are linear
+/// scans over fifty-two rows, on a path that runs once per button edge.
+const PANEL_BUTTONS: &[(&str, MaschineButton, Option<u16>)] = &[
+    ("restart", MaschineButton::Restart, Some(7)),
+    ("step_left", MaschineButton::Stepleft, Some(5)),
+    ("step_right", MaschineButton::Stepright, Some(6)),
+    ("grid", MaschineButton::Grid, Some(4)),
+    ("play", MaschineButton::Play, Some(1)),
+    ("rec", MaschineButton::Rec, Some(3)),
+    ("stop", MaschineButton::Erase, Some(2)),
+    ("shift", MaschineButton::Shift, Some(49)),
+    ("browse", MaschineButton::Browse, Some(8)),
+    ("sampling", MaschineButton::Sampling, Some(9)),
+    ("note_repeat", MaschineButton::Noterepeat, Some(10)),
+    ("encoder", MaschineButton::Encoder, None),
+    ("f1", MaschineButton::F1, Some(39)),
+    ("f2", MaschineButton::F2, Some(40)),
+    ("f3", MaschineButton::F3, Some(41)),
+    ("f4", MaschineButton::F4, Some(42)),
+    ("f5", MaschineButton::F5, Some(43)),
+    ("f6", MaschineButton::F6, Some(44)),
+    ("f7", MaschineButton::F7, Some(45)),
+    ("f8", MaschineButton::F8, Some(46)),
+    ("swing", MaschineButton::Swing, Some(50)),
+    ("step", MaschineButton::Step, Some(32)),
+    ("volume", MaschineButton::Volume, Some(51)),
+    ("enter", MaschineButton::Enter, Some(36)),
+    ("auto", MaschineButton::Auto, Some(37)),
+    ("all", MaschineButton::All, Some(38)),
+    ("navigate", MaschineButton::Navigate, Some(34)),
+    ("tempo", MaschineButton::Tempo, Some(35)),
+    // "stop" APPEARED TWICE in the old forward table - once live and once
+    // commented out - and the commented copy is not restored here. Note what
+    // the live row says: the OSC token "stop" is the ERASE button. That is the
+    // daemon's token names being attached to the opposite physical buttons,
+    // which is measured fact and is why a CC is never read off a name.
+    ("control", MaschineButton::Control, Some(11)),
+    ("nav", MaschineButton::Nav, Some(12)),
+    ("nav_left", MaschineButton::Navleft, Some(13)),
+    ("nav_right", MaschineButton::Navright, Some(14)),
+    ("main", MaschineButton::Main, Some(24)),
+    ("scene", MaschineButton::Scene, Some(25)),
+    ("pattern", MaschineButton::Pattern, Some(26)),
+    ("pad_mode", MaschineButton::Padmode, None),
+    ("view", MaschineButton::View, Some(28)),
+    ("duplicate", MaschineButton::Duplicate, Some(29)),
+    ("select", MaschineButton::Select, Some(30)),
+    ("solo", MaschineButton::Solo, Some(31)),
+    ("mute", MaschineButton::Mute, Some(33)),
+    ("group_a", MaschineButton::GroupA, None),
+    ("group_b", MaschineButton::GroupB, None),
+    ("group_c", MaschineButton::GroupC, None),
+    ("group_d", MaschineButton::GroupD, None),
+    ("group_e", MaschineButton::GroupE, None),
+    ("group_f", MaschineButton::GroupF, None),
+    ("group_g", MaschineButton::GroupG, None),
+    ("group_h", MaschineButton::GroupH, None),
+    ("page_right", MaschineButton::Pageright, Some(47)),
+    ("page_left", MaschineButton::Pageleft, Some(48)),
+];
+
+/// The CC a plain button sends, or `None` if it is not a plain button.
+fn panel_button_cc(osc_button: &str) -> Option<u16> {
+    PANEL_BUTTONS
+        .iter()
+        .find(|(name, _, _)| *name == osc_button)
+        .and_then(|(_, _, cc)| *cc)
+}
+
+/// The MIDI message one button edge produces, or `None` if this token is
+/// handled somewhere that does more than send a CC.
+///
+/// A PURE FUNCTION SO A TEST CAN CALL IT, and that is the whole reason it is
+/// not inlined at the one call site. `MHandler` needs an ALSA port and a
+/// socket, so nothing in this file can construct one - which meant the most
+/// important behaviour here, *does pressing a button send its CC*, had no test
+/// at all. Deleting the dispatch entirely left every test green when this was
+/// checked by mutation on 2026-09-05.
+fn button_message(osc_button: &str, is_down: bool) -> Option<Message> {
+    panel_button_cc(osc_button)
+        .map(|cc| Message::RPN7(Ch1, cc, cc_math::button_cc_value(is_down)))
+}
+
 fn osc_button_to_btn_map(osc_button: &str) -> Option<MaschineButton> {
-    match osc_button {
-        "restart" => Some(MaschineButton::Restart),
-        "step_left" => Some(MaschineButton::Stepleft),
-        "step_right" => Some(MaschineButton::Stepright),
-        "grid" => Some(MaschineButton::Grid),
-        "play" => Some(MaschineButton::Play),
-        "rec" => Some(MaschineButton::Rec),
-        "stop" => Some(MaschineButton::Erase),
-        "shift" => Some(MaschineButton::Shift),
-
-        "browse" => Some(MaschineButton::Browse),
-        "sampling" => Some(MaschineButton::Sampling),
-        "note_repeat" => Some(MaschineButton::Noterepeat),
-
-        "encoder" => Some(MaschineButton::Encoder),
-
-        "f1" => Some(MaschineButton::F1),
-        "f2" => Some(MaschineButton::F2),
-        "f3" => Some(MaschineButton::F3),
-        "f4" => Some(MaschineButton::F4),
-        "f5" => Some(MaschineButton::F5),
-        "f6" => Some(MaschineButton::F6),
-        "f7" => Some(MaschineButton::F7),
-        "f8" => Some(MaschineButton::F8),
-
-        "swing" => Some(MaschineButton::Swing),
-        "step" => Some(MaschineButton::Step),
-        "volume" => Some(MaschineButton::Volume),
-
-        "enter" => Some(MaschineButton::Enter),
-        "auto" => Some(MaschineButton::Auto),
-        "all" => Some(MaschineButton::All),
-        "navigate" => Some(MaschineButton::Navigate),
-        "tempo" => Some(MaschineButton::Tempo),
-        //"stop" => Some(MaschineButton::Erase),
-        "control" => Some(MaschineButton::Control),
-        "nav" => Some(MaschineButton::Nav),
-        "nav_left" => Some(MaschineButton::Navleft),
-        "nav_right" => Some(MaschineButton::Navright),
-        "main" => Some(MaschineButton::Main),
-
-        "scene" => Some(MaschineButton::Scene),
-        "pattern" => Some(MaschineButton::Pattern),
-        "pad_mode" => Some(MaschineButton::Padmode),
-        "view" => Some(MaschineButton::View),
-        "duplicate" => Some(MaschineButton::Duplicate),
-        "select" => Some(MaschineButton::Select),
-        "solo" => Some(MaschineButton::Solo),
-        "mute" => Some(MaschineButton::Mute),
-
-        "group_a" => Some(MaschineButton::GroupA),
-        "group_b" => Some(MaschineButton::GroupB),
-        "group_c" => Some(MaschineButton::GroupC),
-        "group_d" => Some(MaschineButton::GroupD),
-        "group_e" => Some(MaschineButton::GroupE),
-        "group_f" => Some(MaschineButton::GroupF),
-        "group_g" => Some(MaschineButton::GroupG),
-        "group_h" => Some(MaschineButton::GroupH),
-
-        "page_right" => Some(MaschineButton::Pageright),
-        "page_left" => Some(MaschineButton::Pageleft),
-
-        _ => None,
-    }
+    PANEL_BUTTONS
+        .iter()
+        .find(|(name, _, _)| *name == osc_button)
+        .map(|(_, btn, _)| *btn)
 }
 
 fn btn_to_osc_button_map(btn: MaschineButton) -> &'static str {
+    // THE PANEL'S OWN BUTTONS COME FROM THE TABLE, so the forward and inverse
+    // directions cannot drift apart - they were two hand-written lists that
+    // had to agree and nothing checked that they did. A test walks the table
+    // and asserts the round trip.
+    if let Some((name, _, _)) = PANEL_BUTTONS.iter().find(|(_, b, _)| *b == btn) {
+        return name;
+    }
+    // WHAT IS LEFT IS THE RAW REPORT ROWS - R1..R8, A1..A8, B*, C*, D*, E*,
+    // FF* - which are decode-table names rather than things on the panel. They
+    // map to themselves, they have no CC, and `read_buttons` handles rows 8 and
+    // up directly, so most of them can never reach here at all.
     match btn {
-        MaschineButton::Restart => "restart",
-        MaschineButton::Stepleft => "step_left",
-        MaschineButton::Stepright => "step_right",
-        MaschineButton::Grid => "grid",
-        MaschineButton::Play => "play",
-        MaschineButton::Rec => "rec",
-        MaschineButton::Erase => "stop",
-        MaschineButton::Shift => "shift",
 
-        MaschineButton::Browse => "browse",
-        MaschineButton::Sampling => "sampling",
-        MaschineButton::Noterepeat => "note_repeat",
 
-        MaschineButton::Encoder => "encoder",
 
-        MaschineButton::F1 => "f1",
-        MaschineButton::F2 => "f2",
-        MaschineButton::F3 => "f3",
-        MaschineButton::F4 => "f4",
-        MaschineButton::F5 => "f5",
-        MaschineButton::F6 => "f6",
-        MaschineButton::F7 => "f7",
-        MaschineButton::F8 => "f8",
 
-        MaschineButton::Swing => "swing",
-        MaschineButton::Step => "step",
-        MaschineButton::Volume => "volume",
 
-        MaschineButton::Enter => "enter",
-        MaschineButton::Auto => "auto",
-        MaschineButton::All => "all",
-        MaschineButton::Navigate => "navigate",
-        MaschineButton::Tempo => "tempo",
 
-        MaschineButton::Control => "control",
-        MaschineButton::Nav => "nav",
-        MaschineButton::Navleft => "nav_left",
-        MaschineButton::Navright => "nav_right",
-        MaschineButton::Main => "main",
 
-        MaschineButton::Scene => "scene",
-        MaschineButton::Pattern => "pattern",
-        MaschineButton::Padmode => "pad_mode",
-        MaschineButton::View => "view",
-        MaschineButton::Duplicate => "duplicate",
-        MaschineButton::Select => "select",
-        MaschineButton::Solo => "solo",
-        MaschineButton::Mute => "mute",
 
-        MaschineButton::GroupA => "group_a",
-        MaschineButton::GroupB => "group_b",
-        MaschineButton::GroupC => "group_c",
-        MaschineButton::GroupD => "group_d",
-        MaschineButton::GroupE => "group_e",
-        MaschineButton::GroupF => "group_f",
-        MaschineButton::GroupG => "group_g",
-        MaschineButton::GroupH => "group_h",
 
-        MaschineButton::Pageright => "page_right",
-        MaschineButton::Pageleft => "page_left",
         MaschineButton::R1 => "R1",
         MaschineButton::R2 => "R2",
         MaschineButton::R3 => "R3",
@@ -844,76 +847,18 @@ impl<'a> MHandler<'a> {
         }
 
         if status <= 250 {
+            // THE PLAIN BUTTONS ARE ONE LINE NOW, not forty-one identical
+            // match arms differing only in a number. The number lives in
+            // PANEL_BUTTONS, where it can be found.
+            if let Some(msg) = button_message(button, is_down) {
+                self.send_midi(&msg);
+            }
+            // WHAT IS LEFT DOES MORE THAN SEND ONE CC. Each of these carries
+            // real behaviour beside the message, which is exactly why it is
+            // not a table row: PAD MODE eats the SHIFT chord, and the Group
+            // buttons move the pad note base as well as sending their CC.
             match button {
-                "play" => {
-                    let msg = Message::RPN7(Ch1, 1, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
 
-                "stop" => {
-                    let msg = Message::RPN7(Ch1, 2, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "rec" => {
-                    let msg = Message::RPN7(Ch1, 3, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "grid" => {
-                    let msg = Message::RPN7(Ch1, 4, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "step_left" => {
-                    let msg = Message::RPN7(Ch1, 5, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "step_right" => {
-                    let msg = Message::RPN7(Ch1, 6, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "restart" => {
-                    let msg = Message::RPN7(Ch1, 7, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "browse" => {
-                    let msg = Message::RPN7(Ch1, 8, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "sampling" => {
-                    let msg = Message::RPN7(Ch1, 9, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "note_repeat" => {
-                    let msg = Message::RPN7(Ch1, 10, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "control" => {
-                    let msg = Message::RPN7(Ch1, 11, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "nav" => {
-                    let msg = Message::RPN7(Ch1, 12, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "nav_left" => {
-                    let msg = Message::RPN7(Ch1, 13, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "nav_right" => {
-                    let msg = Message::RPN7(Ch1, 14, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "main" => {
-                    let msg = Message::RPN7(Ch1, 24, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "scene" => {
-                    let msg = Message::RPN7(Ch1, 25, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "pattern" => {
-                    let msg = Message::RPN7(Ch1, 26, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
                 "pad_mode" => {
                     if modpress == 1 {
                         // SHIFT + PAD MODE, and it stays EATEN either way -
@@ -941,105 +886,9 @@ impl<'a> MHandler<'a> {
                         self.send_midi(&msg);
                     }
                 }
-                "view" => {
-                    let msg = Message::RPN7(Ch1, 28, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "duplicate" => {
-                    let msg = Message::RPN7(Ch1, 29, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "select" => {
-                    let msg = Message::RPN7(Ch1, 30, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "solo" => {
-                    let msg = Message::RPN7(Ch1, 31, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "step" => {
-                    let msg = Message::RPN7(Ch1, 32, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "mute" => {
-                    let msg = Message::RPN7(Ch1, 33, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "navigate" => {
-                    let msg = Message::RPN7(Ch1, 34, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "tempo" => {
-                    let msg = Message::RPN7(Ch1, 35, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "enter" => {
-                    let msg = Message::RPN7(Ch1, 36, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "auto" => {
-                    let msg = Message::RPN7(Ch1, 37, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "all" => {
-                    let msg = Message::RPN7(Ch1, 38, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f1" => {
-                    let msg = Message::RPN7(Ch1, 39, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f2" => {
-                    let msg = Message::RPN7(Ch1, 40, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f3" => {
-                    let msg = Message::RPN7(Ch1, 41, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f4" => {
-                    let msg = Message::RPN7(Ch1, 42, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f5" => {
-                    let msg = Message::RPN7(Ch1, 43, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f6" => {
-                    let msg = Message::RPN7(Ch1, 44, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f7" => {
-                    let msg = Message::RPN7(Ch1, 45, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "f8" => {
-                    let msg = Message::RPN7(Ch1, 46, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "page_right" => {
-                    let msg = Message::RPN7(Ch1, 47, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "page_left" => {
-                    let msg = Message::RPN7(Ch1, 48, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
                 // SHIFT also stays an internal modifier - the set_mod block
                 // above runs first and does not return, so it keeps gating PAD
                 // MODE and the B6 encoder while the host sees it too.
-                "shift" => {
-                    let msg = Message::RPN7(Ch1, 49, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "swing" => {
-                    let msg = Message::RPN7(Ch1, 50, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
-                "volume" => {
-                    let msg = Message::RPN7(Ch1, 51, cc_math::button_cc_value(is_down));
-                    self.send_midi(&msg);
-                }
 
                 // NO ENCODER ARMS HERE. There used to be eight - "B6" through
                 // "P6", each rebuilding an encoder's absolute position and
@@ -1430,4 +1279,114 @@ mod tests {
             }
         }
     }
+    // --- PANEL_BUTTONS, the one table, 2026-09-05 (todo item 23) ------------
+
+    #[test]
+    fn the_name_lookup_round_trips_every_row() {
+        // This is the property the two hand-written tables had to have and
+        // that nothing checked. They HAPPENED to agree when they were merged -
+        // verified row by row at the time - but nothing would have said so.
+        for (name, btn, _) in PANEL_BUTTONS {
+            assert_eq!(osc_button_to_btn_map(name), Some(*btn), "{} -> btn", name);
+            assert_eq!(btn_to_osc_button_map(*btn), *name, "{:?} -> name", btn);
+        }
+    }
+
+    #[test]
+    fn no_name_and_no_variant_appears_twice() {
+        // A duplicate name makes the second row unreachable; a duplicate
+        // variant makes the INVERSE direction pick whichever comes first,
+        // silently. Both are the kind of thing a hand-written pair of tables
+        // grows and nobody notices.
+        let mut names: Vec<&str> = PANEL_BUTTONS.iter().map(|(n, _, _)| *n).collect();
+        names.sort_unstable();
+        let before = names.len();
+        names.dedup();
+        assert_eq!(names.len(), before, "a token appears twice in PANEL_BUTTONS");
+
+        for (i, (_, a, _)) in PANEL_BUTTONS.iter().enumerate() {
+            for (_, b, _) in PANEL_BUTTONS.iter().skip(i + 1) {
+                assert!(a != b, "{:?} appears twice in PANEL_BUTTONS", a);
+            }
+        }
+    }
+
+    #[test]
+    fn no_cc_is_used_by_two_buttons() {
+        // The CC map is MEASURED HARDWARE FACT. Two buttons sharing a number
+        // means the driver cannot tell them apart, and it would look like one
+        // of them being dead.
+        let mut ccs: Vec<u16> = PANEL_BUTTONS.iter().filter_map(|(_, _, c)| *c).collect();
+        ccs.sort_unstable();
+        let before = ccs.len();
+        ccs.dedup();
+        assert_eq!(ccs.len(), before, "two buttons share a CC");
+    }
+
+    #[test]
+    fn the_buttons_with_no_cc_are_exactly_the_ones_that_do_more() {
+        // `None` is not "no CC exists" - it is "the generic sender must not
+        // fire, because something below it already handles this token and
+        // does more than send one message". If a name joins this list the
+        // reason has to be that it grew behaviour, not that its CC went
+        // missing: a silently absent CC is a dead button.
+        let mut special: Vec<&str> = PANEL_BUTTONS
+            .iter()
+            .filter(|(_, _, cc)| cc.is_none())
+            .map(|(n, _, _)| *n)
+            .collect();
+        special.sort_unstable();
+        assert_eq!(
+            special,
+            vec!["encoder", "group_a", "group_b", "group_c", "group_d",
+                 "group_e", "group_f", "group_g", "group_h", "pad_mode"]);
+    }
+
+    #[test]
+    fn every_plain_button_produces_its_message() {
+        // THE BEHAVIOUR THIS FILE EXISTS FOR, and until 2026-09-05 nothing
+        // tested it: deleting the dispatch left all 177 tests green. Down and
+        // up are both asserted, because a button that only sent one edge would
+        // latch on the driver's side.
+        for (name, _, cc) in PANEL_BUTTONS {
+            match cc {
+                Some(cc) => {
+                    assert_eq!(
+                        button_message(name, true),
+                        Some(Message::RPN7(Ch1, *cc, cc_math::button_cc_value(true))),
+                        "{} down", name);
+                    assert_eq!(
+                        button_message(name, false),
+                        Some(Message::RPN7(Ch1, *cc, cc_math::button_cc_value(false))),
+                        "{} up", name);
+                }
+                None => assert_eq!(button_message(name, true), None, "{}", name),
+            }
+        }
+    }
+
+    #[test]
+    fn an_unknown_token_sends_nothing() {
+        assert_eq!(button_message("not_a_button", true), None);
+    }
+
+    #[test]
+    fn the_two_edges_differ() {
+        // If press and release carried the same value the driver could not
+        // tell a hold from a tap, which is the whole duration rule.
+        assert_ne!(button_message("play", true), button_message("play", false));
+    }
+
+    #[test]
+    fn the_ccs_that_shipped_did_not_move() {
+        // A spot check against the MEASURED map, so a refactor of the table
+        // cannot quietly renumber the panel. These four are the ones a player
+        // would notice first and the ones the guide names.
+        assert_eq!(panel_button_cc("play"), Some(1));
+        assert_eq!(panel_button_cc("swing"), Some(50));   // MOD lives here
+        assert_eq!(panel_button_cc("enter"), Some(36));
+        assert_eq!(panel_button_cc("page_left"), Some(48));
+        assert_eq!(panel_button_cc("nope"), None);
+    }
+
 }

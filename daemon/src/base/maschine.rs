@@ -18,7 +18,11 @@
 use std::os::unix::io::RawFd;
 
 
-#[derive(Copy, Clone, Debug)]
+// PartialEq since 2026-09-05: `btn_to_osc_button_map` looks the button up in
+// PANEL_BUTTONS instead of carrying a second hand-written list of the same
+// rows. Eq/Hash are not derived because nothing needs them and a derive that
+// exists for nobody is the next thing somebody has to reason about.
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MaschineButton {
     F8,
     F7,
