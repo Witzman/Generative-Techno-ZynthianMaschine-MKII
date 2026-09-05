@@ -372,18 +372,98 @@ class TestEncoderMovement(unittest.TestCase):
         self.assertEqual(lib.encoder_steps(carry, -3, 8), (0, 0))
 
 
+
+def whole_screen(screen, tabs, cols, label=""):
+    """Every packet a full repaint sends, in draw order.
+
+    THIS LIVES IN THE TEST BECAUSE THE INSTRUMENT NO LONGER HAS SUCH A THING,
+    since 2026-09-05. `screen_packets` used to be it and was deleted with the
+    band split (todo item 21): `_render_display` draws the tabs, the label and
+    each column independently, so nothing in production ever asks for a whole
+    screen at once. Keeping a library function that only tests call is the
+    NAVIGATE-overlay shape - a slot with nothing behind it - and this project
+    has been caught by that twice.
+
+    The layout assertions are about where a widget lands, which is still worth
+    pinning; they compose the bands here rather than through a function the
+    driver does not use.
+    """
+
+    out = list(lib.tab_packets(screen, tabs))
+    out.extend(lib.label_packets(screen, label))
+    for i, col in enumerate(cols):
+        out.extend(lib.column_packets(screen, i, col))
+    return out
+
+
 class TestScreenLayout(unittest.TestCase):
 
     TABS = tuple(("ABCD"[i], "KICK", i == 0, i == 3) for i in range(4))
     COLS = (("HITS", "5", "u", 0.3), ("ROT", "2", "s", 0.2),
             ("DIV", "1/16", "s", 0.25), ("LEN", "16", "u", 1.0))
 
-    def test_screen_starts_with_a_clear(self):
-        packets = lib.screen_packets(0, self.TABS, self.COLS)
-        self.assertEqual(packets[0], lib.display_clear_osc(0))
+
+    def test_screen_never_clears(self):
+        """ITEM 21, 2026-09-05, and this test used to assert the opposite.
+
+        The clear was correct and it was the thing in the way: it marks all 32
+        rows dirty, so the daemon's per-rectangle blit - shipped 2026-09-01 -
+        collapsed to a full-screen region on every repaint and could never
+        pay. Each band erases its own box now."""
+
+        packets = whole_screen(0, self.TABS, self.COLS)
+        self.assertNotIn(lib.display_clear_osc(0), packets)
+
+    def test_every_band_erases_before_it_draws(self):
+        """The daemon's text drawing is ADDITIVE - draw_char only ever calls
+        set_pixel - so without an erase a shorter string leaves the tail of a
+        longer one behind. That is what the clear was buying, and each band
+        has to buy it for itself now."""
+
+        for packets, x, y, w, h in (
+                (lib.tab_packets(0, self.TABS), 0, 0,
+                 lib.SCREEN_W, lib.TAB_BAND_H),
+                (lib.column_packets(0, 2, self.COLS[2]), 2 * lib.SCREEN_COL,
+                 lib.COL_BAND_Y, lib.SCREEN_COL, lib.COL_BAND_H),
+                (lib.label_packets(0, "X"), 0, lib.LABEL_Y,
+                 lib.SCREEN_W, lib.LABEL_H)):
+            self.assertEqual(
+                packets[:2],
+                [lib.display_rect_osc(0, x, y, w, h, lib.RECT_FILL),
+                 lib.display_rect_osc(0, x, y, w, h, lib.RECT_INVERT)],
+                "fill then invert over the band leaves every pixel dark, and "
+                "both styles have shipped since the displays did - so this "
+                "needs no daemon change")
+
+    def test_a_column_is_narrower_than_the_screen(self):
+        """The saving is real only because the daemon's dirty regions carry x
+        and w as well as y and h (`display.rs`, `Region::cost`). A band that
+        spanned the full width would cost the same rows as a clear."""
+
+        rects = [p for p in lib.column_packets(0, 1, self.COLS[1])
+                 if b"/rect" in p]
+        self.assertTrue(rects)
+        # The erase is the widest thing a column draws.
+        self.assertEqual(
+            rects[0],
+            lib.display_rect_osc(0, lib.SCREEN_COL, lib.COL_BAND_Y,
+                                 lib.SCREEN_COL, lib.COL_BAND_H,
+                                 lib.RECT_FILL))
+
+    def test_the_bands_do_not_overlap(self):
+        """Two bands sharing a row would each erase the other's pixels, and
+        which one won would depend on draw order - a class of bug that only
+        appears when both happen to change in the same repaint."""
+
+        tabs = range(0, lib.TAB_BAND_H)
+        label = range(lib.LABEL_Y, lib.LABEL_Y + lib.LABEL_H)
+        cols = range(lib.COL_BAND_Y, lib.COL_BAND_Y + lib.COL_BAND_H)
+        self.assertFalse(set(tabs) & set(label))
+        self.assertFalse(set(label) & set(cols))
+        self.assertFalse(set(tabs) & set(cols))
 
     def test_a_numeric_value_stays_double_height(self):
-        packets = lib.screen_packets(0, self.TABS, self.COLS)
+        packets = whole_screen(0, self.TABS, self.COLS)
         self.assertIn(lib.display_text_osc(0, 3, lib.VALUE_Y, 2, False, "5"),
                       packets)
 
@@ -393,7 +473,7 @@ class TestScreenLayout(unittest.TestCase):
         # small font and nine characters.
         cols = (("PRESET", "GettinRe2", "s", 0.0, None, None, True),
                 ) + self.COLS[1:]
-        packets = lib.screen_packets(0, self.TABS, cols)
+        packets = whole_screen(0, self.TABS, cols)
         self.assertIn(
             lib.display_text_osc(0, 3, lib.VALUE_Y, 1, False, "GettinRe2"),
             packets)
@@ -401,7 +481,7 @@ class TestScreenLayout(unittest.TestCase):
     def test_a_small_value_is_capped_at_nine_characters(self):
         cols = (("PRESET", "AbcdefghijKLM", "s", 0.0, None, None, True),
                 ) + self.COLS[1:]
-        packets = lib.screen_packets(0, self.TABS, cols)
+        packets = whole_screen(0, self.TABS, cols)
         self.assertIn(
             lib.display_text_osc(0, 3, lib.VALUE_Y, 1, False, "Abcdefghi"),
             packets)
@@ -409,14 +489,14 @@ class TestScreenLayout(unittest.TestCase):
     def test_columns_without_the_flag_are_unchanged(self):
         # The seventh field is optional, exactly as mod and tick are: every
         # existing caller passes a 4-tuple and must keep working.
-        short = lib.screen_packets(0, self.TABS, self.COLS)
-        explicit = lib.screen_packets(
+        short = whole_screen(0, self.TABS, self.COLS)
+        explicit = whole_screen(
             0, self.TABS,
             tuple(c + (None, None, False) for c in self.COLS))
         self.assertEqual(short, explicit)
 
     def test_selected_tab_is_inverted_and_muted_tab_is_dashed(self):
-        packets = lib.screen_packets(0, self.TABS, self.COLS)
+        packets = whole_screen(0, self.TABS, self.COLS)
         self.assertIn(lib.display_rect_osc(0, 1, 0, lib.SCREEN_COL - 4,
                                            lib.TAB_H, lib.RECT_INVERT), packets)
         self.assertIn(lib.display_rect_osc(0, 3 * lib.SCREEN_COL + 1, 0,
@@ -655,16 +735,16 @@ class TestPageLabelRow(unittest.TestCase):
         return [("HITS", "0004", "u", 0.25)] * 4
 
     def test_label_is_drawn_when_given(self):
-        packets = lib.screen_packets(0, self._tabs(), self._cols(), "LEVEL 1/3")
+        packets = whole_screen(0, self._tabs(), self._cols(), "LEVEL 1/3")
         self.assertTrue(any("LEVEL 1/3" in str(p) for p in packets))
 
     def test_no_label_draws_no_extra_text(self):
-        with_label = lib.screen_packets(0, self._tabs(), self._cols(), "X")
-        without = lib.screen_packets(0, self._tabs(), self._cols(), "")
+        with_label = whole_screen(0, self._tabs(), self._cols(), "X")
+        without = whole_screen(0, self._tabs(), self._cols(), "")
         self.assertEqual(len(with_label), len(without) + 1)
 
     def test_label_defaults_to_empty_so_old_calls_still_work(self):
-        packets = lib.screen_packets(0, self._tabs(), self._cols())
+        packets = whole_screen(0, self._tabs(), self._cols())
         self.assertGreater(len(packets), 0)
 
     def test_rows_do_not_overlap(self):
@@ -717,7 +797,7 @@ class TestLabelOnlyRepaint(unittest.TestCase):
     def test_the_text_is_the_same_packet_the_full_repaint_draws(self):
         # Bound to screen_packets on purpose: if the indicator ever moves, one
         # of these two draws it in the old place and the row lands twice.
-        full = lib.screen_packets(0, self._tabs(), self._cols(), "STEP 1/3")
+        full = whole_screen(0, self._tabs(), self._cols(), "STEP 1/3")
         part = lib.label_packets(0, "STEP 1/3")
         text = [p for p in part if b"/maschine/display/text" in p]
         self.assertEqual(len(text), 1)
@@ -738,7 +818,7 @@ class TestLabelOnlyRepaint(unittest.TestCase):
         self.assertNotIn(lib.display_clear_osc(0), packets)
 
     def test_it_is_an_order_of_magnitude_cheaper(self):
-        full = lib.screen_packets(0, self._tabs(), self._cols(), "STEP 1/3")
+        full = whole_screen(0, self._tabs(), self._cols(), "STEP 1/3")
         part = lib.label_packets(0, "STEP 1/3")
         self.assertLess(len(part) * 10, len(full))
 
@@ -820,16 +900,16 @@ class TheScreensDrawTheCurve(unittest.TestCase):
         self.assertEqual(len(a), len(b))
 
     def test_a_modulated_column_carries_its_glyph_into_the_packets(self):
-        plain = lib.screen_packets(0, [], [("CUTOFF", "0064", "u", 0.5)])
-        moded = lib.screen_packets(
+        plain = whole_screen(0, [], [("CUTOFF", "0064", "u", 0.5)])
+        moded = whole_screen(
             0, [], [("CUTOFF~", "0064", "u", 0.5, (0.2, 0.8), None, False,
                      "tri")])
         self.assertGreater(len(moded), len(plain))
 
     def test_an_UNmodulated_column_draws_no_glyph_at_all(self):
         cols = [("CUTOFF", "0064", "u", 0.5, None, None, False, None)]
-        with_none = lib.screen_packets(0, [], cols)
-        without = lib.screen_packets(0, [], [("CUTOFF", "0064", "u", 0.5)])
+        with_none = whole_screen(0, [], cols)
+        without = whole_screen(0, [], [("CUTOFF", "0064", "u", 0.5)])
         self.assertEqual(len(with_none), len(without))
 
 
@@ -1681,7 +1761,7 @@ class NoPacketTheDriverBuildsCanOverflowTheDaemon(unittest.TestCase):
         for kind in (None, "meter", "seg", "bi"):
             cols = [(name, "VVVVVVVV", kind, 1.0, None, None)] * 4
             try:
-                packets = lib.screen_packets(0, tabs, cols, label)
+                packets = whole_screen(0, tabs, cols, label)
             except ValueError:
                 continue          # a kind this build does not draw
             biggest = max([biggest] + [len(p) for p in packets])
@@ -1802,33 +1882,59 @@ class TheLabelIsNotInTheBodyChangeKey(unittest.TestCase):
     caused it - which is precisely what did not stop the next one. A comment
     cannot fail a build.
 
+    UPDATED 2026-09-05 FOR THE BAND SPLIT (todo item 21), and the invariant
+    got STRONGER rather than being relaxed. There is no `body` key any more:
+    the tabs and each of the four columns have their own cache entry and their
+    own erase-and-draw, and nothing clears a whole screen at all. So this no
+    longer looks for one named variable - it walks every `changed()` call in
+    the function and asserts that the only key mentioning the label is the
+    label's own. A future split into more bands inherits the guard for free.
+
     Static, like the other eleven: the driver does not import off the Pi."""
 
     DRIVER = os.path.join(os.path.dirname(__file__), "..",
                           "zynthian_ctrldev_maschine_mk2.py")
 
-    def _body_names(self, source=None):
-        """Every bare name read inside the tuple assigned to `body` in
-        _render_display, or None if there is no such assignment."""
+    def _keys(self, source=None):
+        """Every `...changed(name, value)` call in _render_display, as
+        {cache-name-prefix: {names read in the value}}.
+
+        Keyed by the STRING LITERAL rather than by a variable, because the
+        cache name is what actually separates one band from another at run
+        time - a guard that trusted a local variable's name could be satisfied
+        by renaming it."""
+
         import ast
         if source is None:
             with open(self.DRIVER, encoding="utf-8") as fh:
                 source = fh.read()
+        out = {}
         for func in ast.walk(ast.parse(source)):
             if not isinstance(func, ast.FunctionDef):
                 continue
             if func.name != "_render_display":
                 continue
             for node in ast.walk(func):
-                if not isinstance(node, ast.Assign):
+                if not (isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Attribute)
+                        and node.func.attr == "changed"
+                        and len(node.args) == 2):
                     continue
-                targets = [t.id for t in node.targets
-                           if isinstance(t, ast.Name)]
-                if "body" not in targets:
+                name = node.args[0]
+                # An f-string: take its literal head, which is the part that
+                # distinguishes the bands. `f"dispcol{screen}_{i}"` -> dispcol
+                if isinstance(name, ast.JoinedStr):
+                    parts = [v.value for v in name.values
+                             if isinstance(v, ast.Constant)]
+                    label = parts[0] if parts else ""
+                elif isinstance(name, ast.Constant):
+                    label = str(name.value)
+                else:
                     continue
-                return {n.id for n in ast.walk(node.value)
-                        if isinstance(n, ast.Name)}
-        return None
+                out.setdefault(label, set()).update(
+                    n.id for n in ast.walk(node.args[1])
+                    if isinstance(n, ast.Name))
+        return out
 
     def _calls(self, source=None):
         import ast
@@ -1839,32 +1945,55 @@ class TheLabelIsNotInTheBodyChangeKey(unittest.TestCase):
                 if isinstance(n, ast.Call)
                 and isinstance(n.func, ast.Attribute)}
 
-    def test_the_guard_can_see_the_body_key(self):
+    def test_the_guard_can_see_the_keys(self):
         # A guard that found nothing would pass by checking nothing.
-        names = self._body_names()
-        self.assertIsNotNone(
-            names, "_render_display no longer assigns a `body` change key - "
-            "the label-only repaint has been restructured, so re-read this "
-            "guard before deleting it")
-        self.assertIn("mod", names)
+        keys = self._keys()
+        self.assertIn("disptabs", keys)
+        self.assertIn("dispcol", keys)
+        self.assertIn("displabel", keys)
 
     def test_the_label_is_compared_on_its_own(self):
-        names = self._body_names()
-        for banned in ("label", "label_key"):
-            self.assertNotIn(
-                banned, names,
-                f"`{banned}` is back in the body change key, so a one-line "
-                "text change clears and redraws the whole screen again - "
-                "204 msg/s on DUPLICATE when this was last measured")
+        """The original invariant, now over every band instead of one key."""
 
-    def test_the_cheap_path_is_still_wired_up(self):
-        # The split is only worth anything if something draws the band alone.
-        self.assertIn("label_packets", self._calls())
+        for name, names in self._keys().items():
+            if name == "displabel":
+                continue
+            for banned in ("label", "label_key"):
+                self.assertNotIn(
+                    banned, names,
+                    f"`{banned}` is in the `{name}` change key, so a one-line "
+                    "text change redraws a whole band again - 204 msg/s on "
+                    "DUPLICATE when this was last measured")
+
+    def test_the_label_key_really_is_the_label(self):
+        self.assertTrue(self._keys()["displabel"] & {"label", "label_key"})
+
+    def test_mod_is_in_the_tab_and_column_keys(self):
+        """MOD repurposes every encoder on whatever page is showing, so the
+        columns mean something different while it is on - a body change even
+        where their text happens not to move. Before it was in the key at all,
+        both _render_display() calls in _act_mod() were literal no-ops and a
+        latched MOD made the pads inert with no indication anywhere."""
+
+        keys = self._keys()
+        self.assertIn("mod", keys["disptabs"])
+        self.assertIn("mod", keys["dispcol"])
+
+    def test_no_band_redraws_the_whole_screen(self):
+        """screen_packets is the full repaint and must not be what a change to
+        one band reaches for. It has no caller in the driver at all now."""
+
+        self.assertNotIn("screen_packets", self._calls())
+
+    def test_the_cheap_paths_are_wired_up(self):
+        calls = self._calls()
+        for fn in ("tab_packets", "column_packets", "label_packets"):
+            self.assertIn(fn, calls)
 
     def test_the_check_can_fail(self):
         self.assertEqual(
-            self._body_names(
+            self._keys(
                 "class D:\n"
                 "    def _render_display(self):\n"
-                "        body = (tabs, key, label, mod)\n"),
-            {"tabs", "key", "label", "mod"})
+                "        a = self.leds.changed('disptabs0', (tabs, label))\n"),
+            {"disptabs0": {"tabs", "label"}})

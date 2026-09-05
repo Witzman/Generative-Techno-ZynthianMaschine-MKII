@@ -10707,21 +10707,53 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # its animation; what is kept is a controller that answers.
             key = tuple(c[:5] + (None,) + c[6:] for c in cols)
             tabs = self._tabs(screen)
-            body = (tabs, key, mod, frozenset(self._reroll_pending))
             # The phrase bar rides with the label because that is the only
             # place it is drawn - and it is in a key at all only while a
             # gesture is pending, for the reason written above phrase_shown.
             label_key = (label, self._phrase_bar if phrase_shown else None)
-            body_changed = self.leds.changed(f"disp{screen}", body)
+            # THE BODY IS THREE BANDS NOW, NOT ONE, since 2026-09-05 (todo
+            # item 21). The tabs and the four columns each have their own
+            # cache entry and their own erase-and-draw, so moving one value
+            # sends one column - about a seventh of a screen - instead of a
+            # full-screen clear and everything after it.
+            #
+            # THE CLEAR WAS THE THING IN THE WAY. The daemon has tracked dirty
+            # rectangles per screen since 2026-09-01 and could never use them,
+            # because `screen_packets` opened every repaint with an fbclear
+            # which correctly marks all 32 rows. Finer rectangles start paying
+            # only when the driver stops clearing first - so a session that
+            # measured "the rectangles made no difference" was measuring this.
+            #
+            # `mod` AND THE PENDING REROLLS RIDE WITH THE TABS. mod repurposes
+            # every encoder on the page, so it is a change to the columns even
+            # when their text happens not to move - it is in EVERY column's
+            # key for that reason, not only the tabs'. The reroll set is drawn
+            # in the tab row alone.
+            #
+            # EVERY `changed` CALL MUST RUN, whichever branch is taken: they
+            # are what stores the new value, so short-circuiting one leaves its
+            # cache stale and the next real change to it draws nothing. That is
+            # why these are collected into a list before anything is sent.
+            tabs_changed = self.leds.changed(
+                f"disptabs{screen}",
+                (tabs, mod, frozenset(self._reroll_pending)))
+            cols_changed = [
+                self.leds.changed(f"dispcol{screen}_{i}", (key[i], mod))
+                for i in range(len(cols))]
             label_changed = self.leds.changed(f"displabel{screen}", label_key)
-            if body_changed:
-                # Drawn from `cols`, which still carries the live tick - only
-                # the comparison above ignores it. The full repaint draws the
-                # label too, which is why the label branch is an elif.
-                for packet in lib.screen_packets(screen, tabs, cols, label):
+            if tabs_changed:
+                for packet in lib.tab_packets(screen, tabs):
                     self._send_osc(packet)
-            elif label_changed:
+            if label_changed:
                 for packet in lib.label_packets(screen, label):
+                    self._send_osc(packet)
+            for i, moved in enumerate(cols_changed):
+                if not moved:
+                    continue
+                # Drawn from `cols`, which still carries the live tick - only
+                # the comparison above ignores it, so the marker moves whenever
+                # something else redraws the column and never on its own.
+                for packet in lib.column_packets(screen, i, cols[i]):
                     self._send_osc(packet)
 
     def _render_all(self):

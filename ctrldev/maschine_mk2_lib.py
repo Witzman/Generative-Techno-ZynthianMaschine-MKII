@@ -285,6 +285,23 @@ class maschine_mk2_lib:
     VALUE_Y = 32             # encoder value, double height
     BAR_Y = 52
     BAR_H = 10
+    # THE THREE BANDS A SCREEN IS DRAWN IN, since 2026-09-05 (todo item 21).
+    # Each is erased and redrawn on its own, so a change to one sends nothing
+    # for the other two - which is what the daemon's dirty-rectangle tracking
+    # has been able to exploit since 2026-09-01 and never got the chance to,
+    # because every repaint opened with a full-screen clear.
+    #
+    # THE RULE LINE TRAVELS WITH THE TABS: it sits one row under the tab boxes
+    # and above the label, so the tab band runs to RULE_Y + 1 and redraws it.
+    # Static, which costs nothing - a band is sent only when its contents
+    # changed, and the rule's never do.
+    #
+    # ROWS 14 AND 23 ARE IN NO BAND, deliberately. Nothing has ever drawn
+    # there - they are the gaps under the rule and under the label - and the
+    # one full clear at init leaves them dark for the life of the process.
+    TAB_BAND_H = RULE_Y + 1              # 0 .. RULE_Y, the tabs plus the rule
+    COL_BAND_Y = NAME_Y                  # name, value and bar together
+    COL_BAND_H = BAR_Y + BAR_H - NAME_Y
     TAB_CHARS = 8            # "A KICK " - what fits in a 60 px tab at 6 px
     VALUE_CHARS = 4          # 4 chars of double-height text fit a column
     # A name-valued column (PRESET, KIT, SAMPLE) draws single height instead,
@@ -527,21 +544,27 @@ class maschine_mk2_lib:
         return out
 
     @staticmethod
-    def screen_packets(screen, tabs, cols, label=""):
-        """Every OSC packet for one screen, in draw order.
+    def tab_packets(screen, tabs):
+        """The tab row and the rule beneath it, erased and redrawn alone.
 
-        tabs: four (letter, name, selected, muted), optionally extended with
-              an `armed` flag: (letter, name, selected, muted, armed). Shorter
-              forms still work, so every existing caller and test is untouched.
-        cols: four (name, value, bar kind, bar fraction), optionally extended
-              with a mod span and a tick: (..., mod span) or
-              (..., mod span, tick). Shorter forms still work so every
-              existing caller and test is untouched; mod and tick default to
-              None.
-        label: the page indicator, e.g. "LEVEL 1/3". Empty draws nothing."""
+        WHAT IT IS FOR. The tabs move when the selected channel moves, when a
+        mute changes and when a reroll is queued - and nothing else on the
+        screen moves with them. They used to share one change key with the
+        four columns, so selecting a group redrew the whole screen.
+
+        THE ERASE IS FILL THEN INVERT, the same two messages label_packets
+        uses and for the same reason: both styles have shipped since the
+        displays did, so this needs no daemon change, and the daemon's text
+        drawing is additive - draw_char only ever calls set_pixel - so without
+        an erase a shorter tab name leaves the tail of a longer one behind."""
 
         cls = maschine_mk2_lib
-        out = [cls.display_clear_osc(screen)]
+        out = [
+            cls.display_rect_osc(screen, 0, 0, cls.SCREEN_W,
+                                 cls.TAB_BAND_H, cls.RECT_FILL),
+            cls.display_rect_osc(screen, 0, 0, cls.SCREEN_W,
+                                 cls.TAB_BAND_H, cls.RECT_INVERT),
+        ]
         for i, tab in enumerate(tabs):
             letter, name, selected, muted = tab[:4]
             armed = tab[4] if len(tab) > 4 else False
@@ -567,32 +590,56 @@ class maschine_mk2_lib:
                 out.append(cls.display_rect_osc(screen, x, 0, w, cls.TAB_H, cls.RECT_INVERT))
         out.append(cls.display_rect_osc(
             screen, 0, cls.RULE_Y, cls.SCREEN_W, 1, cls.RECT_DOTTED))
-        if label:
-            out.append(cls.display_text_osc(screen, 3, cls.LABEL_Y, 1, False, label))
-        for i, col in enumerate(cols):
-            name, value, kind, frac = col[:4]
-            mod = col[4] if len(col) > 4 else None
-            tick = col[5] if len(col) > 5 else None
-            small = col[6] if len(col) > 6 else False
-            shape = col[7] if len(col) > 7 else None
-            x = i * cls.SCREEN_COL + 3
-            if name:
-                out.append(cls.display_text_osc(screen, x, cls.NAME_Y, 1, False, name))
-            if shape:
-                # Right-aligned in the name row, where the tilde already says
-                # "modulated" and where every modulatable verb's name is short
-                # enough to leave the space. It answers the question the pads
-                # cannot: they say how FAST, this says what SHAPE.
-                out.extend(cls.glyph_packets(
-                    screen, x + (cls.SCREEN_COL - 8) - cls.GLYPH_W, shape))
-            if value:
-                # A name draws small so more of it fits; a number keeps the
-                # double height that reads at a glance while playing.
-                size = 1 if small else 2
-                budget = cls.SMALL_VALUE_CHARS if small else cls.VALUE_CHARS
-                out.append(cls.display_text_osc(
-                    screen, x, cls.VALUE_Y, size, False, str(value)[:budget]))
-            out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod, tick))
+        return out
+
+    @staticmethod
+    def column_packets(screen, i, col):
+        """ONE encoder column - its name, value and bar - erased and redrawn.
+
+        A column is 64 pixels of 255 and 38 rows of 64, so moving one value
+        touches about a seventh of what a full repaint does. The daemon's
+        dirty regions carry x and w as well as y and h (`display.rs`,
+        `Region::cost`), so narrowing a column horizontally is a real saving
+        rather than a tidier rectangle.
+
+        FOUR COLUMNS COALESCE BY THEMSELVES. `DirtyList::add` merges two
+        regions whenever the union costs no more than the pair, so a repaint
+        that really does move all four ends up as one wide band instead of
+        four headers. That decision is the daemon's and is not duplicated
+        here - MAX_DIRTY_REGIONS is 4, and a fifth region forces a merge
+        whether or not this side has an opinion."""
+
+        cls = maschine_mk2_lib
+        x0 = i * cls.SCREEN_COL
+        out = [
+            cls.display_rect_osc(screen, x0, cls.COL_BAND_Y, cls.SCREEN_COL,
+                                 cls.COL_BAND_H, cls.RECT_FILL),
+            cls.display_rect_osc(screen, x0, cls.COL_BAND_Y, cls.SCREEN_COL,
+                                 cls.COL_BAND_H, cls.RECT_INVERT),
+        ]
+        name, value, kind, frac = col[:4]
+        mod = col[4] if len(col) > 4 else None
+        tick = col[5] if len(col) > 5 else None
+        small = col[6] if len(col) > 6 else False
+        shape = col[7] if len(col) > 7 else None
+        x = i * cls.SCREEN_COL + 3
+        if name:
+            out.append(cls.display_text_osc(screen, x, cls.NAME_Y, 1, False, name))
+        if shape:
+            # Right-aligned in the name row, where the tilde already says
+            # "modulated" and where every modulatable verb's name is short
+            # enough to leave the space. It answers the question the pads
+            # cannot: they say how FAST, this says what SHAPE.
+            out.extend(cls.glyph_packets(
+                screen, x + (cls.SCREEN_COL - 8) - cls.GLYPH_W, shape))
+        if value:
+            # A name draws small so more of it fits; a number keeps the
+            # double height that reads at a glance while playing.
+            size = 1 if small else 2
+            budget = cls.SMALL_VALUE_CHARS if small else cls.VALUE_CHARS
+            out.append(cls.display_text_osc(
+                screen, x, cls.VALUE_Y, size, False, str(value)[:budget]))
+        out.extend(cls.bar_packets(screen, x, cls.SCREEN_COL - 8, kind, frac, mod, tick))
         return out
 
     @staticmethod
@@ -602,9 +649,9 @@ class maschine_mk2_lib:
         WHAT IT IS FOR. Opening a pad overlay changes exactly one line of
         text on each screen and nothing else: DUPLICATE puts the bank on the
         indicator, ARM the countdown, FREEZE the word HELD, MOD the legend.
-        Every one of them went through screen_packets, which opens with a
-        CLEAR - so a press cost a full both-screen redraw and the release cost
-        another. Measured on the rig 2026-09-02 with notes/tools/gesture-cost:
+        Every one of them went through the single whole-screen repaint, which
+        opened with a CLEAR - so a press cost a full both-screen redraw and the
+        release cost another. Measured on the rig 2026-09-02 with notes/tools/gesture-cost:
         DUPLICATE + a group peaked at 204 OSC messages a second with
         `rect x110` - two lots of 55 - against 20 at idle, and it was the most
         expensive gesture on the panel. MOD was 151 and SELECT 138.
@@ -632,9 +679,9 @@ class maschine_mk2_lib:
                                  cls.LABEL_H, cls.RECT_INVERT),
         ]
         if label:
-            # The same coordinates screen_packets uses, and a test binds the
-            # two: if the indicator ever moves, one of them would draw it in
-            # the old place and the row would land twice.
+            # The same coordinates the label band erases, and a test binds
+            # the two: if the indicator ever moves, one of them would draw it
+            # in the old place and the row would land twice.
             out.append(cls.display_text_osc(
                 screen, 3, cls.LABEL_Y, 1, False, label))
         return out
