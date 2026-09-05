@@ -874,4 +874,22 @@ mod render_dump {
         vline(&mut want, 4, 4, HEIGHT);       // the left edge, clipped
         assert_eq!(bits, want);
     }
+    #[test]
+    fn every_row_maps_to_itself_and_none_is_discarded() {
+        // THE PANEL DOES NOT DROP ROWS, settled 2026-09-05 without a trip to
+        // the rig. The belief this pins against was that rows 16-31 and 48-63
+        // were discarded, a 512x32 canvas expanded on the way out.
+        //
+        // The driver's shipped layout answers it: the page indicator is at
+        // rows 15-22, the column name row at 24-31 and the value bar at 52-61,
+        // all three inside the supposedly-discarded bands. If the belief were
+        // true a player would see the channel tabs and the big value number
+        // and nothing else - no indicator, no names, no bars. All three are
+        // drawn every frame and read every session.
+        assert_eq!(LOGICAL_H, HEIGHT);
+        for row in 0..HEIGHT {
+            assert_eq!(logical_row(row), row);
+        }
+    }
+
 }

@@ -1079,14 +1079,27 @@ impl Maschine for Mikro {
     /// of two screens' 16. A widget that does not clear first costs one 73-byte
     /// report for 64x8.
     ///
-    /// FLAGGED, NOT FIXED (working rule 3): this function's docstring used to
-    /// describe a 512x32 logical canvas expanded to transfer rows here, with
-    /// transfer rows 16-31 and 48-63 discarded by the panel. `LOGICAL_H` is
-    /// `HEIGHT` and `logical_row` is the identity, so the code has not done
-    /// that for a long time, and the expansion loop it described was copying
-    /// each row onto itself. The two have been out of step since before this
-    /// change; reconciling what the panel really does with rows belongs with
-    /// somebody at the rig, not here.
+    /// SETTLED 2026-09-05, AND IT NEEDED NO TRIP TO THE RIG. This docstring
+    /// used to describe a 512x32 logical canvas expanded to transfer rows
+    /// here, with transfer rows 16-31 and 48-63 DISCARDED by the panel. It was
+    /// flagged rather than fixed because "what the panel really does with
+    /// rows" looked like a question only an eye at the instrument could
+    /// answer.
+    ///
+    /// IT IS ANSWERED BY THE INSTRUMENT BEING PLAYED. The driver's shipped
+    /// layout puts the page indicator at rows 15-22, the column NAME row at
+    /// 24-31 and the value BAR at 52-61 - and every one of those falls inside
+    /// the two bands the old text claimed were thrown away. If it were true, a
+    /// player would see the channel tabs and the big value number and NOTHING
+    /// ELSE: no page indicator, no column names, no bars. All three are
+    /// documented, drawn every frame, and read by the owner every session -
+    /// one of 2026-09-04's defect reports was about the WORDING of a column
+    /// name, which is at row 24.
+    ///
+    /// So `LOGICAL_H == HEIGHT` and `logical_row` as the identity are CORRECT,
+    /// and the old text described some other panel or some other era. The
+    /// identity hooks stay as documentation of a wrong belief that cost real
+    /// time; a test in display.rs pins them with this reason attached.
     ///
     /// `disp_raw` is likewise vestigial for the same reason: with the mapping
     /// an identity there is nothing for a "raw" mode to bypass, so it now only
