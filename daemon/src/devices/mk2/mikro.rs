@@ -20,14 +20,12 @@ use crate::hid_stats::{self, WriteStats};
 use std::os::unix::io;
 
 extern crate nix;
-use midi::{Channel::Ch2, Message, U7};
 use nix::unistd;
 
 extern crate hex;
 
 use crate::base::{Maschine, MaschineButton, MaschineHandler, MaschinePad, MaschinePadStateTransition};
 use crate::display;
-use crate::clock::{ClockSource, ClockState};
 
 
 /// Every button this device can actually send, by report byte and bit.
@@ -357,19 +355,8 @@ pub struct Mikro {
     roller_status: [i32; 9],
     roller_value: [i32; 9],
     mod_state: usize,
-    padmode: usize,
 
-    note: [[u8; 16]; 8],
-    note_state: [[usize; 16]; 8],
-    noteset: bool,
-    noteidx: usize,
 
-    vel: [[U7; 16]; 8],
-    speed: u64,
-    playing: bool,
-    current_page: usize,
-    selected_step: Option<usize>,
-    clock_state: ClockState,
 }
 
 impl Mikro {
@@ -444,20 +431,9 @@ impl Mikro {
             roller_status: [0i32; 9],
             roller_value: [0i32; 9],
             mod_state: 0,
-            padmode: 0,
 
-            note: [[48u8; 16]; 8],
-            note_state: [[0usize; 16]; 8],
-            noteset: false,
-            noteidx: 0,
 
-            vel: [[80u8; 16]; 8],
-            speed: 100,
 
-            playing: false,
-            current_page: 0,
-            selected_step: None,
-            clock_state: ClockState::new(),
         };
 
         _self.light_buf[0] = 0x80;
@@ -759,131 +735,6 @@ impl Maschine for Mikro {
         return self.mod_state;
     }
 
-    fn set_padmode(&mut self, state: usize) {
-        if self.padmode < 3 && state == 1 {
-            self.padmode += 1
-        } else {
-            self.padmode = 0;
-        };
-        println!("Padmode {}", self.padmode);
-        if self.padmode == 2 {
-            println!("This is Sequencer mode");
-            println!("");
-            println!("Tapping on pads activates them for the sequence.");
-            println!("Tapping on a pad while holding shift, then pressing another pad");
-            println!("will change the note of the pad you pressed first");
-        }
-    }
-
-    fn get_padmode(&self) -> usize {
-        return self.padmode;
-    }
-
-    fn get_seq_page(&self) -> usize { self.current_page }
-
-    fn set_seq_page(&mut self, page: usize) {
-        if page < 8 {
-            self.current_page = page;
-            self.selected_step = None;
-        }
-    }
-
-    fn get_selected_step(&self) -> Option<usize> { self.selected_step }
-
-    fn set_selected_step(&mut self, step: Option<usize>) { self.selected_step = step; }
-
-    fn get_step_note(&self, step: usize) -> u8 {
-        self.note[self.current_page][step]
-    }
-
-    fn set_step_note(&mut self, step: usize, note: u8) {
-        self.note[self.current_page][step] = note;
-    }
-
-    fn get_step_vel(&self, step: usize) -> u8 {
-        self.vel[self.current_page][step]
-    }
-
-    fn set_step_vel(&mut self, step: usize, vel: u8) {
-        self.vel[self.current_page][step] = vel;
-    }
-
-    fn apply_euclidean(&mut self, hits: usize) {
-        let pattern = crate::sequencer::euclidean_pattern(16, hits);
-        for i in 0..16 {
-            self.note_state[self.current_page][i] = if pattern[i] { 1 } else { 0 };
-        }
-    }
-
-    fn set_playing(&mut self, state: usize) {
-        if state == 1 {
-            self.playing = true;
-        } else {
-            self.playing = false;
-        }
-    }
-
-    fn get_playing(&self) -> bool {
-        return self.playing;
-    }
-
-    fn clock_tick(&mut self) -> Option<usize> {
-        self.clock_state.on_clock_tick(std::time::Instant::now())
-    }
-
-    fn clock_start(&mut self) {
-        self.clock_state.on_start();
-        self.playing = true;
-    }
-
-    fn clock_stop(&mut self) {
-        self.clock_state.on_stop();
-        self.playing = false;
-    }
-
-    fn get_clock_state(&self) -> &ClockState {
-        &self.clock_state
-    }
-
-    fn set_clock_source(&mut self, source: ClockSource) {
-        self.clock_state.source = source;
-    }
-
-    fn note_save(&mut self, pad_idx: usize, note: u8, vel: u8) {
-        if self.noteset {
-            self.vel[self.current_page][self.noteidx] = vel;
-            self.note[self.current_page][self.noteidx] = note;
-            println!("step: {}, note:{}, velocity:{}", self.noteidx,
-                self.note[self.current_page][self.noteidx],
-                self.vel[self.current_page][self.noteidx]);
-            self.noteset = false;
-        } else {
-            self.noteidx = pad_idx;
-            self.noteset = true;
-        }
-    }
-
-    fn note_state(&mut self, pad_idx: usize, msg: usize) {
-        self.note_state[self.current_page][pad_idx] = msg;
-    }
-
-    fn note_check(&self, pad_idx: usize) -> usize {
-        self.note_state[self.current_page][pad_idx]
-    }
-
-    fn load_notes(&self, pad_idx: usize, context: usize) -> midi::Message {
-        if context == 1 {
-            Message::NoteOn(Ch2, self.note[self.current_page][pad_idx],
-                                  self.vel[self.current_page][pad_idx])
-        } else {
-            Message::NoteOff(Ch2, self.note[self.current_page][pad_idx],
-                                   self.vel[self.current_page][pad_idx])
-        }
-    }
-
-    fn get_seq_speed(&self) -> u64 {
-        return self.speed
-    }
 
     fn set_button_light(&mut self, btn: MaschineButton, color: u32, brightness: f32) {
         self.lights_dirty = true;
@@ -1468,83 +1319,6 @@ mod tests {
     use crate::cc_math;
 
     fn make_mikro() -> Mikro { Mikro::new(0) }
-
-    #[test]
-    fn pages_are_independent() {
-        let mut m = make_mikro();
-        m.note_state(0, 1);          // page 0 step 0 = on
-        m.set_seq_page(1);
-        assert_eq!(m.note_check(0), 0); // page 1 step 0 = still off
-    }
-
-    #[test]
-    fn set_seq_page_clears_selected_step() {
-        let mut m = make_mikro();
-        m.set_selected_step(Some(3));
-        m.set_seq_page(1);
-        assert_eq!(m.get_selected_step(), None);
-    }
-
-    #[test]
-    fn step_vel_independent_per_page() {
-        let mut m = make_mikro();
-        m.set_step_vel(0, 100);
-        assert_eq!(m.get_step_vel(0), 100);
-        m.set_seq_page(1);
-        assert_eq!(m.get_step_vel(0), 80); // default unchanged
-    }
-
-    #[test]
-    fn step_note_independent_per_page() {
-        let mut m = make_mikro();
-        m.set_step_note(0, 60);
-        assert_eq!(m.get_step_note(0), 60);
-        m.set_seq_page(1);
-        assert_eq!(m.get_step_note(0), 48); // default unchanged
-    }
-
-    #[test]
-    fn apply_euclidean_4_hits() {
-        let mut m = make_mikro();
-        m.apply_euclidean(4);
-        assert_eq!(m.note_check(0),  1);
-        assert_eq!(m.note_check(4),  1);
-        assert_eq!(m.note_check(8),  1);
-        assert_eq!(m.note_check(12), 1);
-        assert_eq!(m.note_check(1),  0);
-    }
-
-    #[test]
-    fn clock_start_resets_state() {
-        let mut m = make_mikro();
-        m.clock_tick();
-        m.clock_tick();
-        m.clock_start();
-        assert!(m.get_playing());
-        let state = m.get_clock_state();
-        assert_eq!(state.step, 0);
-        assert_eq!(state.tick_counter, 0);
-    }
-
-    #[test]
-    fn clock_stop_halts_playing() {
-        let mut m = make_mikro();
-        m.clock_start();
-        m.clock_stop();
-        assert!(!m.get_playing());
-    }
-
-    #[test]
-    fn six_clock_ticks_return_step_on_sixth() {
-        let mut m = make_mikro();
-        m.clock_start();
-        for i in 0..5 {
-            let result = m.clock_tick();
-            assert!(result.is_none(), "tick {} should not advance step", i);
-        }
-        let result = m.clock_tick();
-        assert_eq!(result, Some(0));
-    }
 
     // --- the input path's own guards, 2026-09-03 ---------------------------
 

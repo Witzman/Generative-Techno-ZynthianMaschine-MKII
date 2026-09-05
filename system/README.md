@@ -6,7 +6,6 @@ Deployed configuration, taken off a working rig and verified by checksum.
 |---|---|---|
 | `99-maschine.rules` | `/etc/udev/rules.d/` | Gives the MK2 a stable `/dev/maschine` symlink, mode `0664`, group `audio`, and restarts the daemon on plug / stops it on unplug. Vendor `17cc`, product `1140`. |
 | `maschine-mk2.service` | `/etc/systemd/system/` | The HID daemon. `ExecStartPost` runs `maschine-jack-connect.sh`. **`ExecStart` and `WorkingDirectory` are rewritten by `install.sh`** to wherever this repository was cloned. |
-| `maschine-web.service` | `/etc/systemd/system/` | Serves the LED/config web editor on port 9000. |
 | `maschine-clock.service` | `/etc/systemd/system/` | JACK transport → MIDI clock bridge. |
 | `maschine-jack-connect.sh` | `/usr/local/bin/` | Waits for the daemon's `a2j` port and sets the alias `virtual:maschine.rs/Maschine MK2 Pads` on it. **It deliberately does not connect the port** — patched `zynautoconnect` whitelists it and assigns its own zmip slot, and a second connection from here was the cause of the duplicate-route fault that made every pad tap fire twice. |
 | `maschine-clock-bridge.py` | `/usr/local/bin/` | The clock bridge itself. |

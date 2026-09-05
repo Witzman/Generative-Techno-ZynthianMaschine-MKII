@@ -106,11 +106,8 @@ cd daemon &amp;&amp; cargo build --release &amp;&amp; cd ..</code></pre>
 <pre><code class="language-bash">cp system/maschine.json daemon/maschine.json
 grep external_pad_leds daemon/maschine.json
 # → "external_pad_leds": true</code></pre>
-<p>Two more keys in that file are worth knowing about before the Pi sits on a network you share.</p>
-<table><thead><tr><th>Key</th><th>Ships as</th><th>What it decides</th></tr></thead><tbody>
-<tr><td><code>ws_bind</code></td><td><code>"0.0.0.0"</code></td><td>Where the daemon's web editor listens. <strong>That socket has no password and the daemon runs as root</strong>, so anything on the same network can remap what the pads send and save it to disk. Wide is what the daemon has always done, and it is what lets you open the editor from a laptop at <code>http://&lt;pi&gt;:9000</code>. Set it to <code>"127.0.0.1"</code> and the port closes to everything but the Pi itself. The daemon prints a warning on every start that is not loopback, so you are always told which one you are running.</td></tr>
-<tr><td><code>internal_sequencer</code></td><td><code>false</code></td><td>Whether SHIFT + PAD MODE may hand the pads to the daemon's <em>own</em> sixteen-step sequencer. Leave it off. On this instrument the sequencer is Zynthian's, and entering the daemon's takes the pads, PLAY, STOP and the Group buttons away from it with nothing on the panel to say so.</td></tr>
-</tbody></table>
+<p id="the-two-keys-that-went"><strong>Two keys that used to be here are gone, and so is what they configured.</strong> <code>ws_bind</code> chose where the daemon's web editor listened &mdash; a socket with no password, on a daemon running as root, which anything on the same network could use to remap what the pads send and save it to disk. <code>internal_sequencer</code> decided whether SHIFT + PAD MODE could hand the pads to a sixteen-step sequencer inside the daemon. <strong>Both the editor and that sequencer were removed on 5 September 2026</strong> rather than left switched off: neither had ever been used on this instrument, and the socket was the only part of it reachable from outside the Pi.</p>
+<p><strong>If your <code>maschine.json</code> still has those two keys, leave them.</strong> They are ignored. The one thing that would be dangerous is a file that no longer parses &mdash; the daemon falls back to its built-in defaults on a parse error, and those have <code>external_pad_leds</code> off, which is a dark panel.</p>
 <h3 id="step-3--install-the-udev-rule">Step 3 — Install the udev rule</h3>
 <p><strong>What.</strong> Creates the stable <code>/dev/maschine</code> symlink and restarts the daemon on replug. <strong>Why.</strong> Otherwise the daemon must be pointed at a <code>/dev/hidrawN</code> number that moves between boots. <strong>How to confirm.</strong> <code>/dev/maschine</code> exists and points at a <code>hidraw</code> node.</p>
 <pre><code class="language-bash">install -m 0644 system/99-maschine.rules /etc/udev/rules.d/99-maschine.rules
@@ -122,13 +119,12 @@ udevadm trigger --subsystem-match=hidraw</code></pre>
 install -m 0755 system/maschine-clock-bridge.py /usr/local/bin/
 install -m 0755 system/maschine-clock-connect.sh /usr/local/bin/</code></pre>
 <h3 id="step-5--install-and-enable-the-systemd-units">Step 5 — Install and enable the systemd units</h3>
-<p><strong>What.</strong> Installs the daemon, its web editor and the clock bridge as services. <strong>Why.</strong> The daemon must survive reboots and reconnect to JACK by itself. <strong>How to confirm.</strong> <code>systemctl is-active maschine-mk2</code> prints <code>active</code>, and the MK2's displays light.</p>
+<p><strong>What.</strong> Installs the daemon and the clock bridge as services. <strong>Why.</strong> The daemon must survive reboots and reconnect to JACK by itself. <strong>How to confirm.</strong> <code>systemctl is-active maschine-mk2</code> prints <code>active</code>, and the MK2's displays light.</p>
 <pre><code class="language-bash">install -m 0644 system/maschine-mk2.service   /etc/systemd/system/
-install -m 0644 system/maschine-web.service   /etc/systemd/system/
 install -m 0644 system/maschine-clock.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now maschine-mk2 maschine-web maschine-clock</code></pre>
-<blockquote><p><strong>If you cloned anywhere other than <code>/root/Generative-Techno-ZynthianMaschine-MKII</code>,</strong> edit <code>ExecStart</code> and <code>WorkingDirectory</code> in <code>maschine-mk2.service</code>, and <code>--directory</code> in <code>maschine-web.service</code>. <code>install.sh</code> rewrites these for you; by hand it is on you.</p></blockquote>
+systemctl enable --now maschine-mk2 maschine-clock</code></pre>
+<blockquote><p><strong>If you cloned anywhere other than <code>/root/Generative-Techno-ZynthianMaschine-MKII</code>,</strong> edit <code>ExecStart</code> and <code>WorkingDirectory</code> in <code>maschine-mk2.service</code>. <code>install.sh</code> rewrites these for you; by hand it is on you.</p></blockquote>
 <h3 id="step-5b--order-the-ui-after-the-daemon">Step 5b — Order the UI after the daemon</h3>
 <p><strong>What.</strong> Drops one file into <code>zynthian.service.d/</code> so Zynthian's UI always starts after the Maschine daemon. <strong>Why.</strong> Start the daemon alone once the UI is already up and its MIDI port re-registers on a <em>new</em> router slot while the driver stays bound to the dead one — the rig goes silent with no error in any log, which is the worst failure this instrument has. This makes the boot order structural instead of something you have to remember. It is a drop-in rather than an edit to <code>zynthian.service</code>, so a ZynthianOS update leaves it alone and there is nothing to re-run afterwards. <strong>How to confirm.</strong> <code>After=</code> lists the daemon.</p>
 <pre><code class="language-bash">install -m 0644 -D system/zynthian-maschine-order.conf \

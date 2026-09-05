@@ -29,7 +29,5 @@
   ],
   "external_pad_leds": true,
   "screen_brightness": 72,
-  "screen_contrast": 50,
-  "ws_bind": "0.0.0.0",
-  "internal_sequencer": false
+  "screen_contrast": 50
 }

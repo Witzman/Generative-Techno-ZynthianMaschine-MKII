@@ -184,14 +184,14 @@ has "reloads udev rules"           "$I" '\[dry-run\] udevadm control --reload-ru
 for f in maschine-jack-connect.sh maschine-clock-bridge.py maschine-clock-connect.sh; do
     has "installs $f in /usr/local/bin" "$I" "\[dry-run\] install -m 0755 '.*/system/$f' /usr/local/bin/$f"
 done
-for u in maschine-mk2.service maschine-clock.service maschine-web.service; do
+for u in maschine-mk2.service maschine-clock.service; do
     has "installs unit $u" "$I" "\[dry-run\] install -m 0644 '[^']*$u[^']*' /etc/systemd/system/$u"
 done
 has "installs the UI ordering drop-in" "$I" \
     "\\[dry-run\\] install -m 0644 -D '.*/system/zynthian-maschine-order\\.conf'.*zynthian\\.service\\.d/10-maschine-order\\.conf"
 before "the drop-in is in place before daemon-reload" "$I" \
     '10-maschine-order\.conf' '\[dry-run\] systemctl daemon-reload'
-has "enables the three units"      "$I" '\[dry-run\] systemctl enable maschine-mk2 maschine-web maschine-clock'
+has "enables the two units"        "$I" '\[dry-run\] systemctl enable maschine-mk2 maschine-clock'
 has "reloads systemd"              "$I" '\[dry-run\] systemctl daemon-reload'
 for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
     has "installs driver $f" "$I" "\[dry-run\] install -m 0644 '.*/ctrldev/$f' '.*/zyngine/ctrldev/$f'"

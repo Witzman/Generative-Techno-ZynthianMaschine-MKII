@@ -17,8 +17,6 @@
 
 use std::os::unix::io::RawFd;
 
-use midi::Message;
-use crate::clock::ClockState;
 
 #[derive(Copy, Clone, Debug)]
 pub enum MaschineButton {
@@ -282,43 +280,6 @@ pub trait Maschine {
 
     fn set_mod(&mut self, state: usize);
     fn get_mod(&self) -> usize;
-
-    fn note_state(&mut self, pad_idx: usize, msg: usize);
-    fn note_check(&self, pad_idx: usize) -> usize;
-    fn note_save(&mut self, pad_idx: usize, note: u8, vel: u8);
-
-    fn load_notes(&self, pad_idx: usize, context: usize) -> Message;
-
-    fn get_seq_speed(&self) -> u64;
-
-    fn set_padmode(&mut self, state: usize);
-    fn get_padmode(&self) -> usize;
-
-    // Sequencer page (0–7)
-    fn get_seq_page(&self) -> usize { 0 }
-    fn set_seq_page(&mut self, _page: usize) {}
-
-    // Selected step for velocity/note editing (None = nothing selected)
-    fn get_selected_step(&self) -> Option<usize> { None }
-    fn set_selected_step(&mut self, _step: Option<usize>) {}
-
-    // Per-step note (offset, 0–127) and velocity on the current page
-    fn get_step_note(&self, _step: usize) -> u8 { 48 }
-    fn set_step_note(&mut self, _step: usize, _note: u8) {}
-    fn get_step_vel(&self, _step: usize) -> u8 { 80 }
-    fn set_step_vel(&mut self, _step: usize, _vel: u8) {}
-
-    // Apply Euclidean rhythm to current page, `hits` = number of active steps
-    fn apply_euclidean(&mut self, _hits: usize) {}
-
-    fn set_playing(&mut self, state: usize);
-    fn get_playing(&self) -> bool;
-
-    fn clock_tick(&mut self) -> Option<usize> { None }
-    fn clock_start(&mut self) {}
-    fn clock_stop(&mut self) {}
-    fn get_clock_state(&self) -> &ClockState;
-    fn set_clock_source(&mut self, _source: crate::clock::ClockSource) {}
 
     fn readable(&mut self, _: &mut dyn MaschineHandler);
 

@@ -103,7 +103,7 @@ say "systemd units (daemon paths rewritten to $REPO)"
 # makes a 0700 directory nobody else can reach.
 UNITDIR=$(mktemp -d)
 trap 'rm -rf "$UNITDIR"' EXIT
-for f in maschine-mk2.service maschine-web.service maschine-clock.service; do
+for f in maschine-mk2.service maschine-clock.service; do
     tmp="$UNITDIR/$f"
     run "sed -e 's#^ExecStart=.*/daemon/target/release/maschine#ExecStart=$REPO/daemon/target/release/maschine#' \
              -e 's#^WorkingDirectory=.*/daemon\$#WorkingDirectory=$REPO/daemon#' \
@@ -120,7 +120,7 @@ run "install -m 0644 -D '$REPO/system/zynthian-maschine-order.conf' \
          /etc/systemd/system/zynthian.service.d/10-maschine-order.conf"
 
 run "systemctl daemon-reload"
-run "systemctl enable maschine-mk2 maschine-web maschine-clock"
+run "systemctl enable maschine-mk2 maschine-clock"
 
 # --- 7. the ctrldev driver ----------------------------------------------------
 say "ctrldev driver files"

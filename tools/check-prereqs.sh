@@ -43,7 +43,7 @@ else bad "zynautoconnect NOT patched (run tools/patch-autoconnect-maschine.py)"
 fi
 
 echo "Services"
-for u in maschine-mk2 maschine-web maschine-clock; do
+for u in maschine-mk2 maschine-clock; do
     if systemctl is-active --quiet "$u"; then ok "$u active"; else bad "$u not active"; fi
 done
 if [ -e /dev/maschine ]; then ok "/dev/maschine"; else bad "/dev/maschine (udev rule, or the MK2 is unplugged)"; fi

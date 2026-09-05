@@ -47,20 +47,13 @@ mod devices;
 mod display;
 mod hid_feature;
 mod font;
-mod ws_types;
-mod ws_server;
 mod midi_parse;
 mod config;
 mod hid_stats;
 mod watchdog;
-mod sequencer;
-mod clock;
-use clock::ClockSource;
 use config::MaschineConfig;
 
 use crate::base::{Maschine, MaschineButton, MaschineHandler};
-use std::sync::mpsc;
-use crate::ws_types::{DeviceEvent, WsCommand};
 
 fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     let mut fds = [
@@ -76,14 +69,9 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     // days out on 2026-08-30. Every one of these is an interval, which is what
     // a monotonic clock is for; none of them wants a wall-clock date.
     let mut now = Instant::now();
-    let mut now2 = Instant::now();
     let mut now_display = Instant::now();
     let timer_interval = Duration::from_millis(16);
     let display_interval = Duration::from_millis(100);
-    let clock_fallback_timeout = Duration::from_millis(500);
-    let mut timer_interval2;
-    let mut step = 0;
-    let mut check = 0;
     let mut last_report = Instant::now();
     let mut reopens: u64 = 0;
     // Storm state for the input watchdog. `consecutive` counts reopens since
@@ -92,11 +80,9 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     // `journalctl | grep -c reopened` is this project's primary diagnostic.
     let mut consecutive: u64 = 0;
     let mut last_reopen = Instant::now();
-    let mut last_bpm_sent = Instant::now();
     let mut backoff_until = Instant::now();
     let mut announced_backoff = Duration::from_millis(0);
     let input_timeout = Duration::from_millis(50);
-    let mut active = false;
     loop {
         // poll() returns EINTR on any signal the process is handed, and
         // `.unwrap()` on that ended the daemon. There is nothing to do about
@@ -201,75 +187,16 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                     SeqInputEvent::Clock => {
                         let _ = mhandler.seq_port.send_message(&Message::TimingClock);
                         mhandler.seq_handle.drain_output();
-                        if let Some(_fired_step) = dev.clock_tick() {
-                        }
-                        // RATE LIMITED. This fired on every MIDI clock -
-                        // twenty-four a beat, fifty a second at 125 BPM - to
-                        // move a tempo readout in a web page. Twice a second
-                        // is faster than anyone can read it.
-                        if last_bpm_sent.elapsed() >= BPM_REPORT_INTERVAL {
-                            if let Some(bpm) = dev.get_clock_state().estimated_bpm() {
-                                let _ = mhandler.event_tx.try_send(
-                                    DeviceEvent::ClockBpm { bpm });
-                                last_bpm_sent = Instant::now();
-                            }
-                        }
                     }
                     SeqInputEvent::Start => {
                         let _ = mhandler.seq_port.send_message(&Message::Start);
                         mhandler.seq_handle.drain_output();
-                        dev.clock_start();
-                        step = 0;
-                        check = 0;
-                        now2 = Instant::now();
                     }
                     SeqInputEvent::Stop => {
                         let _ = mhandler.seq_port.send_message(&Message::Stop);
                         mhandler.seq_handle.drain_output();
-                        dev.clock_stop();
                     }
                     _ => {}
-                }
-            }
-        }
-
-        while let Ok(cmd) = mhandler.cmd_rx.try_recv() {
-            match cmd {
-                WsCommand::SetPadColor { pad, color, brightness } => {
-                    // BOUNDED, and the bound is the point. `pad` arrives as a
-                    // usize straight out of JSON on a socket, and
-                    // set_pad_light indexes a sixteen-entry table with it - so
-                    // one message with pad 16 ended the daemon. Every other
-                    // arm here already checked its index; this one did not.
-                    if pad < 16 {
-                        dev.set_pad_light(pad, color, brightness);
-                    }
-                }
-                WsCommand::SetButtonColor { button, brightness } => {
-                    if let Some(btn) = osc_button_to_btn_map(&button) {
-                        dev.set_button_light(btn, 0xFFFFFF, brightness);
-                    }
-                }
-                WsCommand::SetNoteBase { base } => {
-                    dev.set_midi_note_base(base);
-                }
-                WsCommand::SetPadNote { pad, note } => {
-                    if pad < 16 {
-                        mhandler.pad_notes[pad] = note;
-                        mhandler.save_config();
-                    }
-                }
-                WsCommand::SetEncoderCC { encoder, cc } => {
-                    if encoder < 8 {
-                        mhandler.encoder_ccs[encoder] = cc;
-                        mhandler.save_config();
-                    }
-                }
-                WsCommand::RequestConfig => {
-                    let _ = mhandler.event_tx.try_send(DeviceEvent::ConfigSnapshot {
-                        pad_notes: mhandler.pad_notes.to_vec(),
-                        encoder_ccs: mhandler.encoder_ccs.to_vec(),
-                    });
                 }
             }
         }
@@ -292,56 +219,6 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             now_display = Instant::now();
         }
 
-        if dev.get_clock_state().should_fallback_to_internal(clock_fallback_timeout) {
-            dev.set_clock_source(ClockSource::Internal);
-            now2 = Instant::now();
-        }
-
-        if dev.get_playing() == true {
-            timer_interval2 = Duration::from_millis(dev.get_seq_speed());
-            active = true;
-            let use_internal_clock = matches!(dev.get_clock_state().source, ClockSource::Internal);
-            if use_internal_clock && dev.note_check(step) == 1 && now2.elapsed() >= timer_interval2 && check == 0
-            {
-                let msg = dev.load_notes(step, 1);
-                mhandler.send_midi(&msg);
-                check = 1;
-            };
-            if use_internal_clock && now2.elapsed() >= timer_interval2 * 2 && dev.note_check(step) == 1 {
-                let msg = dev.load_notes(step, 0);
-                mhandler.send_midi(&msg);
-                now2 = Instant::now();
-                step += 1;
-                check = 0;
-            } else if use_internal_clock && now2.elapsed() >= timer_interval2 * 2 && dev.note_check(step) == 0 {
-                step += 1;
-                check = 0;
-                now2 = Instant::now();
-            };
-            if !use_internal_clock {
-                let ext_step = dev.get_clock_state().step;
-                if ext_step != step {
-                    if dev.note_check(step) == 1 && check == 1 {
-                        let msg = dev.load_notes(step, 0);
-                        mhandler.send_midi(&msg);
-                    }
-                    step = ext_step;
-                    check = 0;
-                    if dev.note_check(step) == 1 {
-                        let msg = dev.load_notes(step, 1);
-                        mhandler.send_midi(&msg);
-                        check = 1;
-                    }
-                }
-            }
-            if step >= 16 {
-                step = 0;
-            };
-        } else if active == true {
-            let msg = dev.load_notes(step, 0);
-            mhandler.send_midi(&msg);
-            active = false;
-        }
     }
 }
 
@@ -357,17 +234,6 @@ fn usage(prog_name: &String) {
 const BIG_ENC_SLOT: usize = 8;
 
 const PAD_RELEASED_BRIGHTNESS: f32 = 0.015;
-
-/// Events held for a web editor that may never connect.
-///
-/// Deep enough that a burst of pad and encoder traffic reaches an attached
-/// client whole; shallow enough that an absent one costs a few kilobytes
-/// rather than growing forever. ws_server drains what is left before it serves
-/// a new client, so a full queue is never shown to anyone as history.
-const WS_EVENT_QUEUE: usize = 256;
-
-/// Gap between two `ClockBpm` events. See the send site.
-const BPM_REPORT_INTERVAL: Duration = Duration::from_millis(500);
 
 /// Minimum gap between two aftertouch sends for the SAME pad.
 ///
@@ -398,21 +264,11 @@ struct MHandler<'a> {
     osc_socket: &'a UdpSocket,
     osc_outgoing_addr: SocketAddr,
 
-    event_tx: mpsc::SyncSender<DeviceEvent>,
-    cmd_rx: mpsc::Receiver<WsCommand>,
-
     seq_in_fd: RawFd,
 
     pad_notes: [u8; 16],
     encoder_ccs: [u16; 8],
     external_pad_leds: bool,
-    /// Whether SHIFT + PAD MODE may hand the pads to the daemon's own step
-    /// sequencer. Off unless maschine.json asks; see `config::internal_sequencer`.
-    internal_sequencer: bool,
-    /// The config as loaded, kept whole so `save_config` can round-trip every
-    /// key it does not own - including keys added after this line was written.
-    cfg: MaschineConfig,
-
     /// Last aftertouch value sent per pad, and when. Both are needed: the
     /// change gate alone still lets a slowly-moving finger send at the report
     /// rate, and the time gate alone re-sends a value nobody changed.
@@ -707,31 +563,6 @@ fn btn_to_osc_button_map(btn: MaschineButton) -> &'static str {
 }
 
 impl<'a> MHandler<'a> {
-    /// One MIDI send, and it CANNOT end the process.
-    ///
-    /// Sixty call sites were `self.seq_port.send_message(&msg).unwrap()`
-    /// followed by a drain. Every one of them turned an ALSA error into a
-    /// panic, and a panic here is the worst failure this daemon has: the
-    /// surface goes dark and the music stops, from a button press. A dropped
-    /// message costs one button; a panic costs the instrument.
-    ///
-    /// The drain belongs here too - it followed every one of those sends, and
-    /// a send whose drain was forgotten is a message that sits in the queue.
-    /// Persist what the editor can change, WITHOUT rebuilding the config.
-    ///
-    /// Both callers used to construct a fresh `MaschineConfig` out of six
-    /// handler fields, so every key added to the config had to be remembered
-    /// in two more places or a live rig silently lost it on the next pad-note
-    /// change. config.rs carries two tests about exactly that hazard; holding
-    /// the loaded config and overwriting only the two mutable arrays removes
-    /// the hazard instead of testing for it.
-    fn save_config(&self) {
-        let mut cfg = self.cfg.clone();
-        cfg.pad_notes = self.pad_notes;
-        cfg.encoder_ccs = self.encoder_ccs;
-        cfg.save();
-    }
-
     fn send_midi(&self, msg: &Message) {
         if let Err(err) = self.seq_port.send_message(msg) {
             println!("midi send failed: {:?}", err);
@@ -946,38 +777,6 @@ impl<'a> MHandler<'a> {
         }
     }
 
-    fn refresh_seq_page(&self, maschine: &mut dyn Maschine) {
-        let page = maschine.get_seq_page();
-        let color = self.pad_color();
-        for i in 0..16 {
-            let b = if maschine.note_check(i) == 1 { 0.4 } else { PAD_RELEASED_BRIGHTNESS };
-            maschine.set_pad_light(i, color, b);
-        }
-        const GROUPS: [MaschineButton; 8] = [
-            MaschineButton::GroupA, MaschineButton::GroupB, MaschineButton::GroupC,
-            MaschineButton::GroupD, MaschineButton::GroupE, MaschineButton::GroupF,
-            MaschineButton::GroupG, MaschineButton::GroupH,
-        ];
-        for (i, &btn) in GROUPS.iter().enumerate() {
-            maschine.set_button_light(btn, 0xFFFFFF, if i == page { 1.0 } else { 0.05 });
-        }
-    }
-
-    fn refresh_normal_mode(&self, maschine: &mut dyn Maschine) {
-        let color = self.pad_color();
-        for i in 0..16 {
-            maschine.set_pad_light(i, color, PAD_RELEASED_BRIGHTNESS);
-        }
-        const GROUPS: [MaschineButton; 8] = [
-            MaschineButton::GroupA, MaschineButton::GroupB, MaschineButton::GroupC,
-            MaschineButton::GroupD, MaschineButton::GroupE, MaschineButton::GroupF,
-            MaschineButton::GroupG, MaschineButton::GroupH,
-        ];
-        for &btn in GROUPS.iter() {
-            maschine.set_button_light(btn, 0xFFFFFF, 0.05);
-        }
-    }
-
 //Status is Byte from previous stupid naming!
     fn send_osc_button_msg(
         &mut self,
@@ -1047,22 +846,13 @@ impl<'a> MHandler<'a> {
         if status <= 250 {
             match button {
                 "play" => {
-                    if maschine.get_padmode() != 2 {
-                        let msg = Message::RPN7(Ch1, 1, cc_math::button_cc_value(is_down));
-                        self.send_midi(&msg);
-                    } else if is_down {
-                        maschine.clock_start();
-                        maschine.set_playing(1);
-                    };
+                    let msg = Message::RPN7(Ch1, 1, cc_math::button_cc_value(is_down));
+                    self.send_midi(&msg);
                 }
 
                 "stop" => {
-                    if maschine.get_padmode() != 2 {
-                        let msg = Message::RPN7(Ch1, 2, cc_math::button_cc_value(is_down));
-                        self.send_midi(&msg);
-                    } else if !is_down {
-                        maschine.set_playing(0);
-                    }
+                    let msg = Message::RPN7(Ch1, 2, cc_math::button_cc_value(is_down));
+                    self.send_midi(&msg);
                 }
                 "rec" => {
                     let msg = Message::RPN7(Ch1, 3, cc_math::button_cc_value(is_down));
@@ -1131,27 +921,20 @@ impl<'a> MHandler<'a> {
                         // chord never arrives, and that is still true, so the
                         // panel's grammar does not move.
                         //
-                        // What has gone, since 2026-09-03, is what it used to
-                        // do unasked: step the daemon into its own sequencer,
-                        // where the pads stop sending notes to the host, PLAY
-                        // and STOP drive the daemon's transport instead of the
-                        // driver's, the Group buttons switch its pages instead
-                        // of the pad octave, and every pad LED is repainted in
-                        // its colour. Nothing on the panel said so and three
-                        // more presses of the same chord were the way out.
-                        // config::internal_sequencer turns it back on.
-                        if is_down && self.internal_sequencer {
-                            maschine.set_padmode(1);
-                            if maschine.get_padmode() == 2 {
-                                self.refresh_seq_page(maschine);
-                            } else {
-                                self.refresh_normal_mode(maschine);
-                            }
-                        } else if is_down {
-                            println!(
-                                "SHIFT + PAD MODE: the daemon's own sequencer is \
-                                 off (\"internal_sequencer\" in maschine.json); \
-                                 ignored");
+                        // What it used to do unasked, until 2026-09-03: step
+                        // the daemon into its own sequencer, where the pads
+                        // stop sending notes to the host, PLAY and STOP drive
+                        // the daemon's transport instead of the driver's, the
+                        // Group buttons switch its pages instead of the pad
+                        // octave, and every pad LED is repainted in its
+                        // colour. Nothing on the panel said so and three more
+                        // presses of the same chord were the way out.
+                        //
+                        // THAT SEQUENCER IS DELETED, 2026-09-05 - it is gone
+                        // rather than flagged off. The chord is still eaten so
+                        // the panel's grammar does not move.
+                        if is_down {
+                            println!("SHIFT + PAD MODE: ignored");
                         }
                     } else {
                         let msg = Message::RPN7(Ch1, 27, cc_math::button_cc_value(is_down));
@@ -1273,11 +1056,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(1); }
-                        else { maschine.set_seq_page(0); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(24); }
+                    maschine.set_midi_note_base(24);
                 }
                 "group_b" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(1), cc_math::button_cc_value(is_down));
@@ -1285,11 +1064,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(2); }
-                        else { maschine.set_seq_page(1); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(36); }
+                    maschine.set_midi_note_base(36);
                 }
                 "group_c" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(2), cc_math::button_cc_value(is_down));
@@ -1297,11 +1072,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(3); }
-                        else { maschine.set_seq_page(2); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(48); }
+                    maschine.set_midi_note_base(48);
                 }
                 "group_d" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(3), cc_math::button_cc_value(is_down));
@@ -1309,11 +1080,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(4); }
-                        else { maschine.set_seq_page(3); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(60); }
+                    maschine.set_midi_note_base(60);
                 }
                 "group_e" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(4), cc_math::button_cc_value(is_down));
@@ -1321,11 +1088,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(5); }
-                        else { maschine.set_seq_page(4); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(72); }
+                    maschine.set_midi_note_base(72);
                 }
                 "group_f" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(5), cc_math::button_cc_value(is_down));
@@ -1333,11 +1096,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(6); }
-                        else { maschine.set_seq_page(5); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(84); }
+                    maschine.set_midi_note_base(84);
                 }
                 "group_g" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(6), cc_math::button_cc_value(is_down));
@@ -1345,11 +1104,7 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(7); }
-                        else { maschine.set_seq_page(6); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(96); }
+                    maschine.set_midi_note_base(96);
                 }
                 "group_h" => {
                     let msg = Message::RPN7(Ch1, cc_math::group_cc(7), cc_math::button_cc_value(is_down));
@@ -1357,19 +1112,13 @@ impl<'a> MHandler<'a> {
                         println!("group button: MIDI send failed: {:?}", err);
                     }
                     self.seq_handle.drain_output();
-                    if maschine.get_padmode() == 2 && is_down {
-                        if maschine.get_mod() == 1 { maschine.apply_euclidean(8); }
-                        else { maschine.set_seq_page(7); }
-                        self.refresh_seq_page(maschine);
-                    } else { maschine.set_midi_note_base(108); }
+                    maschine.set_midi_note_base(108);
                 }
                 _ => {}
             }
         }
         if is_down {
-            let _ = self.event_tx.try_send(DeviceEvent::ButtonDown { button: button.to_string() });
         } else {
-            let _ = self.event_tx.try_send(DeviceEvent::ButtonUp { button: button.to_string() });
         }
         self.send_osc_msg(&*format!("/{}", button), osc_args![status as f32]);
     }
@@ -1392,7 +1141,6 @@ impl<'a> MHandler<'a> {
             let msg = Message::RPN7(Ch1, cc_num, value);
             maschine.set_roller_value(value as i32, idx);
             self.send_midi(&msg);
-            let _ = self.event_tx.try_send(DeviceEvent::Encoder { idx, value });
         }
     }
 }
@@ -1401,30 +1149,10 @@ impl<'a> MaschineHandler for MHandler<'a> {
     fn pad_pressed(&mut self, maschine: &mut dyn Maschine, pad_idx: usize, pressure: f32) {
         let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
         let msg = Message::NoteOn(Ch1, midi_note, self.pressure_to_vel(pressure));
-        if maschine.get_padmode() == 2 {
-            if maschine.get_mod() != 1 {
-                if maschine.note_check(pad_idx) == 0 {
-                    maschine.note_state(pad_idx, 1);
-                    maschine.set_selected_step(Some(pad_idx));
-                    maschine.set_pad_light(pad_idx, 0xFF8800, 0.7);
-                } else {
-                    maschine.note_state(pad_idx, 0);
-                    maschine.set_selected_step(None);
-                    maschine.set_pad_light(pad_idx, self.pad_color(), PAD_RELEASED_BRIGHTNESS);
-                }
-            } else {
-                maschine.note_save(pad_idx, midi_note, self.pressure_to_vel(pressure));
-            }
-        } else {
-            self.send_midi(&msg);
-            if !self.external_pad_leds {
-                maschine.set_pad_light(pad_idx, self.pad_color(), pressure.sqrt());
-            }
-            let _ = self.event_tx.try_send(DeviceEvent::PadPressed {
-                pad: pad_idx,
-                velocity: self.pressure_to_vel(pressure),
-            });
-        };
+        self.send_midi(&msg);
+        if !self.external_pad_leds {
+            maschine.set_pad_light(pad_idx, self.pad_color(), pressure.sqrt());
+        }
     }
 
     fn pad_aftertouch(&mut self, maschine: &mut dyn Maschine, pad_idx: usize, pressure: f32) {
@@ -1477,40 +1205,18 @@ impl<'a> MaschineHandler for MHandler<'a> {
         self.at_last_val[pad_idx] = 0;
         self.at_last_sent[pad_idx] = None;
 
-        if maschine.get_padmode() != 2 {
-            let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
-            let msg = Message::NoteOff(Ch1, midi_note, 0);
-            self.send_midi(&msg);
-            if !self.external_pad_leds {
-                maschine.set_pad_light(pad_idx, self.pad_color(), PAD_RELEASED_BRIGHTNESS);
-            }
-            let _ = self.event_tx.try_send(DeviceEvent::PadReleased { pad: pad_idx });
-        };
+        let midi_note = maschine.get_midi_note_base() + self.pad_notes[pad_idx];
+        let msg = Message::NoteOff(Ch1, midi_note, 0);
+        self.send_midi(&msg);
+        if !self.external_pad_leds {
+            maschine.set_pad_light(pad_idx, self.pad_color(), PAD_RELEASED_BRIGHTNESS);
+        }
     }
 
     fn encoder_step(&mut self, maschine: &mut dyn Maschine, idx: usize, state: i32) {
         if maschine.calib_active() {
             maschine.calib_move(idx, state);
             return;
-        }
-        if maschine.get_padmode() == 2 {
-            if let Some(sel) = maschine.get_selected_step() {
-                match idx {
-                    0 => {
-                        let new_vel = ((maschine.get_step_vel(sel) as i32) + state)
-                            .clamp(0, 127) as u8;
-                        maschine.set_step_vel(sel, new_vel);
-                        return;
-                    }
-                    1 => {
-                        let new_note = ((maschine.get_step_note(sel) as i32) + state)
-                            .clamp(0, 127) as u8;
-                        maschine.set_step_note(sel, new_note);
-                        return;
-                    }
-                    _ => {}
-                }
-            }
         }
         self.send_encoder_cc(maschine, idx, state);
     }
@@ -1570,22 +1276,7 @@ fn main() {
         }
     };
 
-    // Loaded before the WebSocket server, which needs its bind address.
     let cfg = MaschineConfig::load();
-
-    // BOUNDED, since 2026-09-03. `event_rx` is drained ONLY inside
-    // ws_server's per-client loop, so on a rig with no web editor attached -
-    // which is every rig - nothing ever read this channel while pad presses,
-    // encoder moves, button edges and one ClockBpm PER MIDI CLOCK TICK were
-    // pushed into it. At 125 BPM that is fifty messages a second into an
-    // unbounded queue, for the life of the process.
-    //
-    // A bounded channel with try_send makes the overflow a dropped event
-    // instead of a leak. Every send site already ignored its result, because
-    // none of them can do anything about a missing web editor.
-    let (event_tx, event_rx) = mpsc::sync_channel::<DeviceEvent>(WS_EVENT_QUEUE);
-    let (cmd_tx, cmd_rx) = mpsc::channel::<WsCommand>();
-    ws_server::start(cfg.ws_bind.clone(), cmd_tx, event_rx);
 
     let seq_handle = SequencerHandle::open("maschine.rs", HandleOpenStreams::Duplex)
         .unwrap_or_else(|_| {
@@ -1627,16 +1318,12 @@ fn main() {
         osc_socket: &osc_socket,
         osc_outgoing_addr: SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 42435)),
 
-        event_tx,
-        cmd_rx,
 
         seq_in_fd,
 
         pad_notes: cfg.pad_notes,
         encoder_ccs: cfg.encoder_ccs,
         external_pad_leds: cfg.external_pad_leds,
-        internal_sequencer: cfg.internal_sequencer,
-        cfg: cfg.clone(),
 
         at_last_val: [0; 16],
         at_last_sent: [None; 16],

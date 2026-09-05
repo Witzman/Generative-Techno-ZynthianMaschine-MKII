@@ -45,7 +45,7 @@ assert_eq() {
     if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "expected [$2], got [$3]"; fi
 }
 
-UNITS="maschine-mk2.service maschine-clock.service maschine-web.service"
+UNITS="maschine-mk2.service maschine-clock.service"
 
 # ---------------------------------------------------------------- files exist
 head_ "system/ ships what system/README.md says it does"
@@ -123,8 +123,6 @@ print("ccs", ",".join(str(c) for c in ccs))
 print("ext_leds", d["external_pad_leds"])
 print("bright", d["screen_brightness"])
 print("contrast", d["screen_contrast"])
-print("wsbind", d["ws_bind"])
-print("intseq", d["internal_sequencer"])
 PY
 )   || { bad "maschine.json parses as JSON" "$out"; out=""; }
     if [ -n "$out" ]; then
@@ -148,18 +146,16 @@ PY
         # power cycle, which is why the shipped pair must stay the factory pair.
         assert_eq "screen_brightness is the factory 72" 72 "$(awk '/^bright/{print $2}'   <<<"$out")"
         assert_eq "screen_contrast is the factory 50"   50 "$(awk '/^contrast/{print $2}' <<<"$out")"
-        # The WebSocket editor's socket has NO authentication and the daemon
-        # runs as root, so this key decides whether the whole network can remap
-        # the pads. It is in the template to be FOUND - the daemon also warns on
-        # every start that is not loopback. The value here must match the
-        # daemon's own default (config.rs default_ws_bind): a template shipping
-        # a different one would split the fleet by install date, since an
-        # existing rig's maschine.json predates the key entirely.
-        assert_eq "ws_bind matches the daemon's default" "0.0.0.0" "$(awk '/^wsbind/{print $2}' <<<"$out")"
-        # SHIFT + PAD MODE used to hand the pads, the transport and the Group
-        # buttons to the daemon's own step sequencer with nothing on the panel
-        # saying so. Off, and it must stay off on a rig that plays zynseq.
-        assert_eq "internal_sequencer is off"           False   "$(awk '/^intseq/{print $2}' <<<"$out")"
+        # `ws_bind` and `internal_sequencer` LEFT this template on 2026-09-05
+        # with the web editor and the internal sequencer. An existing rig's
+        # maschine.json still carries both, and that must stay harmless:
+        # MaschineConfig::load fails OPEN into the defaults on a parse error,
+        # where external_pad_leds is false and the panel goes dark. A daemon
+        # test pins that serde ignores the two rather than rejecting the file.
+        assert_no_grep "ws_bind is gone from the template" \
+            'ws_bind' "$REPO/system/maschine.json"
+        assert_no_grep "internal_sequencer is gone from the template" \
+            'internal_sequencer' "$REPO/system/maschine.json"
     fi
 else
     skip "maschine.json checks (no python3)"
@@ -198,11 +194,11 @@ fi
 assert_grep "install.sh installs the drop-in" \
     'zynthian\.service\.d/10-maschine-order\.conf' "$REPO/install.sh"
 
-# install.sh enables exactly these three.
+# install.sh enables exactly these two.
 head_ "install.sh enables exactly the units that ship"
 enabled=$(grep -oP 'systemctl enable \K[^"]+' "$REPO/install.sh" | tr -s ' ' '\n' | grep -v '^$' | sort | tr '\n' ' ')
-assert_eq "install.sh enables the three shipped units" \
-    "maschine-clock maschine-mk2 maschine-web " "$enabled"
+assert_eq "install.sh enables the two shipped units" \
+    "maschine-clock maschine-mk2 " "$enabled"
 
 # ------------------------------------------- install.sh rewrites every path
 # The units ship with absolute paths under /root. install.sh rewrites them to
@@ -265,14 +261,13 @@ else
     verify_out=$(systemd-analyze --root="$FAKE" verify \
                     --recursive-errors=no --generators=no --man=no \
                     "$FAKE/etc/systemd/system/maschine-mk2.service" \
-                    "$FAKE/etc/systemd/system/maschine-clock.service" \
-                    "$FAKE/etc/systemd/system/maschine-web.service" 2>&1)
+                    "$FAKE/etc/systemd/system/maschine-clock.service" 2>&1)
     rc=$?
     # Warnings about units outside the root's search path are noise here; a
     # non-zero exit or any line naming one of our own units is not.
-    ours=$(grep -E 'maschine-(mk2|clock|web)\.service' <<<"$verify_out" || true)
+    ours=$(grep -E 'maschine-(mk2|clock)\.service' <<<"$verify_out" || true)
     if [ $rc -eq 0 ] && [ -z "$ours" ]; then
-        ok "systemd-analyze verify clean for all three units"
+        ok "systemd-analyze verify clean for both units"
     else
         bad "systemd-analyze verify clean for all three units" "rc=$rc ${ours:-$verify_out}"
     fi
