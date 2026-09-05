@@ -934,14 +934,27 @@ class EveryLedNameTheDriverWritesIsOneTheDaemonAccepts(unittest.TestCase):
     DAEMON = os.path.join(ROOT, "daemon", "src", "main.rs")
 
     def _daemon_names(self):
-        """Every string osc_button_to_btn_map answers to."""
+        """Every token the daemon answers to, read out of PANEL_BUTTONS.
+
+        IT READ THE MATCH ARMS OF `osc_button_to_btn_map` UNTIL 2026-09-05,
+        and item 23 replaced those arms with a table - so this parser went
+        BLIND while the names were all still there. The whole ctrldev suite
+        went red on the first full run afterwards, which is the guard working:
+        a cross-language check whose parser silently found nothing would have
+        passed forever and is exactly the failure it exists to prevent. That is
+        also why `test_the_daemon_map_is_readable` asserts a floor on the count
+        rather than trusting the scan.
+
+        This guard is not decoration: it is the one that caught
+        `LED_FREEZE = "padmode"`, a name the daemon drops, which meant the
+        FREEZE light had never lit since the day it shipped - in silence."""
 
         import re
         with open(self.DAEMON, encoding="utf-8") as fh:
             src = fh.read()
-        start = src.index("fn osc_button_to_btn_map")
-        end = src.index("\n}", start)
-        return set(re.findall(r'"([a-z0-9_]+)"\s*=>', src[start:end]))
+        start = src.index("const PANEL_BUTTONS")
+        end = src.index("\n];", start)
+        return set(re.findall(r'\("([a-z0-9_]+)"\s*,', src[start:end]))
 
     def _driver_names(self):
         """Every literal LED name the driver sends, from its own source.
