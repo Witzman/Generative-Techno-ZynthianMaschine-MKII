@@ -853,6 +853,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # thread: the scan takes the lock and must never run on the MIDI
         # thread, for the same reason _commit_kit and _commit_preset do not.
         self._rebuild_due = set()
+        # THE RESTORED FX GLOBALS, 2026-09-05. A snapshot restores revsize,
+        # revtype and dlyfbk into self.globals as NUMBERS and nothing ever
+        # wrote them to the plugins, so two presets differing only in their
+        # room sounded identical - `064-space-cathedral` and
+        # `079-space-closet` carry bit-identical plugin state and were
+        # measured 0.8 dB apart, with the cathedral the drier of the two.
+        # Drained on the poll thread, never on the signal thread that
+        # `_on_snapshot` runs on: _set_ganged walks eight chains and reaches
+        # engine.send_controller_value() on each.
+        # dlytime is NOT here: _push_delay_time() already runs every
+        # VOLUME_POLL_TICKS, so it was the one of the four that worked.
+        self._fx_globals_due = False
         self._last_delay_ms = None
         # last raw play position per voice, for wrap detection
         self._voice_pos = {}
@@ -1847,6 +1859,38 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                            lo=zctrl.value_min, hi=zctrl.value_max)
         with self.lock:
             self._render_display()
+
+    def _push_fx_globals(self):
+        """Write the restored room to the plugins. Poll thread only.
+
+        A snapshot's `revsize`, `revtype` and `dlyfbk` are restored by
+        `set_state` into `self.globals` and were never written anywhere else,
+        so the GLOBAL page drew a room the instrument was not in. Measured
+        2026-09-05: `064-space-cathedral` and `079-space-closet` hold
+        BIT-IDENTICAL plugin state - `decay 6700.0  mode 8  wetlevel -70.0`,
+        `ldelay 241.935  lfeedback 73.0` - and differ only in these numbers.
+        The owner, hearing both back to back, said they were not different
+        rooms; tail-to-peak on the main bus put them 0.8 dB apart with the
+        cathedral the DRIER of the two.
+
+        `dlytime` is deliberately absent: `_push_delay_time()` already runs on
+        this thread every VOLUME_POLL_TICKS because the delay's division has
+        to follow the tempo, so it was the one of the four that always
+        arrived.
+
+        Eighth appearance of stored-drawn-never-written, after
+        `_apply_generator`'s missing HITS and ROTATE branch, CHANCE and SWING
+        defaulted rather than read back, `chord` absent from
+        `GENERATOR_PARAMS`, and the `_LEGACY` per-group cases. The hand-turn
+        path was never broken - `_set_ganged` walks all eight channels and
+        finds an effect by ROLE since 2026-09-04 - only the load path."""
+
+        for which, role, key in (("reverb", "REVSIZE", "revsize"),
+                                 ("reverb", "REVTYPE", "revtype"),
+                                 ("delay", "DLYFBK", "dlyfbk")):
+            value = self.globals.get(key)
+            if value is not None:
+                self._set_ganged(which, role, value)
 
     def _set_ganged(self, which, role, value):
         """One knob, eight instances. Identical character in eight boxes is
@@ -9369,6 +9413,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # Tempo can move from the touchscreen or from a snapshot,
                     # and the delay's musical division has to follow it.
                     self._push_delay_time()
+                if self._fx_globals_due:
+                    # A restore brought a room with it. Once, here, on the
+                    # thread that is allowed to reach an engine.
+                    self._fx_globals_due = False
+                    self._push_fx_globals()
                 if tick % VOLUME_POLL_TICKS == 0:
                     # ~200ms. Deliberately the existing sub-rate: an unthrottled
                     # 30 Hz modulator is 30 writes/s per moving target, each
@@ -10805,6 +10854,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # rather than run it here: the scan takes the lock, and this handler
         # runs on the signal thread.
         self._rebuild_due.update(range(len(tlib.CHANNELS)))
+        # The restored room is a set of numbers until something writes it.
+        self._fx_globals_due = True
         self._force_swing_div()
         # A restore rebuilds the chains, so the zmop channel translation the
         # voices need is gone with them. Outside the lock: it touches zyncore

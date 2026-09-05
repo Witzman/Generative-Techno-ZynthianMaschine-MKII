@@ -1008,3 +1008,67 @@ class BankScenesCase(DispatchCase):
         self.assertEqual(self.d.bank, 1)
         self.d._on_snapshot()
         self.assertEqual(self.d.bank, 1, "landed twice off one snapshot")
+
+
+class RestoredFxGlobalsCase(unittest.TestCase):
+    """A restored room has to be written, not only drawn.
+
+    `set_state` puts `revsize`, `revtype` and `dlyfbk` into `self.globals` and
+    nothing else touched them, so the GLOBAL page showed a room the instrument
+    was not in. Found 2026-09-05 by playing `064-space-cathedral` and
+    `079-space-closet` back to back: they hold BIT-IDENTICAL plugin state and
+    differ only in these numbers, and the owner said they were not different
+    rooms.
+
+    `dlytime` is not asserted here on purpose - `_push_delay_time()` already
+    runs on the poll thread every VOLUME_POLL_TICKS, so it was the one of the
+    four that always arrived.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = rig_stub.load_driver()
+
+    def setUp(self):
+        self.d = rig_stub.make_driver()
+
+    def test_a_restore_marks_the_room_owed(self):
+        self.d._fx_globals_due = False
+        self.d._on_snapshot()
+        self.assertTrue(self.d._fx_globals_due,
+                        "a restore left the room as numbers only")
+
+    def test_the_push_writes_every_global_that_has_a_role(self):
+        self.d.globals.update(revsize=47, revtype=27, dlyfbk=55)
+        seen = []
+        with patch.object(type(self.d), "_set_ganged",
+                          lambda _s, which, role, value:
+                          seen.append((which, role, value))):
+            self.d._push_fx_globals()
+        self.assertEqual(seen, [("reverb", "REVSIZE", 47),
+                                ("reverb", "REVTYPE", 27),
+                                ("delay", "DLYFBK", 55)])
+
+    def test_the_cathedral_and_the_closet_push_different_rooms(self):
+        """The two snapshots that found this, as the numbers they differ by."""
+
+        rooms = {}
+        for name, g in (("cathedral", dict(revsize=47, revtype=27, dlyfbk=55)),
+                        ("closet", dict(revsize=20, revtype=0, dlyfbk=15))):
+            self.d.globals.update(g)
+            seen = []
+            with patch.object(type(self.d), "_set_ganged",
+                              lambda _s, which, role, value:
+                              seen.append((role, value))):
+                self.d._push_fx_globals()
+            rooms[name] = seen
+        self.assertNotEqual(rooms["cathedral"], rooms["closet"])
+
+    def test_a_missing_global_is_skipped_not_written_as_none(self):
+        self.d.globals.pop("revtype", None)
+        seen = []
+        with patch.object(type(self.d), "_set_ganged",
+                          lambda _s, which, role, value:
+                          seen.append(role)):
+            self.d._push_fx_globals()
+        self.assertNotIn("REVTYPE", seen)
