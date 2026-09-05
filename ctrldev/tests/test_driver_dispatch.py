@@ -810,3 +810,201 @@ class ATakeTapMovesTheColourWithTheNote(DispatchCase):
     def test_the_tap_records_the_velocity_it_wrote(self):
         self.d._take_tap(4, velocity=63)
         self.assertEqual(self.d.notes[self.ch][4][1], 63)
+
+
+class BankScenesCase(DispatchCase):
+    """Item 8: what a bank remembers, and what a snapshot carries.
+
+    THE MEASURED DEFECTS these pin, from
+    `notes/findings/2026-09-04-banks-as-scenes-loses-five-things.md`:
+
+    (a) `hits`, `rot` and `owner` live in the per-group arrays rather than in
+        `self.state`, so the stash never saw them - they LEAKED into the
+        incoming bank and were LOST from the outgoing one. Measured before the
+        fix: bank 1 rotated 5, bank 3 rotated 1, back to bank 1 read 1.
+    (d) the snapshot carried no bank state at all.
+    (e) `zynseq.load()` ends with `select_bank(1, True)`, so a set saved on
+        bank 3 came back as bank 1's patterns under bank 3's registers.
+
+    These assert the driver's own bookkeeping, not the sequencer's - libseq is
+    a recorder here. What a bank SOUNDS like is still the rig's question.
+    """
+
+    def test_switch_keeps_rotate_per_bank(self):
+        """The exact leak that was measured, in the order it was measured."""
+
+        self.d.rot[0] = 5
+        self.d._bank_switch(3)
+        self.assertEqual(self.d.rot[0], 0,
+                         "a never-visited bank must be blank, not a copy")
+        self.d.rot[0] = 1
+        self.d._bank_switch(1)
+        self.assertEqual(self.d.rot[0], 5, "bank 1's rotation came back wrong")
+        self.d._bank_switch(3)
+        self.assertEqual(self.d.rot[0], 1, "bank 3's rotation came back wrong")
+
+    def test_switch_keeps_hits_per_bank(self):
+        """HITS matters more than ROTATE: `_recount_hits` REFUSES to read it
+        back off a thinned pattern, so the stash is the only copy."""
+
+        self.d.hits[2] = 11
+        self.d._bank_switch(4)
+        self.assertEqual(self.d.hits[2], 0)
+        self.d.hits[2] = 3
+        self.d._bank_switch(1)
+        self.assertEqual(self.d.hits[2], 11)
+
+    def test_switch_keeps_ownership_per_bank(self):
+        self.d.owner[5] = self.mod.tlib.OWNER_PLAYER
+        self.d._bank_switch(2)
+        self.assertEqual(self.d.owner[5], "gen",
+                         "a fresh bank has patterns nobody recorded on")
+        self.d._bank_switch(1)
+        self.assertEqual(self.d.owner[5], self.mod.tlib.OWNER_PLAYER)
+
+    def test_capture_is_verb_agnostic(self):
+        """A verb added tomorrow is bank-scoped for free - the capture takes
+        the state dict wholesale rather than a field list, which is the thing
+        every field list in this file has had to be taught."""
+
+        self.d.state[0]["a_verb_invented_by_this_test"] = 42
+        got = self.d._bank_capture()
+        self.assertEqual(
+            got["channels"][0]["a_verb_invented_by_this_test"], 42)
+
+    def test_capture_survives_a_json_round_trip(self):
+        """`_stash_out` runs at CAPTURE time, so no set or deque can reach the
+        file. A `pending` set in the state would raise on json.dumps."""
+
+        import json
+        self.d.state[0]["pending"] = {1, 2, 3}
+        got = self.d._bank_capture()
+        json.dumps(got["channels"][0])          # must not raise
+        self.assertNotIn("pending", got["channels"][0])
+
+    # --- the snapshot -----------------------------------------------------
+
+    def test_banks_round_trip_through_a_snapshot(self):
+        self.d.rot[1] = 7
+        self.d.hits[1] = 9
+        self.d._bank_switch(3)
+        saved = self.d.get_state()
+        self.assertIn("banks", saved)
+        self.assertIn("1", saved["banks"], "keys are strings in the file")
+
+        fresh = rig_stub.make_driver()
+        fresh.set_state(saved)
+        self.assertIn(1, fresh._bank_state, "keys are ints in the stash")
+        self.assertEqual(fresh._bank_state[1]["rot"][1], 7)
+        self.assertEqual(fresh._bank_state[1]["hits"][1], 9)
+
+    def test_the_live_bank_is_not_in_banks(self):
+        """The live bank is described by the FLAT blocks. Writing it into
+        `banks` as well would be two truths, and the one in `banks` would be
+        the stale copy."""
+
+        saved = self.d.get_state()
+        self.assertNotIn(str(self.d.bank), saved.get("banks", {}))
+
+    def test_absent_banks_restores_none(self):
+        """ABSENT MEANS "THERE WAS NOTHING". Every pre-`banks` snapshot has one
+        zynseq bank block and its flat blocks ARE that bank, so every other
+        bank in such a file genuinely is blank."""
+
+        self.d._bank_switch(3)                  # put something in the stash
+        self.assertTrue(self.d._bank_state)
+        self.d.set_state({})
+        self.assertEqual(self.d._bank_state, {})
+
+    def test_a_load_replaces_the_outgoing_scenes(self):
+        """Defect (c), which shipped separately - kept here because `banks`
+        must not quietly reintroduce it by MERGING instead of replacing."""
+
+        self.d._bank_switch(3)
+        self.d.set_state({"banks": {"7": {"channels": {}, "hits": [],
+                                          "rot": [], "owners": {}}}})
+        self.assertEqual(set(self.d._bank_state), {7},
+                         "bank 1 came from a file that is no longer loaded")
+
+    def test_malformed_bank_entries_are_dropped_not_half_built(self):
+        """A raise here takes the whole snapshot load with it."""
+
+        got = self.d._banks_in({
+            "notanumber": {"channels": {}},
+            "2": "not a dict",
+            "3": {"channels": {"x": {}, "1": "not a dict", "2": {"hits": 1}}},
+            "4": {"owners": {"0": "nonsense", "1": "player"}},
+        })
+        self.assertNotIn("notanumber", got)
+        self.assertNotIn(2, got)
+        self.assertEqual(set(got[3]["channels"]), {2})
+        self.assertEqual(got[4]["owners"], {1: "player"})
+
+    def test_banks_in_refuses_a_non_dict(self):
+        self.assertEqual(self.d._banks_in(None), {})
+        self.assertEqual(self.d._banks_in([1, 2, 3]), {})
+
+    def test_a_truncated_legacy_list_lands_on_the_blank_value(self):
+        """These lists can arrive from a hand-edited file. A raise lands on the
+        poll thread, whose handler catches - and the surface then stops
+        repainting, which is this instrument's worst failure shape."""
+
+        self.d._bank_state[3] = {"channels": {}, "hits": [1], "rot": ["x"],
+                                 "owners": {}}
+        self.d._bank_switch(3)
+        self.assertEqual(self.d.hits[0], 1)
+        self.assertEqual(self.d.hits[7], 0, "past the end of a short list")
+        self.assertEqual(self.d.rot[0], 0, "unparseable, not a raise")
+
+    # --- landing on the saved bank ----------------------------------------
+
+    def test_a_snapshot_lands_on_the_bank_it_was_saved_on(self):
+        """Defect (e). `zynseq.load()` always lands on bank 1."""
+
+        self.d.libseq.banks[3] = 8              # bank 3 exists in this file
+        self.d.set_state({"bank": 3})
+        self.assertEqual(self.d.bank, 1, "set_state must not move it itself")
+        self.d._on_snapshot()
+        self.assertEqual(self.d.bank, 3)
+
+    def test_landing_does_not_stash_the_live_state_under_bank_one(self):
+        """THE SUBTLETY, and the reason this does not go through
+        `_bank_switch`. The live state after a load is the SAVED bank's, so a
+        switch would file bank 3's registers under bank 1 and then overwrite
+        bank 3's own restored record with them."""
+
+        self.d.libseq.banks[3] = 8
+        self.d.set_state({"bank": 3})
+        self.d.rot[0] = 6                       # bank 3's rotation, restored
+        self.d._on_snapshot()
+        self.assertEqual(self.d.bank, 3)
+        self.assertEqual(self.d.rot[0], 6, "the state was already correct")
+        self.assertNotIn(1, self.d._bank_state,
+                         "bank 3's registers were filed under bank 1")
+
+    def test_landing_refuses_a_bank_that_does_not_exist(self):
+        """`select_bank` AUTHORS a missing bank as somebody else's 4x4 default
+        on MIDI channels 0-3, so following a bad number writes that layout
+        into the riff."""
+
+        self.d.set_state({"bank": 9})           # not in libseq.banks
+        self.d._on_snapshot()
+        self.assertEqual(self.d.bank, 1)
+
+    def test_landing_ignores_a_non_integer_bank(self):
+        for bad in ("3", 3.5, True, None, [3]):
+            self.d.set_state({"bank": bad})
+            self.assertIsNone(self.d._saved_bank, f"accepted {bad!r}")
+
+    def test_landing_happens_once(self):
+        """`_saved_bank` is consumed. A later `_on_snapshot` - the once-a-
+        second drift check calls `_resync_all` the same way - must not drag the
+        player back to the bank a previous file was saved on."""
+
+        self.d.libseq.banks[3] = 8
+        self.d.set_state({"bank": 3})
+        self.d._on_snapshot()
+        self.d._bank_switch(1)
+        self.assertEqual(self.d.bank, 1)
+        self.d._on_snapshot()
+        self.assertEqual(self.d.bank, 1, "landed twice off one snapshot")

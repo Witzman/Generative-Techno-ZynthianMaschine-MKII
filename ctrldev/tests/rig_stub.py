@@ -57,6 +57,20 @@ class FakeLibseq:
         self.notes = {}                 # step -> [(note, velocity)]
         self.tempo = 125.0
         self.play_state = {}
+        # WHICH BANKS EXIST. `getSequencesInBank` is the driver's only test
+        # for "is there a bank here", and it decides two different refusals:
+        # `_bank_switch` AUTHORS an empty bank, and `_land_bank` REFUSES to
+        # follow a snapshot onto one. The catch-all below would answer 0 for
+        # every bank, so a test about landing needs to say which exist.
+        self.banks = {1: 8}
+
+    def getSequencesInBank(self, bank):
+        self.calls.append(("getSequencesInBank", (bank,)))
+        return self.banks.get(bank, 0)
+
+    def setSequencesInBank(self, bank, count):
+        self.calls.append(("setSequencesInBank", (bank, count)))
+        self.banks[bank] = count
 
     def __getattr__(self, name):
         # One recorder for the whole API surface. Anything not named below
@@ -141,6 +155,11 @@ class FakeStateManager:
         self.zynseq = MagicMock()
         self.zynseq.libseq = FakeLibseq()
         self.zynseq.bank = 1
+        # `select_bank` MOVES `zynseq.bank`, because the driver reads the bank
+        # back off zynseq immediately afterwards to pin it - a MagicMock that
+        # recorded the call and left `bank` at 1 would make every landing test
+        # pass by accident, asserting the pin of a bank nothing moved to.
+        self.zynseq.select_bank.side_effect = self._select_bank
         self.zynmixer = FakeMixer()
         self.chain_manager = FakeChainManager()
         self.busy = set()
@@ -148,6 +167,10 @@ class FakeStateManager:
         # The signals the driver registers for. SS_LOAD_SNAPSHOT is read off
         # the state manager, so it has to exist.
         self.SS_LOAD_SNAPSHOT = "load_snapshot"
+
+    def _select_bank(self, bank, force=False):
+        self.zynseq.bank = bank
+        self.zynseq.libseq.banks.setdefault(bank, 8)
 
 
 def _module(name, **attrs):

@@ -777,6 +777,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # three voices playing the same line over a different pattern set,
         # which is not a scene.
         self._bank_state = {}
+        # The bank a loading snapshot was SAVED on, handed from set_state to
+        # _land_bank. None except during a load - see _land_bank for why the
+        # correction cannot happen in set_state itself.
+        self._saved_bank = None
         # Which channels are writing their fill bar right now. Set at the
         # phrase boundary and read by the writers - a flag rather than an
         # argument, because both writers are reached from several places and
@@ -3455,6 +3459,36 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # is rebuilt from the pattern rather than trusted.
             "owners": {str(i): self.owner[i]
                        for i in range(len(tlib.CHANNELS))},
+            # WHICH BANK THIS WAS SAVED ON, and every OTHER bank's scene.
+            #
+            # `bank` is a scalar and `banks` is the stash. They are separate
+            # because the bank that was live at save time is described by the
+            # FLAT blocks above - `voices`, `drums`, `owners` - and not by
+            # `banks`, exactly as it is at runtime: the live bank's state is
+            # in `self.state` and the others are in `self._bank_state`.
+            # Writing the live bank into both would be two truths, and the
+            # one in `banks` would be the stale copy.
+            #
+            # PURELY ADDITIVE. A `.zss` written after this still loads on last
+            # week's driver, minus the scenes - so AST guard 6, which pairs
+            # every saved key with a reader, needed no new exemption and the
+            # flat blocks did not move.
+            #
+            # ABSENT MEANS "THERE WAS NOTHING", not "reconstruct it" - the
+            # `hand_reg` precedent rather than the `rhythm_reg` one. Every
+            # pre-`banks` snapshot carries exactly one zynseq bank block and
+            # its flat blocks ARE that bank's state, so every other bank in
+            # such a file genuinely is blank. Restoring `{}` is therefore
+            # bit-identical to today's behaviour rather than a guess.
+            "bank": self.bank,
+            "banks": {str(n): {"channels": {str(ch): self._stash_out(v)
+                                            for ch, v in
+                                            entry.get("channels", {}).items()},
+                               "hits": list(entry.get("hits", [])),
+                               "rot": list(entry.get("rot", [])),
+                               "owners": {str(ch): who for ch, who in
+                                          entry.get("owners", {}).items()}}
+                      for n, entry in self._bank_state.items()},
             # WHICH STEPS A HAND PLAYED - THE STEP INDICES, AND NOTHING ELSE.
             #
             # The one thing on this surface with no truth in zynseq to read
@@ -3740,12 +3774,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Measured off the rig 2026-09-04: two banks still in the stash after
         # a load that carried none.
         #
-        # A BANK'S STATE IS NOT YET IN THE SNAPSHOT - that is todo item 8 and
-        # it is a bigger change, needing a migration and a correction for the
-        # fact that `zynseq.load()` always lands on bank 1. Until then the
-        # honest behaviour is that other banks come back BLANK rather than
-        # wrong, which is what this line buys.
+        # A BANK'S STATE IS IN THE SNAPSHOT SINCE 2026-09-05 (todo item 8).
+        # The clear stays and is what makes the read below safe: whatever this
+        # file carries REPLACES the outgoing scenes rather than merging with
+        # them, so a snapshot with no `banks` key restores none - which is the
+        # honest reading of a file that recorded none.
         self._bank_state = {}
+        self._bank_state.update(self._banks_in(state.get("banks")))
+        # WHICH BANK TO LAND ON. Read here because this is where the file is,
+        # applied in `_on_snapshot` because `self.bank` is still the OUTGOING
+        # bank at this point - see `_land_bank`, which carries the ordering.
+        want = state.get("bank")
+        self._saved_bank = want if isinstance(want, int) and not isinstance(
+            want, bool) else None
 
         # SP10: modulators. Validated rather than trusted - the lesson of
         # 2026-08-11, when CHANCE and SWING were assumed on load and a channel
@@ -4602,6 +4643,178 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.libseq.setGroup(bank, group, group)
             self.libseq.setChannel(bank, group, 0, midi)
 
+    @staticmethod
+    def _banks_in(raw):
+        """The snapshot's `banks` block on its way back into the stash.
+
+        VALIDATED, NEVER TRUSTED - the lesson of 2026-08-11, when CHANCE and
+        SWING were assumed on load and a channel saved at chance 0 came back
+        silent while the surface read 100. Everything here arrives from a file
+        that a hand may have edited, and a raise on this path takes the whole
+        snapshot load with it.
+
+        The keys come back as INTS. JSON makes every key a string on the way
+        out and `_bank_switch` indexes by integer bank and integer channel, so
+        the conversion belongs here, once, rather than at each of the reader's
+        sites.
+
+        A malformed entry is DROPPED rather than half-built. A bank whose
+        record cannot be read is a blank scene, which is a state this feature
+        already has a meaning for; a half-built one is a scene that is wrong
+        in a way nothing on the surface can show."""
+
+        out = {}
+        if not isinstance(raw, dict):
+            return out
+        for key, entry in raw.items():
+            try:
+                bank = int(key)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(entry, dict):
+                continue
+            chans = entry.get("channels")
+            if not isinstance(chans, dict):
+                chans = {}
+            keep = {}
+            for ch_key, st in chans.items():
+                try:
+                    ch = int(ch_key)
+                except (TypeError, ValueError):
+                    continue
+                if isinstance(st, dict):
+                    keep[ch] = st
+            owners = {}
+            raw_owners = entry.get("owners")
+            if isinstance(raw_owners, dict):
+                for ch_key, who in raw_owners.items():
+                    try:
+                        ch = int(ch_key)
+                    except (TypeError, ValueError):
+                        continue
+                    if who in ("gen", tlib.OWNER_PLAYER):
+                        owners[ch] = who
+            out[bank] = {
+                "channels": keep,
+                "hits": list(entry.get("hits") or []),
+                "rot": list(entry.get("rot") or []),
+                "owners": owners,
+            }
+        return out
+
+    def _bank_capture(self):
+        """Everything Python owns about the CURRENT bank, ready to stash.
+
+        VERB-AGNOSTIC ON PURPOSE. The channel state goes in wholesale rather
+        than as a field list: every field list in this file has needed a line
+        added on the day a verb shipped, and `chord` was missed anyway. A verb
+        added tomorrow is bank-scoped for free.
+
+        `div` and `beats` are deliberately NOT here. `_derive_params` reads
+        both back out of zynseq, which is the INCOMING bank's own truth -
+        storing them would be the CHANCE/SWING shape of 2026-08-11 again, a
+        second answer that a re-read overwrites seconds later.
+
+        `_stash_out` at capture time, so a JSON round trip is the identity and
+        no set or deque can ever reach the snapshot."""
+
+        n = len(tlib.CHANNELS)
+        return {
+            "channels": {ch: self._stash_out(self.state[ch])
+                         for ch in range(n)},
+            "hits": list(self.hits[:n]),
+            "rot": list(self.rot[:n]),
+            "owners": {ch: self.owner.get(ch, "gen") for ch in range(n)},
+        }
+
+    def _bank_restore_legacy(self, saved):
+        """Put HITS, ROTATE and ownership back for the bank being taken.
+
+        Separate from the `self.state` loop above because these three live in
+        the per-group arrays rather than in the state dict - the fifth-and-
+        onward appearance of the shape `param_get`'s docstring describes.
+
+        A BANK WITH NO RECORD GETS THE DEFAULTS, not the outgoing bank's
+        numbers. That is what makes a never-visited bank a blank scene rather
+        than a copy of the one it was launched from, and it is the same rule
+        the state loop above already follows.
+
+        Ownership defaults to `gen`, never to what the outgoing bank held: a
+        fresh bank has patterns nobody has recorded on, and inheriting
+        `player` there would make the generator refuse to write a channel the
+        player has never touched - a silent channel with no explanation, which
+        is the one law this surface cannot break."""
+
+        # `self.hits` and `self.rot` are both built as [0] * 8, so 0 is the
+        # blank-bank value for each and there is no constant to reach for.
+        saved = saved or {}
+        hits = saved.get("hits") or []
+        rot = saved.get("rot") or []
+        owners = saved.get("owners") or {}
+        for ch in range(len(tlib.CHANNELS)):
+            self.hits[ch] = self._bank_int(hits, ch)
+            self.rot[ch] = self._bank_int(rot, ch)
+            who = owners.get(ch, "gen")
+            self.owner[ch] = who if who in ("gen", tlib.OWNER_PLAYER) else "gen"
+
+    @staticmethod
+    def _bank_int(seq, ch):
+        """One integer out of a stashed per-group list, defaulting to 0.
+
+        Defensive because this list can arrive from a SNAPSHOT rather than
+        from `_bank_capture`: a hand-edited or truncated file must land on the
+        blank-bank value instead of raising on the poll thread, where the
+        handler catches and the surface then stops repainting."""
+
+        if ch >= len(seq):
+            return 0
+        try:
+            return int(seq[ch])
+        except (TypeError, ValueError):
+            return 0
+
+    def _land_bank(self):
+        """Put a loaded snapshot back on the bank it was SAVED on.
+
+        `zynseq.load()` ends with `select_bank(1, True)` and carries its own
+        upstream TODO about it (`zynlibs/zynseq/zynseq.py:259-261`, verified on
+        the rig itself 2026-09-05, not merely in the pinned reference tree).
+        So the sequencer is ALWAYS on bank 1 by the time `set_state` runs,
+        while the flat `voices`/`drums`/`owners` blocks describe whatever bank
+        was live at save time. Save on bank 3 and reload: **bank 1's patterns
+        under bank 3's registers, in silence.**
+
+        THIS CANNOT LIVE IN `set_state`. `self.bank` there is still the
+        OUTGOING bank - `set_state` runs inside the zs3 restore, and
+        `SS_LOAD_SNAPSHOT` -> `_on_snapshot` arrives afterwards. It runs here,
+        after `_pin_bank()` has taken what zynseq landed on and before
+        `_resync_all()` re-reads every cache, so the caches are filled from the
+        bank the player actually saved.
+
+        IT DOES NOT GO THROUGH `_bank_switch`, and that is the whole subtlety.
+        A switch STASHES the outgoing bank first - and the live state here is
+        the SAVED bank's, not bank 1's, so a switch would file bank 3's
+        registers under bank 1 and then overwrite bank 3's own restored record
+        with them. The state is already correct for the destination; only
+        zynseq has to move.
+
+        A BANK THAT DOES NOT EXIST IS REFUSED AND SAID OUT LOUD. `select_bank`
+        AUTHORS a missing bank as somebody else's 4x4 default on MIDI channels
+        0-3, so following a bad number would write that layout into the riff.
+        Staying on bank 1 with a line in the log is the honest failure."""
+
+        want = self._saved_bank
+        self._saved_bank = None
+        if want is None or want == self.bank:
+            return
+        if self.libseq.getSequencesInBank(want) == 0:
+            self._slog("bank", event="land_refused", bank=want,
+                       reason="no such bank in this snapshot", now=self.bank)
+            return
+        self.zynseq.select_bank(want, force=True)
+        self.bankpin.pin(self.zynseq.bank)
+        self._slog("bank", event="landed", bank=want)
+
     def _bank_switch(self, bank):
         """Take a bank. Poll thread, on the bar, under the lock.
 
@@ -4612,8 +4825,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         one it was launched from."""
 
         old = self.bank
-        self._bank_state[old] = {ch: dict(self.state[ch])
-                                 for ch in range(len(tlib.CHANNELS))}
+        self._bank_state[old] = self._bank_capture()
         if self.libseq.getSequencesInBank(bank) == 0:
             self._author_bank(bank)
         self.zynseq.select_bank(bank, force=True)
@@ -4640,11 +4852,24 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # same answer in every bank and there is nothing to store. This is
             # the ENGINE-OR-BEHAVIOUR distinction for the fourth time.
             kind = self.channel_kind(ch)
-            if saved is not None and ch in saved:
-                self.state[ch] = tlib.upgrade_state(kind, saved[ch],
+            keep = saved.get("channels", {}).get(ch) if saved else None
+            if keep is not None:
+                self.state[ch] = tlib.upgrade_state(kind, keep,
                                                     self._steps(ch))
             else:
                 self.state[ch] = tlib.default_channel_state(kind)
+        # HITS, ROTATE AND OWNERSHIP ARE BANK-SCOPED TOO, since 2026-09-05.
+        # They live in the per-group arrays `_LEGACY` names rather than in
+        # `self.state`, so the stash above never saw them: they LEAKED into the
+        # incoming bank and were LOST from the outgoing one. Measured before
+        # the fix - bank 1 rotated 5, bank 3 rotated 1, back to bank 1 read 1.
+        #
+        # THIS MATTERS MORE THAN A DISPLAY GLITCH, because neither number can
+        # be recovered from the pattern. `_derive_params`' own docstring says
+        # rotation is not recoverable, and `_recount_hits` deliberately REFUSES
+        # to read HITS back once the rhythm register thins the line. For a
+        # thinned channel the stash is the only copy that has ever existed.
+        self._bank_restore_legacy(saved)
         # A bank switch is snapshot-shaped: it rewrites every play mode and
         # every cached value the driver holds. Both of those already have a
         # single answer each, and this reuses them rather than inventing a
@@ -10535,6 +10760,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # every cache is about to be re-read anyway - so the once-a-second
         # check does not then report a restore as a drift.
         self._pin_bank()
+        # PUT IT BACK ON THE BANK IT WAS SAVED ON, before the caches are read.
+        # `zynseq.load()` always lands on bank 1; the flat blocks describe
+        # whatever bank was live at save time. `_land_bank` carries the whole
+        # argument, including why this cannot go in `set_state` and why it
+        # must not go through `_bank_switch`.
+        self._land_bank()
         with self.lock:
             self._resync_all()
             self._render_all()
