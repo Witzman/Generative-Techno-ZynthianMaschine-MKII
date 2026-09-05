@@ -4413,15 +4413,18 @@ class techno_lib:
 
     MOD_SHAPES = ("tri", "ramp", "squ", "s&h")
 
-    # Bars per cycle, slowest first. TWELVE, not sixteen: the sixteen pads
-    # carry twelve rates (pads 0-11) and four shapes (pads 12-15), and an
-    # entry no pad can reach is a table that lies about the surface.
+    # Bars per cycle, slowest first. NINE, and the sixteen pads carry nine
+    # rates (pads 0-8), a DARK GAP (pads 9-11) and four shapes (pads 12-15).
+    # An entry no pad can reach is a table that lies about the surface, and so
+    # is a lit pad with no entry behind it - which is why the gap draws at
+    # PAD_OFF rather than being closed up by sliding the shapes left.
     #
     # Bar-synced rather than free-running so a modulator lines up with the
     # pattern it is colouring - this instrument already lands structure on
     # the bar everywhere else.
-    # NINE, NOT TWELVE, since 2026-09-04. The three fastest were dropped
-    # because they could not produce the shape they named.
+    #
+    # IT WAS TWELVE UNTIL 2026-09-04. The three fastest were dropped because
+    # they could not produce the shape they named.
     #
     # The modulator writer runs on the ~200 ms poll tick, so a rate's period
     # has to be several multiples of that to be a WAVE rather than an alias.
