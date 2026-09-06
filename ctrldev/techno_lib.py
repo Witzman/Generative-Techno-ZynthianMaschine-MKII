@@ -2945,7 +2945,27 @@ class techno_lib:
         snapshot loaded, the processor says what is running now."""
         measured = techno_lib.VOICE_SYMBOLS.get(eng_code)
         if measured:
-            return tuple(measured)
+            # THE TABLE SAYS WHICH SYMBOL SERVES WHICH ROLE; THE INSTANCE SAYS
+            # WHETHER IT IS THERE - item 60, 2026-09-06. Returning the table
+            # unconditionally drew a column LIVE on a processor that publishes
+            # no such port: the number moved under the encoder and the plugin
+            # was never written. Measured in the matrix built while hunting
+            # item 42 - column live, 64 -> 62, zero writes - and
+            # `_dead_column_reason` already had a branch for it that
+            # `_column_dead` could not reach.
+            #
+            # Gate G2's measurement is NOT being second-guessed: it decides the
+            # symbol, and only whether that symbol exists on this instance is
+            # asked here.
+            #
+            # AN EMPTY PORT LIST MEANS UNKNOWN, NOT ABSENT, and the difference
+            # is a page that blacks out on every snapshot load. A processor
+            # mid-load publishes nothing; answering "all four dead" there would
+            # be a confident wrong answer of exactly the kind this is removing.
+            if not ports:
+                return tuple(measured)
+            published = {symbol for symbol, *_rest in ports}
+            return tuple(sym if sym in published else None for sym in measured)
         return techno_lib.discover_voice_symbols(ports)
 
     @staticmethod

@@ -1317,8 +1317,22 @@ class TestVoiceSymbolResolution(unittest.TestCase):
     ]
 
     def test_the_measured_table_wins_over_any_guess(self):
-        # Gate G2 measured these; a pattern match must never override them.
-        self.assertEqual(tl.voice_symbols("JV/JC303", self.UNKNOWN),
+        """Gate G2 measured these; a pattern match must never override them.
+
+        REWRITTEN 2026-09-06 WITH ITEM 60, and the reason is worth keeping.
+        This used to pass JC303's engine code beside ANOTHER plugin's port
+        list, which cannot happen: `_voice_symbols` reads `eng_code` and the
+        ports off the SAME processor. The pairing was a way of saying "the
+        table wins", and it kept working only because the ports were ignored
+        entirely - which is precisely the defect item 60 filed. So the same
+        intent is asserted against a state that can exist: JC303's own ports,
+        with the decoys a pattern match would rather have."""
+        ports = [("_cutoff", 0.0, 1.0), ("_resonance", 0.0, 1.0),
+                 ("_envmod", 0.0, 1.0), ("_decay", 0.0, 1.0),
+                 # what a guess would reach for instead
+                 ("filter_cutoff", 20.0, 20000.0),
+                 ("filter_resonance", 0.0, 1.0)]
+        self.assertEqual(tl.voice_symbols("JV/JC303", ports),
                          ("_cutoff", "_resonance", "_envmod", "_decay"))
 
     def test_an_unknown_engine_is_resolved_from_its_own_ports(self):
@@ -3710,6 +3724,56 @@ class TheWetReadsBackAsThePercentThatWroteIt(unittest.TestCase):
     def test_the_floor_reads_zero(self):
         spec = tl.FX_ROLES["TAP Reverberator"]
         self.assertEqual(tl.fx_wet_percent(spec, {"wetlevel": tl.WET_OFF}), 0)
+
+
+
+
+class TheMeasuredTableStillHasToMeetThePlugin(unittest.TestCase):
+    """Todo item 60. `voice_symbols` returned the measured table for a known
+    engine WITHOUT asking whether the processor publishes those ports, so a
+    column drew LIVE, moved its number under the encoder, and wrote nothing.
+
+    Found 2026-09-06 in the matrix built while hunting item 42 - row E, column
+    live, number 64 -> 62, zero plugin writes. `_dead_column_reason` already
+    carries a branch for "the processor has no controller" that `_column_dead`
+    could never reach.
+
+    THE TABLE STILL WINS ON WHICH SYMBOL SERVES WHICH ROLE - that is what gate
+    G2 measured and it is not being second-guessed. What it cannot do is assert
+    that a particular instance publishes it."""
+
+    ENG = "JV/Obxd"
+
+    def ports(self, symbols):
+        return [(sym, 0.0, 1.0) for sym in symbols]
+
+    def test_a_plugin_publishing_all_four_is_unchanged(self):
+        measured = tl.VOICE_SYMBOLS[self.ENG]
+        got = tl.voice_symbols(self.ENG, self.ports([s for s in measured if s]))
+        self.assertEqual(got, tuple(measured))
+
+    def test_a_role_the_instance_does_not_publish_goes_dead(self):
+        measured = [s for s in tl.VOICE_SYMBOLS[self.ENG] if s]
+        self.assertGreater(len(measured), 1)
+        got = tl.voice_symbols(self.ENG, self.ports(measured[1:]))
+        self.assertIsNone(got[0], "a column whose port the plugin does not "
+                                  "publish must draw dead")
+        self.assertEqual(got[1], tl.VOICE_SYMBOLS[self.ENG][1])
+
+    def test_a_processor_publishing_nothing_keeps_the_table(self):
+        """THE GUARD THAT KEEPS THIS SAFE. An empty controllers dict means the
+        chain has not told us yet - a processor mid-load publishes none - and
+        answering "every column is dead" there would black out page 1 on every
+        snapshot load. Unknown is not the same as absent."""
+        self.assertEqual(tl.voice_symbols(self.ENG, []),
+                         tuple(tl.VOICE_SYMBOLS[self.ENG]))
+        self.assertEqual(tl.voice_symbols(self.ENG, None),
+                         tuple(tl.VOICE_SYMBOLS[self.ENG]))
+
+    def test_an_unknown_engine_still_discovers(self):
+        got = tl.voice_symbols("JV/NothingWeKnow",
+                               self.ports(["cutoff", "resonance"]))
+        self.assertEqual(len(got), 4)
 
 
 
