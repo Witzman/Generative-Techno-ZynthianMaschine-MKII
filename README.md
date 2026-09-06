@@ -89,13 +89,20 @@ boundary and resolves by itself. MOD binds a bar-synced LFO to any knob, FREEZE
 parks everything that moves, a held MUTE turns the pads into a mute grid, and
 SHIFT + REC captures the master to a WAV on the Pi.
 
-The factory snapshot arrives playing 125 BPM techno: four-on-the-floor across
-A-D, a drum kit walked by a Turing register on E, a frozen bass line on F, a lead
-at full random on G, and one long sustained note per 8-step loop on H — three
-different kinds of authorship, one per voice. It is
-`018-generative-techno-main-insert`, which carries a filter on the Main chain, so
-one knob sweeps the whole mix; `017-generative-techno` ships beside it as the
-same instrument without that insert.
+The factory snapshot arrives playing dub at 120 BPM: four-on-the-floor with a
+backbeat and one drenched clap across A-D, each with its own slow modulator, a
+four-note bass on F, and chords held on G and H. It is `019-dub-factory`, and
+it is the first factory snapshot that is a piece of music rather than a bare
+instrument — press Play and it plays.
+
+Two more ship beside it and neither is ever the default.
+`018-generative-techno-main-insert` is the same eight channels with no genre on
+them: four-on-the-floor across A-D, a drum kit walked by a Turing register on
+E, a frozen bass on F, a lead at full random on G, and one long sustained note
+per 8-step loop on H — three different kinds of authorship, one per voice.
+Start there to build your own. `017-generative-techno` is the way back from a
+master filter that has eaten the mix: `018` and `019` both carry one on the
+Main chain, so one knob sweeps the whole mix, and `017` has no insert at all.
 
 ## What you need
 

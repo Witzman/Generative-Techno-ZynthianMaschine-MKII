@@ -1,11 +1,18 @@
 # Snapshots
 
-Three things live here: the **factory snapshot** — `018`, the instrument's own
-configuration with a master filter on the Main chain, with `017` beside it as
-the same instrument without one; the **genre pack**, fifty-one fixed
-arrangements built from it; and
+Three things live here: the **factory snapshot** — `019-dub-factory` since
+2026-09-06, the first one that is a piece of music rather than a bare
+instrument, with `018` beside it as the plain eight channels and `017` beside
+that as the same instrument with no master filter; the **genre pack**,
+fifty-one fixed arrangements; and
 the **drone and ambient pack**, twenty slow pieces that are the opposite
 instrument — almost no pattern, and everything moving.
+
+**Three snapshots are installed on a fresh Pi and only one is ever the
+default.** `bootstrap.sh` places `019` in bank `000` **and** over
+`default.zss`; `018` and `017` go into the bank and never over it. Both halves
+are asserted in `system/tests/test-dry-run.sh`, and the file itself is pinned
+in `tools/tests/test_factory_snapshot_shipped.py`.
 
 ---
 
@@ -139,7 +146,76 @@ hand.
 
 
 
-## `018-generative-techno-main-insert` — THE FACTORY SNAPSHOT since 2026-08-22
+## `019-dub-factory` — THE FACTORY SNAPSHOT since 2026-09-06
+
+**File:** [`019-dub-factory.zss`](019-dub-factory.zss) · 45,417 bytes · md5
+`3da1d2c5fefce59e4aad7852dcab0211` (measured 2026-09-06, after the main fader
+moved; the pre-promotion `af448d3b…` is the same music at a different output
+level)
+
+**Owner decision, 2026-09-06: this became the factory snapshot**, replacing
+`018`. It is built on `018`, so it carries the master insert, and it is the
+first factory snapshot that **plays** — dub drums on A–D with six modulators,
+a four-note JC303 bass on F, and chord takes on G and H. Built from
+[`factory-manifest.json`](factory-manifest.json) by
+`tools/build-factory-snapshot.py`.
+
+### Its main fader is 0.28, and that is the only thing the promotion changed
+
+Not taste. Two reads of `zynmixer:output_17a`, of **the same file**, with the
+fader at 1.0 both times:
+
+| when | peak | RMS | clipped |
+|---|---|---|---|
+| 2026-09-02, 40 s | **−3.99 dBFS** | −20.34 | zero near full scale |
+| 2026-09-05 | **+7.00 dBFS** | −10.70 | **1.21 % of samples over 1.0** |
+
+The crest factor is ~17.7 dB, so it is the kick and the clap crunching rather
+than a hot mix — and `083-drone-cathedral` clips zero of 488,448 samples on the
+same build, so it is this snapshot's gain staging and not the corrected wet law
+in general.
+
+**What happened between the two is the wet-law fix of 2026-09-04.** `019`'s
+four *modulated* sends self-correct on load — the driver owns a modulator's
+base as a **percent** and writes `base + offset` through `_set_wet` — so they
+came back 35–50 dB louder into a main fader still at unity.
+
+So the correction is derived rather than picked: **−11.06 dB** puts the
+measured peak back on the ceiling the owner settled on by ear
+(predicted −4.06 dBFS against −3.99). Every ratio between the eight channels is
+untouched; only the output stage moved.
+
+**Still owed: a rig re-read of `zynmixer:output_17a` to confirm it.** The two
+windows differ — 40 s in 2026-09-02, shorter during the gate — and a longer
+window catches higher peaks, so the true margin may be thinner than the
+arithmetic says. **Do not raise this fader without that measurement.** The
+arithmetic is a test, not a comment:
+`TheMainFaderLeavesTheHeadroomItWasGiven`.
+
+### The manifest does NOT rebuild this file, and that is deliberate
+
+Rebuilding from `factory-manifest.json` produces **nineteen FX wet ports 20–45
+dB louder**, because the shipped `.zss` was written under the **old wet law**
+(percent mapped linearly onto −70..+10 dB) and the builder now uses
+`tlib.wet_db`. Checked 2026-09-06 with a full structural diff: those nineteen
+values were the *only* differences.
+
+**The file that was NOT rebuilt is the one that ships.** It is what the owner
+heard at the rig on 2026-09-05, and promoting a rebuild would have made the
+factory default a snapshot nobody has played. Closing the gap is item 50 — the
+whole pack is dry — inside item 49's preset rebuild, where the new sound gets
+an ear gate. Until then the manifest describes the **intent** and the `.zss`
+holds the **evidence**. The manifest says so in `reproduces_shipped_file`, and
+a test asserts it keeps saying so.
+
+---
+
+## `018-generative-techno-main-insert` — the factory snapshot from 2026-08-22 to 2026-09-06
+
+**Still installed, never the default.** `019` is a genre in a way `018` was
+not, so the plain eight channels stay one snapshot load away — a fresh Pi
+holding only a dub preset and a bare `017` would have lost the instrument
+itself. Start here to build your own.
 
 **File:** [`018-generative-techno-main-insert.zss`](018-generative-techno-main-insert.zss)
 · 55,121 bytes · md5 `89020924f3700bdae09ba47e308e9bd0` (measured 2026-08-22,
@@ -151,9 +227,11 @@ different file)
 Nothing else differs — the two files' only unequal top-level keys are `chains`
 and `zs3`, and both differences are that plugin and its saved controls.
 
-**Owner decision, 2026-08-22: this became the factory snapshot.** `bootstrap.sh`
-now places `018` as the bank-`000` entry **and** as `default.zss`, so a fresh Pi
-boots into the instrument with its MAIN page already there.
+**Owner decision, 2026-08-22: this became the factory snapshot**, and it held
+that job until `019` replaced it on 2026-09-06. `bootstrap.sh` placed `018` as
+the bank-`000` entry **and** as `default.zss`, so a fresh Pi booted into the
+instrument with its MAIN page already there. It is still placed in the bank;
+it is no longer the default.
 
 **The argument that had kept it out for two days is still true, and is answered
 rather than dismissed.** The insert sits between the mixer and the card, so it
@@ -163,12 +241,14 @@ controls explicitly; at the plugin's own defaults the cutoff sits below the
 point where it passes audio at all. The risk of shipping it was that one bad
 control write leaves a dead rig with a healthy-looking surface.
 
-**What makes it acceptable is the way back.** `bootstrap.sh` also places `017`
-in bank `000` — never as `default.zss` — so the insert-free instrument is one
-snapshot load away rather than a rebuild. Both halves are asserted in
-`system/tests/test-dry-run.sh`: `018` in the bank and over `default.zss`, `017`
-in the bank and never over it, and no genre snapshot as the default. The
-assertions were proved able to fail by pointing the installer back at `017`.
+**What makes it acceptable is the way back**, and that argument now covers
+`019` too, which inherits the insert. `bootstrap.sh` also places `017` in bank
+`000` — never as `default.zss` — so the insert-free instrument is one snapshot
+load away rather than a rebuild. All three are asserted in
+`system/tests/test-dry-run.sh`: `019` in the bank and over `default.zss`, `018`
+and `017` in the bank and never over it, and no genre snapshot as the default.
+The assertions were proved able to fail by pointing the installer back at
+`018`.
 
 **Loading `017` builds no MAIN page at all** — `ALL`'s ring is one page shorter
 rather than showing dead columns — which is what the guide's mixing page says.

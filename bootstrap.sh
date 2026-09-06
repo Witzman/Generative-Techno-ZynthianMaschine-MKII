@@ -17,17 +17,37 @@ REPO_URL=https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
 : "${REPO_DIR:=/root/Generative-Techno-ZynthianMaschine-MKII}"
 SNAP_ROOT="$ZYNTHIAN_ROOT/zynthian-my-data/snapshots"
 SNAP_DIR="$SNAP_ROOT/000"
-# THE FACTORY SNAPSHOT CARRIES THE MASTER INSERT since 2026-08-22, by the
-# owner's decision. 017 has an empty Main chain, so the MAIN page is not built
-# at all and the master filter does not exist; 018 is the same instrument with
-# an MDA RezFilter on the Main chain, written wide open and inaudible.
+# THE FACTORY SNAPSHOT IS 019-dub-factory SINCE 2026-09-06, by the owner's
+# decision, replacing 018. It is the first factory snapshot that is a piece of
+# MUSIC rather than a bare instrument: dub drums on A-D with six modulators,
+# a four-note JC303 bass on F, and chord takes on G and H. A fresh Pi now
+# boots into something that plays.
 #
-# The risk that kept it out until now is real and has not gone away: that one
-# insert can silence all eight channels from a single knob. So 017 is STILL
-# placed in bank 000 beside it - the insert-free instrument is one snapshot
-# load away, which is what makes shipping the insert an acceptable default
-# rather than a trap.
-SNAP=018-generative-techno-main-insert.zss
+# Its main fader is 0.35, NOT 1.0. That is not a taste setting: 019 at 1.0
+# was measured on 2026-09-05 at +7.0 dBFS peak with 1.21 % of samples over
+# full scale - the kick and the clap crunching against a crest factor of
+# 17.7 dB. RMS was a healthy -10.7 dBFS, so the mix was right and only the
+# output stage was wrong. Do not raise it without re-reading
+# zynmixer:output_17a.
+#
+# THREE SNAPSHOTS ARE PLACED, and each is a different way back:
+#
+#   019  the factory default, in the bank and over default.zss
+#   018  the GENERIC instrument - the same eight channels with no genre on
+#        them. It was the factory snapshot from 2026-08-22 to 2026-09-06 and
+#        it keeps shipping, because a fresh Pi holding only a dub preset and
+#        a bare 017 would have lost the plain instrument altogether
+#   017  the INSERT-FREE instrument. 018 and 019 both carry an MDA RezFilter
+#        on the Main chain, written wide open and inaudible, and one knob on
+#        that filter can silence all eight channels. 017 has an empty Main
+#        chain, so the MAIN page is not built at all and the master filter
+#        does not exist. That is what makes shipping the insert an acceptable
+#        default rather than a trap
+#
+# Neither 018 nor 017 is ever written over default.zss. Asserted both ways in
+# system/tests/test-dry-run.sh.
+SNAP=019-dub-factory.zss
+SNAP_GENERIC=018-generative-techno-main-insert.zss
 SNAP_FALLBACK=017-generative-techno.zss
 PACK_DIR="$REPO_DIR/snapshot/genre-pack"   # the fifty genre snapshots, 031-080
 DRONE_DIR="$REPO_DIR/snapshot/drone-ambient"   # the twenty drone/ambient ones, 081-100
@@ -101,11 +121,16 @@ main() {
     if [ "$DRY" = 1 ]; then
         echo "  [dry-run] mkdir -p $SNAP_DIR"
         echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP $SNAP_DIR/"
+        echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP_GENERIC $SNAP_DIR/"
         echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP_FALLBACK $SNAP_DIR/"
         echo "  [dry-run] install -m 0644 $REPO_DIR/snapshot/$SNAP $SNAP_ROOT/default.zss"
     else
         mkdir -p "$SNAP_DIR"
         install -m 0644 "$REPO_DIR/snapshot/$SNAP" "$SNAP_DIR/"
+        # The generic instrument, beside it and never as the default: 019 is a
+        # genre in a way 018 was not, so the plain eight channels stay one
+        # snapshot load away.
+        install -m 0644 "$REPO_DIR/snapshot/$SNAP_GENERIC" "$SNAP_DIR/"
         # The insert-free instrument, beside it and never as the default: the
         # way back from a master filter that has swallowed the mix.
         install -m 0644 "$REPO_DIR/snapshot/$SNAP_FALLBACK" "$SNAP_DIR/"
@@ -202,12 +227,16 @@ displays drawing their tab rows, the Group buttons lit in channel colours.
 
 If instead you get an empty Zynthian, this Pi had a previous session, which
 takes priority over the factory snapshot. Load it by hand from the screen:
-  Snapshots > into bank 000 > 018-generative-techno-main-insert
+  Snapshots > into bank 000 > 019-dub-factory
 
-That is the factory snapshot and it carries the master filter on the Main
-chain. If the whole mix ever goes quiet from one knob, that filter is the first
-thing to suspect - and 017-generative-techno, in the same bank, is the same
-instrument without it.
+That is the factory snapshot: dub drums on A-D, a bass on F, chords on G and H.
+Press Play and it plays.
+
+Two more sit in the same bank and neither is ever the default.
+018-generative-techno-main-insert is the same eight channels with no genre on
+them - start there to build your own. 017-generative-techno is the way back
+from a master filter that has eaten the mix: 018 and 019 both carry one on the
+Main chain, and one knob on it can silence all eight channels.
 
 If something is wrong, section 4 of the guide gives every step its own check:
 https://witzman.github.io/Generative-Techno-ZynthianMaschine-MKII/04-manual-installation.html

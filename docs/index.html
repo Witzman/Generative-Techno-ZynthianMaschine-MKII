@@ -1265,11 +1265,20 @@ p.more a:hover{border-bottom-color:var(--ch-f)}
   function artPages(ac){
     var o='', SX=[10,204], SW=186, SY=32, SH=74, COLW=44, i, k;
 
-    /* Every reading here is measured against the factory snapshot: chain 7 is
-       midi_chan 6 - channel G - titled LEAD, running JV/Obxd with 82
+    /* Every reading here is measured against 018-generative-techno-main-insert:
+       chain 7 is midi_chan 6 - channel G - titled LEAD, running JV/Obxd with 82
        controllers. The PRESET column shows the ENGINE rather than a patch
-       name, because the patch name is not in the snapshot and inventing one
-       would put a made-up string on the landing page. */
+       name, because the patch name is not in THAT snapshot and inventing one
+       would put a made-up string on the landing page.
+
+       018 IS NAMED HERE RATHER THAN "the factory snapshot", AND THAT CHANGED
+       ON 2026-09-06, when 019-dub-factory took the factory job. These numbers
+       are still a real measurement of a real shipped snapshot, which is the
+       property that matters - but 019's LEAD chain is a different patch with
+       ONE saved controller instead of 82, and it DOES carry a patch name
+       ("Analog Brass Chrds"), so re-pointing this slide would mean
+       re-measuring every column rather than editing a label. Do not relabel
+       it back without doing that. */
     var P1=[['PRESET','OBXD',0],['CUTOFF','0062',62],['RESO','0028',28],['ENV','0044',44],
             ['DECAY','0035',35],['LEVEL','0071',71],['REVERB','0018',18],['DELAY','0026',26]];
     var P2=[['VOLUME','0080',80],['VOICES','0005',55],['TUNE','0051',51],['OCTAVE','0002',33],

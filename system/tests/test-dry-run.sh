@@ -200,7 +200,7 @@ has "patches zynautoconnect"       "$I" "\[dry-run\] python3 '.*/tools/patch-aut
 # One-time .bak baseline before the first overwrite, and never a second time.
 has "takes a .bak of zynautoconnect" "$I" "\[dry-run\] cp '$FAKE/zynthian-ui/zynautoconnect/zynthian_autoconnect\.py' '.*\.bak'"
 
-head_ "bootstrap.sh --dry-run: the factory snapshot is 018, with 017 beside it"
+head_ "bootstrap.sh --dry-run: the factory snapshot is 019, with 018 and 017 beside it"
 ################################################################################
 # The fresh-install path is the one nobody can rehearse: it runs once, on a Pi
 # nobody has yet. So the snapshot it places is asserted here rather than
@@ -216,9 +216,17 @@ $B"; fi
 has "reports the ZynthianOS build"  "$B" '^== ZynthianOS: Oram-2601-1 fake$'
 has "says it is a dry run"          "$B" 'DRY RUN - nothing will be changed\.'
 
-# 018 is the factory snapshot: in the bank AND over default.zss.
-has "puts 018 in bank 000"          "$B"     '\[dry-run\] install -m 0644 .*/snapshot/018-generative-techno-main-insert\.zss .*/snapshots/000/$'
-has "makes 018 the default"         "$B"     '\[dry-run\] install -m 0644 .*/snapshot/018-generative-techno-main-insert\.zss .*/snapshots/default\.zss$'
+# 019 is the factory snapshot since 2026-09-06: in the bank AND over
+# default.zss. It is a GENRE snapshot in a way 018 was not, which is why the
+# two below it are both still placed.
+has "puts 019 in bank 000"          "$B"     '\[dry-run\] install -m 0644 .*/snapshot/019-dub-factory\.zss .*/snapshots/000/$'
+has "makes 019 the default"         "$B"     '\[dry-run\] install -m 0644 .*/snapshot/019-dub-factory\.zss .*/snapshots/default\.zss$'
+# 018 is the generic instrument - the same eight channels with no genre on
+# them. It stopped being the default on 2026-09-06 and did NOT stop shipping:
+# a fresh Pi that only had a dub preset and a bare 017 would have lost the
+# plain instrument entirely.
+has "puts 018 in bank 000 too"      "$B"     '\[dry-run\] install -m 0644 .*/snapshot/018-generative-techno-main-insert\.zss .*/snapshots/000/$'
+hasnt "never makes 018 the default" "$B"     'install -m 0644 .*/snapshot/018-generative-techno-main-insert\.zss .*default\.zss'
 # 017 is the way back from a master filter that ate the mix - present, never
 # the default. Both halves matter, so both are asserted.
 has "puts 017 in bank 000 too"      "$B"     '\[dry-run\] install -m 0644 .*/snapshot/017-generative-techno\.zss .*/snapshots/000/$'
@@ -226,8 +234,9 @@ hasnt "never makes 017 the default" "$B"     'install -m 0644 .*/snapshot/017-ge
 # A genre snapshot over default.zss would boot a fresh Pi into a fixed
 # arrangement instead of the instrument.
 hasnt "no genre snapshot as default" "$B"     'install .*/snapshot/(genre-pack|drone-ambient)/.*default\.zss'
-has "names 018 in the closing help" "$B"     'bank 000 > 018-generative-techno-main-insert'
-has "points at 017 as the way back" "$B" '017-generative-techno, in the same bank'
+has "names 019 in the closing help" "$B"     'bank 000 > 019-dub-factory'
+has "points at 017 as the way back" "$B" '017-generative-techno is the way back'
+has "names 018 as the plain one"    "$B" '018-generative-techno-main-insert is the same eight channels'
 rm -rf "$BFAKE"
 
 ################################################################################
