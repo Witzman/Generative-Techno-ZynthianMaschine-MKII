@@ -700,8 +700,26 @@ class maschine_mk2_lib:
 
         cls = maschine_mk2_lib
         out = [
-            cls.display_rect_osc(screen, 0, cls.LABEL_Y, cls.SCREEN_W,
-                                 cls.LABEL_H, cls.RECT_CLEAR),
+            # ONE ROW EITHER SIDE OF THE LABEL - item 68, 2026-09-06.
+            #
+            # The three bands were carved out when the full-screen clear went
+            # (item 21) and the GAPS BETWEEN THEM were never covered: the tabs
+            # erase rows 0-13, the label 15-22, the columns 24-61, so **rows 14
+            # and 23 are erased by nothing at all**. Anything that ever reaches
+            # them stays for the life of the process - a page change does not
+            # clear it, because no band includes it.
+            #
+            # Found after a physical replug, when the panel came back lit but
+            # carrying "a few additional lines": one two pixels under the page
+            # name (row 14) and one a pixel above the encoder names (row 23).
+            # The owner's pixel positions are what identified it.
+            #
+            # The label band is the one that grows, because it is the only band
+            # BETWEEN the other two: rows 14..23 closes both gaps in one erase,
+            # stops short of the rule at row 13 and of NAME_Y at 24, and costs
+            # two rows on a packet that was already being sent.
+            cls.display_rect_osc(screen, 0, cls.LABEL_Y - 1, cls.SCREEN_W,
+                                 cls.LABEL_H + 2, cls.RECT_CLEAR),
         ]
         if label:
             # The same coordinates the label band erases, and a test binds

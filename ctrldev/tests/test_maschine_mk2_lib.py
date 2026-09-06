@@ -414,6 +414,56 @@ class TestScreenLayout(unittest.TestCase):
         packets = whole_screen(0, self.TABS, self.COLS)
         self.assertNotIn(lib.display_clear_osc(0), packets)
 
+    def test_no_screen_row_is_erased_by_nothing(self):
+        """ITEM 68, and it is the guard the band split never had.
+
+        The three bands replaced a full-screen clear (item 21). Nothing checked
+        that they COVER the screen between them, and they did not: the tabs
+        erase rows 0-13, the label 15-22 and the columns 24-61, leaving **rows
+        14 and 23 erased by nothing**. Anything reaching those rows stayed for
+        the life of the process, and no page change could clear it, because no
+        band included it.
+
+        It took a physical replug and an owner counting pixels to find - "two
+        pixels below the page name", "one pixel above the top row of the words
+        Sus, Retrig, REl". Those are rows 14 and 23 exactly.
+
+        A test that checked each band drew correctly would still pass. What has
+        to hold is that the bands leave NO ROW uncovered."""
+
+        bands = [
+            (0, lib.TAB_BAND_H),
+            (lib.LABEL_Y - 1, lib.LABEL_H + 2),
+            (lib.COL_BAND_Y, lib.COL_BAND_H),
+        ]
+        covered = set()
+        for y, h in bands:
+            covered |= set(range(y, y + h))
+        bottom = lib.COL_BAND_Y + lib.COL_BAND_H
+        missing = sorted(set(range(bottom)) - covered)
+        self.assertEqual(missing, [],
+                         "rows erased by no band at all: %r" % (missing,))
+
+    def test_the_bands_do_not_overlap_each_other(self):
+        """And the fix must not be a bigger band that eats its neighbour: an
+        erase that reached into the tab band would wipe the rule at RULE_Y, and
+        one that reached NAME_Y would erase the encoder names a moment before
+        they are drawn."""
+
+        bands = [
+            (0, lib.TAB_BAND_H),
+            (lib.LABEL_Y - 1, lib.LABEL_H + 2),
+            (lib.COL_BAND_Y, lib.COL_BAND_H),
+        ]
+        seen = set()
+        for y, h in bands:
+            rows = set(range(y, y + h))
+            self.assertEqual(seen & rows, set(),
+                             "bands overlap at %r" % sorted(seen & rows))
+            seen |= rows
+        self.assertIn(lib.RULE_Y, range(0, lib.TAB_BAND_H),
+                      "the rule must stay inside the tab band")
+
     def test_no_division_label_is_cut_into_another_division(self):
         """ITEM 67, and this is the shape that makes a truncation dangerous.
 
@@ -463,8 +513,8 @@ class TestScreenLayout(unittest.TestCase):
                  lib.SCREEN_W, lib.TAB_BAND_H),
                 (lib.column_packets(0, 2, self.COLS[2]), 2 * lib.SCREEN_COL,
                  lib.COL_BAND_Y, lib.SCREEN_COL, lib.COL_BAND_H),
-                (lib.label_packets(0, "X"), 0, lib.LABEL_Y,
-                 lib.SCREEN_W, lib.LABEL_H)):
+                (lib.label_packets(0, "X"), 0, lib.LABEL_Y - 1,
+                 lib.SCREEN_W, lib.LABEL_H + 2)):
             self.assertEqual(
                 packets[0],
                 lib.display_rect_osc(0, x, y, w, h, lib.RECT_CLEAR),
@@ -819,8 +869,11 @@ class TestLabelOnlyRepaint(unittest.TestCase):
         # set_pixel - so a shorter label leaves the tail of the old one on
         # glass unless the row is cleared first.
         packets = lib.label_packets(0, "STEP 1/3")
+        # The band is one row taller either side since item 68: rows 14 and
+        # 23 were erased by nothing at all.
         self.assertEqual(packets[0], lib.display_rect_osc(
-            0, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H, lib.RECT_CLEAR))
+            0, 0, lib.LABEL_Y - 1, lib.SCREEN_W, lib.LABEL_H + 2,
+            lib.RECT_CLEAR))
 
     def test_the_erase_is_one_message_and_needs_the_matching_daemon(self):
         # THIS TEST USED TO ASSERT THE OPPOSITE, AND THE REVERSAL IS THE POINT.
@@ -850,9 +903,9 @@ class TestLabelOnlyRepaint(unittest.TestCase):
         # TestScreenLayout.test_every_band_erases_before_it_draws.
         for packets, box in (
                 (lib.label_packets(0, "X"),
-                 (0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H)),
+                 (0, lib.LABEL_Y - 1, lib.SCREEN_W, lib.LABEL_H + 2)),
                 (lib.label_packets(1, ""),
-                 (0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H))):
+                 (0, lib.LABEL_Y - 1, lib.SCREEN_W, lib.LABEL_H + 2))):
             x, y, w, h = box
             screen = 0 if len(packets) > 1 else 1
             self.assertEqual(
@@ -902,7 +955,7 @@ class TestLabelOnlyRepaint(unittest.TestCase):
             packets = lib.label_packets(screen, "X")
             self.assertTrue(all(p for p in packets))
             self.assertEqual(packets[0], lib.display_rect_osc(
-                screen, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H,
+                screen, 0, lib.LABEL_Y - 1, lib.SCREEN_W, lib.LABEL_H + 2,
                 lib.RECT_CLEAR))
 
 
