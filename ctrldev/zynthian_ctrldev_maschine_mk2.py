@@ -3939,6 +3939,25 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # meaningless - MOD+pad has nothing held down across a snapshot load.
         self.mod_last = None
 
+        # CLEAR FIRST — item 69, 2026-09-06.
+        #
+        # The save side says what the contract is: *"Only channels that were
+        # actually switched appear - an absent entry means 'ask the chain'."*
+        # This loop only ever SET the channels present in the dict, so an
+        # absent entry meant "keep whatever the driver already had" — the
+        # opposite. A channel switched by hand stayed switched across every
+        # snapshot load, silently and for the life of the process.
+        #
+        # **Every shipped pack preset stores `kinds: {}`**, so no preset could
+        # put a switched channel back. Found at the rig: `031` loaded fresh
+        # with group A still a voice, GRID still blinking. It also explains
+        # item 52's original report, which was made on a channel switched
+        # during earlier experimenting.
+        #
+        # Clearing first restores the round trip in both directions: a kind
+        # deliberately saved comes back, and one that was not saved does not.
+        for channel in self.kind_override:
+            self.kind_override[channel] = None
         for key, kind in (state.get("kinds") or {}).items():
             try:
                 channel = int(key)

@@ -462,6 +462,35 @@ class ALoadClearsThePreviousSnapshotsScenes(DispatchCase):
         self.d.set_state({"globals": {}})
         self.assertEqual(self.d._bank_state, {})
 
+    def test_a_kind_switch_does_not_survive_a_snapshot_load(self):
+        """ITEM 69. A channel switched by hand stayed switched across every
+        snapshot load, silently and for ever.
+
+        `set_state` only SETS the channels present in the saved dict and never
+        clears the ones absent from it - while the save side's own comment says
+        the opposite: *"Only channels that were actually switched appear - an
+        absent entry means 'ask the chain'."* The two halves disagreed, and the
+        load half won.
+
+        Every shipped pack preset stores `kinds: {}`, so **no preset could ever
+        put a switched channel back.** Found at the rig 2026-09-06: the owner
+        loaded `031-house-classic` fresh and reported *"preset 31 group is
+        already knid swithed - grid is blinking"*."""
+
+        self.d.kind_override[0] = "voice"
+        self.d.set_state({"globals": {}})
+        self.assertIsNone(self.d.kind_override[0],
+                          "an absent entry means 'ask the chain', so the load "
+                          "must clear an override the snapshot does not carry")
+
+    def test_a_kind_the_snapshot_DOES_carry_is_restored(self):
+        """And the clear must not throw away what was saved - the round trip is
+        what makes a switched channel survive being saved on purpose."""
+
+        self.d.kind_override[0] = None
+        self.d.set_state({"globals": {}, "kinds": {"0": "voice"}})
+        self.assertEqual(self.d.kind_override[0], "voice")
+
     def test_a_bank_visited_before_the_load_comes_back_blank(self):
         # BLANK rather than WRONG. A bank's state is not in the snapshot yet -
         # that is todo item 8 - so the honest answer after a load is defaults.
