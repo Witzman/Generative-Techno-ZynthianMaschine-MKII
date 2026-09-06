@@ -33,22 +33,29 @@ FALLBACK = "017-generative-techno.zss"
 # no curve, no taper - which is what makes the dB arithmetic below legal.
 MAIN_STRIP = "chan_16"
 
-# THE UNITY PEAK OF *THIS* FILE, AND THE NUMBER HERE WAS WRONG FOR A DAY.
+# Measured on zynmixer:output_17a with nobody at the panel, main fader at 1.0.
+# Both readings are of the SAME FILE; the 11 dB between them is the wet-law
+# fix of 2026-09-04, which let 019's four modulated sends self-correct on load.
 #
-# It said +7.0 dBFS, which is the gate's reading of 2026-09-05 - and that gate
-# was measuring the RIG'S RE-SAVE (md5 8a70348a), a different file: it carries
-# channel D at 0.808 where the shipped copy has 0.67. So the before-measurement
-# and the file being corrected were never the same bytes, and the fader derived
-# from it landed 4 dB low.
+# CONFIRMED ON THE RIG 2026-09-06, and the confirmation is why this number is
+# still +7.0 after a day of being argued with. 019 was loaded and playing and
+# the bus was read over 96 s - FORTY-EIGHT BARS, the LCM of the six modulator
+# periods (16, 8, 6, 8, 4 and 3 bars) - at a known fader of 0.45:
 #
-# +2.95 is measured on the SHIPPED file, 2026-09-06, loaded and playing on the
-# rig: 20 s locked to ten 2.000 s bars at 120 BPM gave peak -8.11 dBFS with the
-# fader at 0.28, zero samples at or over full scale, zero wrap signature, and a
-# per-bar peak spread of 1.0 dB. -8.11 + 11.06 = +2.95.
+#     peak -0.39 dBFS, RMS -18.36, crest 18.0 dB, 0 of 9,216,000 clipped
+#     per-bar peak over 48 bars: max -0.39, min -1.97, spread 1.59 dB
 #
-# THE LESSON IS THE ONE THIS PROJECT KEEPS PAYING FOR: a measurement is of a
-# FILE, not of a name. Two things both called "019" differed by 4 dB.
-PEAK_AT_UNITY_DBFS = +2.95     # 2026-09-06, measured on the shipped copy
+# Back-computed, that is a unity peak of +6.55 dBFS, which agrees with the gate's
+# +7.0 within 0.45 dB. So +7.0 stands and is slightly conservative.
+#
+# A SHORTER WINDOW IS NOT A SMALLER VERSION OF THIS MEASUREMENT, IT IS A
+# DIFFERENT ONE. Locking to a BAR is what the trap file says and it is not
+# enough here: a 10-bar read of the same file at 0.28 returned -8.11 dBFS,
+# 3.6 dB below what the 48-bar figure predicts, and that reading was used to
+# "correct" this constant to +2.95 and the fader to 0.45 - which put the peak
+# 0.4 dB from full scale. Both were reverted. LOCK THE WINDOW TO THE LONGEST
+# THING THAT MOVES, not to the bar.
+PEAK_AT_UNITY_DBFS = +7.0      # 2026-09-05; +6.55 measured 2026-09-06, agrees
 OWNER_CEILING_DBFS = -3.99     # 2026-09-02, 40 s, zero samples near full scale
 
 
@@ -127,9 +134,8 @@ class TheMainFaderLeavesTheHeadroomItWasGiven(unittest.TestCase):
 
     def test_the_main_fader_is_not_at_unity(self):
         self.assertLess(self.level, 1.0,
-                        "the main fader is back at unity - the shipped 019 "
-                        "peaks at +2.95 dBFS there, and the rig's re-save of "
-                        "it clipped 1.21 % of its samples")
+                        "the main fader is back at unity - 019 clips 1.21 % "
+                        "of its samples there")
 
     def test_the_predicted_peak_is_at_or_under_the_owners_ceiling(self):
         predicted = PEAK_AT_UNITY_DBFS + 20 * math.log10(self.level)
