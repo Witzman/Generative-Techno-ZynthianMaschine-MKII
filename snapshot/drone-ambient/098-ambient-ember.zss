@@ -372,14 +372,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 4.5
+            },
+            "level_r": {
+              "value": 4.5
+            }
+          }
         },
         "11": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 12.0
+            },
+            "late_level": {
+              "value": 12.0
+            }
+          }
         },
         "3": {
           "bank_info": null,
@@ -393,14 +407,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 13.5
+            },
+            "level_r": {
+              "value": 13.5
+            }
+          }
         },
         "13": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 62.0
+            },
+            "late_level": {
+              "value": 62.0
+            }
+          }
         },
         "4": {
           "bank_info": null,
@@ -414,14 +442,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 22.5
+            },
+            "level_r": {
+              "value": 22.5
+            }
+          }
         },
         "15": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 40.0
+            },
+            "late_level": {
+              "value": 40.0
+            }
+          }
         },
         "5": {
           "bank_info": [
@@ -457,14 +499,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 0.0
+            },
+            "level_r": {
+              "value": 0.0
+            }
+          }
         },
         "17": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 0.0
+            },
+            "late_level": {
+              "value": 0.0
+            }
+          }
         },
         "6": {
           "bank_info": [
@@ -500,14 +556,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 22.5
+            },
+            "level_r": {
+              "value": 22.5
+            }
+          }
         },
         "19": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 62.0
+            },
+            "late_level": {
+              "value": 62.0
+            }
+          }
         },
         "26": {
           "bank_info": null,
@@ -521,14 +591,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 22.5
+            },
+            "level_r": {
+              "value": 22.5
+            }
+          }
         },
         "21": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 55.00000000000001
+            },
+            "late_level": {
+              "value": 55.00000000000001
+            }
+          }
         },
         "7": {
           "bank_info": null,
@@ -542,14 +626,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 22.5
+            },
+            "level_r": {
+              "value": 22.5
+            }
+          }
         },
         "23": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 62.0
+            },
+            "late_level": {
+              "value": 62.0
+            }
+          }
         },
         "8": {
           "bank_info": [
@@ -859,14 +957,28 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "level_l": {
+              "value": 0.0
+            },
+            "level_r": {
+              "value": 0.0
+            }
+          }
         },
         "25": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 0.0
+            },
+            "late_level": {
+              "value": 0.0
+            }
+          }
         }
       },
       "mixer": {

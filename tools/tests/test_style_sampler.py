@@ -456,6 +456,83 @@ class TheBlendNeverInventsAValue(unittest.TestCase):
                 ss.validate_entry(out)
 
 
+class TheStaticSendsTravelWithTheirPair(unittest.TestCase):
+    """`wets`, added 2026-09-06 with the pack builder's static-send lever.
+
+    A send is chosen FOR its insert pair - six of the fourteen effects are
+    crossfades and capped lower, and a send to a role the pair cannot serve is
+    a port that does not exist - so it takes the `fx` coin rather than one of
+    its own. And because `mods` keeps a separate coin, a blend can pair one
+    parent's sends with the other's modulators; a modulator owns its port, so
+    the static send on that channel is dropped rather than emitted for the
+    builder to refuse."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.genre = load(GENRE)
+        cls.drone = load(DRONE)
+
+    def _pairs(self):
+        g, d = self.genre, self.drone
+        return [(g[0], g[7]), (g[3], g[20]), (g[0], d[0]), (d[2], d[9])]
+
+    def test_the_sends_come_whole_from_the_parent_that_gave_the_pair(self):
+        for a, b in self._pairs():
+            for t in (0.0, 0.3, 0.5, 0.7, 1.0):
+                for seed in (0, 3, 11):
+                    out = ss.blend(a, b, t, seed)
+                    side = out["blend_taken_whole"]["fx"]
+                    parent = a if side == "a" else b
+                    self.assertEqual(out["fx"], parent["fx"])
+                    # Every surviving send is one the pair's parent wrote - a
+                    # dropped one is allowed, an INVENTED one is not.
+                    for cid, wants in (out.get("wets") or {}).items():
+                        for role, percent in wants.items():
+                            self.assertEqual(
+                                percent, parent["wets"][cid][role],
+                                f"{cid}/{role} is not the value {side} chose")
+
+    def test_the_sends_and_the_modulators_come_from_one_parent(self):
+        """THE INVARIANT THAT REPLACED A RECONCILER. `wets` and `mods` shared
+        the `fx` coin from 2026-09-06, so a static send and the modulator that
+        owns its port can never disagree - there is no half of a blend where
+        one came from A and the other from B. The first attempt gave them
+        separate coins and patched the disagreement afterwards, which broke the
+        blender's headline property: every leaf under a whole group is BYTE
+        equal to one parent, and a patched value is equal to neither."""
+        for a, b in self._pairs():
+            for t in (0.0, 0.3, 0.5, 0.7, 1.0):
+                for seed in (0, 3, 11, 29):
+                    out = ss.blend(a, b, t, seed)
+                    parent = a if out["blend_taken_whole"]["fx"] == "a" else b
+                    self.assertEqual(out.get("mods"), parent.get("mods"))
+                    self.assertEqual(out.get("wets"), parent.get("wets"))
+                    bases = {(int(m["channel"]), m["verb"]): int(m["base"])
+                             for m in (out.get("mods") or ())
+                             if m["verb"] in ("reverb", "delay")}
+                    for cid, wants in (out.get("wets") or {}).items():
+                        for role, percent in wants.items():
+                            base = bases.get((int(cid) - 1, role))
+                            if base is not None:
+                                self.assertEqual(
+                                    percent, base,
+                                    f"{cid}/{role}: the static send and its "
+                                    f"modulator's base disagree, which the "
+                                    f"pack builder refuses")
+
+    def test_every_blend_of_the_shipped_packs_still_builds(self):
+        """The end of the chain, and the reason the reconciler exists: the pack
+        builder REFUSES a send that disagrees with a modulator, so a sampler
+        that emitted one would produce an entry nobody can build."""
+        builder = importlib.import_module("build-genre-snapshots")
+        base = load(os.path.join(REPO, "snapshot", "017-generative-techno.zss"))
+        kits = load(os.path.join(TOOLS, "drum-kit-notes.json"))["notes"]
+        for a, b in self._pairs():
+            for t in (0.0, 0.5, 1.0):
+                out = ss.blend(a, b, t, 5)
+                builder.build_one(copy.deepcopy(base), out, kits)
+
+
 class TheBlendEndpointsAndTheAverages(unittest.TestCase):
 
     @classmethod

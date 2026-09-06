@@ -247,7 +247,42 @@
       "JV/TAP Stereo Echo",
       "JV/TAP Reverberator"
     ],
-    "notes": "One chord, four minutes, nothing arrives"
+    "notes": "One chord, four minutes, nothing arrives",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "082-drone-tectonic",
@@ -497,7 +532,42 @@
       "JV/Tal-Dub-3",
       "JV/Tal-Reverb-III"
     ],
-    "notes": "Two chords grinding past each other"
+    "notes": "Two chords grinding past each other",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "083-drone-cathedral",
@@ -747,7 +817,42 @@
       "JV/TAP Stereo Echo",
       "JV/Dragonfly Hall Reverb"
     ],
-    "notes": "A slow plagal fall, immense room"
+    "notes": "A slow plagal fall, immense room",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "084-drone-ironworks",
@@ -997,7 +1102,42 @@
       "JV/GxEcho-Stereo",
       "JV/Shiroverb"
     ],
-    "notes": "Metallic, the raised seventh biting"
+    "notes": "Metallic, the raised seventh biting",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 40,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "085-drone-tidal",
@@ -1247,7 +1387,42 @@
       "JV/Modulay",
       "JV/Dragonfly Room Reverb"
     ],
-    "notes": "The top layer breathing in and out"
+    "notes": "The top layer breathing in and out",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "086-drone-permafrost",
@@ -1497,7 +1672,42 @@
       "JV/TAP Stereo Echo",
       "JV/Tal-Reverb-II"
     ],
-    "notes": "Almost no motion, maximum decay"
+    "notes": "Almost no motion, maximum decay",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "087-drone-monolith",
@@ -1747,7 +1957,42 @@
       "JV/Tal-Dub-3",
       "JV/Dragonfly Hall Reverb"
     ],
-    "notes": "One fifth, no third, ever"
+    "notes": "One fifth, no third, ever",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "088-drone-thaw",
@@ -1977,7 +2222,42 @@
       "JV/TAP Stereo Echo",
       "JV/Roomy"
     ],
-    "notes": "Five notes, no dissonance possible"
+    "notes": "Five notes, no dissonance possible",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 40,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "7": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "089-drone-undertow",
@@ -2227,7 +2507,42 @@
       "JV/GxEcho-Stereo",
       "JV/Tal-Reverb-III"
     ],
-    "notes": "Phrygian second as colour, never in the bass"
+    "notes": "Phrygian second as colour, never in the bass",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "090-drone-aurora",
@@ -2477,7 +2792,42 @@
       "JV/Modulay",
       "JV/Dragonfly Early Reflections"
     ],
-    "notes": "High shimmer over a still root"
+    "notes": "High shimmer over a still root",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 55,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 25
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "7": {
+        "reverb": 55,
+        "delay": 25
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "drone row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "091-ambient-lantern",
@@ -2747,7 +3097,42 @@
       "JV/TAP Stereo Echo",
       "JV/Dragonfly Room Reverb"
     ],
-    "notes": "Warm, major, a slow walk"
+    "notes": "Warm, major, a slow walk",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "092-ambient-driftwood",
@@ -3017,7 +3402,42 @@
       "JV/Tal-Dub-3",
       "JV/Shiroverb"
     ],
-    "notes": "Dorian, plucked air, brushes underneath"
+    "notes": "Dorian, plucked air, brushes underneath",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 40,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "093-ambient-solstice",
@@ -3267,7 +3687,42 @@
       "JV/TAP Stereo Echo",
       "JV/Dragonfly Early Reflections"
     ],
-    "notes": "Pentatonic bells, no chords at all"
+    "notes": "Pentatonic bells, no chords at all",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "094-ambient-quarry",
@@ -3537,7 +3992,42 @@
       "JV/GxEcho-Stereo",
       "JV/Tal-Reverb-II"
     ],
-    "notes": "Dry, close, short room, delay-led"
+    "notes": "Dry, close, short room, delay-led",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "095-ambient-nightbus",
@@ -3807,7 +4297,42 @@
       "JV/Modulay",
       "JV/Tal-Reverb-III"
     ],
-    "notes": "A pulse under stillness"
+    "notes": "A pulse under stillness",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "096-ambient-glasshouse",
@@ -4057,7 +4582,42 @@
       "JV/TAP Stereo Echo",
       "JV/Dragonfly Hall Reverb"
     ],
-    "notes": "Ninths, very quiet, very wide"
+    "notes": "Ninths, very quiet, very wide",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "097-ambient-lowtide",
@@ -4327,7 +4887,42 @@
       "JV/Tal-Dub-3",
       "JV/Roomy"
     ],
-    "notes": "Suspended throughout, never resolving"
+    "notes": "Suspended throughout, never resolving",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 40,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "098-ambient-ember",
@@ -4597,7 +5192,42 @@
       "JV/GxEcho-Stereo",
       "JV/Dragonfly Hall Reverb"
     ],
-    "notes": "Dark, one bright note on top"
+    "notes": "Dark, one bright note on top",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "099-ambient-fieldstation",
@@ -4867,7 +5497,42 @@
       "JV/TAP Stereo Echo",
       "JV/Tal-Reverb-III"
     ],
-    "notes": "Rhythmic ambient, the key walking"
+    "notes": "Rhythmic ambient, the key walking",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   },
   {
     "file": "100-ambient-longwave",
@@ -5137,6 +5802,41 @@
       "JV/Tal-Dub-3",
       "JV/TAP Reverberator"
     ],
-    "notes": "The delay is the instrument"
+    "notes": "The delay is the instrument",
+    "wets": {
+      "1": {
+        "reverb": 12,
+        "delay": 6
+      },
+      "2": {
+        "reverb": 62,
+        "delay": 18
+      },
+      "3": {
+        "reverb": 40,
+        "delay": 30
+      },
+      "4": {
+        "reverb": 0,
+        "delay": 0
+      },
+      "5": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "6": {
+        "reverb": 55,
+        "delay": 30
+      },
+      "7": {
+        "reverb": 62,
+        "delay": 30
+      },
+      "8": {
+        "reverb": 0,
+        "delay": 0
+      }
+    },
+    "wets_why": "ambient row of the send table in notes/specs/2026-09-06-the-static-send-design.md. Channels already owned by a reverb or delay modulator are absent on purpose: the modulator writes base+offset within 200 ms of load, so a static send there is overwritten or redundant."
   }
 ]

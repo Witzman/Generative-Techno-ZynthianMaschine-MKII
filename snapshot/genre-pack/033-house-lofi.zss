@@ -437,7 +437,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 6.0
+            },
+            "late_level": {
+              "value": 6.0
+            }
+          }
         },
         "3": {
           "bank_info": [
@@ -492,10 +499,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -21.93820026016113
             },
             "recholevel": {
-              "value": -70.0
+              "value": -21.93820026016113
             },
             "dryLevel": {
               "value": 0.0
@@ -516,7 +523,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 18.0
+            },
+            "late_level": {
+              "value": 18.0
+            }
+          }
         },
         "4": {
           "bank_info": [
@@ -571,10 +585,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -18.416375079047505
             },
             "recholevel": {
-              "value": -70.0
+              "value": -18.416375079047505
             },
             "dryLevel": {
               "value": 0.0
@@ -595,7 +609,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 24.0
+            },
+            "late_level": {
+              "value": 24.0
+            }
+          }
         },
         "5": {
           "bank_info": [
@@ -650,10 +671,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -27.95880017344075
             },
             "recholevel": {
-              "value": -70.0
+              "value": -27.95880017344075
             },
             "dryLevel": {
               "value": 0.0
@@ -674,7 +695,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 8.0
+            },
+            "late_level": {
+              "value": 8.0
+            }
+          }
         },
         "6": {
           "bank_info": [
@@ -729,10 +757,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -24.436974992327126
             },
             "recholevel": {
-              "value": -70.0
+              "value": -24.436974992327126
             },
             "dryLevel": {
               "value": 0.0
@@ -753,7 +781,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 12.0
+            },
+            "late_level": {
+              "value": 12.0
+            }
+          }
         },
         "26": {
           "bank_info": null,
@@ -786,10 +821,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -24.436974992327126
             },
             "recholevel": {
-              "value": -70.0
+              "value": -24.436974992327126
             },
             "dryLevel": {
               "value": 0.0
@@ -810,7 +845,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 8.0
+            },
+            "late_level": {
+              "value": 8.0
+            }
+          }
         },
         "7": {
           "bank_info": null,
@@ -843,10 +885,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -13.151546383555875
             },
             "recholevel": {
-              "value": -70.0
+              "value": -13.151546383555875
             },
             "dryLevel": {
               "value": 0.0
@@ -867,7 +909,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 40.0
+            },
+            "late_level": {
+              "value": 40.0
+            }
+          }
         },
         "8": {
           "bank_info": [
@@ -1196,10 +1245,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -15.917600346881503
             },
             "recholevel": {
-              "value": -70.0
+              "value": -15.917600346881503
             },
             "dryLevel": {
               "value": 0.0
@@ -1220,7 +1269,14 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "early_level": {
+              "value": 34.0
+            },
+            "late_level": {
+              "value": 34.0
+            }
+          }
         }
       },
       "mixer": {

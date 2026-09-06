@@ -86,6 +86,7 @@ import atomic_write  # noqa: E402
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ctrldev"))
 from maschine_mk2_lib import maschine_mk2_lib as lib  # noqa: E402
+from techno_lib import techno_lib as tlib  # noqa: E402
 
 SFZ_BANK = "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines"
 DRUM_CHAINS = ["1", "2", "3", "4", "5"]      # Kick, Snare, Clap, Closed Hat, Open Hat
@@ -282,6 +283,41 @@ def clear_processor(proc):
     proc["preset_info"] = None
     proc["preset_subdir_info"] = None
     proc["controllers"] = {}
+
+
+def insert_role_procs(chain, procs):
+    """{"reverb": proc or None, "delay": proc or None} for one chain's inserts.
+
+    RESOLVED BY ROLE, NEVER BY PLUGIN NAME OR SLOT INDEX. The two packs use
+    nineteen different insert pairs and only 21 of 71 entries carry the TAP
+    pair, so a hardcoded `wetlevel` would write nothing on the rest and say
+    nothing about it - which is the shape of the defect this lever exists to
+    close. `tlib.fx_role_of` is the driver's own resolver, so a send this tool
+    writes lands on the port the REVERB and DELAY encoders move."""
+    found = {"reverb": None, "delay": None}
+    for slot in chain["slots"][1:]:
+        pid, code = next(iter(slot.items()))
+        role = tlib.fx_role_of(str(code).split("/")[-1])
+        if role is not None:
+            found[role[1]["role"]] = (procs[pid], role[1])
+    return found
+
+
+def set_wet(proc, spec, percent):
+    """Write one insert's wet at `percent`, in that plugin's own units.
+
+    `tlib.fx_wet_values` is the driver's `_set_wet` arithmetic: dB through the
+    wet law for a port that takes decibels, linear across the port's range for
+    one that does not, and a crossfade held below CROSSFADE_CEILING so a full
+    send cannot delete the channel's dry signal.
+
+    The controller is CREATED if the processor has none. An insert whose plugin
+    was just swapped has an empty `controllers` dict by design
+    (`clear_processor`), and a send that refused to write there would be a
+    lever that works on exactly the chains that did not need it."""
+    ctrls = proc.setdefault("controllers", {})
+    for symbol, value in tlib.fx_wet_values(spec, percent):
+        ctrls.setdefault(symbol, {})["value"] = value
 
 
 def set_kit(proc, kit):
@@ -515,6 +551,50 @@ def build_one(base, entry, kit_notes):
             raise ValueError(f"main {main} outside 0.0..1.0")
         # chan_16 is the main strip on this build - MAX_NUM_CHANNELS - 1.
         zs3["mixer"]["chan_16"]["level"] = main
+
+    # --- the static sends ----------------------------------------------------
+    # NOTHING BUT A MODULATOR EVER WROTE A WET PORT, and every entry modulates
+    # one to three channels of eight - so five to seven channels of all 71
+    # shipped presets are dry on load whatever the entry's globals say about
+    # the room. Surveyed 2026-09-05 at the rig: 55 of the 57 snapshots that
+    # save wet ports save every one at the -70 dB floor. `wets` is the missing
+    # lever, keyed by CHAIN id like the factory manifest's, in surface percent.
+    #
+    # A MODULATED SEND IS REFUSED RATHER THAN OVERWRITTEN. The driver owns a
+    # modulator's base as a percent and writes base+offset through _set_wet
+    # within 200 ms of load, so a static send that disagrees with the base is a
+    # number in the file that never reaches the ear - the same law `mix`
+    # already obeys against a `level` modulator, one verb over.
+    wets = entry.get("wets")
+    if wets is not None:
+        mod_base = {(int(m["channel"]), m["verb"]): int(m["base"])
+                    for m in (entry.get("mods") or [])
+                    if m["verb"] in ("reverb", "delay")}
+        for cid, wants in sorted(wets.items()):
+            chain = chains.get(str(cid))
+            if chain is None:
+                raise ValueError(f"wets names chain {cid!r}, which is not in "
+                                 f"the base snapshot")
+            inserts = insert_role_procs(chain, procs)
+            for role, percent in sorted(wants.items()):
+                if role not in ("reverb", "delay"):
+                    raise ValueError(f"wets[{cid}] names {role!r} - the two "
+                                     f"roles are 'reverb' and 'delay'")
+                if not 0 <= float(percent) <= 100:
+                    raise ValueError(f"wets[{cid}][{role}] = {percent} outside "
+                                     f"0..100")
+                if inserts[role] is None:
+                    raise ValueError(f"chain {cid} has no insert that can "
+                                     f"serve as a {role}")
+                base = mod_base.get((int(cid) - 1, role))
+                if base is not None and abs(base - float(percent)) > 1:
+                    raise ValueError(
+                        f"chain {cid} {role} wet {percent} but its modulator's "
+                        f"base is {base} - the modulator overwrites the port "
+                        f"within 200 ms, so the send on disk is not the send "
+                        f"you hear")
+                proc, spec = inserts[role]
+                set_wet(proc, spec, float(percent))
 
     # --- the patterns --------------------------------------------------------
     blocks = parse_blocks(base64.b64decode(d["zynseq_riff_b64"]))

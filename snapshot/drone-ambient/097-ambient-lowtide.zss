@@ -372,14 +372,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.06
+            }
+          }
         },
         "11": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.09
+            }
+          }
         },
         "3": {
           "bank_info": null,
@@ -393,14 +401,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.18
+            }
+          }
         },
         "13": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.30000000000000004
+            }
+          }
         },
         "4": {
           "bank_info": null,
@@ -414,14 +430,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.3
+            }
+          }
         },
         "15": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.30000000000000004
+            }
+          }
         },
         "5": {
           "bank_info": [
@@ -457,14 +481,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.0
+            }
+          }
         },
         "17": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.0
+            }
+          }
         },
         "6": {
           "bank_info": [
@@ -500,14 +532,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.3
+            }
+          }
         },
         "19": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.30000000000000004
+            }
+          }
         },
         "26": {
           "bank_info": null,
@@ -521,14 +561,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.3
+            }
+          }
         },
         "21": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.41250000000000003
+            }
+          }
         },
         "7": {
           "bank_info": null,
@@ -542,14 +590,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.3
+            }
+          }
         },
         "23": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.30000000000000004
+            }
+          }
         },
         "8": {
           "bank_info": [
@@ -859,14 +915,22 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.0
+            }
+          }
         },
         "25": {
           "bank_info": null,
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "dry_wet": {
+              "value": 0.0
+            }
+          }
         }
       },
       "mixer": {

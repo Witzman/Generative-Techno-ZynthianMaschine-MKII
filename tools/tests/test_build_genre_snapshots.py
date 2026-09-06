@@ -368,6 +368,108 @@ class DrumsBlockCase(unittest.TestCase):
         self.assertNotIn("drums", state_of(built()))
 
 
+class WetsCase(unittest.TestCase):
+    """The STATIC SEND lever - todo item 50.
+
+    Until it existed nothing but a modulator ever wrote a wet port, so five to
+    seven channels of every pack entry were dry on load whatever the entry's
+    globals said about the room. The lever is opt-in: an entry with no `wets`
+    key writes no wet, which is what keeps the 71 shipped files byte-identical.
+
+    IT RESOLVES THE PORT THROUGH tlib.FX_ROLES, NEVER BY PLUGIN NAME. Twelve of
+    the nineteen insert pairs the two packs use are not the TAP pair, and their
+    wets are different symbols in different units - Dragonfly's is TWO linear
+    ports (early and late reflections, not left and right), Tal's is one 0..1.
+    A hardcoded `wetlevel` would have written nothing on 30 of 71 entries and
+    said nothing about it."""
+
+    def inserts(self, doc, cid):
+        chain = doc["chains"][cid]
+        out = {}
+        for slot in chain["slots"][1:]:
+            pid, code = next(iter(slot.items()))
+            out[code.split("/")[-1]] = doc["zs3"]["zs3-0"]["processors"][pid]
+        return out
+
+    def test_a_reverb_send_is_written_in_the_plugins_own_units(self):
+        doc = built(wets={"6": {"reverb": 30}})
+        procs = self.inserts(doc, "6")
+        self.assertAlmostEqual(
+            procs["TAP Reverberator"]["controllers"]["wetlevel"]["value"],
+            builder.tlib.wet_db(30))
+
+    def test_a_delay_send_writes_both_ganged_ports(self):
+        doc = built(wets={"6": {"delay": 45}})
+        ctrls = self.inserts(doc, "6")["TAP Stereo Echo"]["controllers"]
+        want = builder.tlib.wet_db(45)
+        self.assertAlmostEqual(ctrls["lecholevel"]["value"], want)
+        self.assertAlmostEqual(ctrls["recholevel"]["value"], want)
+
+    def test_it_follows_the_role_table_onto_a_non_tap_insert(self):
+        doc = built(fx=["JV/TAP Stereo Echo", "JV/Dragonfly Room Reverb"],
+                    wets={"6": {"reverb": 50}})
+        ctrls = self.inserts(doc, "6")["Dragonfly Room Reverb"]["controllers"]
+        self.assertAlmostEqual(ctrls["early_level"]["value"], 50.0)
+        self.assertAlmostEqual(ctrls["late_level"]["value"], 50.0)
+        self.assertNotIn("wetlevel", ctrls)
+
+    def test_a_crossfade_is_held_below_the_ceiling(self):
+        doc = built(fx=["JV/TAP Stereo Echo", "JV/Shiroverb"],
+                    wets={"6": {"reverb": 100}})
+        ctrls = self.inserts(doc, "6")["Shiroverb"]["controllers"]
+        self.assertAlmostEqual(ctrls["mix"]["value"],
+                               100.0 * builder.tlib.CROSSFADE_CEILING)
+
+    def test_zero_writes_the_floor_rather_than_nothing(self):
+        doc = built(wets={"6": {"reverb": 0}})
+        ctrls = self.inserts(doc, "6")["TAP Reverberator"]["controllers"]
+        self.assertEqual(ctrls["wetlevel"]["value"], builder.tlib.WET_OFF)
+
+    def test_an_absent_key_writes_no_wet_at_all(self):
+        ctrls = self.inserts(built(), "6")["TAP Reverberator"]["controllers"]
+        self.assertEqual(ctrls, {})
+
+    def test_it_writes_only_the_chains_it_names(self):
+        doc = built(wets={"6": {"reverb": 30}})
+        self.assertEqual(
+            self.inserts(doc, "7")["TAP Reverberator"]["controllers"], {})
+
+    def test_a_role_the_pair_cannot_serve_is_refused(self):
+        with self.assertRaises(ValueError):
+            built(fx=["JV/TAP Reverberator", "JV/TAP Reverberator"],
+                  wets={"6": {"delay": 20}})
+
+    def test_an_unknown_role_name_is_refused(self):
+        with self.assertRaises(ValueError):
+            built(wets={"6": {"chorus": 20}})
+
+    def test_a_percent_outside_the_surface_is_refused(self):
+        with self.assertRaises(ValueError):
+            built(wets={"6": {"reverb": 130}})
+        with self.assertRaises(ValueError):
+            built(wets={"6": {"reverb": -1}})
+
+    def test_a_chain_that_is_not_there_is_refused(self):
+        with self.assertRaises(ValueError):
+            built(wets={"9": {"reverb": 20}})
+
+    def test_a_wet_that_disagrees_with_its_modulator_is_refused(self):
+        """The same law as `mix` against a `level` modulator: the driver writes
+        base+offset within 200 ms of load, so a static send that disagrees is
+        overwritten and the file is not what it sounds like."""
+        with self.assertRaises(ValueError):
+            built(wets={"6": {"reverb": 30}},
+                  mods=[{"channel": 5, "verb": "reverb", "depth": 10,
+                         "rate": 3, "shape": "tri", "base": 60}])
+
+    def test_a_wet_that_agrees_with_its_modulator_is_allowed(self):
+        doc = built(wets={"6": {"reverb": 60}},
+                    mods=[{"channel": 5, "verb": "reverb", "depth": 10,
+                           "rate": 3, "shape": "tri", "base": 60}])
+        ctrls = self.inserts(doc, "6")["TAP Reverberator"]["controllers"]
+        self.assertAlmostEqual(ctrls["wetlevel"]["value"], builder.tlib.wet_db(60))
+
+
 class ShippedPacksCase(unittest.TestCase):
     """THE REGRESSION GUARD for all seven new levers.
 

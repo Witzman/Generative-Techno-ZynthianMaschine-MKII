@@ -391,10 +391,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -24.436974992327126
             },
             "recholevel": {
-              "value": -70.0
+              "value": -24.436974992327126
             },
             "dryLevel": {
               "value": 0.0
@@ -415,7 +415,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.12
+            }
+          }
         },
         "3": {
           "bank_info": null,
@@ -448,10 +452,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -14.89454989793388
             },
             "recholevel": {
-              "value": -70.0
+              "value": -14.89454989793388
             },
             "dryLevel": {
               "value": 0.0
@@ -472,7 +476,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.55
+            }
+          }
         },
         "4": {
           "bank_info": null,
@@ -505,10 +513,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "recholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "dryLevel": {
               "value": 0.0
@@ -529,7 +537,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.4
+            }
+          }
         },
         "5": {
           "bank_info": [
@@ -608,7 +620,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.0
+            }
+          }
         },
         "6": {
           "bank_info": [
@@ -687,7 +703,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.0
+            }
+          }
         },
         "26": {
           "bank_info": null,
@@ -720,10 +740,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "recholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "dryLevel": {
               "value": 0.0
@@ -744,7 +764,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.55
+            }
+          }
         },
         "7": {
           "bank_info": null,
@@ -777,10 +801,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "recholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "dryLevel": {
               "value": 0.0
@@ -801,7 +825,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.55
+            }
+          }
         },
         "8": {
           "bank_info": [
@@ -1154,7 +1182,11 @@
           "bank_subdir_info": null,
           "preset_info": null,
           "preset_subdir_info": null,
-          "controllers": {}
+          "controllers": {
+            "wet": {
+              "value": 0.0
+            }
+          }
         }
       },
       "mixer": {

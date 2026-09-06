@@ -351,11 +351,31 @@ WHOLE_GROUPS = {
     "harmony": ("voices.chord", "globals"),
     "kits": ("drums.kits",),
     "engines": ("voices.engines",),
-    # One coin, because the pair lands on all eight chains - see the header.
-    "fx": ("fx",),
+    # THE PAIR, THE SENDS AND THE MODULATORS ARE ONE COIN, and this group was
+    # two of them until 2026-09-06. The pair lands on all eight chains, so it
+    # was already whole; `wets` and `mods` joined it when the static-send lever
+    # arrived, because all three are one statement about where a channel's
+    # space comes from and any split between them produces an entry that is
+    # wrong in a way nothing says out loud:
+    #
+    #  * sends from A with the pair from B can send 62 % into a CROSSFADE,
+    #    which has no separable dry, or send to a role B's pair cannot serve -
+    #    a port that does not exist, which the pack builder refuses outright.
+    #  * sends from A with modulators from B disagree about the same port. The
+    #    driver writes base+offset within 200 ms of load, so the static number
+    #    is silently overwritten - and the builder refuses that too.
+    #  * MODULATORS from A with the PAIR from B was already broken before any
+    #    of this, and nothing had noticed: `_mod_write` treats a missing port
+    #    as "skip", so a reverb modulator on a pair with no reverb is INERT and
+    #    says nothing. Merging the coins fixes a defect that predates the
+    #    sends.
+    #
+    # The cost is real and is the right trade: a blend varies less, because
+    # three fields move together instead of separately. An entry that cannot be
+    # built, or one whose modulators do nothing, varies less still.
+    "fx": ("fx", "mods", "wets", "wets_why"),
     # A whole alternative channel definition; there is no half of one.
     "overrides": ("overrides",),
-    "mods": ("mods",),
 }
 
 # Never blended: the blend is a new thing and its caller names it.

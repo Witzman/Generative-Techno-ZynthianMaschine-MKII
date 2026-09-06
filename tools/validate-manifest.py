@@ -49,11 +49,17 @@ THE CHECKS, and what each one is for:
   an echo (DLYTIME, DLYFBK) and then sends nothing to it has designed a
   character that cannot be heard. This is todo item 50, found by ear at the rig
   on 2026-09-05 and then surveyed: 55 of the 57 snapshots that save FX wet ports
-  save every one of them at the -70 dB floor. **A wet port only leaves the floor
-  if a modulator drives it**, because the driver owns a modulator's base as a
-  percent and writes base+offset through `_set_wet` within 200 ms of load. Every
-  pack entry has one to three such channels, so five to seven of its eight are
-  dry whatever the globals say.
+  save every one of them at the -70 dB floor. **A wet port leaves the floor two
+  ways**: a MODULATOR drives it - the driver owns the base as a percent and
+  writes base+offset through `_set_wet` within 200 ms of load - or the entry
+  writes a STATIC send with `wets`, the lever the pack builder grew 2026-09-06.
+  Before that lever existed only the first way did, and every pack entry
+  modulates one to three channels of eight, so five to seven were dry whatever
+  the globals said.
+* **A STATIC SEND AGAINST ITS MODULATOR.** The same law as a level modulator
+  against its fader, one verb over: base+offset lands within 200 ms, so a
+  `wets` value that disagrees with the modulator's base is a number in the file
+  that never reaches the ear.
 * **A MODULATOR ON A VERB THAT REWRITES THE PATTERN**, and one whose rate is
   faster than the ~200 ms poll tick can render.
 * **CHORD WHERE IT DRAWS DEAD** - on a sampler, and above the burst cap.
@@ -423,6 +429,41 @@ def check(entry, kit_notes, budget=None):
                     f"the fader within 200 ms, so the mix on disk is not the "
                     f"mix you hear")
 
+    # --- the static sends, and their modulators ---------------------------
+    #
+    # THE BUILDER REFUSES EVERY ONE OF THESE TOO. It is checked here as well
+    # because this file is the pre-flight: a manifest is written and validated
+    # long before anything is built, and "the builder will catch it" is how a
+    # bad number survives to the one run nobody watches.
+    for cid, wants in sorted((entry.get("wets") or {}).items()):
+        if not str(cid).isdigit() or not 1 <= int(cid) <= 8:
+            bad(f"wets names chain {cid!r} - the board is chains 1-8")
+            continue
+        chan = int(cid) - 1
+        for role, percent in sorted((wants or {}).items()):
+            if role not in ("reverb", "delay"):
+                bad(f"wets[{cid}] names {role!r} - the two roles a chain's "
+                    f"insert pair can serve are 'reverb' and 'delay'")
+                continue
+            if not 0 <= float(percent) <= 100:
+                bad(f"wets[{cid}][{role}] = {percent} outside 0..100")
+                continue
+            served = any((tlib.fx_role_of(str(p).split("/")[-1]) or
+                          (None, {}))[1].get("role") == role
+                         for p in (entry.get("fx") or ()))
+            if not served:
+                bad(f"wets[{cid}] sends {percent} to a {role} this entry's "
+                    f"insert pair cannot serve - the port does not exist, so "
+                    f"the send is silently nothing")
+                continue
+            for mod in entry.get("mods") or ():
+                if int(mod["channel"]) == chan and mod.get("verb") == role:
+                    if abs(int(mod["base"]) - float(percent)) > 1:
+                        bad(f"{CHANNELS[chan]}|{role} static send {percent} "
+                            f"but its modulator's base is {mod['base']} - the "
+                            f"modulator overwrites the port within 200 ms, so "
+                            f"the send on disk is not the send you hear")
+
     # --- inserts ----------------------------------------------------------
     roles = set()
     for plugin in entry.get("fx") or ():
@@ -479,26 +520,31 @@ def check(entry, kit_notes, budget=None):
     # indistinguishable. That is exactly what happened, and nothing here caught
     # it: the packs passed every check this file had while being dry.
     #
-    # A WET PORT ONLY LEAVES THE -70 dB FLOOR IF A MODULATOR DRIVES IT. Nothing
-    # else writes one. The builder has no static-send lever at all - the FACTORY
-    # manifest has a `wets` key and no pack entry has or can have one - so a
-    # channel with no reverb/delay modulator is dry on load and stays dry until
-    # a hand turns the encoder. Growing that lever is item 49's step 1 work;
-    # this check only refuses to let the gap ship again unseen.
+    # A WET PORT LEAVES THE -70 dB FLOOR TWO WAYS, and until 2026-09-06 only one
+    # of them existed. A MODULATOR drives it - the driver owns the base as a
+    # percent and writes base+offset through `_set_wet` within 200 ms of load.
+    # Or the entry writes a STATIC send with `wets`, which Zynthian restores
+    # with every other saved controller. A channel reached by neither is dry on
+    # load and stays dry until a hand turns the encoder.
     dials = [k for k in ("revsize", "revtype", "dlytime", "dlyfbk")
              if k in (entry.get("globals") or {})]
     if dials:
         wet_driven = {m.get("channel") for m in (entry.get("mods") or ())
                       if m.get("verb") in ("reverb", "delay")}
+        # A `wets` entry AT ZERO writes the floor, which is the state this
+        # check exists to catch. A key that is present is not a send that is
+        # open.
+        for cid, wants in (entry.get("wets") or {}).items():
+            if any(float(p) > 0 for p in (wants or {}).values()):
+                wet_driven.add(int(cid) - 1)
         deaf = [ch.name for i, ch in enumerate(channels)
                 if i not in wet_driven and any(ch.mask[s]
                                                for s in range(ch.steps))]
         if deaf:
             bad(f"{len(deaf)} of {len(channels)} channels can never be heard "
-                f"wet - {', '.join(deaf)} have no reverb or delay modulator, "
-                f"so their sends stay at the -70 dB floor while this entry "
-                f"dials {', '.join(dials)}. Nothing but a modulator writes a "
-                f"wet port, and the pack manifest has no static-send key")
+                f"wet - {', '.join(deaf)} have no reverb or delay modulator "
+                f"and no static `wets` send, so their sends stay at the -70 dB "
+                f"floor while this entry dials {', '.join(dials)}")
 
     # --- chord and gate ---------------------------------------------------
     for ch in channels:

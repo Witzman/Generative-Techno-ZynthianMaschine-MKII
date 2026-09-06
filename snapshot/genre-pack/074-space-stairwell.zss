@@ -450,7 +450,7 @@
               "value": 0.0
             },
             "wetlevel": {
-              "value": -70.0
+              "value": -18.416375079047505
             },
             "combs_en": {
               "value": 1
@@ -740,10 +740,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -21.93820026016113
             },
             "recholevel": {
-              "value": -70.0
+              "value": -21.93820026016113
             },
             "dryLevel": {
               "value": 0.0
@@ -777,7 +777,7 @@
               "value": 0.0
             },
             "wetlevel": {
-              "value": -70.0
+              "value": -17.07743928643524
             },
             "combs_en": {
               "value": 1
@@ -936,10 +936,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -20.0
             },
             "recholevel": {
-              "value": -70.0
+              "value": -20.0
             },
             "dryLevel": {
               "value": 0.0
@@ -973,7 +973,7 @@
               "value": 0.0
             },
             "wetlevel": {
-              "value": -70.0
+              "value": -13.979400086720375
             },
             "combs_en": {
               "value": 1
@@ -1023,10 +1023,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -9.118639112994488
             },
             "recholevel": {
-              "value": -70.0
+              "value": -9.118639112994488
             },
             "dryLevel": {
               "value": 0.0
@@ -1060,7 +1060,7 @@
               "value": 0.0
             },
             "wetlevel": {
-              "value": -70.0
+              "value": -6.935749724493126
             },
             "combs_en": {
               "value": 1
@@ -1406,10 +1406,10 @@
               "value": 35.0
             },
             "lecholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "recholevel": {
-              "value": -70.0
+              "value": -12.041199826559248
             },
             "dryLevel": {
               "value": 0.0
@@ -1443,7 +1443,7 @@
               "value": 0.0
             },
             "wetlevel": {
-              "value": -70.0
+              "value": -5.192746210115122
             },
             "combs_en": {
               "value": 1
