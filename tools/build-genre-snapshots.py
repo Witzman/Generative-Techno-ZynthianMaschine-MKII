@@ -285,6 +285,40 @@ def clear_processor(proc):
     proc["controllers"] = {}
 
 
+def set_preset(proc, spec):
+    """Name a chain's PATCH, in the shape Zynthian's own jalv engine reads.
+
+    THE SHAPES ARE READ OFF THE ENGINE, NOT GUESSED.
+    `zynthian_engine_jalv.get_preset_list` builds a preset as
+    `[url, None, title, bank_url]` and `get_bank_list` builds a bank as
+    `(bank_url, None, label, None)`. The index is None in both because
+    `set_preset` takes `preset[0]` as the id and nothing re-derives an index.
+
+    TWO KINDS OF URL, and the second is the whole point of this lever. A preset
+    in the zynthian preset directory has a `file://` url into a
+    `.presets.lv2` bundle - that is what the factory snapshot's Obxd patch is.
+    A plugin that ships its OWN factory presets has a plugin URI instead:
+    Monique has 143 of them and not one file in that directory, which is why
+    naming a patch for it was impossible until now and why 59 of 75 shipped
+    presets load whatever their plugin defaults to.
+
+    THE CONTROLLERS ARE RESET AND THAT IS NOT OPTIONAL. `set_state` calls
+    `set_preset` FIRST and then writes every saved controller over the top
+    (`zynthian_processor.py:792-820`), so keeping the old plugin's values loads
+    the new patch and then overwrites it with the old one - the swap would look
+    done in the file, be named right on the touchscreen, and sound exactly as
+    before. `controllers` in the spec is what must WIN over the patch.
+    """
+    bank_url = spec.get("bank_url") or ""
+    proc["bank_info"] = [bank_url, None, spec.get("bank", "factory"), None]
+    proc["preset_info"] = [spec["url"], None, spec["name"], bank_url]
+    proc["bank_subdir_info"] = None
+    proc["preset_subdir_info"] = None
+    proc["controllers"] = {symbol: {"value": value}
+                           for symbol, value in (spec.get("controllers")
+                                                 or {}).items()}
+
+
 def insert_role_procs(chain, procs):
     """{"reverb": proc or None, "delay": proc or None} for one chain's inserts.
 
@@ -415,6 +449,30 @@ def build_one(base, entry, kit_notes):
         if chains[cid]["slots"][0][pid] != engine:
             chains[cid]["slots"][0] = {pid: engine}
             clear_processor(procs[pid])
+
+    # --- the patch on a chain that names one ---------------------------------
+    # THE PACK NAMED AN ENGINE AND SAID NOTHING ABOUT ITS PATCH, which is todo
+    # item 53: a plugin with no preset and no controllers loads its own
+    # default, and Monique's default is transposed two semitones - so `031`'s
+    # bass played B flat under a panel reading C, measured by FFT over sixteen
+    # bars. 59 of 75 shipped presets have that hole.
+    #
+    # IT RUNS AFTER THE ENGINE SWAP ABOVE, and the order is load-bearing: a
+    # swap calls clear_processor(), so a preset written first would be wiped by
+    # the very next line.
+    for cid, spec in sorted((entry.get("presets") or {}).items()):
+        chain = chains.get(str(cid))
+        if chain is None:
+            raise ValueError(f"presets names chain {cid!r}, which is not in "
+                             f"the base snapshot")
+        pid = proc_of(chain)
+        loaded = chain["slots"][0][pid]
+        if spec["engine"] != loaded:
+            raise ValueError(
+                f"presets[{cid}] names a {spec['engine']!r} patch but the "
+                f"chain loads {loaded!r} - a preset pointing into another "
+                f"plugin's bundle is worse than none")
+        set_preset(procs[pid], spec)
 
     # --- the insert pair on every chain -------------------------------------
     for cid, chain in chains.items():

@@ -470,6 +470,120 @@ class WetsCase(unittest.TestCase):
         self.assertAlmostEqual(ctrls["wetlevel"]["value"], builder.tlib.wet_db(60))
 
 
+class PresetsCase(unittest.TestCase):
+    """The PATCH lever - todo item 53.
+
+    The pack names an ENGINE and said nothing about its patch, so 59 of 75
+    shipped presets load whatever the plugin defaults to. Monique's default is
+    transposed, which is how `031`'s bass plays B flat under a panel reading C.
+
+    TWO PRESET SHAPES, AND THE SECOND IS WHY THE FACTORY BUILDER'S LEVER COULD
+    NOT JUST BE REUSED. Zynthian's jalv engine builds a preset as
+    `[url, None, title, bank_url]` and a bank as `(bank_url, None, label,
+    None)` - read from `zynthian_engine_jalv.get_preset_list` and
+    `get_bank_list`, not guessed. For a preset in the zynthian preset directory
+    the url is a `file://` path into a `.presets.lv2` bundle; for a plugin that
+    ships its own factory presets - Monique has 143 of them - it is the
+    plugin's own URI. Both must work, because the pack uses both.
+
+    AND THE CONTROLLERS MUST BE RESET WITH THE SWAP. `set_state` calls
+    `set_preset` FIRST and then writes every saved controller over the top, so
+    keeping the old ones loads the new patch and then overwrites it - right
+    name on the touchscreen, identical in the ears."""
+
+    def proc_of(self, doc, cid):
+        chain = doc["chains"][cid]
+        pid = next(iter(chain["slots"][0]))
+        return doc["zs3"]["zs3-0"]["processors"][pid]
+
+    def spec(self, **over):
+        s = {"engine": "JV/JC303",
+             "url": "https://surge-synthesizer.github.io/lv2/Monique:preset46",
+             "bank_url": "https://surge-synthesizer.github.io/lv2/Monique:bank0",
+             "bank": "factory", "name": "BASS 1"}
+        s.update(over)
+        return s
+
+    def test_a_plugin_uri_preset_is_written_in_zynthians_own_shape(self):
+        doc = built(presets={"6": self.spec()})
+        proc = self.proc_of(doc, "6")
+        self.assertEqual(proc["preset_info"],
+                         [self.spec()["url"], None, "BASS 1",
+                          self.spec()["bank_url"]])
+        self.assertEqual(proc["bank_info"],
+                         [self.spec()["bank_url"], None, "factory", None])
+
+    def test_a_file_bundle_preset_works_too(self):
+        url = ("file:///zynthian/zynthian-data/presets/lv2/Obxd_003.presets.lv2"
+               "/003_BzSYN_PolySynth.ttl")
+        doc = built(voices={"engines": ["JV/Obxd", "JV/Obxd", "JV/padthv1"],
+                            "rhythm_reg": [4369, 17476, 1],
+                            "register": [40, 24222, 9974],
+                            "length": [16, 16, 16], "octave": [0, 0, 1],
+                            "range": [1, 2, 1], "velo": [110, 96, 80],
+                            "gate": [35, 45, 800]},
+                    presets={"6": self.spec(engine="JV/Obxd", url=url,
+                                            name="BzSYN PolySynth")})
+        self.assertEqual(self.proc_of(doc, "6")["preset_info"][0], url)
+
+    def _same_engine_base(self):
+        """A base whose chain 6 ALREADY loads the engine the entry names, with
+        controllers on it.
+
+        THIS IS THE ONLY SHAPE THAT CAN TEST THE RESET. When the engine
+        changes, `clear_processor` has already emptied the dict before
+        `set_preset` is reached - so a fixture that swaps the engine makes the
+        reset unobservable, and a mutation that merges instead of replacing
+        survives it. That mutation DID survive the first version of these
+        tests. The dangerous case is the one where nothing else clears:
+        the entry names the engine the chain is already running.
+        """
+        base = base_snapshot()
+        pid = next(iter(base["chains"]["6"]["slots"][0]))
+        base["chains"]["6"]["slots"][0] = {pid: "LS"}
+        base["zs3"]["zs3-0"]["processors"][pid]["controllers"] = {
+            "cutoff": {"value": 0.9}, "resonance": {"value": 0.4}}
+        return base, pid
+
+    def _voices_on(self, engine):
+        return {"engines": [engine, "JV/Obxd", "JV/padthv1"],
+                "rhythm_reg": [4369, 17476, 1], "register": [40, 24222, 9974],
+                "length": [16, 16, 16], "octave": [0, 0, 1], "range": [1, 2, 1],
+                "velo": [110, 96, 80], "gate": [35, 45, 800]}
+
+    def test_the_controllers_are_reset_even_when_the_engine_did_not_change(self):
+        base, pid = self._same_engine_base()
+        doc = builder.build_one(base, entry(
+            voices=self._voices_on("LS"),
+            presets={"6": self.spec(engine="LS")}), KITS)
+        self.assertEqual(doc["zs3"]["zs3-0"]["processors"][pid]["controllers"],
+                         {})
+
+    def test_a_named_controller_replaces_the_old_ones_rather_than_joining_them(self):
+        base, pid = self._same_engine_base()
+        doc = builder.build_one(base, entry(
+            voices=self._voices_on("LS"),
+            presets={"6": self.spec(engine="LS", controllers={"unison": 0.0})}),
+            KITS)
+        self.assertEqual(doc["zs3"]["zs3-0"]["processors"][pid]["controllers"],
+                         {"unison": {"value": 0.0}})
+
+    def test_a_preset_for_the_wrong_engine_is_refused(self):
+        """A preset_info pointing into another plugin's bundle is worse than
+        none - it names a patch the loaded plugin cannot have."""
+        with self.assertRaises(ValueError):
+            built(presets={"6": self.spec(engine="JV/Obxd")})
+
+    def test_a_chain_that_is_not_there_is_refused(self):
+        with self.assertRaises(ValueError):
+            built(presets={"9": self.spec()})
+
+    def test_an_absent_key_leaves_every_processor_alone(self):
+        proc = self.proc_of(built(), "6")
+        self.assertIsNone(proc["preset_info"])
+        self.assertEqual(proc["controllers"], {})
+
+
 class ShippedPacksCase(unittest.TestCase):
     """THE REGRESSION GUARD for all seven new levers.
 
