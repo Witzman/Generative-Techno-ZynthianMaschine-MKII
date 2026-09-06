@@ -1270,6 +1270,47 @@ class TheCutoffKnobOnALiveVoice(DispatchCase):
         self.d._pressure_write()                    # the poll thread's answer
         self.assertNotEqual(self.shown(), before)
 
+    def test_the_knob_works_DURING_the_release_decay(self):
+        """ITEM 62. The owner, at the rig on 2026-09-06: *"after hitting the
+        pad hard, it took 1-2 seconds for the encoder to become responsive -
+        before it was stuck"*.
+
+        1.2 to 1.5 s is exactly the release decay - `PRESSURE_DECAY = 0.35`
+        of the remaining offset per ~200 ms tick, down to `PRESSURE_FLOOR`.
+        Six ticks from a full squeeze.
+
+        `_press_base` is captured ONCE, at line 6128 of the driver, and no
+        encoder path touches it. So every tick of the decay re-asserts
+        `pressure_value(stale_base, off)` over whatever the knob just set,
+        and the restore write at the end puts the stale base back - erasing
+        the turn completely.
+
+        The sibling test above sweeps only AFTER fifty ticks, which is after
+        the decay has finished. That is why the suite was green over this."""
+
+        self.cc(self.enc, 64)
+        self.d.midi_event(bytes([0x90, self.base, 100]))         # pad down
+        self.d.midi_event(bytes([0xA0, self.base, 90]))          # squeeze
+        self.d._pressure_write()
+        self.d.midi_event(bytes([0x80, self.base, 0]))           # pad up
+        self.d._pressure_write()                    # tick 1 of the decay
+        self.assertGreater(self.d._press_off[self.channel], 0.0,
+                           "the decay must still be live for this to test it")
+
+        during = self.shown()
+        self.sweep()                                # the hand turns CUTOFF
+        moved = self.shown()
+        self.assertNotEqual(moved, during, "the knob moved the drawn number")
+
+        # ...and the decay must not take it away again.
+        for _ in range(50):
+            self.d._pressure_write()
+        self.assertEqual(self.d._press_off[self.channel], 0.0)
+        self.assertEqual(
+            self.shown(), moved,
+            "the decay restored a base captured before the knob was turned, "
+            "so the turn was erased - item 62")
+
     def test_a_squeeze_on_a_step_mode_pad_ends_too(self):
         """THE HALF THE OBVIOUS FIX MISSES, and it is why the clear sits above
         the early return rather than below it.

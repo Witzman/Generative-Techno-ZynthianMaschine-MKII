@@ -6569,6 +6569,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         live = self._live_mix(channel, verb)
         if live is not None:
             current = live
+        # A LIVE SQUEEZE OWNS THIS VERB'S STORAGE, so read the knob's own value
+        # out of the squeeze base rather than out of state - item 62.
+        #
+        # While `_press_base` is set, `state[verb]` holds the SWEPT value that
+        # `_pressure_write` put there, and the glass is showing the base
+        # (`pressure_display`). Incrementing the swept value would start the
+        # turn from wherever the sweep happened to be, and the display would
+        # not move at all because it renders the base. That is the same
+        # base-and-offset law the pressure code already states: the driver owns
+        # the base, the swept value is for the engine rather than for the knob.
+        squeezing = (verb == tlib.PRESSURE_VERB
+                     and self._press_base[channel] is not None)
+        if squeezing:
+            current = self._press_base[channel]
         if current is None:
             return
         new_value = min(hi, max(lo, current + delta))
@@ -6578,6 +6592,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.owner[channel] == "player" and tlib.hands_back(
                 self.channel_kind(channel), verb, new_value):
             self._handback(channel)
+        if squeezing:
+            # MOVE THE BASE, DO NOT WRITE THE VERB - item 62.
+            #
+            # The release decay is 1.2 to 1.5 s (PRESSURE_DECAY, six ticks
+            # from a full squeeze) and `_press_base` used to be captured once
+            # at squeeze start and never touched again. Every tick of that
+            # window re-asserted `pressure_value(stale_base, off)` over the
+            # turn, and the restore write put the stale base back at the end -
+            # so the knob was inert for one to two seconds after a hard pad
+            # hit and then sprang back to life. The owner timed it at the rig,
+            # 2026-09-06: "it took 1-2 seconds for the encoder to become
+            # responsive - before it was stuck".
+            #
+            # Writing `new_value` through apply() here would be the OTHER
+            # fault: a bare base over a live sweep drops the filter for one
+            # poll tick and the squeeze audibly stutters. The poll thread owns
+            # this parameter while a squeeze is live, and it writes base+offset
+            # within 200 ms - including the restore write, which now restores
+            # the value the hand actually left.
+            #
+            # Assigning one list slot from the MIDI thread, as `_pad_pressure`
+            # already does with `_press_raw`.
+            self._press_base[channel] = new_value
+            with self.lock:
+                self._render_display()
+            return
         self.apply(channel, verb, new_value)
         with self.lock:
             self._render_display()

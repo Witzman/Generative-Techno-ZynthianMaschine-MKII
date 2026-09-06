@@ -233,10 +233,47 @@ class techno_lib:
     # spent here is latency nobody had complained about against a rate that
     # has wedged the instrument twice.
     #
+    # LOWERED 0.35 -> 0.15 ON 2026-09-06, AND THIS TIME THE HAND WAS ASKED.
+    #
+    # The paragraph above spent latency "nobody had complained about". Nobody
+    # had complained because nobody had ever FELT 0.35 - the feel that had been
+    # judged acceptable was 0.15's. At runbook step 14 the owner turned the
+    # ring on 0.35 and said "feels laggy". Item 63.
+    #
+    # What changed in between is item 41: `_render_pads` was redrawing both
+    # screens at the end of every detent and clearing the flag the coalescing
+    # depended on, so eight detents cost 424 display packets and now cost 24.
+    # The flood 0.35 was bought to contain is a sixth of what it was, measured
+    # on the same rig with the same script:
+    #
+    #     2026-09-04, before item 41, at 0.35     934.2/s   peak 3852
+    #     2026-09-06, after  item 41, at 0.35     240.3/s   peak  608
+    #
+    # 674/s is the rate that wedged the controller. The peak went from five
+    # times that to below it without the settle changing at all.
+    #
+    # WHAT 0.15 COSTS, measured at the rig 2026-09-06 right here rather than
+    # predicted - 20 s of continuous hard ring walking, transport running:
+    #
+    #     0.35    240.3/s sustained   peak 608
+    #     0.15    339.1/s sustained   peak 646
+    #
+    # Sustained is up about 40 % and now sits at HALF the 674/s that wedged
+    # the controller, where 0.35 sat at a third. The peak barely moved, and a
+    # peak is a burst: this rig has taken 3,852 in one second without wedging.
+    #
+    # OWNER DECISION, 2026-09-06, given the numbers above: "keep for now".
+    # **PROVISIONAL BY THE OWNER'S OWN WORDS.** It is a live trade of wedge
+    # margin against feel, and if the controller starts wedging in ordinary
+    # play this constant is the first thing to put back to 0.35. 0.20 and 0.25
+    # were never measured; they are the untried middle.
+    #
     # DO NOT LOWER IT WITHOUT RE-MEASURING. The number and the sniff belong
-    # together; the previous value's justification was a sentence about a hand
-    # with no measurement behind it.
-    DISPLAY_SETTLE_S = 0.35
+    # together; the 0.15 that ships here was measured at the rig on 2026-09-06
+    # and the figures are in `notes/findings/` under that date. The rule that
+    # burnt this constant once is that a value tuned against an imagined hand
+    # is not tuned at all.
+    DISPLAY_SETTLE_S = 0.15
 
     @staticmethod
     def display_held(now, until):

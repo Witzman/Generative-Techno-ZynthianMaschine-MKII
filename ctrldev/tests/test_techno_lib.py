@@ -8104,9 +8104,28 @@ class TheScreensAreCoalescedWhileAControlIsStillMoving(unittest.TestCase):
         # sustained and 3,852 in one second on the wire, against a 43/s idle.
         # 934/s is above the 674/s that wedged it.
         #
-        # A third of a second between detents is a deliberate turn. That is
-        # what this now has to cover.
-        self.assertGreaterEqual(tl.DISPLAY_SETTLE_S, 1.0 / 3.0)
+        # LOWERED AGAIN 2026-09-06, item 63, and the bound above was the OLD
+        # FLOOD's bound rather than a rule of its own.
+        #
+        # Item 41 found `_render_pads` redrawing both screens at the end of
+        # every detent and clearing the flag the coalescing depended on. Eight
+        # detents cost 424 display packets before it and 24 after. Re-measured
+        # at the rig on 2026-09-06, same script, same gesture, still at 0.35:
+        #
+        #     2026-09-04, before item 41    934.2/s   peak 3852
+        #     2026-09-06, after  item 41    240.3/s   peak  608
+        #
+        # 674/s is the rate that wedged the controller. The peak fell from five
+        # times it to below it WITHOUT the settle moving, so the third of a
+        # second was buying margin against a flood that no longer exists - and
+        # the owner, who had never actually felt 0.35, called it laggy.
+        #
+        # The bound is now the value the hand judged smooth, and the number
+        # that keeps it honest is the sniff at the rig, recorded beside the
+        # constant. A bound that only restates the constant would be no test,
+        # so what this pins is the FLOOR the feel established: anything below
+        # 0.15 has never been felt by anyone.
+        self.assertGreaterEqual(tl.DISPLAY_SETTLE_S, 0.15)
 
     def test_the_settle_is_shorter_than_a_page_can_be_read(self):
         # And it must not become a lag the hand can feel as a broken control.
