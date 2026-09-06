@@ -358,13 +358,20 @@ KIT_RETRY_S = 2.0            # floor between kit-list retries on a bare chain
 MIN_BEATS = 1
 PADS = 16              # a pattern longer than the pad grid is not displayable
 
-# How often the animated MOD legend repaints, in poll ticks. 3 gives ~10 Hz.
+# MOD_LEGEND_TICKS IS GONE, 2026-09-06 - item 61. It set how often the ANIMATED
+# MOD legend repainted, and the animation was withdrawn in 2026-08: the legend
+# is painted on events and is static, so nothing had read this constant for
+# weeks while `techno_lib` still cited it as one of two live mitigations
+# against the controller wedge. A comment naming a dead constant as a safety
+# property is worse than no comment.
 #
-# NOT a style choice and not a performance tweak: at every tick this overlay
-# writes all sixteen pads, and 480 HID writes a second on the fd the input
-# arrives on starves the daemon's reader and wedges the controller until it is
-# physically unplugged. Measured on the rig 2026-08-20, three times.
-MOD_LEGEND_TICKS = 3
+# THE MEASUREMENT IT CARRIED IS KEPT because it is the reason the animation is
+# withdrawn and must not be relearned: at ~10 Hz that overlay wrote all sixteen
+# pads per tick, and 480 HID writes a second on the fd the input arrives on
+# starves the daemon's reader and wedges the controller until it is PHYSICALLY
+# unplugged - not a daemon restart, not USB re-enumeration. Measured on the rig
+# 2026-08-20, three times in one session, each within seconds of MOD being
+# latched. Re-animating the legend means solving that first.
 
 # What each encoder does now depends on the mode, the page and the channel
 # type - see techno_lib.PAGE_RINGS. LEVEL drives the group's MIXER STRIP
@@ -5212,12 +5219,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         is doing. tlib.MOD_LEGEND_PERIODS carries that caveat at length."""
 
         bound, rate, shape = self._mod_legend_state()
-        # STATIC. `elapsed` is fixed rather than read from the clock: the
-        # legend is painted on events now, so a moving time base would make
-        # two repaints of an unchanged grid differ and put sixteen pad writes
-        # on the wire for nothing. Zero is a phase like any other.
+        # STATIC, AND IT SAYS SO - `elapsed=None`, item 61. The legend is
+        # painted on events, so a moving time base would make two repaints of
+        # an unchanged grid differ and put sixteen pad writes on the wire for
+        # nothing. It used to pass 0.0, and "zero is a phase like any other"
+        # was the mistake: phase 0 is the TROUGH of a triangle and the PEAK of
+        # a square, so the shape pads came up three times brighter than the
+        # rate pads for a reason no player can read. None means not animating,
+        # and every unselected pad takes the band's midpoint.
         for pad in range(16):
-            self._paint_pad(pad, tlib.mod_legend_pad(pad, 0.0, rate, shape,
+            self._paint_pad(pad, tlib.mod_legend_pad(pad, None, rate, shape,
                                                      bound=bound))
 
     def _probe_step_chance(self):

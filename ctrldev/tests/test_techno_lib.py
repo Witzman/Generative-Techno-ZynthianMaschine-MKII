@@ -3777,6 +3777,85 @@ class TheMeasuredTableStillHasToMeetThePlugin(unittest.TestCase):
 
 
 
+
+class TheStaticLegendSaysOnlyWhatIsSelected(unittest.TestCase):
+    """Todo item 61. The legend does not animate - the fade was withdrawn in
+    2026-08 because repainting sixteen pads on a timer wedged the controller -
+    so the driver paints ONE frame. It painted phase 0 of the withdrawn
+    animation, and `mod_wave` at phase 0 is the TROUGH for tri and ramp and the
+    PEAK for square and sample-and-hold.
+
+    So pads 14-15 sat three times brighter than pads 1-8 and 13, for a reason
+    no player can read, on a grid whose brightness was just made meaningful.
+    An animation frozen at phase 0 is not a design.
+
+    `elapsed=None` means "not animating" and cannot collide with a real frame
+    the way 0.0 does."""
+
+    def levels(self, elapsed, rate=0, shape="tri"):
+        out = {}
+        for pad in range(16):
+            colour, level = tl.mod_legend_pad(pad, elapsed, rate, shape)
+            out[pad] = level
+        return out
+
+    def test_every_unselected_pad_is_the_same_brightness(self):
+        lv = self.levels(None, rate=0, shape="tri")
+        rates = [lv[i] for i in range(1, len(tl.MOD_LEGEND_PERIODS))]
+        shapes = [lv[i] for i in range(tl.MOD_SHAPE_PAD_FIRST, 16)
+                  if lv[i] != tl.PAD_FULL]
+        self.assertEqual(len(set(rates + shapes)), 1,
+                         "the static legend still varies its brightness for "
+                         "no reason a player can read")
+
+    def test_the_selected_pads_are_still_the_brightest(self):
+        lv = self.levels(None, rate=0, shape="tri")
+        self.assertEqual(lv[0], tl.PAD_FULL)
+        others = [lv[i] for i in range(1, len(tl.MOD_LEGEND_PERIODS))]
+        self.assertTrue(all(o < tl.PAD_FULL for o in others))
+
+    def test_the_static_level_is_inside_the_band(self):
+        lv = self.levels(None, rate=0, shape="tri")
+        level = lv[1] / tl.PAD_FULL
+        self.assertGreaterEqual(level, tl.MOD_LEGEND_FLOOR)
+        self.assertLessEqual(level, tl.MOD_LEGEND_FLOOR + tl.MOD_LEGEND_BAND)
+        self.assertLess(level, tl.LIGHT_READS_FULL)
+
+    def test_the_static_level_sits_in_the_middle_of_the_band(self):
+        """NOT THE FLOOR, and the difference is testable rather than a taste.
+
+        The shipped legend is this one frame, so it should sit where the eye
+        reads it most easily - the middle of the band - rather than at its
+        dimmest edge, which is a hair above the level that means NOTHING IS
+        BOUND. A mutation using the floor passed every other test here.
+
+        Compared in PAD BRIGHTNESS, not in band fractions: MOD_LEGEND_INERT is
+        a raw pad level while FLOOR and BAND are fractions of PAD_FULL, and
+        comparing the two directly is the scale slip that put the old band
+        above the eye's range in the first place."""
+        level = tl.mod_legend_pad(1, None, 0, "tri")[1]
+        floor_pad = tl.MOD_LEGEND_FLOOR * tl.PAD_FULL
+        top_pad = (tl.MOD_LEGEND_FLOOR + tl.MOD_LEGEND_BAND) * tl.PAD_FULL
+        self.assertGreater(level, floor_pad,
+                           "the static frame sits at the dimmest edge of the "
+                           "band, a hair above 'nothing is bound'")
+        self.assertLess(level, top_pad)
+        self.assertGreater(level, tl.MOD_LEGEND_INERT * 3,
+                           "a bound legend must not read like an unbound one")
+
+    def test_the_dark_pads_stay_dark(self):
+        lv = self.levels(None)
+        for pad in range(len(tl.MOD_LEGEND_PERIODS), tl.MOD_SHAPE_PAD_FIRST):
+            self.assertEqual(lv[pad], tl.PAD_OFF)
+
+    def test_an_animated_frame_still_varies(self):
+        """The discrimination: this must flatten the STATIC frame only. If the
+        animation is ever re-enabled it has to swell again."""
+        moving = {self.levels(t)[1] for t in (0.0, 0.3, 0.6, 0.9)}
+        self.assertGreater(len(moving), 1)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 

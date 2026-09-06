@@ -2533,9 +2533,13 @@ class techno_lib:
     # three times in one session, each within seconds of MOD being latched:
     # the daemon's reader starves, the device stops streaming HID reports, and
     # it does NOT come back from a daemon restart or from USB re-enumeration -
-    # only from a physical replug. The repaint is now also THROTTLED, in the
-    # driver, by MOD_LEGEND_TICKS. Both mitigations are needed; neither is
-    # decoration.
+    # only from a physical replug. THE ANIMATION WAS THEN WITHDRAWN ALTOGETHER
+    # and the legend is painted on EVENTS, static - so the throttle that used
+    # to sit beside this (MOD_LEGEND_TICKS in the driver) went with it on
+    # 2026-09-06, having been dead for weeks while this comment still called it
+    # a live mitigation. Quantising is what remains, and re-animating the
+    # legend means solving the write rate first rather than turning a timer
+    # back on.
     #
     # STEPS ACROSS THE BAND, NOT ACROSS THE SCALE - 2026-09-06, and this is the
     # other half of item 43. It used to be 12 steps of PAD_FULL/12, which the
@@ -2563,8 +2567,24 @@ class techno_lib:
         pad that is lit and does nothing is the fault this surface must never
         commit, so they are not lit.
 
-        `elapsed` is seconds. The legend is a display of what a rate FEELS like
-        and is deliberately not tempo-locked to the modulator it depicts."""
+        `elapsed` is seconds, or **None for the static legend, which is what
+        ships** - item 61, 2026-09-06.
+
+        THE FADE IS WITHDRAWN. Repainting sixteen pads on a timer wedged the
+        controller in 2026-08, so the driver paints ONE frame. It used to paint
+        phase 0 of the withdrawn animation, and `mod_wave` at phase 0 is the
+        TROUGH for tri and ramp and the PEAK for square and sample-and-hold -
+        so pads 14-15 sat three times brighter than pads 1-8 and 13, for a
+        reason no player can read, on a grid whose brightness had just been
+        made meaningful. An animation frozen at phase 0 is not a design.
+
+        With None every unselected pad takes the band's MIDPOINT, so the only
+        thing brightness says is what is selected. None rather than 0.0 because
+        0.0 is a real frame: if the fade is ever re-enabled it must swell from
+        its first frame like any other.
+
+        The legend is a display of what a rate FEELS like and is deliberately
+        not tempo-locked to the modulator it depicts."""
 
         rates = len(techno_lib.MOD_LEGEND_PERIODS)
         is_rate = index < rates
@@ -2592,9 +2612,16 @@ class techno_lib:
         if selected:
             # Steady, full, and the only pad on the grid not moving.
             return (colour, techno_lib.PAD_FULL)
-        wave = techno_lib.mod_wave(shape, (elapsed / period) % 1.0, seed=index)
-        # wave is bipolar; fold to 0..1 so the pad swells rather than inverting.
-        level = techno_lib.MOD_LEGEND_FLOOR + techno_lib.MOD_LEGEND_BAND * (wave + 1.0) / 2.0
+        if elapsed is None:
+            # The static legend: the band's midpoint for every unselected pad.
+            level = techno_lib.MOD_LEGEND_FLOOR + techno_lib.MOD_LEGEND_BAND / 2.0
+        else:
+            wave = techno_lib.mod_wave(shape, (elapsed / period) % 1.0,
+                                       seed=index)
+            # wave is bipolar; fold to 0..1 so the pad swells rather than
+            # inverting.
+            level = (techno_lib.MOD_LEGEND_FLOOR
+                     + techno_lib.MOD_LEGEND_BAND * (wave + 1.0) / 2.0)
         level = min(level, 1.0) * techno_lib.PAD_FULL
         # QUANTISED INSIDE THE BAND. The step is the band's width over
         # MOD_LEGEND_LEVELS, not the full scale's - a band narrow enough for
