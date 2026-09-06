@@ -303,7 +303,21 @@ class maschine_mk2_lib:
     COL_BAND_Y = NAME_Y                  # name, value and bar together
     COL_BAND_H = BAR_Y + BAR_H - NAME_Y
     TAB_CHARS = 8            # "A KICK " - what fits in a 60 px tab at 6 px
-    VALUE_CHARS = 4          # 4 chars of double-height text fit a column
+    # RAISED 4 -> 5 ON 2026-09-06, item 67, because 4 made one division read
+    # as a DIFFERENT division.
+    #
+    # The six labels are 1/32, 1/16, 1/8, 1/16T, 1/8T and 1/4. Only "1/16T" is
+    # five characters, and cut to four it becomes "1/16" - not a truncation a
+    # player can see, but another entry in the same list. The owner played a
+    # triplet channel believing it was straight, and reported it as "why cant
+    # i dial in 16 steps in current 1/16 divide setting": at 1/16T a beat is
+    # six steps, sixteen pads fit two beats, so LENGTH stops at 12 and HITS
+    # with it. The panel said 1/16 and the instrument was playing 1/16T.
+    #
+    # FIVE FITS, measured rather than assumed: char_w(2) is 12 px, so
+    # text_w("1/16T", 2) is 5*12-1 = 59, drawn from x=3 and ending at 61
+    # inside a 64 px column. A sixth character would not fit.
+    VALUE_CHARS = 5          # 5 chars of double-height text fit a column
     # A name-valued column (PRESET, KIT, SAMPLE) draws single height instead,
     # because four characters cannot tell one preset from the next: 48 of the
     # 67 patches on group H shared a 4-char label with an alphabetical

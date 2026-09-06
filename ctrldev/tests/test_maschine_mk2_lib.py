@@ -414,6 +414,44 @@ class TestScreenLayout(unittest.TestCase):
         packets = whole_screen(0, self.TABS, self.COLS)
         self.assertNotIn(lib.display_clear_osc(0), packets)
 
+    def test_no_division_label_is_cut_into_another_division(self):
+        """ITEM 67, and this is the shape that makes a truncation dangerous.
+
+        The value column drew 4 characters. Five of the six division labels
+        are four or fewer, so nothing looked wrong - but "1/16T" cut to four
+        is "1/16", which is ANOTHER ENTRY IN THE SAME LIST. The panel did not
+        show a mangled string, it showed a different valid setting, and the
+        owner played a triplet channel for a while believing it was straight.
+
+        A test that only asked "does it fit" would have passed the old value
+        for five of six labels. What has to hold is that no label can be
+        mistaken for another one after the cut."""
+
+        drawn = [name[:lib.VALUE_CHARS] for name, _, _ in lib.DIVISIONS]
+        self.assertEqual(len(set(drawn)), len(drawn),
+                         "two divisions draw the same text: %r" % (drawn,))
+        for name, _, _ in lib.DIVISIONS:
+            self.assertEqual(
+                name[:lib.VALUE_CHARS], name,
+                "%r does not survive the value budget" % (name,))
+
+    def test_the_widest_value_still_fits_the_column(self):
+        """And the budget is not free - it is measured against the glass.
+
+        char_w(2) is 12 px in the daemon (`display.rs`: 6 * X_SCALE * scale),
+        text is drawn at x = 3 inside a column of SCREEN_COL, and the daemon's
+        own text_w excludes the trailing gap. A budget that did not fit would
+        be clipped by the daemon silently, which is the failure this pairs
+        with."""
+
+        char_w = 12                      # daemon display.rs, scale 2
+        widest = max(len(n) for n, _, _ in lib.DIVISIONS)
+        self.assertLessEqual(widest, lib.VALUE_CHARS)
+        used = 3 + lib.VALUE_CHARS * char_w - 1
+        self.assertLess(used, lib.SCREEN_COL,
+                        "%d chars of double-height text overrun the column"
+                        % lib.VALUE_CHARS)
+
     def test_every_band_erases_before_it_draws(self):
         """The daemon's text drawing is ADDITIVE - draw_char only ever calls
         set_pixel - so without an erase a shorter string leaves the tail of a
