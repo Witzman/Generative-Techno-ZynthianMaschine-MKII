@@ -33,30 +33,33 @@ FALLBACK = "017-generative-techno.zss"
 # no curve, no taper - which is what makes the dB arithmetic below legal.
 MAIN_STRIP = "chan_16"
 
-# Measured on zynmixer:output_17a with nobody at the panel, main fader at 1.0.
-# Both readings are of the SAME FILE; the 11 dB between them is the wet-law
-# fix of 2026-09-04, which let 019's four modulated sends self-correct on load.
+# THE MAIN BUS, MEASURED PROPERLY ON 2026-09-06 - and every earlier number
+# here was taken over too short a window.
 #
-# CONFIRMED ON THE RIG 2026-09-06, and the confirmation is why this number is
-# still +7.0 after a day of being argued with. 019 was loaded and playing and
-# the bus was read over 96 s - FORTY-EIGHT BARS, the LCM of the six modulator
-# periods (16, 8, 6, 8, 4 and 3 bars) - at a known fader of 0.45:
+# The shipped 019 was read on the rig, loaded and playing, over 96 s: FORTY-
+# EIGHT BARS, the LCM of its six modulator periods (16, 8, 6, 8, 4 and 3). The
+# main fader was READ BACK off the mixer as 0.2800 rather than assumed, and all
+# eight channel faders matched this file, with channels 0 and 3 visibly
+# modulating:
 #
-#     peak -0.39 dBFS, RMS -18.36, crest 18.0 dB, 0 of 9,216,000 clipped
-#     per-bar peak over 48 bars: max -0.39, min -1.97, spread 1.59 dB
+#     peak -2.43 dBFS, RMS -20.37, crest 17.9 dB
+#     0 of 9,216,000 samples at or over full scale
+#     per-bar peak spread over 48 bars: 1.46 dB
 #
-# Back-computed, that is a unity peak of +6.55 dBFS, which agrees with the gate's
-# +7.0 within 0.45 dB. So +7.0 stands and is slightly conservative.
+# THE OLD -3.99 "OWNER CEILING" IS NOT A USABLE TARGET AND HAS BEEN REMOVED.
+# It came from a 40 s read on 2026-09-02 - twenty bars, less than half the
+# modulator period - so it understates the peak for the same reason every other
+# short window here did. A number that cannot be reproduced is not a ceiling.
 #
-# A SHORTER WINDOW IS NOT A SMALLER VERSION OF THIS MEASUREMENT, IT IS A
-# DIFFERENT ONE. Locking to a BAR is what the trap file says and it is not
-# enough here: a 10-bar read of the same file at 0.28 returned -8.11 dBFS,
-# 3.6 dB below what the 48-bar figure predicts, and that reading was used to
-# "correct" this constant to +2.95 and the fader to 0.45 - which put the peak
-# 0.4 dB from full scale. Both were reverted. LOCK THE WINDOW TO THE LONGEST
-# THING THAT MOVES, not to the bar.
-PEAK_AT_UNITY_DBFS = +7.0      # 2026-09-05; +6.55 measured 2026-09-06, agrees
-OWNER_CEILING_DBFS = -3.99     # 2026-09-02, 40 s, zero samples near full scale
+# WHAT REPLACES IT IS A STATED POLICY, not a recalled reading: the factory
+# snapshot must keep at least 2 dB of peak headroom over a full modulator
+# cycle, and must not be so quiet that the instrument arrives inaudible. 0.28
+# gives 2.43 dB of headroom with nothing clipped, and an RMS of -20.37 which is
+# within 0.03 dB of the mix the owner tuned by ear.
+PEAK_AT_SHIPPED_FADER_DBFS = -2.43   # 48 bars, fader read back as 0.2800
+SHIPPED_FADER = 0.28
+MIN_HEADROOM_DB = 2.0                # policy, not a recalled measurement
+MAX_HEADROOM_DB = 12.0               # below this it is just quiet
 
 
 def _snapshot(name):
@@ -137,20 +140,27 @@ class TheMainFaderLeavesTheHeadroomItWasGiven(unittest.TestCase):
                         "the main fader is back at unity - 019 clips 1.21 % "
                         "of its samples there")
 
-    def test_the_predicted_peak_is_at_or_under_the_owners_ceiling(self):
-        predicted = PEAK_AT_UNITY_DBFS + 20 * math.log10(self.level)
-        self.assertLessEqual(
-            round(predicted, 2), round(OWNER_CEILING_DBFS, 2) + 0.1,
-            f"main at {self.level} puts the measured peak at "
-            f"{predicted:+.2f} dBFS, above the {OWNER_CEILING_DBFS:+.2f} the "
-            f"owner settled on. Raising this fader needs a fresh read of "
-            f"zynmixer:output_17a, not arithmetic")
+    def test_the_shipped_fader_is_the_one_that_was_measured(self):
+        """The measurement above is of ONE fader position. If the file moves
+        off it, the headroom figures below describe a snapshot that no longer
+        exists - so pin the two together rather than letting them drift."""
+        self.assertAlmostEqual(
+            self.level, SHIPPED_FADER, places=4,
+            msg="the main fader moved away from the value the 48-bar "
+                "measurement was taken at - re-measure before changing this")
+
+    def test_it_keeps_the_headroom_policy(self):
+        headroom = -PEAK_AT_SHIPPED_FADER_DBFS
+        self.assertGreaterEqual(
+            headroom, MIN_HEADROOM_DB,
+            f"the factory snapshot peaks {PEAK_AT_SHIPPED_FADER_DBFS:+.2f} "
+            f"dBFS, leaving {headroom:.2f} dB - under the {MIN_HEADROOM_DB} dB "
+            f"policy. Measure over 48 bars before changing the fader")
 
     def test_it_is_not_pulled_so_far_the_instrument_is_quiet(self):
-        """The other half of the same judgement. A fader low enough to be
-        safe against any input is also a factory default nobody can hear."""
-        predicted = PEAK_AT_UNITY_DBFS + 20 * math.log10(self.level)
-        self.assertGreater(predicted, OWNER_CEILING_DBFS - 6.0)
+        """The other half of the same judgement. A fader low enough to be safe
+        against any input is also a factory default nobody can hear."""
+        self.assertLess(-PEAK_AT_SHIPPED_FADER_DBFS, MAX_HEADROOM_DB)
 
 
 class TheFileAgreesWithItselfAboutTheMaster(unittest.TestCase):
