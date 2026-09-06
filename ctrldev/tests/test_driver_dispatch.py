@@ -1072,3 +1072,133 @@ class RestoredFxGlobalsCase(unittest.TestCase):
                           seen.append(role)):
             self.d._push_fx_globals()
         self.assertNotIn("REVTYPE", seen)
+
+
+class TheCutoffKnobOnALiveVoice(DispatchCase):
+    """Todo item 42 - "channel F's CUTOFF moves nothing, not even the driver's
+    own number", reported at the rig and never reproduced there.
+
+    THE ENTRY SAID THIS WAS ANSWERABLE OFF THE RIG, and it is: the driver
+    constructs, so the encoder CC can be driven into `midi_event` and the
+    driver's OWN number read back. Four causes had already been eliminated by
+    hand (the top clamp, `_enc_delta`'s re-centre, a dead column, and the whole
+    downstream half); none of them is re-derived here.
+
+    Nothing below asserts a sound. `set_value` on the fake zctrl records that
+    the driver ATTEMPTED a write, which is a different claim from "the filter
+    moved" - the rig gate is still the rig gate.
+
+    NO CC NUMBER IS WRITTEN DOWN. The encoder CCs come from the driver's own
+    ENCODER_CCS and the column from techno_lib's page ring, so a surface
+    reorder moves this test with it rather than leaving it addressing the
+    wrong knob and passing.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # F is the first voice in the table. Selected the way a hand selects
+        # it, through the Group button, so the driver does whatever a real
+        # selection does.
+        self.channel = next(i for i, ch in enumerate(self.mod.tlib.CHANNELS)
+                            if ch[2] == "voice")
+        self.cc(self.mod.GROUP_CC_FIRST + self.channel, 127)
+        self.d.mode = "CONTROL"
+        self.proc = rig_stub.fit_voice_chain(self.d, self.channel)
+        self.zctrl = self.proc.controllers_dict[
+            self.mod.tlib.VOICE_SYMBOLS["JV/Obxd"][0]]
+        verbs = self.d._page()["verbs"]
+        self.column = verbs.index("cutoff")
+        self.enc = self.mod.ENCODER_CCS[self.column]
+        self.base = self.mod.GROUP_NOTE_BASE[self.d.group]
+
+    def shown(self):
+        """The number the CUTOFF column DRAWS - not the stored one.
+
+        The two are different claims and this defect lives in the gap: the
+        display reads `state_view`, which substitutes a pressure base over the
+        stored value."""
+        return self.d.state_view(self.channel)["cutoff"]
+
+    def sweep(self):
+        """Two full encoder sweeps, up then down, as the owner reported doing.
+
+        Absolute knob: the second sweep is what defeats `_enc_delta`'s
+        re-centre, which is one of the four causes already eliminated."""
+        for value in list(range(64, 128, 4)) + list(range(64, 0, -4)):
+            self.cc(self.enc, value)
+
+    def test_the_column_is_live_when_the_chain_publishes_the_port(self):
+        self.assertFalse(self.d._column_dead(self.column))
+
+    def test_the_number_moves_and_the_write_is_attempted(self):
+        # The entry's own question, answered: with a chain that publishes
+        # `cutoff`, the driver's own number moves and it tries to write.
+        before = self.shown()
+        self.sweep()
+        self.assertNotEqual(self.shown(), before)
+        self.assertTrue(self.zctrl.writes)
+
+    def test_a_pad_release_ends_the_squeeze(self):
+        """THE DEFECT. The daemon sends NO zero-pressure message on release -
+        `pad_released` in `daemon/src/main.rs` sends a NoteOff and nothing
+        else, and `pad_aftertouch` is change-gated so the last value it ever
+        sent is non-zero by construction.
+
+        `_pressure_write` decays the offset only while the raw pressure has
+        FALLEN below it, so a raw value that never returns to zero pins the
+        offset, pins the base, and the restore write never happens. The verb
+        is left displaced and the knob is dead for the rest of the session."""
+
+        self.cc(self.enc, 64)                       # anchor the encoder
+        self.d.midi_event(bytes([0x90, self.base, 100]))         # pad down
+        self.d.midi_event(bytes([0xA0, self.base, 90]))          # squeeze
+        self.d._pressure_write()
+        self.assertGreater(self.d._press_off[self.channel], 0.0)
+        self.d.midi_event(bytes([0x80, self.base, 0]))           # pad up
+        for _ in range(50):                         # ~10 s of poll ticks
+            self.d._pressure_write()
+        self.assertEqual(self.d._press_off[self.channel], 0.0)
+        self.assertIsNone(self.d._press_base[self.channel])
+
+    def test_the_knob_still_works_after_a_pad_has_been_played(self):
+        """The owner's symptom, in the state that produces it: the column
+        draws LIVE with a number, the number does not move, and nothing is
+        logged on any of the four refusal paths."""
+
+        self.cc(self.enc, 64)
+        self.d.midi_event(bytes([0x90, self.base, 100]))
+        self.d.midi_event(bytes([0xA0, self.base, 90]))
+        self.d._pressure_write()
+        self.d.midi_event(bytes([0x80, self.base, 0]))
+        for _ in range(50):
+            self.d._pressure_write()
+        before = self.shown()
+        self.sweep()
+        self.d._pressure_write()                    # the poll thread's answer
+        self.assertNotEqual(self.shown(), before)
+
+    def test_a_squeeze_on_a_step_mode_pad_ends_too(self):
+        """THE HALF THE OBVIOUS FIX MISSES, and it is why the clear sits above
+        the early return rather than below it.
+
+        In STEP mode a pad press goes to the step editor, so `self.held` never
+        gains an entry and `_pad_up` returns before it reaches the note. The
+        finger is on the pad all the same, `_pad_pressure` stores its reading
+        whatever the mode is, and `_pressure_write` sweeps CUTOFF from it - so
+        the one place a squeeze can be stranded forever is the one place a
+        release does the least work.
+
+        Written after a mutation survived: moving the clear two lines down left
+        the whole suite green."""
+
+        self.d.mode = "STEP"
+        self.d.midi_event(bytes([0x90, self.base, 100]))    # -> _toggle_step
+        self.d.midi_event(bytes([0xA0, self.base, 90]))     # squeeze anyway
+        self.d._pressure_write()
+        self.assertGreater(self.d._press_off[self.channel], 0.0)
+        self.assertFalse(self.d.held, "STEP mode holds no note")
+        self.d.midi_event(bytes([0x80, self.base, 0]))
+        for _ in range(50):
+            self.d._pressure_write()
+        self.assertEqual(self.d._press_off[self.channel], 0.0)
+        self.assertIsNone(self.d._press_base[self.channel])

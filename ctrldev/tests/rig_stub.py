@@ -108,6 +108,7 @@ class FakeMixer:
     def __init__(self):
         self.levels = {}
         self.mutes = {}
+        self.solos = {}
         self.MAX_NUM_CHANNELS = 17
 
     def get_level(self, chan):
@@ -121,6 +122,17 @@ class FakeMixer:
 
     def set_mute(self, chan, value):
         self.mutes[chan] = value
+
+    # SOLO EXISTS BECAUSE `_render_groups` ASKS FOR IT. It is only reached on a
+    # channel that HAS a mixer strip - `_any_soloed` skips a None chan - so
+    # this was latent for as long as every chain here was empty. The moment a
+    # test fits a chain (fit_voice_chain below), any render raises
+    # AttributeError on a line that has nothing to do with what is under test.
+    def get_solo(self, chan):
+        return self.solos.get(chan, 0)
+
+    def set_solo(self, chan, value):
+        self.solos[chan] = value
 
     def enable_dpm(self, *args):
         pass
@@ -289,3 +301,78 @@ def cc_for(action, driver_module):
         if name == action:
             return cc
     raise AssertionError(f"nothing is bound to {action!r}")
+
+
+# --------------------------------------------------------------- a live chain
+#
+# EVERYTHING ABOVE LEAVES THE CHAINS EMPTY ON PURPOSE, and that is still the
+# default. But an empty chain answers one question and one only: a voice
+# CONTROL column with no processor behind it is DEAD, so every question about
+# what the CUTOFF knob does when it is LIVE was unreachable - which is exactly
+# the question todo item 42 asked and could not answer off the rig.
+#
+# Nothing here simulates a plugin. `set_value` records; it makes no sound and
+# proves none. What it proves is that the driver ATTEMPTED the write, which is
+# a different claim from "the filter moved" and must never be read as one.
+
+
+class FakeZctrl:
+    """One plugin controller. Records every write, in order."""
+
+    def __init__(self, symbol, value_min=0.0, value_max=1.0, value=0.5):
+        self.symbol = symbol
+        self.value_min = value_min
+        self.value_max = value_max
+        self.value = value
+        self.writes = []
+
+    def set_value(self, value, *args):
+        self.value = value
+        self.writes.append(value)
+
+
+class FakeEngine:
+    def __init__(self, name):
+        self.name = name
+
+
+class FakeProcessor:
+    def __init__(self, eng_code, engine_name, symbols):
+        self.eng_code = eng_code
+        self.engine = FakeEngine(engine_name)
+        self.controllers_dict = {s: FakeZctrl(s) for s in symbols}
+        self.preset_list = []
+        self.preset_index = 0
+        self.preset_info = None
+
+
+class FakeChain:
+    def __init__(self, processors, mixer_chan):
+        self.processors = processors
+        self.mixer_chan = mixer_chan
+
+    def get_processors(self, *args, **kwargs):
+        return self.processors
+
+
+# What Obxd publishes for the four page-1 roles, from techno_lib's own measured
+# VOICE_SYMBOLS table - never copied here, so a table edit cannot leave a test
+# addressing symbols the driver no longer asks for.
+def fit_voice_chain(driver, channel, eng_code="JV/Obxd", engine_name="Obxd"):
+    """Put a synth chain behind `channel` and hand back its processor.
+
+    The four CONTROL columns then draw LIVE, which is the state the owner's rig
+    was in and the empty default can never reach."""
+
+    tlib = sys.modules["zyngine.ctrldev.techno_lib"].techno_lib
+    symbols = [s for s in tlib.VOICE_SYMBOLS[eng_code] if s]
+    proc = FakeProcessor(eng_code, engine_name, symbols)
+    chain_id = 100 + channel
+    driver.chain_manager.chains[chain_id] = FakeChain([proc], mixer_chan=channel)
+    driver.chain_manager.midi_chan_2_chain_ids[
+        tlib.CHANNELS[channel][5]] = [chain_id]
+    # The driver caches BOTH of these on the engine it last saw, and neither
+    # notices a chain appearing underneath it.
+    driver.sym_cache.clear()
+    driver._invalidate_gen_cache()
+    return proc

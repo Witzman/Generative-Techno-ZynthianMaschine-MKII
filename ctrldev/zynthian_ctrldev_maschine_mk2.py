@@ -7418,6 +7418,37 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """Release. Ends the note; the capture hangs off the same edge."""
 
         entry = self.held.pop(pad, None)
+        # THE END OF A SQUEEZE IS THIS EDGE AND NOTHING ELSE. Item 42: the
+        # daemon sends NO zero-pressure message when a pad comes up -
+        # `pad_released` (daemon/src/main.rs) sends a NoteOff and re-arms the
+        # aftertouch gates, and `pad_aftertouch` is change-gated, so the last
+        # PolyphonicPressure it ever sends is non-zero BY CONSTRUCTION.
+        #
+        # `_pressure_write` sheds its offset only while the raw pressure has
+        # fallen BELOW it, so a raw value stuck at its last reading pins the
+        # offset, pins `_press_base`, and the restore write never runs. The
+        # driver then holds a base the display draws in place of the stored
+        # value and the poll thread rewrites base+offset every 200 ms - so the
+        # CUTOFF column goes on drawing a LIVE number that no amount of turning
+        # can move, the verb sits displaced for the rest of the session, and
+        # not one of the four refusal paths logs a thing. That is item 42's
+        # symptom exactly, and pressure's own docstring promises the opposite:
+        # "squeeze a pad, let go, and the knob is where you left it".
+        #
+        # RAW TO ZERO, NOT `_press_release()`. That one snaps the verb back in
+        # a single write, and PRESSURE_DECAY's comment says why not: "a snap to
+        # base sounds like a fault; a slow glide sounds like a filter closing".
+        # Zeroing the raw is what the decay was written to see.
+        #
+        # ONLY WHEN THE LAST PAD IS UP: two pads held share one offset (see
+        # `_pad_pressure`), and letting one release cut the other's squeeze
+        # short would trade a permanent fault for an audible one. `self.held`
+        # is empty in STEP mode, where the pop above finds nothing and the
+        # press went to the step editor - so the clear has to sit ABOVE the
+        # early return, not below it, or a squeeze on a step pad is unreachable
+        # forever.
+        if not self.held:
+            self._press_raw[self.group] = 0
         if entry is None:
             if self.rec_down:
                 # Released with nothing held: the press went somewhere else -
