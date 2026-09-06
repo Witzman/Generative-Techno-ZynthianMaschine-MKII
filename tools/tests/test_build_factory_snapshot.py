@@ -694,6 +694,77 @@ class TheWetLevelsUseTheDriversOwnScale(unittest.TestCase):
         self.assertEqual(ctrls["ldelay"]["value"], 250.0)
 
 
+class ThereIsOneWetLever(unittest.TestCase):
+    """Item 57, closed 2026-09-06. This tool used to carry its own
+    `insert_procs` / `set_wet`, which matched the literal strings "TAP
+    Reverberator" and "TAP Stereo Echo" and wrote the literal symbols
+    `wetlevel` / `lecholevel` - correct for the factory chain and a refusal
+    on the eighteen other insert pairs the two packs use. The pack builder
+    grew the role-resolved version the same day, so there were two
+    implementations of one idea in two files that already import one another.
+
+    THE FIX WAS DELETION: the factory builder calls `genre.insert_role_procs`
+    and `genre.set_wet` now. These tests are what stops the copy coming back,
+    in the same shape as ThereIsOneRiffDecoder below - and the first two are
+    the case that used to raise."""
+
+    def _crossfade_base(self):
+        """Chain 3 with an insert pair that is NOT the TAP one, and whose wet
+        ports are linear crossfades rather than dB sends - so nothing the old
+        implementation named appears anywhere on it."""
+        base = base_snapshot()
+        chain = base["chains"]["3"]
+        procs = base["zs3"]["zs3-0"]["processors"]
+        chain["slots"][1] = {"22": "JV/Regrader"}
+        chain["slots"][2] = {"32": "JV/Shiroverb"}
+        procs["22"] = {"controllers": {"DelayMix": {"value": 0.0},
+                                       "DelayFeedback": {"value": 0.2}}}
+        procs["32"] = {"controllers": {"mix": {"value": 0.0},
+                                       "roomsize": {"value": 50.0}}}
+        return base
+
+    def test_a_non_tap_pair_takes_the_send_in_its_own_units(self):
+        d, _r = builder.build(self._crossfade_base(), manifest(), KITS)
+        procs = d["zs3"]["zs3-0"]["processors"]
+        # Both are CROSSFADES - no separable dry - so the wet is held under
+        # tlib.CROSSFADE_CEILING and a full send cannot delete the channel.
+        # reverb 22% of 0..100 * 0.75; delay 30% of 0..1 * 0.75.
+        self.assertAlmostEqual(procs["32"]["controllers"]["mix"]["value"],
+                               16.5, places=6)
+        self.assertAlmostEqual(procs["22"]["controllers"]["DelayMix"]["value"],
+                               0.225, places=6)
+
+    def test_no_tap_symbol_is_invented_on_a_plugin_that_has_none(self):
+        d, _r = builder.build(self._crossfade_base(), manifest(), KITS)
+        procs = d["zs3"]["zs3-0"]["processors"]
+        self.assertNotIn("wetlevel", procs["32"]["controllers"])
+        self.assertNotIn("lecholevel", procs["22"]["controllers"])
+
+    def test_a_modulator_base_reads_back_through_the_same_law(self):
+        # read_wet INVERTS fx_wet_values, ceiling and all, so the base is the
+        # percent that was asked for rather than three quarters of it. A base
+        # that disagrees with the plugin yanks the port on the first tick.
+        d, _r = builder.build(self._crossfade_base(), manifest(), KITS)
+        state = d["zs3"]["zs3-0"]["midi_capture"][PORT]["ctrldev_state"]
+        self.assertEqual(state["mods"]["2|delay"]["base"], 30)
+
+    def test_no_other_tool_defines_its_own(self):
+        tools_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        guilty = []
+        for name in sorted(os.listdir(tools_dir)):
+            if not name.endswith(".py") or name == "build-genre-snapshots.py":
+                continue
+            with open(os.path.join(tools_dir, name), encoding="utf-8") as fh:
+                src = fh.read()
+            if "def set_wet" in src or "def insert_role_procs" in src \
+                    or "def insert_procs" in src:
+                guilty.append(name)
+        self.assertEqual(
+            guilty, [],
+            "one wet lever, in build-genre-snapshots.py - these define their "
+            f"own and will drift from it: {guilty}")
+
+
 class AModulatorsBaseIsComputedNeverDeclared(unittest.TestCase):
 
     def test_a_level_base_is_the_mixer_strip(self):

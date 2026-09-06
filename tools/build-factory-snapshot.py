@@ -90,8 +90,6 @@ STEPS = 16
 DRUM_CHAINS = ["1", "2", "3", "4", "5"]
 VOICE_CHAINS = ["6", "7", "8"]
 CTRLDEV_PORT = genre.CTRLDEV_PORT
-REVERB_NAME = "TAP Reverberator"
-DELAY_NAME = "TAP Stereo Echo"
 # 0-100 on the surface onto the plugin's dB range, exactly as the driver's
 # _set_wet does it. Kept as one pair of functions so the tool and the
 # instrument cannot disagree about what "30% wet" means.
@@ -186,37 +184,38 @@ def chain_of_channel(channel):
     return str(channel + 1)
 
 
-def insert_procs(chain, procs):
-    """(reverb processor, delay processor) for a chain, or None for each that
-    is not there. Found by the plugin's own name, never by slot index: a
-    snapshot whose insert pair is in the other order is still correct."""
-    found = {"reverb": None, "delay": None}
-    for slot in chain["slots"][1:]:
-        pid, code = next(iter(slot.items()))
-        if REVERB_NAME in code:
-            found["reverb"] = procs[pid]
-        elif DELAY_NAME in code:
-            found["delay"] = procs[pid]
-    return found
+def read_wet(insert):
+    """A modulator's base: the percent one insert's wet is sitting at.
 
+    Takes the `(processor, FX_ROLES entry)` pair `genre.insert_role_procs`
+    hands back, and INVERTS `tlib.fx_wet_values` on the entry's first wet
+    port. A two-port wet is ganged, so either side answers; a dB port comes
+    back through the wet law, a linear one back across the port's own range
+    with the crossfade ceiling undone, so a base reads the percent that was
+    asked for rather than three quarters of it.
 
-def set_wet(proc, which, percent):
-    """Write a wet level as the driver would. The echo's two sides are ganged,
-    which is what _set_wet does on the rig."""
-    symbols = ["wetlevel"] if which == "reverb" else ["lecholevel", "recholevel"]
-    ctrls = proc.setdefault("controllers", {})
-    for symbol in symbols:
-        if symbol not in ctrls:
-            raise ValueError(f"{which} insert has no {symbol!r} controller")
-        ctrls[symbol]["value"] = wet_db(percent)
+    THIS USED TO NAME `wetlevel` AND `lecholevel` OUTRIGHT, which made it a
+    third TAP-only wet lever beside the two item 57 deleted: on any other
+    insert pair it returned None and the caller raised "channel N has no
+    reverb insert" about a chain that has one.
 
-
-def read_wet(proc, which):
+    Read back off the port rather than taken from the manifest on purpose -
+    a base that disagrees with the plugin makes the first modulator tick
+    after a load yank the parameter to wherever the number said."""
+    if insert is None:
+        return None
+    proc, spec = insert
+    symbol, kind, lo, hi = spec["WET"][0]
     ctrls = (proc or {}).get("controllers") or {}
-    symbol = "wetlevel" if which == "reverb" else "lecholevel"
     if symbol not in ctrls:
         return None
-    return wet_percent(ctrls[symbol]["value"])
+    value = float(ctrls[symbol]["value"])
+    if kind == "db":
+        return wet_percent(value)
+    ceiling = (tlib.CROSSFADE_CEILING
+               if spec.get("blend") == "crossfade" else 1.0)
+    percent = 100.0 * (value - lo) / ((hi - lo) * ceiling)
+    return int(round(max(0.0, min(100.0, percent))))
 
 
 def set_preset(proc, spec):
@@ -528,19 +527,22 @@ def build(base, manifest, kit_notes):
     for cid, chain in chains.items():
         if chain.get("midi_chan") is None:
             continue
-        inserts = insert_procs(chain, procs)
+        inserts = genre.insert_role_procs(chain, procs)
         if delay_ms is not None and inserts["delay"] is not None:
-            ctrls = inserts["delay"]["controllers"]
+            # STILL NAMES THE TAP'S OWN TIME PORTS. The wet lever is general
+            # now; the delay TIME is not, and there is no shared writer for it
+            # to call. Out of scope for item 57, noted rather than fixed.
+            ctrls = inserts["delay"][0]["controllers"]
             for symbol in ("ldelay", "rhaasdelay"):
                 if symbol in ctrls:
                     ctrls[symbol]["value"] = float(delay_ms)
     for cid, wants in sorted((manifest.get("wets") or {}).items()):
         chain = chains[cid]
-        inserts = insert_procs(chain, procs)
+        inserts = genre.insert_role_procs(chain, procs)
         for which, percent in sorted(wants.items()):
             if inserts[which] is None:
                 raise ValueError(f"chain {cid} has no {which} insert")
-            set_wet(inserts[which], which, percent)
+            genre.set_wet(inserts[which][0], inserts[which][1], percent)
         report.append(f"  {chain['title']:11} wet "
                       + "  ".join(f"{w} {p}%" for w, p in sorted(wants.items())))
     if delay_ms is not None:
@@ -601,7 +603,7 @@ def build(base, manifest, kit_notes):
             base_value = int(round(level * 100))
         else:
             chain = chains[chain_of_channel(channel)]
-            base_value = read_wet(insert_procs(chain, procs)[verb], verb)
+            base_value = read_wet(genre.insert_role_procs(chain, procs)[verb])
             if base_value is None:
                 raise ValueError(f"channel {channel} has no {verb} insert")
         mods_out[f"{channel}|{verb}"] = {
