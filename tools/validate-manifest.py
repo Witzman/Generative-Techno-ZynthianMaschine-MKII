@@ -45,6 +45,15 @@ THE CHECKS, and what each one is for:
   or the mix on disk is not the mix you hear.
 * **INSERTS THAT SERVE NO ROLE.** A chain whose pair cannot supply a reverb or
   a delay has dead knobs, inert modulators and four dead globals.
+* **A SEND NOBODY CAN HEAR.** An entry that dials a room (REVSIZE, REVTYPE) or
+  an echo (DLYTIME, DLYFBK) and then sends nothing to it has designed a
+  character that cannot be heard. This is todo item 50, found by ear at the rig
+  on 2026-09-05 and then surveyed: 55 of the 57 snapshots that save FX wet ports
+  save every one of them at the -70 dB floor. **A wet port only leaves the floor
+  if a modulator drives it**, because the driver owns a modulator's base as a
+  percent and writes base+offset through `_set_wet` within 200 ms of load. Every
+  pack entry has one to three such channels, so five to seven of its eight are
+  dry whatever the globals say.
 * **A MODULATOR ON A VERB THAT REWRITES THE PATTERN**, and one whose rate is
   faster than the ~200 ms poll tick can render.
 * **CHORD WHERE IT DRAWS DEAD** - on a sampler, and above the burst cap.
@@ -459,6 +468,37 @@ def check(entry, kit_notes, budget=None):
             dead.append(f"the dry survives on {name} (it is a crossfade)")
     if dead:
         warn("this pair cannot reach: " + "; ".join(dead))
+
+    # --- a send nobody can hear -------------------------------------------
+    #
+    # WHY THIS IS A FAIL AND THE DEAD-CONTROL CHECK ABOVE IS A WARN. A dead
+    # REVTYPE is a trade: the plugin already IS a room, so a room selector is
+    # redundant and the preset still sounds like itself. A dry SEND is not a
+    # trade - the preset's globals describe a space, the ear never reaches it,
+    # and two presets whose only difference is 27 points of room size come out
+    # indistinguishable. That is exactly what happened, and nothing here caught
+    # it: the packs passed every check this file had while being dry.
+    #
+    # A WET PORT ONLY LEAVES THE -70 dB FLOOR IF A MODULATOR DRIVES IT. Nothing
+    # else writes one. The builder has no static-send lever at all - the FACTORY
+    # manifest has a `wets` key and no pack entry has or can have one - so a
+    # channel with no reverb/delay modulator is dry on load and stays dry until
+    # a hand turns the encoder. Growing that lever is item 49's step 1 work;
+    # this check only refuses to let the gap ship again unseen.
+    dials = [k for k in ("revsize", "revtype", "dlytime", "dlyfbk")
+             if k in (entry.get("globals") or {})]
+    if dials:
+        wet_driven = {m.get("channel") for m in (entry.get("mods") or ())
+                      if m.get("verb") in ("reverb", "delay")}
+        deaf = [ch.name for i, ch in enumerate(channels)
+                if i not in wet_driven and any(ch.mask[s]
+                                               for s in range(ch.steps))]
+        if deaf:
+            bad(f"{len(deaf)} of {len(channels)} channels can never be heard "
+                f"wet - {', '.join(deaf)} have no reverb or delay modulator, "
+                f"so their sends stay at the -70 dB floor while this entry "
+                f"dials {', '.join(dials)}. Nothing but a modulator writes a "
+                f"wet port, and the pack manifest has no static-send key")
 
     # --- chord and gate ---------------------------------------------------
     for ch in channels:

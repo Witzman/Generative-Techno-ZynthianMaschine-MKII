@@ -298,6 +298,87 @@ class SomethingMustOutliveABarCase(unittest.TestCase):
         self.assertFalse(any("outlives one bar" in m for m in fails(e)))
 
 
+class ASendNobodyCanHearCase(unittest.TestCase):
+    """Todo item 50, made into a check on 2026-09-06.
+
+    A wet port only leaves the -70 dB floor if a MODULATOR drives it - the
+    driver owns a modulator's base as a percent and writes base+offset through
+    `_set_wet` within 200 ms of load, and nothing else writes one at all. So an
+    entry that dials REVSIZE and REVTYPE and then sends nothing to the reverb
+    has designed a room its own channels are never in.
+
+    `CLEAN` has no `globals` block, which is why it passed before this check
+    existed and still does: an entry that dials nothing cannot be deaf to it.
+    """
+
+    SOUNDING = ("A", "B", "C", "F", "G")     # D, E and H are silent in CLEAN
+
+    def entry(self, globals_=None, mods=None):
+        e = copy.deepcopy(CLEAN)
+        if globals_ is not None:
+            e["globals"] = globals_
+        if mods is not None:
+            e["mods"] = mods
+        return e
+
+    def fails(self, entry):
+        return [m for sev, m in vm.check(entry, KITS)
+                if sev == "FAIL" and "can never be heard wet" in m]
+
+    def test_dialling_a_room_with_no_send_to_it_fails(self):
+        bad = self.fails(self.entry(globals_={"revsize": 45, "revtype": 3}))
+        self.assertEqual(len(bad), 1)
+        self.assertIn("5 of 8", bad[0])
+        for name in self.SOUNDING:
+            self.assertIn(name, bad[0])
+
+    def test_dialling_an_echo_counts_too(self):
+        self.assertTrue(self.fails(self.entry(globals_={"dlyfbk": 35})))
+
+    def test_a_silent_channel_is_not_deaf(self):
+        """D, E and H have no notes. A channel that never sounds cannot be
+        heard dry either, and listing it would bury the real ones."""
+        bad = self.fails(self.entry(globals_={"revsize": 45}))
+        self.assertIn("5 of 8", bad[0])
+        for silent in ("D", "E", "H"):
+            self.assertNotIn(silent, bad[0].split(" have no ")[0])
+
+    def test_a_modulator_on_every_sounding_channel_is_clean(self):
+        mods = [{"channel": c, "verb": "reverb", "depth": 20, "rate": 3,
+                 "shape": "tri", "base": 30, "phase0": 0.0, "seed": c + 1}
+                for c in (0, 1, 2, 5, 6)]
+        self.assertEqual(
+            self.fails(self.entry(globals_={"revsize": 45}, mods=mods)), [])
+
+    def test_a_delay_modulator_reaches_the_send_as_well_as_a_reverb_one(self):
+        mods = [{"channel": c, "verb": "delay", "depth": 20, "rate": 3,
+                 "shape": "tri", "base": 30, "phase0": 0.0, "seed": c + 1}
+                for c in (0, 1, 2, 5, 6)]
+        self.assertEqual(
+            self.fails(self.entry(globals_={"dlytime": 1}, mods=mods)), [])
+
+    def test_one_channel_short_still_fails(self):
+        """The discrimination that matters: the shipped packs have one to
+        three of these, not zero, and passing them would make the check
+        useless on exactly the files it was written for."""
+        mods = [{"channel": c, "verb": "reverb", "depth": 20, "rate": 3,
+                 "shape": "tri", "base": 30, "phase0": 0.0, "seed": c + 1}
+                for c in (0, 1, 2, 5)]
+        bad = self.fails(self.entry(globals_={"revsize": 45}, mods=mods))
+        self.assertEqual(len(bad), 1)
+        self.assertIn("1 of 8", bad[0])
+        self.assertIn("G", bad[0])
+
+    def test_a_level_modulator_does_not_open_a_send(self):
+        """`level` moves the fader, not the wet port. Counting it would make
+        every shipped entry look reachable - all 71 carry one."""
+        mods = [{"channel": c, "verb": "level", "depth": 20, "rate": 3,
+                 "shape": "tri", "base": 30, "phase0": 0.0, "seed": c + 1}
+                for c in (0, 1, 2, 5, 6)]
+        self.assertTrue(
+            self.fails(self.entry(globals_={"revsize": 45}, mods=mods)))
+
+
 class TheShippedPacksAllPassCase(unittest.TestCase):
     """THE STANDING GUARD ON THE PACKS.
 
@@ -333,14 +414,48 @@ class TheShippedPacksAllPassCase(unittest.TestCase):
         total = sum(len(entries) for _n, entries, _k in self.packs())
         self.assertEqual(total, 71)
 
-    def test_every_shipped_entry_passes(self):
+    # THE ONE FAILURE EVERY SHIPPED ENTRY HAS, AND IT IS TODO ITEM 50.
+    #
+    # Added 2026-09-06. The packs are DRY: a wet port only leaves the -70 dB
+    # floor if a modulator drives it, and every entry has one to three such
+    # channels out of eight. So each preset dials a room in its globals that
+    # most of its channels cannot be heard in.
+    #
+    # THIS IS NOT WAIVED, IT IS PINNED. The failure is expected because the fix
+    # is a rebuild with decided values - item 50 says in terms that writing a
+    # number to make the survey green is how the pack got here - and the
+    # rebuild is item 49's job. What this pair of tests holds is that the dry
+    # send is the ONLY thing wrong: any OTHER fail is a regression and turns
+    # the build red, exactly as before. When the rebuild lands, delete the
+    # constant and this test goes back to asserting nothing fails at all.
+    KNOWN_FAILURE = "can never be heard wet"
+
+    def test_the_only_failure_is_the_known_dry_send(self):
         broke = {}
         for name, entries, kits in self.packs():
             for entry in entries:
-                msgs = [m for sev, m in vm.check(entry, kits) if sev == "FAIL"]
+                msgs = [m for sev, m in vm.check(entry, kits)
+                        if sev == "FAIL" and self.KNOWN_FAILURE not in m]
                 if msgs:
                     broke[f"{name}:{entry['file']}"] = msgs
         self.assertEqual(broke, {})
+
+    def test_the_dry_send_really_does_fire_on_every_entry(self):
+        """The other half. Without this, deleting the check would leave the
+        test above green over nothing - which is the shape the daemon's
+        mutation run found on 2026-09-05 and the reason this is two tests."""
+        clean = []
+        for name, entries, kits in self.packs():
+            for entry in entries:
+                if not any(self.KNOWN_FAILURE in m
+                           for sev, m in vm.check(entry, kits)
+                           if sev == "FAIL"):
+                    clean.append(f"{name}:{entry['file']}")
+        self.assertEqual(
+            clean, [],
+            "these entries no longer report the dry send. If the rebuild has "
+            "landed that is correct - delete KNOWN_FAILURE and restore the "
+            "plain 'nothing fails' assertion above")
 
     # A DEAD FX CONTROL IS AN ACCEPTED TRADE; ANYTHING ELSE IS NOT.
     #
