@@ -3649,6 +3649,70 @@ class ADrumTapAddsAStep(unittest.TestCase):
 
 
 
+
+class TheWetReadsBackAsThePercentThatWroteIt(unittest.TestCase):
+    """`fx_wet_percent` - the inverse of `fx_wet_values`, added 2026-09-06 for
+    todo item 59.
+
+    `wet_percent` existed for this and had NO CALLER: the driver's REVERB and
+    DELAY columns drew `self.state`'s copy, which starts at 0, is not carried
+    in the snapshot's driver block, and is never read back - so every preset
+    with an audible send drew 0, and the first detent of the encoder wrote 1
+    and collapsed the send. LEVEL had the identical defect and was fixed on
+    2026-09-02; its two neighbours in `MIX_PARAMS` were not.
+
+    A ROUND TRIP IS THE TEST. Anything else is two implementations of one idea
+    agreeing with each other, which is how the wet law was wrong for months."""
+
+    def test_every_plugin_round_trips_every_percent(self):
+        for plugin, spec in tl.FX_ROLES.items():
+            for percent in (0, 1, 6, 12, 25, 34, 50, 63, 80, 100):
+                values = tl.fx_wet_values(spec, percent)
+                back = tl.fx_wet_percent(spec, dict(values))
+                self.assertLessEqual(
+                    abs(back - percent), 1,
+                    f"{plugin} at {percent}% read back as {back}")
+
+    def test_a_crossfade_round_trips_through_its_ceiling(self):
+        """The ceiling scales the write, so the read must undo it or every
+        crossfade reads back a third low."""
+        spec = tl.FX_ROLES["Shiroverb"]
+        self.assertEqual(spec["blend"], "crossfade")
+        values = dict(tl.fx_wet_values(spec, 40))
+        self.assertAlmostEqual(values["mix"], 40.0 * tl.CROSSFADE_CEILING)
+        self.assertEqual(tl.fx_wet_percent(spec, values), 40)
+
+    def test_a_two_port_wet_reads_one_number(self):
+        """Dragonfly's are EARLY and LATE reflections, not a stereo pair, and
+        the surface has one column for them."""
+        spec = tl.FX_ROLES["Dragonfly Room Reverb"]
+        self.assertEqual(len(spec["WET"]), 2)
+        self.assertEqual(tl.fx_wet_percent(spec, {"early_level": 30.0,
+                                                    "late_level": 30.0}), 30)
+
+    def test_a_decibel_crossfade_would_undo_its_ceiling_too(self):
+        """NO SHIPPED PLUGIN IS BOTH, and that is exactly why this is here: the
+        `db` branch's ceiling division is unreachable from the current table,
+        so a mutation deleting it passed the whole suite. A synthetic spec
+        pins the arithmetic against the day a dB crossfade is added."""
+        spec = {"role": "reverb", "blend": "crossfade",
+                "WET": (("wetlevel", "db", -70.0, 10.0),)}
+        values = dict(tl.fx_wet_values(spec, 60))
+        self.assertEqual(tl.fx_wet_percent(spec, values), 60)
+
+    def test_a_missing_port_reads_none_rather_than_zero(self):
+        """A port the processor does not publish is UNKNOWN. Reading it as 0
+        would put a confident wrong number on the surface, which is the defect
+        this function exists to remove."""
+        spec = tl.FX_ROLES["TAP Reverberator"]
+        self.assertIsNone(tl.fx_wet_percent(spec, {}))
+
+    def test_the_floor_reads_zero(self):
+        spec = tl.FX_ROLES["TAP Reverberator"]
+        self.assertEqual(tl.fx_wet_percent(spec, {"wetlevel": tl.WET_OFF}), 0)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -9160,3 +9224,91 @@ class TheHitsColumnSaysWhenTheLineIsNotWhatHitsAsked(unittest.TestCase):
             if col is None or col["grey"]:
                 continue
             self.assertEqual(col["name"], spec[0], verb)
+
+
+class TheModLegendSwellIsInsideTheEyesRange(unittest.TestCase):
+    """Todo item 43, the half that is arithmetic rather than an eye.
+
+    THE PANEL'S LIGHT ALPHABET IS MEASURED, not derived - owner's eyes,
+    2026-09-01, after an OSC sniff had "verified" an alphabet the owner could
+    not tell apart. As a fraction of full: **0.30 and 0.35 are
+    indistinguishable from full**, 0.12 is nearly full, 0.08 reads as half,
+    and 0.03 is the value that reads as on-but-clearly-not-full.
+
+    `MOD_LEGEND_FLOOR` was 0.35 and `MOD_LEGEND_BAND` 0.30, so the swell ran
+    from 0.35 to 0.65 of full - **the whole band above the dimmest level
+    measured to read as FULL.** Every unselected pad, at every phase, was
+    saturated: the legend could not read as anything but sixteen flat lights,
+    and the selected pad - which is meant to be the one still, full pad on the
+    grid - was indistinguishable from the eight it is supposed to stand out
+    from.
+
+    Reading LED bytes is not reading LEDs, so what these pin is the
+    arithmetic: that the band stays inside the range the eye was measured to
+    resolve. The eye is still owed a look at the rig.
+    """
+
+    def unselected(self, count=64):
+        """Every brightness an unselected rate pad can take, over one cycle."""
+
+        # Pad 0 with pad 3 selected, so the pad under test is never the still
+        # one. The period is the legend's own, read out of the table.
+        period = tl.MOD_LEGEND_PERIODS[0]
+        return {tl.mod_legend_pad(0, period * n / count, 3, "tri",
+                                  bound=True)[1]
+                for n in range(count)}
+
+    def test_the_top_of_the_band_is_below_the_measured_saturation(self):
+        self.assertLess(tl.MOD_LEGEND_FLOOR + tl.MOD_LEGEND_BAND,
+                        tl.LIGHT_READS_FULL)
+
+    def test_no_unselected_pad_ever_reaches_a_level_that_reads_as_full(self):
+        """The assertion that would have caught this, and the one the constants
+        alone cannot make: the quantiser rounds, so a band inside the range can
+        still be rounded out of it."""
+
+        ceiling = tl.LIGHT_READS_FULL * tl.PAD_FULL
+        for level in self.unselected():
+            self.assertLess(level, ceiling)
+
+    def test_the_swell_still_has_levels_to_swell_through(self):
+        """Moving the band down is only half of it. The quantiser divides the
+        BAND, not the whole scale - divide the whole scale and a band this
+        narrow collapses onto two values and the swell becomes a flicker."""
+
+        self.assertGreaterEqual(len(self.unselected()), 4)
+
+    def test_the_swell_costs_no_more_messages_than_it_used_to(self):
+        """`led_cache.changed()` swallows a repeat, so what the daemon pays is
+        the number of DISTINCT levels the fade crosses - and this legend has
+        wedged the controller off the USB bus. Five is what the old constants
+        produced (a 0.60 band over a 0.1667 step), so five is the ceiling."""
+
+        self.assertLessEqual(len(self.unselected(400)), 5)
+
+    def test_the_floor_is_brighter_than_the_unbound_menu(self):
+        """`MOD_LEGEND_INERT` is the alphabet's "available, not acting". A
+        bound legend whose trough sat at or below it would say the same thing
+        the unbound one does.
+
+        COMPARED IN PAD BRIGHTNESS, WHICH IS THE ONLY UNIT THE TWO SHARE.
+        MOD_LEGEND_FLOOR is a FRACTION and is multiplied by PAD_FULL on the way
+        out; MOD_LEGEND_INERT is a pad brightness used raw. Comparing the two
+        constants directly compares 0.05 of full against 0.015 of full while
+        looking like it compares 0.05 against 0.03 - the same scale slip that
+        put the old band above the eye's range in the first place."""
+
+        trough = min(self.unselected())
+        self.assertGreater(trough, tl.MOD_LEGEND_INERT)
+        self.assertAlmostEqual(trough, tl.MOD_LEGEND_FLOOR * tl.PAD_FULL)
+
+    def test_the_selected_pad_is_still_the_brightest_thing_on_the_grid(self):
+        selected = tl.mod_legend_pad(3, 0.0, 3, "tri", bound=True)[1]
+        self.assertEqual(selected, tl.PAD_FULL)
+        self.assertGreater(selected, max(self.unselected()))
+
+    def test_the_measured_alphabet_is_a_number_not_a_sentence(self):
+        """The four measured points, in the source rather than in a comment,
+        so a level chosen against them can be checked by a test."""
+
+        self.assertEqual(tl.LIGHT_READS_FULL, 0.30)

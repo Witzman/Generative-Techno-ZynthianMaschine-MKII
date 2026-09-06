@@ -205,17 +205,14 @@ def read_wet(insert):
     if insert is None:
         return None
     proc, spec = insert
-    symbol, kind, lo, hi = spec["WET"][0]
     ctrls = (proc or {}).get("controllers") or {}
-    if symbol not in ctrls:
-        return None
-    value = float(ctrls[symbol]["value"])
-    if kind == "db":
-        return wet_percent(value)
-    ceiling = (tlib.CROSSFADE_CEILING
-               if spec.get("blend") == "crossfade" else 1.0)
-    percent = 100.0 * (value - lo) / ((hi - lo) * ceiling)
-    return int(round(max(0.0, min(100.0, percent))))
+    # THE ARITHMETIC IS `tlib.fx_wet_percent`, SINCE 2026-09-06 - item 59 gave
+    # the driver a wet READ-BACK and there is no reason for a second one here.
+    # The version this replaced was subtly different: it skipped the crossfade
+    # ceiling on the dB branch, which no shipped plugin reaches and which would
+    # have been wrong the day one did.
+    return tlib.fx_wet_percent(
+        spec, {symbol: entry["value"] for symbol, entry in ctrls.items()})
 
 
 def set_preset(proc, spec):

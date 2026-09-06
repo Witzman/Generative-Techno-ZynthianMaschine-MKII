@@ -1517,6 +1517,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if chan is not None:
             view["level"] = int(round(self.state_manager.zynmixer.get_level(chan) * 100))
 
+        # AND THE TWO VERBS BESIDE IT - item 59. Same reason as the level
+        # above: the value lives in the plugin, the stored copy is stale by
+        # design, and drawing the stored copy is what made 807 audible sends
+        # read 0. A channel with no such insert keeps the stored value - it is
+        # the only number there is, and inventing a 0 would be the same fault.
+        for which in ("reverb", "delay"):
+            wet = self._live_wet(channel, which)
+            if wet is not None:
+                view[which] = wet
+
         # A LIVE SQUEEZE SHOWS THE KNOB, NOT THE SWEEP. Pressure writes the
         # displaced value through apply(), so without this the column tracked
         # the finger and both screens repainted about thirty times a second -
@@ -5874,11 +5884,61 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         it happened; it is the lens now.)"""
         if verb.startswith(tlib.VERB_LV2) or verb.startswith(tlib.VERB_FX):
             return self._mod_percent_get(channel, verb)
-        if verb == "level":
-            level = self._live_level(channel)
-            if level is not None:
-                return level
+        # LEVEL, REVERB and DELAY all live somewhere other than self.state -
+        # the mixer strip and the insert plugin - and all three are moved by
+        # the touchscreen behind the driver's back. Capturing a stale copy as a
+        # modulator's base makes the first tick after a bind YANK the parameter
+        # to wherever the driver last thought it was.
+        live = self._live_mix(channel, verb)
+        if live is not None:
+            return live
         return self.param_get(channel, verb)
+
+    def _live_mix(self, channel, verb):
+        """The live value of a MIX_PARAMS verb, or None if there is nowhere to
+        read it from.
+
+        ONE READER FOR ALL THREE SITES - item 59. The live-vs-stored rule was
+        written three times for `level` alone (the encoder's increment, the
+        EXIT ramp's capture through `_mod_base_get`, and `state_view`) and
+        `reverb` and `delay` were in none of them. Three copies of a rule is
+        how two of the three verbs came to be missed."""
+        if verb == "level":
+            return self._live_level(channel)
+        if verb in ("reverb", "delay"):
+            return self._live_wet(channel, verb)
+        return None
+
+    def _live_wet(self, channel, which):
+        """This channel's reverb or delay send as the 0-100 the surface shows,
+        straight from the insert plugin, or None when there is no such insert.
+
+        THE SAME LAW AS `_live_level`, AND IT WAS OWED TO THESE TWO SINCE
+        2026-09-02 - todo item 59. `state[ch]["reverb"]` starts at 0
+        (`default_channel_state`), `get_state`'s docstring says outright that
+        the insert wets "live in objects that are already saved" so the
+        snapshot's driver block does not carry them, and neither `_resync_all`
+        nor `_derive_params` reads them back - `_derive_params` refreshes
+        chance and swing from zynseq and stops. The touchscreen can move a wet
+        behind the driver's back exactly as it can a fader.
+
+        WHAT IT COST: item 50 gave all 71 presets decided sends on 2026-09-06,
+        807 of them audible - and every one of those columns drew 0. Because
+        `apply()` returns early when `param_get` already matches, the FIRST
+        detent of REVERB wrote 1, and a 34 % send collapsed in one click.
+        Before item 50 the ports were mostly at the floor, so the stale 0 was
+        accidentally near-true and nothing showed.
+
+        `fx_wet_percent` is the arithmetic, in `techno_lib` so the driver, the
+        pack builder and the factory builder cannot disagree about what a send
+        of 34 means - there were three copies of the forward direction alone
+        before 2026-09-06."""
+        proc, spec = self.fx_spec(channel, which)
+        if proc is None:
+            return None
+        values = {symbol: getattr(zctrl, "value", None)
+                  for symbol, zctrl in proc.controllers_dict.items()}
+        return tlib.fx_wet_percent(spec, values)
 
     def _live_level(self, channel):
         """This channel's fader as the 0-100 the surface shows, straight from
@@ -6489,13 +6549,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if delta == 0:
             return
         current = self.param_get(channel, verb)
-        if verb == "level":
-            # Read the live value, not the stored copy: the touchscreen and
-            # the snapshot both move the fader behind the driver's back, and
-            # incrementing a stale number makes the first turn jump.
-            chan = self._mixer_chan(channel)
-            if chan is not None:
-                current = int(round(self.state_manager.zynmixer.get_level(chan) * 100))
+        # Read the live value, not the stored copy: the touchscreen and the
+        # snapshot both move a fader - and an insert's wet - behind the
+        # driver's back, and incrementing a stale number makes the first turn
+        # jump. REVERB and DELAY joined LEVEL here on 2026-09-06, item 59:
+        # their stored copies start at 0 and nothing refreshes them, so the
+        # first detent wrote 1 over whatever send the preset loaded with.
+        live = self._live_mix(channel, verb)
+        if live is not None:
+            current = live
         if current is None:
             return
         new_value = min(hi, max(lo, current + delta))
@@ -9703,7 +9765,51 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # Every path that changes a pattern parameter or the selected group
         # ends here, so this is where the screens follow the encoders without
         # each handler having to remember to repaint them.
-        self._render_display()
+        #
+        # UNLESS A REPAINT IS ALREADY OWED - 2026-09-06, todo item 41, and
+        # this is the half the message-rate fix never reached. The owner,
+        # cycling the page ring: "all screens show, while i cycle".
+        #
+        # THE COALESCING WAS CORRECT EVERYWHERE THE ENTRY LOOKED. `_step_page`
+        # does end in `_display_soon()`, the poll thread does suppress its
+        # periodic repaint while one is owed, and the LENS branch had already
+        # been coalesced on 2026-09-04 - the entry's lead was stale. **The
+        # synchronous repaint came in through the LEDs.** `_step_page` calls
+        # `_render_all()`, `_render_all` ends in `_render_pads()`, and this
+        # line drew both screens on the MIDI thread AND cleared `_display_due`
+        # on the way past - so the `_display_soon()` armed a line later had
+        # nothing left to coalesce. A page ring walked through `_render_all`
+        # paid a full both-screen repaint per detent, exactly as before.
+        #
+        # Measured off the rig through `tests/rig_stub.py`, eight detents of
+        # the big encoder on VOLUME's two-page ring with every cache already
+        # warm - so what is counted is the walk and nothing else:
+        #
+        #     before   8 `_render_display` calls   424 display packets
+        #     after    1 call                       24 display packets
+        #
+        # CHOOSE THE RING DELIBERATELY WHEN RE-MEASURING THIS. The stub comes
+        # up in STEP on a drum channel, whose ring is ONE page long: the walk
+        # then steps nothing, every repaint draws identical content, and the
+        # change key swallows all seven of the wasted calls. Off that ring the
+        # defect costs 0 packets and looks fixed while the calls still happen.
+        # That is why the test beside this asserts the CALL COUNT.
+        #
+        # THE FIRST DETENT STILL DRAWS AT ONCE and must: nothing is owed yet,
+        # so a single DL or DR press - which comes through `_step_page` too -
+        # lands immediately rather than waiting out a settle no second detent
+        # will ever end. What is suppressed is only a repaint something has
+        # already promised to do, and `_display_due` stays True so the poll
+        # thread draws the page the hand stopped on.
+        #
+        # NOT A GUARD INSIDE `_render_display` - that decision stands, and
+        # `_display_soon`'s docstring carries it: HOME, a mode press and a
+        # snapshot load all repaint directly and must land at once. This is
+        # the one call site that is REACHED rather than chosen, by a caller
+        # that wanted the LEDs.
+        if not (self._display_due and tlib.display_held(
+                time.monotonic(), self._display_hold_until)):
+            self._render_display()
 
     def _render_groups(self):
         for group in range(8):

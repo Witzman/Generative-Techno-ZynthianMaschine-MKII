@@ -2467,9 +2467,46 @@ class techno_lib:
     # mark you had to work out rather than see. The cost is that the selected
     # rate no longer demonstrates its own speed - which is the one rate you
     # already know, because you chose it.
-    MOD_LEGEND_BAND = 0.30
+    # THE BAND AND THE FLOOR ARE A FRACTION OF FULL, and they were both above
+    # the eye's saturation point until 2026-09-06 - todo item 43.
+    #
+    # They were 0.35 and 0.30, so the swell ran 0.35 -> 0.65 of full. This
+    # panel's measured alphabet (`LIGHT_READS_FULL`, owner's eyes 2026-09-01)
+    # says the DIMMEST level that reads as full is 0.30 - so every value the
+    # fade could take was saturated. Not a swell that was too subtle: a swell
+    # that could not exist, and it took the selected pad's whole job with it,
+    # because "steady at full" only means anything beside something that is
+    # not full. The still legend the driver actually paints (`elapsed=0.0`,
+    # since the animation was withdrawn) showed nine cyan and four violet pads
+    # of which every single one read as full.
+    #
+    # DERIVED FROM THE FOUR MEASURED POINTS, not chosen. The eye resolves
+    # 0.03 ("on but clearly not full"), 0.08 ("half"), 0.12 ("nearly full")
+    # and 0.30 ("full"), so the whole usable range is 0.03..0.30 and the part
+    # that carries information is 0.03..0.12:
+    #
+    #     trough  FLOOR         = 0.05   between "clearly not full" and "half"
+    #     peak    FLOOR + BAND  = 0.15   past "nearly full" (0.12) and short of
+    #                                    the dimmest measured full (0.30)
+    #
+    # so the five quantised steps below land at 0.050, 0.075, 0.100, 0.125 and
+    # 0.150 - straddling three of the four measured points instead of sitting
+    # on the far side of all of them.
+    #
+    # MIND THE TWO SCALES, because mixing them is how the old band was chosen.
+    # FLOOR and BAND are fractions and are multiplied by PAD_FULL below, so the
+    # trough leaves here at 0.10 of the pad's 0..2.0. MOD_LEGEND_INERT beside
+    # them is NOT a fraction - it is a pad brightness, used raw - so 0.03 there
+    # is 0.015 of full. The trough is therefore 0.10 against 0.03 in the units
+    # that reach the daemon, and a bound legend cannot be mistaken for an
+    # unbound one.
+    #
+    # READING LED BYTES IS NOT READING LEDs, and that applies to this comment
+    # too. The arithmetic is now inside the range the eye was measured in; only
+    # an eye at the rig can say the swell READS as one.
+    MOD_LEGEND_BAND = 0.10
     # Floor, so an unselected pad still reads as lit rather than dead.
-    MOD_LEGEND_FLOOR = 0.35
+    MOD_LEGEND_FLOOR = 0.05
     # Nothing bound: _mod_pad returns immediately, so the gesture is inert.
     # Pads dancing while nothing can happen is the sin the dashed tab row
     # exists to prevent. Still, dim, and identical.
@@ -2499,7 +2536,19 @@ class techno_lib:
     # only from a physical replug. The repaint is now also THROTTLED, in the
     # driver, by MOD_LEGEND_TICKS. Both mitigations are needed; neither is
     # decoration.
-    MOD_LEGEND_LEVELS = 12
+    #
+    # STEPS ACROSS THE BAND, NOT ACROSS THE SCALE - 2026-09-06, and this is the
+    # other half of item 43. It used to be 12 steps of PAD_FULL/12, which the
+    # 0.60-wide band crossed 3.6 of, so the fade really had FIVE distinct
+    # values. Moving the band into the eye's range makes it 0.20 wide, and the
+    # same divisor would have crossed 1.2 steps: two values, and the swell
+    # would have become a flicker with the defect looking fixed.
+    #
+    # FOUR, so the fade still ends at five distinct values and the daemon pays
+    # exactly what it paid before. What the daemon is charged for is the number
+    # of levels a cycle CROSSES - led_cache.changed() swallows every repeat -
+    # and that is this number, not the size of a step.
+    MOD_LEGEND_LEVELS = 4
 
     @staticmethod
     def mod_legend_pad(index, elapsed, selected_rate, selected_shape, bound=True):
@@ -2547,8 +2596,16 @@ class techno_lib:
         # wave is bipolar; fold to 0..1 so the pad swells rather than inverting.
         level = techno_lib.MOD_LEGEND_FLOOR + techno_lib.MOD_LEGEND_BAND * (wave + 1.0) / 2.0
         level = min(level, 1.0) * techno_lib.PAD_FULL
-        step = techno_lib.PAD_FULL / techno_lib.MOD_LEGEND_LEVELS
-        return (colour, round(level / step) * step)
+        # QUANTISED INSIDE THE BAND. The step is the band's width over
+        # MOD_LEGEND_LEVELS, not the full scale's - a band narrow enough for
+        # the eye to resolve is too narrow for a step measured against
+        # PAD_FULL, and quantising against the scale would round the whole
+        # swell onto two values. Anchored at the floor so the trough is
+        # exactly MOD_LEGEND_FLOOR rather than whatever the rounding lands on.
+        floor = techno_lib.MOD_LEGEND_FLOOR * techno_lib.PAD_FULL
+        step = (techno_lib.MOD_LEGEND_BAND * techno_lib.PAD_FULL
+                / techno_lib.MOD_LEGEND_LEVELS)
+        return (colour, floor + round((level - floor) / step) * step)
 
     @staticmethod
     def throttle(seen, key, message, now, seconds):
@@ -2947,6 +3004,24 @@ class techno_lib:
     LIGHT_DIM = 0.03         # available, not acting - MEASURED, see above
     LIGHT_ON = 1.0           # acting, or held
 
+    # THE DIMMEST LEVEL MEASURED TO READ AS FULL - the same 2026-09-01 sitting,
+    # written down as a number because the prose above it could not be checked
+    # by anything. 0.30 and 0.35 were both indistinguishable from full, so the
+    # eye's usable range ends somewhere at or below 0.30 and everything above
+    # is one level wearing many values.
+    #
+    # A FRACTION OF FULL, so it applies on either scale: the mono buttons take
+    # 0.0-1.0 and the pads 0.0-PAD_FULL, and a level is comparable across the
+    # two only after it is divided by whatever full is there. Todo item 43 was
+    # a band of 0.35-0.65 on the PAD scale's fraction, which is exactly this
+    # mistake made in the other direction - the numbers looked small next to
+    # PAD_FULL 2.0 and were saturated.
+    #
+    # WHAT IT IS NOT: a claim that 0.29 is visibly under full. The measurement
+    # has four points - 0.03, 0.08, 0.12 and 0.30 - and this is the lowest one
+    # that read as full, so it is a CEILING to design under, not a threshold.
+    LIGHT_READS_FULL = 0.30
+
     # Half-period of the LATCHED blink, in seconds. 0.5 gives 1 Hz, which
     # reads as deliberate rather than as a fault. One rate on the whole panel:
     # a second would read as a second meaning.
@@ -3329,6 +3404,43 @@ class techno_lib:
                 value = lo + (hi - lo) * (percent / 100.0) * ceiling
             out.append((symbol, max(lo, min(hi, value))))
         return out
+
+    @staticmethod
+    def fx_wet_percent(spec, values):
+        """The 0-100 a plugin's wet ports are currently sitting at, or None.
+
+        THE INVERSE OF `fx_wet_values`, AND THE REASON IT EXISTS IS ITEM 59.
+        `wet_percent` above was written "for reading a stored port value back
+        onto the surface" and had no caller anywhere in the driver, so REVERB
+        and DELAY drew `self.state`'s copy - which starts at 0, is not carried
+        in the snapshot's driver block, and nothing refreshes. Every preset
+        with an audible send drew 0, and because `apply()` skips a write whose
+        value already matches, the first detent of the encoder wrote 1 and
+        collapsed the send in one click.
+
+        LEVEL had exactly this defect and was fixed on 2026-09-02 by reading
+        the mixer strip instead. Its two neighbours in `MIX_PARAMS` kept it.
+
+        `values` is {symbol: value} - normally a processor's `controllers_dict`
+        read through `.value`. **A missing port returns None, not 0**: a port
+        the processor does not publish is UNKNOWN, and a confident wrong number
+        on the surface is the thing being removed here.
+
+        The crossfade ceiling is undone, or every crossfade reads back a
+        quarter low. Only the FIRST port is read - a two-port wet is one number
+        on the surface, and `fx_wet_values` writes the same percent to both."""
+        ceiling = (techno_lib.CROSSFADE_CEILING
+                   if spec.get("blend") == "crossfade" else 1.0)
+        symbol, kind, lo, hi = spec["WET"][0]
+        if symbol not in values or values[symbol] is None:
+            return None
+        value = float(values[symbol])
+        if kind == "db":
+            percent = techno_lib.wet_percent(value) / ceiling
+        else:
+            span = (hi - lo) or 1.0
+            percent = (value - lo) / span / ceiling * 100.0
+        return int(round(max(0.0, min(100.0, percent))))
 
     # label, fraction of a beat
     DELAY_DIVISIONS = (

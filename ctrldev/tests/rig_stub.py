@@ -358,6 +358,43 @@ class FakeChain:
 # What Obxd publishes for the four page-1 roles, from techno_lib's own measured
 # VOICE_SYMBOLS table - never copied here, so a table edit cannot leave a test
 # addressing symbols the driver no longer asks for.
+def tlib():
+    """The driver's own techno_lib, after the stub has installed it. Tests must
+    not import it a second way: two module objects mean two FX_ROLES tables."""
+    return sys.modules["zyngine.ctrldev.techno_lib"].techno_lib
+
+
+def fit_insert_pair(driver, channel, reverb="TAP Reverberator",
+                    delay="TAP Stereo Echo"):
+    """Hang a reverb and a delay off `channel`, with the real wet ports.
+
+    The symbols come from `tlib.FX_ROLES` rather than being typed here, so a
+    table edit cannot leave a test addressing ports the driver no longer asks
+    for - the same rule `fit_voice_chain` follows for VOICE_SYMBOLS.
+
+    Returns {"reverb": proc, "delay": proc}.
+    """
+    tlib = sys.modules["zyngine.ctrldev.techno_lib"].techno_lib
+    out = {}
+    procs = []
+    for name in (reverb, delay):
+        spec = tlib.FX_ROLES[name]
+        symbols = [sym for sym, _kind, _lo, _hi in spec["WET"]]
+        for key in ("DRY", "REVSIZE", "REVTYPE", "DLYTIME", "DLYFBK"):
+            if key in spec:
+                symbols.append(spec[key][0])
+        proc = FakeProcessor("JV/" + name, name, symbols)
+        procs.append(proc)
+        out[spec["role"]] = proc
+    chain_id = 200 + channel
+    driver.chain_manager.chains[chain_id] = FakeChain(procs, mixer_chan=channel)
+    driver.chain_manager.midi_chan_2_chain_ids[
+        tlib.CHANNELS[channel][5]] = [chain_id]
+    driver.sym_cache.clear()
+    driver._invalidate_gen_cache()
+    return out
+
+
 def fit_voice_chain(driver, channel, eng_code="JV/Obxd", engine_name="Obxd"):
     """Put a synth chain behind `channel` and hand back its processor.
 

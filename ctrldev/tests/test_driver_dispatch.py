@@ -317,6 +317,99 @@ class PadPressureStoresAndReturns(DispatchCase):
         self.assertEqual(self.d._press_raw[self.d.group], 0)
 
 
+
+class TheWetColumnsShowThePluginNotTheStaleCopy(unittest.TestCase):
+    """Todo item 59. LEVEL's defect, on its two neighbours in MIX_PARAMS.
+
+    `state[ch]["reverb"]` starts at 0, the snapshot's driver block does not
+    carry it, and nothing reads it back - so a preset with an audible send drew
+    0. Worse, `apply()` skips a write whose value already matches, so the first
+    detent of REVERB wrote 1 and collapsed the send in one click.
+
+    LEVEL was fixed on 2026-09-02 by reading the mixer strip. These two read
+    the plugin."""
+
+    def setUp(self):
+        self.driver = rig_stub.make_driver()
+
+    def _set_port(self, procs, which, percent):
+        tl = rig_stub.tlib()
+        spec = tl.FX_ROLES[procs[which].engine.name]
+        for symbol, value in tl.fx_wet_values(spec, percent):
+            procs[which].controllers_dict[symbol].value = value
+
+    def test_the_column_reads_the_plugins_own_wet(self):
+        procs = rig_stub.fit_insert_pair(self.driver, 0)
+        self._set_port(procs, "reverb", 34)
+        self.assertEqual(self.driver.state_view(0)["reverb"], 34)
+
+    def test_it_reads_a_non_db_plugin_too(self):
+        procs = rig_stub.fit_insert_pair(self.driver, 0,
+                                         reverb="Dragonfly Room Reverb")
+        self._set_port(procs, "reverb", 20)
+        self.assertEqual(self.driver.state_view(0)["reverb"], 20)
+
+    def test_the_delay_column_reads_its_own_plugin(self):
+        procs = rig_stub.fit_insert_pair(self.driver, 0)
+        self._set_port(procs, "delay", 45)
+        self.assertEqual(self.driver.state_view(0)["delay"], 45)
+
+    def test_the_stale_copy_does_not_win(self):
+        """The discrimination: the stored value is deliberately set to
+        something else, and the plugin must still be what shows."""
+        procs = rig_stub.fit_insert_pair(self.driver, 0)
+        self.driver.state[0]["reverb"] = 0
+        self._set_port(procs, "reverb", 34)
+        self.assertEqual(self.driver.state_view(0)["reverb"], 34)
+
+    def test_a_turn_starts_from_the_send_that_is_there(self):
+        """THE CONSEQUENCE THAT IS WORSE THAN A WRONG NUMBER. Reading the
+        stale 0 made the first detent write 1, so one click took a 34% send to
+        almost nothing. `_live_mix` is the one reader the encoder's increment,
+        the modulator's base capture and `state_view` all go through."""
+        procs = rig_stub.fit_insert_pair(self.driver, 0)
+        self.driver.state[0]["reverb"] = 0
+        self._set_port(procs, "reverb", 34)
+        self.assertEqual(self.driver._live_mix(0, "reverb"), 34)
+
+    def test_turning_the_encoder_starts_from_the_live_send(self):
+        """THE WHOLE POINT, DRIVEN THROUGH THE ENCODER RATHER THAN A HELPER.
+        Asserting `_live_mix` alone left the increment site untested: a
+        mutation that reverted it to the stored copy passed the whole suite.
+
+        NO CC NUMBER IS WRITTEN DOWN - the column comes from the page ring and
+        the CC from the driver's own ENCODER_CCS."""
+        driver = self.driver
+        procs = rig_stub.fit_insert_pair(driver, 0)
+        self._set_port(procs, "reverb", 34)
+        driver.state[0]["reverb"] = 0           # the stale copy, as loaded
+
+        page = None
+        for mode in ("VOLUME", "CONTROL", "STEP", "AUTO"):
+            driver.mode = mode
+            verbs = driver._page()["verbs"]
+            if "reverb" in verbs:
+                page = verbs
+                break
+        self.assertIsNotNone(page, "no page carries the REVERB column")
+        mod = rig_stub.load_driver()
+        enc = mod.ENCODER_CCS[page.index("reverb")]
+
+        for value in range(64, 80, 4):
+            driver.midi_event(bytes([0xB0, enc, value]))
+
+        # One detent up from 34 is 35 and change. What it must NOT be is 1,
+        # which is what incrementing the stale 0 produced.
+        self.assertGreater(driver._live_mix(0, "reverb"), 30)
+
+    def test_a_channel_with_no_insert_falls_back_to_the_stored_value(self):
+        """No chain, no ports, no crash - and no confident wrong number
+        either: what is drawn is the only thing there is."""
+        self.driver.state[0]["reverb"] = 7
+        self.assertEqual(self.driver.state_view(0)["reverb"], 7)
+
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -1202,3 +1295,100 @@ class TheCutoffKnobOnALiveVoice(DispatchCase):
             self.d._pressure_write()
         self.assertEqual(self.d._press_off[self.channel], 0.0)
         self.assertIsNone(self.d._press_base[self.channel])
+
+
+class ThePageRingDrawsOnlyThePageTheHandStopsOn(DispatchCase):
+    """Todo item 41, the half the message-rate fix did not reach.
+
+    The owner, cycling the page ring: *"all screens show, while i cycle"*. The
+    coalescing was built correctly and every place the entry looked was right -
+    `_step_page` ends in `_display_soon()`, the poll thread suppresses its
+    periodic repaint while one is owed, and the LENS branch had already been
+    coalesced on 2026-09-04. **The synchronous repaint came in through the
+    LEDs**: `_step_page` calls `_render_all()`, `_render_all` ends in
+    `_render_pads()`, and `_render_pads` ended in `_render_display()` - which
+    drew both screens on the MIDI thread AND cleared `_display_due` on the way
+    past, so the coalesce that was armed a line later had nothing left to
+    coalesce.
+
+    THE ASSERTION IS A CALL COUNT, NOT A PACKET COUNT. `_render_display` is
+    change-keyed, so counting bytes on the wire would measure the cache rather
+    than the defect; what has to be pinned is that the walk does not REACH the
+    draw once a repaint has been promised.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.drawn = []
+        real = self.d._render_display
+        self.d._render_display = lambda: (self.drawn.append(1), real())[1]
+
+    def detents(self, count, first=0):
+        """`count` detents of the big encoder, as fast as the loop can run.
+
+        CC 15 is a POSITION - eight units per detent - so the first report only
+        establishes the anchor and is sent separately."""
+
+        self.cc(self.mod.CC_BIG_TURN, first)
+        self.drawn.clear()
+        for n in range(1, count + 1):
+            self.cc(self.mod.CC_BIG_TURN,
+                    (first + n * self.mod.tlib.BIG_UNITS_PER_DETENT) % 128)
+
+    def test_a_ring_walk_draws_once_not_once_per_detent(self):
+        self.detents(8)
+        self.assertEqual(
+            len(self.drawn), 1,
+            "every page the hand passed through was drawn synchronously")
+
+    def test_the_walk_leaves_a_repaint_owed(self):
+        """Suppressing the draw is only half of it: the page the hand STOPPED
+        on has to still be coming, or the screens would keep the first page of
+        the walk until something else happened to repaint them."""
+
+        self.detents(8)
+        self.assertTrue(self.d._display_due)
+
+    def test_the_first_detent_still_lands_at_once(self):
+        """DL and DR come through the same function. Nothing is owed on the
+        first step, so it must not wait for a settle that a single press will
+        never end."""
+
+        self.detents(1)
+        self.assertEqual(len(self.drawn), 1)
+
+    def test_a_walk_slower_than_the_settle_draws_every_page(self):
+        """The suppression is the SETTLE, not a rate limiter. A hand putting
+        more than DISPLAY_SETTLE_S between detents is reading each page, and
+        each one must be drawn - otherwise the guard would be hiding pages the
+        player is actually looking at."""
+
+        self.cc(self.mod.CC_BIG_TURN, 0)
+        self.drawn.clear()
+        for n in range(1, 4):
+            self.cc(self.mod.CC_BIG_TURN,
+                    n * self.mod.tlib.BIG_UNITS_PER_DETENT)
+            # The hand pauses: expire the hold rather than sleep for it.
+            self.d._display_hold_until = 0.0
+        self.assertEqual(len(self.drawn), 3)
+
+    def test_the_lens_ring_coalesces_too(self):
+        """The lens's arrows step a VERB and the big encoder is inert there,
+        so the walk is DL/DR - but it goes through the same `_render_all()`
+        and had the same defect behind it."""
+
+        self.press("lens", True)
+        self.drawn.clear()
+        for _ in range(6):
+            self.d._act_page_next()
+        self.assertEqual(len(self.drawn), 1)
+
+    def test_a_direct_repaint_is_never_suppressed(self):
+        """HOME, a mode press and a snapshot load all repaint directly and
+        must land at once whatever is owed - which is why the guard is at the
+        one call site that is REACHED rather than inside `_render_display`."""
+
+        self.d._display_soon()
+        self.drawn.clear()
+        self.d._render_display()
+        self.assertEqual(len(self.drawn), 1)
