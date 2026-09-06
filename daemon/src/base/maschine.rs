@@ -302,7 +302,10 @@ pub trait Maschine {
     fn display_fb_text(
         &mut self, _screen: usize, _x: usize, _y: usize, _scale: usize, _invert: bool, _text: &str,
     ) {}
-    /// style: 0 outline, 1 filled, 2 dashed outline, 3 dotted rule, 4 invert.
+    /// style: 0 outline, 1 filled, 2 dashed outline, 3 dotted rule, 4 invert,
+    /// 5 clear. Style 5 arrived 2026-09-06 (item 66) so an erase is ONE
+    /// message: fill-then-invert is two, and the flush timer firing between
+    /// them showed a lit block on the glass.
     fn display_fb_rect(
         &mut self, _screen: usize, _x: usize, _y: usize, _w: usize, _h: usize, _style: usize,
     ) {}

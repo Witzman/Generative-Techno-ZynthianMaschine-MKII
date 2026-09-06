@@ -402,6 +402,37 @@ pub fn fill_rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize,
     for dy in 0..h { for dx in 0..w { set_pixel(bits, x + dx, y + dy); } }
 }
 
+/// Unset every pixel in a box, in ONE operation.
+///
+/// WHY IT EXISTS, 2026-09-06 - item 66. The driver's erase was FILL then
+/// INVERT over the same box: fill lights every pixel, invert turns them all
+/// off, and the pair leaves the box dark. But they are TWO OSC messages and
+/// `display_fb_flush` runs off a 100 ms timer, so whenever the timer fired
+/// between the two the panel showed a solid lit block for up to a tenth of a
+/// second. The owner saw it as "a white box where the text cutoff, its value
+/// and the bar sits ... only for a split of a second" and it had been there,
+/// unreported, since the erase was written.
+///
+/// No driver-side ordering can fix that: ANY two packets can be split by the
+/// timer. The erase has to be one message, which means one primitive here.
+///
+/// It also halves the erase: one 73-byte report's worth of work instead of
+/// two, on the path this project keeps having to make cheaper.
+///
+/// `on_glass` FIRST, per the daemon's own trap file: the primitives clip per
+/// pixel, which is memory-safe and useless against a loop count - a width of
+/// two billion once hung this daemon forever.
+pub fn clear_rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize, h: usize) {
+    let (w, h) = on_glass(x, y, w, h);
+    for dy in 0..h {
+        for dx in 0..w {
+            let (px, py) = (x + dx, y + dy);
+            if px >= WIDTH || py >= HEIGHT { continue; }
+            bits[py * STRIDE + px / 8] &= !(0x80 >> (px % 8));
+        }
+    }
+}
+
 pub fn rect(bits: &mut [u8; HEIGHT * STRIDE], x: usize, y: usize, w: usize, h: usize) {
     if w == 0 || h == 0 { return; }
     hline(bits, x, y, w);
@@ -450,6 +481,42 @@ mod tests {
         let mut bits = [0u8; HEIGHT * STRIDE];
         set_pixel(&mut bits, 0, 0);
         assert_eq!(bits[0], 0x80);
+    }
+
+    #[test]
+    fn clear_rect_leaves_the_box_dark_in_one_pass() {
+        // Item 66. What FILL+INVERT achieved in two messages, in one.
+        let mut two = [0u8; HEIGHT * STRIDE];
+        fill_rect(&mut two, 3, 2, 20, 6);
+        invert_rect(&mut two, 3, 2, 20, 6);
+
+        let mut one = [0u8; HEIGHT * STRIDE];
+        fill_rect(&mut one, 3, 2, 20, 6);
+        clear_rect(&mut one, 3, 2, 20, 6);
+
+        assert_eq!(one, two, "one clear must equal fill-then-invert");
+        assert!(one.iter().all(|b| *b == 0), "and the box must be dark");
+    }
+
+    #[test]
+    fn clear_rect_touches_nothing_outside_the_box() {
+        let mut bits = [0u8; HEIGHT * STRIDE];
+        fill_rect(&mut bits, 0, 0, WIDTH, HEIGHT);
+        clear_rect(&mut bits, 8, 1, 8, 2);
+        // The cleared box is dark...
+        for y in 1..3 { for x in 8..16 {
+            assert_eq!(bits[y * STRIDE + x / 8] & (0x80 >> (x % 8)), 0);
+        } }
+        // ...and the pixel immediately left of it is not.
+        assert_ne!(bits[1 * STRIDE + 7 / 8] & (0x80 >> (7 % 8)), 0);
+    }
+
+    #[test]
+    fn an_absurd_clear_terminates() {
+        // The trap that hung the daemon forever, on the new primitive.
+        let mut bits = [0u8; HEIGHT * STRIDE];
+        clear_rect(&mut bits, 0, 0, usize::MAX, usize::MAX);
+        clear_rect(&mut bits, WIDTH + 9, HEIGHT + 9, usize::MAX, usize::MAX);
     }
 
     #[test]

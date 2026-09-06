@@ -1059,6 +1059,10 @@ impl Maschine for Mikro {
             2 => display::dashed_rect(fb, x, y, w, h),
             3 => display::dotted_hline(fb, x, y, w),
             4 => display::invert_rect(fb, x, y, w, h),
+            // 5 is the ATOMIC erase - item 66, 2026-09-06. The driver used to
+            // send 1 then 4 over the same box; the flush timer firing between
+            // them showed a lit block for up to 100 ms.
+            5 => display::clear_rect(fb, x, y, w, h),
             _ => display::rect(fb, x, y, w, h),
         }
         // Style 3 is a rule, one row tall whatever h says. Marking h rows

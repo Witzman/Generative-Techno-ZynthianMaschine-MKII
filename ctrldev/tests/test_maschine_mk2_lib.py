@@ -428,12 +428,14 @@ class TestScreenLayout(unittest.TestCase):
                 (lib.label_packets(0, "X"), 0, lib.LABEL_Y,
                  lib.SCREEN_W, lib.LABEL_H)):
             self.assertEqual(
-                packets[:2],
-                [lib.display_rect_osc(0, x, y, w, h, lib.RECT_FILL),
-                 lib.display_rect_osc(0, x, y, w, h, lib.RECT_INVERT)],
-                "fill then invert over the band leaves every pixel dark, and "
-                "both styles have shipped since the displays did - so this "
-                "needs no daemon change")
+                packets[0],
+                lib.display_rect_osc(0, x, y, w, h, lib.RECT_CLEAR),
+                "ONE message - item 66. It was fill-then-invert until "
+                "2026-09-06, and the daemon's 100 ms flush landing between "
+                "the two showed a solid lit block on the glass")
+            self.assertNotIn(
+                lib.display_rect_osc(0, x, y, w, h, lib.RECT_FILL), packets,
+                "and the lit intermediate state must not be sent at all")
 
     def test_a_column_is_narrower_than_the_screen(self):
         """The saving is real only because the daemon's dirty regions carry x
@@ -448,7 +450,7 @@ class TestScreenLayout(unittest.TestCase):
             rects[0],
             lib.display_rect_osc(0, lib.SCREEN_COL, lib.COL_BAND_Y,
                                  lib.SCREEN_COL, lib.COL_BAND_H,
-                                 lib.RECT_FILL))
+                                 lib.RECT_CLEAR))
 
     def test_the_bands_do_not_overlap(self):
         """Two bands sharing a row would each erase the other's pixels, and
@@ -780,19 +782,47 @@ class TestLabelOnlyRepaint(unittest.TestCase):
         # glass unless the row is cleared first.
         packets = lib.label_packets(0, "STEP 1/3")
         self.assertEqual(packets[0], lib.display_rect_osc(
-            0, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H, lib.RECT_FILL))
-        self.assertEqual(packets[1], lib.display_rect_osc(
-            0, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H, lib.RECT_INVERT))
+            0, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H, lib.RECT_CLEAR))
 
-    def test_the_erase_needs_no_daemon_change(self):
-        # FILL then INVERT over the same box leaves every pixel dark, and both
-        # styles have shipped since the displays did. A style 5 "erase" would
-        # have been one message instead of two and a daemon deploy instead of
-        # none; the daemon's own `_ =>` arm draws an OUTLINE for an unknown
-        # style, so an old daemon would have boxed the label instead.
-        styles = [lib.RECT_FILL, lib.RECT_INVERT]
-        for style in styles:
-            self.assertIn(style, (0, 1, 2, 3, 4))
+    def test_the_erase_is_one_message_and_needs_the_matching_daemon(self):
+        # THIS TEST USED TO ASSERT THE OPPOSITE, AND THE REVERSAL IS THE POINT.
+        #
+        # It read: "A style 5 erase would have been one message instead of two
+        # and a daemon deploy instead of none" - the trade was weighed and
+        # two messages were chosen to keep the change on one side of the wire.
+        #
+        # What that reasoning could not know is that the two are SEPARATED BY
+        # A TIMER. The daemon flushes what changed every 100 ms, so a flush
+        # landing between the fill and the invert put a solid lit block on the
+        # glass for up to a tenth of a second. The owner saw it at the rig on
+        # 2026-09-06 - item 66 - and said it had been there all along.
+        #
+        # No ordering on this side fixes that, because any two packets can be
+        # split. So the trade is taken the other way now: one message, and the
+        # daemon goes to the rig with the driver.
+        #
+        # THE OLD WARNING IS STILL TRUE and is why the deploy order matters:
+        # the daemon's `_ =>` arm draws an OUTLINE for an unknown style, so a
+        # NEW driver against an OLD daemon boxes the label instead of erasing
+        # it. deploy-to-pi.sh already sends the daemon first.
+        self.assertEqual(lib.RECT_CLEAR, 5)
+        # No widget may send the lit intermediate state over its own band.
+        # This case lives in the label class, so it checks the label band;
+        # tabs and columns are covered by
+        # TestScreenLayout.test_every_band_erases_before_it_draws.
+        for packets, box in (
+                (lib.label_packets(0, "X"),
+                 (0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H)),
+                (lib.label_packets(1, ""),
+                 (0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H))):
+            x, y, w, h = box
+            screen = 0 if len(packets) > 1 else 1
+            self.assertEqual(
+                packets[0],
+                lib.display_rect_osc(screen, x, y, w, h, lib.RECT_CLEAR))
+            self.assertNotIn(
+                lib.display_rect_osc(screen, x, y, w, h, lib.RECT_FILL),
+                packets)
 
     def test_the_text_is_the_same_packet_the_full_repaint_draws(self):
         # Bound to screen_packets on purpose: if the indicator ever moves, one
@@ -807,7 +837,8 @@ class TestLabelOnlyRepaint(unittest.TestCase):
         # A label that GOES AWAY - the overlay released, the stall cleared -
         # has to take its pixels with it.
         packets = lib.label_packets(0, "")
-        self.assertEqual(len(packets), 2)
+        # ONE since item 66: the erase stopped being fill-then-invert.
+        self.assertEqual(len(packets), 1)
         self.assertNotIn(lib.display_clear_osc(0), packets)
 
     def test_it_never_clears_the_screen(self):
@@ -834,7 +865,7 @@ class TestLabelOnlyRepaint(unittest.TestCase):
             self.assertTrue(all(p for p in packets))
             self.assertEqual(packets[0], lib.display_rect_osc(
                 screen, 0, lib.LABEL_Y, lib.SCREEN_W, lib.LABEL_H,
-                lib.RECT_FILL))
+                lib.RECT_CLEAR))
 
 
 class TestQuarterNoteDivision(unittest.TestCase):

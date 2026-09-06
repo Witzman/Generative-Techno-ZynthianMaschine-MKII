@@ -317,6 +317,21 @@ class maschine_mk2_lib:
     RECT_DASHED = 2
     RECT_DOTTED = 3
     RECT_INVERT = 4
+    # ONE-MESSAGE ERASE - item 66, 2026-09-06, and it needs the daemon of that
+    # date or later. The erase used to be RECT_FILL then RECT_INVERT over the
+    # same box: fill lights every pixel, invert turns them all off, and the
+    # pair leaves it dark. But that is TWO OSC messages and the daemon flushes
+    # off a 100 ms timer, so a flush landing between them showed a solid lit
+    # block for up to a tenth of a second - "a white box where the text cutoff,
+    # its value and the bar sits", seen at the rig and unreported for months.
+    #
+    # NO ORDERING ON THIS SIDE CAN FIX IT. Any two packets can be split by that
+    # timer, so the erase has to be one message. It also halves the erase.
+    #
+    # AN OLDER DAEMON DRAWS AN OUTLINE FOR AN UNKNOWN STYLE, so the driver and
+    # the daemon go to the rig together - which is the order deploy-to-pi.sh
+    # already uses, daemon first and UI second.
+    RECT_CLEAR = 5
 
     @staticmethod
     def encoder_osc(idx, value):
@@ -561,9 +576,7 @@ class maschine_mk2_lib:
         cls = maschine_mk2_lib
         out = [
             cls.display_rect_osc(screen, 0, 0, cls.SCREEN_W,
-                                 cls.TAB_BAND_H, cls.RECT_FILL),
-            cls.display_rect_osc(screen, 0, 0, cls.SCREEN_W,
-                                 cls.TAB_BAND_H, cls.RECT_INVERT),
+                                 cls.TAB_BAND_H, cls.RECT_CLEAR),
         ]
         for i, tab in enumerate(tabs):
             letter, name, selected, muted = tab[:4]
@@ -613,9 +626,7 @@ class maschine_mk2_lib:
         x0 = i * cls.SCREEN_COL
         out = [
             cls.display_rect_osc(screen, x0, cls.COL_BAND_Y, cls.SCREEN_COL,
-                                 cls.COL_BAND_H, cls.RECT_FILL),
-            cls.display_rect_osc(screen, x0, cls.COL_BAND_Y, cls.SCREEN_COL,
-                                 cls.COL_BAND_H, cls.RECT_INVERT),
+                                 cls.COL_BAND_H, cls.RECT_CLEAR),
         ]
         name, value, kind, frac = col[:4]
         mod = col[4] if len(col) > 4 else None
@@ -661,9 +672,11 @@ class maschine_mk2_lib:
         clear marks all 32 rows and costs 8 reports of 265 bytes where this
         band costs one of 73.
 
-        THE ERASE IS FILL THEN INVERT over the same box, which leaves every
-        pixel dark. Both styles have shipped since the displays did, so this
-        needs NO daemon change and lands with a driver copy. Text drawing in
+        THE ERASE IS ONE MESSAGE, RECT_CLEAR - item 66, 2026-09-06. It used to
+        be FILL then INVERT over the same box, which leaves every pixel dark
+        and needed no daemon change; what it also did was show a solid lit
+        block whenever the daemon's 100 ms flush landed between the two. Text
+        drawing in
         the daemon is additive - draw_char only ever calls set_pixel - so
         without an erase a shorter label leaves the tail of the longer one
         behind, which is how "STEP 1/3" would read as "STEP 1/33".
@@ -674,9 +687,7 @@ class maschine_mk2_lib:
         cls = maschine_mk2_lib
         out = [
             cls.display_rect_osc(screen, 0, cls.LABEL_Y, cls.SCREEN_W,
-                                 cls.LABEL_H, cls.RECT_FILL),
-            cls.display_rect_osc(screen, 0, cls.LABEL_Y, cls.SCREEN_W,
-                                 cls.LABEL_H, cls.RECT_INVERT),
+                                 cls.LABEL_H, cls.RECT_CLEAR),
         ]
         if label:
             # The same coordinates the label band erases, and a test binds
