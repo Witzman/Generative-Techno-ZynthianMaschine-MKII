@@ -33,10 +33,22 @@ FALLBACK = "017-generative-techno.zss"
 # no curve, no taper - which is what makes the dB arithmetic below legal.
 MAIN_STRIP = "chan_16"
 
-# Measured on zynmixer:output_17a with nobody at the panel, main fader at 1.0.
-# Both readings are of the SAME FILE; the 11 dB between them is the wet-law
-# fix of 2026-09-04, which let 019's four modulated sends self-correct on load.
-PEAK_AT_UNITY_DBFS = +7.0      # 2026-09-05, 1.21 % of samples over full scale
+# THE UNITY PEAK OF *THIS* FILE, AND THE NUMBER HERE WAS WRONG FOR A DAY.
+#
+# It said +7.0 dBFS, which is the gate's reading of 2026-09-05 - and that gate
+# was measuring the RIG'S RE-SAVE (md5 8a70348a), a different file: it carries
+# channel D at 0.808 where the shipped copy has 0.67. So the before-measurement
+# and the file being corrected were never the same bytes, and the fader derived
+# from it landed 4 dB low.
+#
+# +2.95 is measured on the SHIPPED file, 2026-09-06, loaded and playing on the
+# rig: 20 s locked to ten 2.000 s bars at 120 BPM gave peak -8.11 dBFS with the
+# fader at 0.28, zero samples at or over full scale, zero wrap signature, and a
+# per-bar peak spread of 1.0 dB. -8.11 + 11.06 = +2.95.
+#
+# THE LESSON IS THE ONE THIS PROJECT KEEPS PAYING FOR: a measurement is of a
+# FILE, not of a name. Two things both called "019" differed by 4 dB.
+PEAK_AT_UNITY_DBFS = +2.95     # 2026-09-06, measured on the shipped copy
 OWNER_CEILING_DBFS = -3.99     # 2026-09-02, 40 s, zero samples near full scale
 
 
@@ -115,8 +127,9 @@ class TheMainFaderLeavesTheHeadroomItWasGiven(unittest.TestCase):
 
     def test_the_main_fader_is_not_at_unity(self):
         self.assertLess(self.level, 1.0,
-                        "the main fader is back at unity - 019 clips 1.21 % "
-                        "of its samples there")
+                        "the main fader is back at unity - the shipped 019 "
+                        "peaks at +2.95 dBFS there, and the rig's re-save of "
+                        "it clipped 1.21 % of its samples")
 
     def test_the_predicted_peak_is_at_or_under_the_owners_ceiling(self):
         predicted = PEAK_AT_UNITY_DBFS + 20 * math.log10(self.level)
