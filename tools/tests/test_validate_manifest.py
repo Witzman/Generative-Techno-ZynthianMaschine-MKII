@@ -608,6 +608,64 @@ class TheShippedPacksAllPassCase(unittest.TestCase):
                 seen[key] = entry["file"]
 
 
+class NoPortIsLeftToItsPluginCase(unittest.TestCase):
+    """THE STANDING GUARD FOR ITEM 50, and it is not the same test as "the
+    packs pass".
+
+    The validator can only refuse a dry send on an entry that DIALS a room -
+    an entry with no `globals` block cannot be deaf to anything, so it would
+    pass with every wet port unwritten. That is precisely how the pack got
+    here: an unwritten port is not silence, it is the plugin's own default, and
+    not one of the fourteen defaults to silence. TAP Stereo Echo comes up at
+    63 % of the surface.
+
+    So this asserts the property directly against the BUILT files: every insert
+    that can serve a role has that role's ports written, in every one of the 71
+    shipped snapshots. A new entry that forgets `wets` turns this red even if
+    it dials nothing.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.files = sorted(glob.glob(os.path.join(ROOT, "snapshot", "genre-pack", "*.zss"))
+                           + glob.glob(os.path.join(ROOT, "snapshot", "drone-ambient", "*.zss")))
+
+    def _ports(self):
+        """(file, chain, plugin, symbol, written) for every insert wet port."""
+        for path in self.files:
+            with open(path) as fh:
+                doc = json.load(fh)
+            procs = doc["zs3"]["zs3-0"]["processors"]
+            for cid, chain in doc["chains"].items():
+                for slot in chain["slots"][1:]:
+                    pid, code = next(iter(slot.items()))
+                    found = vm.tlib.fx_role_of(str(code).split("/")[-1])
+                    if found is None:
+                        continue
+                    plugin, spec = found
+                    ctrls = procs[pid].get("controllers") or {}
+                    for symbol, _kind, _lo, _hi in spec["WET"]:
+                        yield (os.path.basename(path), cid, plugin, symbol,
+                               symbol in ctrls)
+
+    def test_there_are_seventy_one_files_to_check(self):
+        self.assertEqual(len(self.files), 71)
+
+    def test_every_insert_wet_port_is_written(self):
+        missing = [f"{f}:{cid} {plugin}.{symbol}"
+                   for f, cid, plugin, symbol, written in self._ports()
+                   if not written]
+        self.assertEqual(
+            missing[:20], [],
+            f"{len(missing)} insert wet ports are not written, so the plugin's "
+            f"own default sounds instead - which is item 50")
+
+    def test_there_are_ports_to_miss(self):
+        """The discrimination: without this, a generator that produced no
+        inserts at all would pass the test above over nothing."""
+        self.assertGreater(sum(1 for _ in self._ports()), 1000)
+
+
 class ANoteIsAClaimCase(unittest.TestCase):
     """EVERY FALSIFIABLE SENTENCE IN A `notes` STRING IS CHECKED AGAINST THE
     DATA.
