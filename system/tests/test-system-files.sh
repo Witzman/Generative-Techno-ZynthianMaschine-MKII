@@ -45,19 +45,25 @@ assert_eq() {
     if [ "$2" = "$3" ]; then ok "$1"; else bad "$1" "expected [$2], got [$3]"; fi
 }
 
+# The two long-running units. Restart= is asserted on these and only these.
 UNITS="maschine-mk2.service maschine-clock.service"
+# Everything that ships as a unit, including the oneshot that keeps :6080 up.
+# A oneshot must NOT carry Restart=always, so it cannot join $UNITS.
+ALL_UNITS="$UNITS maschine-vnc-ui.service"
 
 # ---------------------------------------------------------------- files exist
 head_ "system/ ships what system/README.md says it does"
 for f in 99-maschine.rules maschine.json README.md zynthian-maschine-order.conf \
          maschine-jack-connect.sh maschine-clock-connect.sh maschine-clock-bridge.py \
-         $UNITS; do
+         maschine-plugin-guis.sh maschine-vnc-ui.sh \
+         $ALL_UNITS; do
     if [ -f "$SYS/$f" ]; then ok "$f present"; else bad "$f present" "missing"; fi
 done
 
 # --------------------------------------------------------- syntax of helpers
 head_ "Helper scripts parse"
-for f in maschine-jack-connect.sh maschine-clock-connect.sh; do
+for f in maschine-jack-connect.sh maschine-clock-connect.sh \
+         maschine-plugin-guis.sh maschine-vnc-ui.sh; do
     if err=$(bash -n "$SYS/$f" 2>&1); then ok "bash -n $f"; else bad "bash -n $f" "$err"; fi
 done
 if command -v python3 >/dev/null 2>&1; then
@@ -167,10 +173,80 @@ assert_grep "daemon waits for jack2"        '^Requires=.*jack2\.service' "$SYS/m
 assert_grep "daemon is After jack2"         '^After=.*jack2\.service'    "$SYS/maschine-mk2.service"
 assert_grep "clock bridge is After the daemon" '^After=.*maschine-mk2\.service' "$SYS/maschine-clock.service"
 assert_grep "clock bridge only Wants the daemon" '^Wants=maschine-mk2\.service'  "$SYS/maschine-clock.service"
-for u in $UNITS; do
+for u in $ALL_UNITS; do
     assert_grep "$u is WantedBy multi-user.target" '^WantedBy=multi-user\.target' "$SYS/$u"
+done
+for u in $UNITS; do
     assert_grep "$u restarts"                     '^Restart='                    "$SYS/$u"
 done
+
+# ------------------------------------------------- the :6080 keeper, item 70
+# Plugin GUIs are off by default because a modulated GUI-hosted plugin burns
+# ~0.7 of a core in its GTK idle loop (measured 2026-09-07). Turning them off
+# means ZYNTHIAN_VNCSERVER_ENABLED=0, and the UI stops BOTH VNC servers from
+# inside its own startup - so this unit puts the UI's own one back.
+GUISW_EARLY="$SYS/maschine-plugin-guis.sh"
+head_ "The unit that keeps the Zynthian UI's VNC up"
+VNCUI="$SYS/maschine-vnc-ui.service"
+assert_grep "vnc-ui runs after the UI"      '^After=zynthian\.service$'  "$VNCUI"
+assert_grep "vnc-ui is a oneshot"           '^Type=oneshot$'             "$VNCUI"
+# A oneshot that stays `active` cannot be started again, and this one must run
+# on EVERY zynthian start. Asserted as an ABSENCE because the first shipped
+# version had it and the owner's screen stayed down through a restart.
+assert_no_grep "vnc-ui is re-runnable (no RemainAfterExit)" \
+    '^RemainAfterExit='                                                  "$VNCUI"
+assert_grep "vnc-ui calls the shipped script" \
+    '^ExecStart=/usr/local/bin/maschine-vnc-ui\.sh$'                     "$VNCUI"
+# Requires= would tie the owner's only screen to the UI's fate and back again;
+# Wants= is the whole relationship this needs.
+assert_no_grep "vnc-ui does NOT Requires zynthian" '^Requires='          "$VNCUI"
+assert_no_grep "vnc-ui does NOT restart forever"   '^Restart=always'     "$VNCUI"
+# The script must never touch vncserver1: that server IS the cost, and putting
+# it back would undo the fix while looking like it fixed something.
+assert_no_grep "the keeper never starts vncserver1" \
+    'start .*vncserver1'                            "$SYS/maschine-vnc-ui.sh"
+# A greeting on 5900, not merely an open port: noVNC answering proves the proxy.
+assert_grep "the keeper checks for an RFB greeting" 'RFB'  "$SYS/maschine-vnc-ui.sh"
+# The drop-in is what makes the keeper run on every UI start rather than only
+# at boot. Without it, `systemctl restart zynthian` leaves :6080 with a live
+# proxy and no server behind it - which reads as working.
+assert_grep "the UI drop-in pulls the keeper" \
+    '^Wants=maschine-vnc-ui\.service$'  "$SYS/zynthian-maschine-order.conf"
+assert_grep "the switch kicks the keeper after a restart" \
+    'start --no-block maschine-vnc-ui'  "$GUISW_EARLY"
+
+head_ "status reports a port as three characters, not six"
+# THE BUG THIS PINS: port_code had `|| echo 000` after a curl that already
+# prints 000 on a refused connection, so `status` printed ":6081=000000".
+# Run the real function against a port nothing listens on.
+if command -v curl >/dev/null 2>&1; then
+    code=$(bash -c 'eval "$(sed -n "/^port_code()/,/^}/p" "$1")"; port_code 9' \
+           _ "$SYS/maschine-plugin-guis.sh" 2>/dev/null)
+    if [ "${#code}" = 3 ]; then
+        ok "port_code prints one code on a closed port (got $code)"
+    else
+        bad "port_code prints one code on a closed port" "got [$code]"
+    fi
+else
+    skip "port_code check (no curl)"
+fi
+
+head_ "The plugin-GUI switch is a switch, both ways"
+GUISW="$SYS/maschine-plugin-guis.sh"
+assert_grep "switch has an off"     '^off\)'   "$GUISW"
+assert_grep "switch has an on"      '^on\)'    "$GUISW"
+assert_grep "switch has a status"   '^status\)' "$GUISW"
+assert_grep "off sets the envar to 0"  'set_envar 0'  "$GUISW"
+assert_grep "on sets the envar back"   'set_envar 1'  "$GUISW"
+# The owner's condition for accepting this fix was that it can be undone, so
+# the reactivation path is a test rather than a promise in a comment.
+assert_grep "off keeps the UI's own VNC up" 'start vncserver0 novnc0' "$GUISW"
+assert_grep "install.sh turns plugin GUIs off" \
+    'maschine-plugin-guis\.sh off'  "$REPO/install.sh"
+assert_grep "install.sh ships the switch" \
+    'maschine-plugin-guis\.sh'      "$REPO/install.sh"
+assert_grep "install.sh ships the keeper" \
+    'maschine-vnc-ui\.sh'           "$REPO/install.sh"
 # THE law of this rig, now expressed in a unit rather than only in prose.
 # Starting the daemon after the UI leaves the driver bound to a dead zmip slot
 # and the rig goes silent with no error in any log.
@@ -197,8 +273,8 @@ assert_grep "install.sh installs the drop-in" \
 # install.sh enables exactly these two.
 head_ "install.sh enables exactly the units that ship"
 enabled=$(grep -oP 'systemctl enable \K[^"]+' "$REPO/install.sh" | tr -s ' ' '\n' | grep -v '^$' | sort | tr '\n' ' ')
-assert_eq "install.sh enables the two shipped units" \
-    "maschine-clock maschine-mk2 " "$enabled"
+assert_eq "install.sh enables the three shipped units" \
+    "maschine-clock maschine-mk2 maschine-vnc-ui " "$enabled"
 
 # ------------------------------------------- install.sh rewrites every path
 # The units ship with absolute paths under /root. install.sh rewrites them to
@@ -207,7 +283,7 @@ assert_eq "install.sh enables the two shipped units" \
 # pointing at a directory that does not exist.
 head_ "install.sh's path rewrite still matches the templates"
 FAKEREPO=/opt/gtzm-test
-for f in $UNITS; do
+for f in $ALL_UNITS; do
     rewritten=$(sed -e "s#^ExecStart=.*/daemon/target/release/maschine#ExecStart=$FAKEREPO/daemon/target/release/maschine#" \
                     -e "s#^WorkingDirectory=.*/daemon\$#WorkingDirectory=$FAKEREPO/daemon#" \
                     -e "s#--directory .*/web#--directory $FAKEREPO/daemon/web#" \
@@ -244,7 +320,7 @@ else
     # the fake root, then stub every binary they name.
     STUBREPO="$FAKE/opt/gtzm"
     mkdir -p "$STUBREPO/daemon/web"
-    for f in $UNITS; do
+    for f in $ALL_UNITS; do
         sed -e "s#^ExecStart=.*/daemon/target/release/maschine#ExecStart=/opt/gtzm/daemon/target/release/maschine#" \
             -e "s#^WorkingDirectory=.*/daemon\$#WorkingDirectory=/opt/gtzm/daemon#" \
             -e "s#--directory .*/web#--directory /opt/gtzm/daemon/web#" \
@@ -261,13 +337,14 @@ else
     verify_out=$(systemd-analyze --root="$FAKE" verify \
                     --recursive-errors=no --generators=no --man=no \
                     "$FAKE/etc/systemd/system/maschine-mk2.service" \
-                    "$FAKE/etc/systemd/system/maschine-clock.service" 2>&1)
+                    "$FAKE/etc/systemd/system/maschine-clock.service" \
+                    "$FAKE/etc/systemd/system/maschine-vnc-ui.service" 2>&1)
     rc=$?
     # Warnings about units outside the root's search path are noise here; a
     # non-zero exit or any line naming one of our own units is not.
-    ours=$(grep -E 'maschine-(mk2|clock)\.service' <<<"$verify_out" || true)
+    ours=$(grep -E 'maschine-(mk2|clock|vnc-ui)\.service' <<<"$verify_out" || true)
     if [ $rc -eq 0 ] && [ -z "$ours" ]; then
-        ok "systemd-analyze verify clean for both units"
+        ok "systemd-analyze verify clean for all three units"
     else
         bad "systemd-analyze verify clean for all three units" "rc=$rc ${ours:-$verify_out}"
     fi

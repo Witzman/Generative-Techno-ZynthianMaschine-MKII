@@ -166,6 +166,15 @@
 <tr><td>Modulay + Dragonfly Hall Reverb</td><td>29.8&nbsp;%</td><td>0</td></tr>
 <tr><td>YK Chorus + Dragonfly Room Reverb</td><td>36.5&nbsp;%</td><td>0</td></tr>
 </tbody></table>
+<h3 id="plugin-guis">Why plugin GUIs are off, and how to switch them back on</h3>
+<p><strong>A reverb doing nothing can burn three quarters of a core.</strong> Zynthian hosts any plugin that ships its own screen in <code>jalv.gtk3</code>, and when a modulator writes to such a plugin, that host's idle loop spins &mdash; not the audio. Measured on this rig: with plugin GUIs on, one house preset cost <strong>189&nbsp;%</strong> of a core and the single modulated reverb sat at <strong>80&nbsp;%</strong> while its seven identical siblings sat at 11&nbsp;%. With the GUIs off, the same preset cost <strong>97&nbsp;%</strong> and that reverb dropped to <strong>10&nbsp;%</strong>, level with the others. The sound is identical &mdash; same plugin, same audio thread.</p>
+<p>Eight of the twelve effects in the packs ship a screen, and <strong>50 of the 71 presets</strong> aim a modulator at one, so this is the normal case rather than a corner. <strong>The installer therefore turns plugin GUIs off</strong>, and the Zynthian UI's own remote screen on <code>:6080</code> is unaffected &mdash; only the engines' desktop on <code>:6081</code> goes.</p>
+<table><thead><tr><th>What you want</th><th>Command on the Pi</th></tr></thead><tbody>
+<tr><td>See the state &mdash; measured, not remembered</td><td><code>maschine-plugin-guis.sh status</code></td></tr>
+<tr><td>Plugin GUIs back on <em>(costs ~0.7 of a core per modulated one)</em></td><td><code>maschine-plugin-guis.sh on --restart</code></td></tr>
+<tr><td>Off again</td><td><code>maschine-plugin-guis.sh off --restart</code></td></tr>
+</tbody></table>
+<p>The webconf checkbox at <strong>INTERFACE &rarr; UI Options &rarr; Enable VNC Server</strong> is the same switch by another route. <code>status</code> prints the host binaries actually running: <code>jalv.gtk3</code> in that list means the GUIs are on for those chains.</p>
 <h3 id="effects-out">Five that are out, and why</h3>
 <table><thead><tr><th>Plugin</th><th>Measured at eight instances</th></tr></thead><tbody>
 <tr><td>Aether</td><td>61.6&nbsp;% with real xruns &mdash; still 49&nbsp;% in the lighter three-synth layout</td></tr>

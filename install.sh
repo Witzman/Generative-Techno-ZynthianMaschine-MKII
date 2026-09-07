@@ -88,7 +88,8 @@ run "udevadm trigger --subsystem-match=hidraw"
 
 # --- 5. helper scripts ---------------------------------------------------------
 say "Helper scripts in /usr/local/bin"
-for f in maschine-jack-connect.sh maschine-clock-bridge.py maschine-clock-connect.sh; do
+for f in maschine-jack-connect.sh maschine-clock-bridge.py maschine-clock-connect.sh \
+         maschine-plugin-guis.sh maschine-vnc-ui.sh; do
     run "install -m 0755 '$REPO/system/$f' /usr/local/bin/$f"
 done
 
@@ -103,7 +104,7 @@ say "systemd units (daemon paths rewritten to $REPO)"
 # makes a 0700 directory nobody else can reach.
 UNITDIR=$(mktemp -d)
 trap 'rm -rf "$UNITDIR"' EXIT
-for f in maschine-mk2.service maschine-clock.service; do
+for f in maschine-mk2.service maschine-clock.service maschine-vnc-ui.service; do
     tmp="$UNITDIR/$f"
     run "sed -e 's#^ExecStart=.*/daemon/target/release/maschine#ExecStart=$REPO/daemon/target/release/maschine#' \
              -e 's#^WorkingDirectory=.*/daemon\$#WorkingDirectory=$REPO/daemon#' \
@@ -120,7 +121,23 @@ run "install -m 0644 -D '$REPO/system/zynthian-maschine-order.conf' \
          /etc/systemd/system/zynthian.service.d/10-maschine-order.conf"
 
 run "systemctl daemon-reload"
-run "systemctl enable maschine-mk2 maschine-clock"
+run "systemctl enable maschine-mk2 maschine-clock maschine-vnc-ui"
+
+# --- 6b. plugin GUIs off ------------------------------------------------------
+# MEASURED, 2026-09-07: a plugin Zynthian hosts in jalv.gtk3 (because it ships
+# an LV2 UI) and that a modulator writes to spins its GTK idle loop at ~70-80 %
+# of a core doing no audio work - 031-house-classic cost 189.3 % of a core with
+# the GUIs on and 97.2 % with them off, the modulated instance falling from
+# 80.1 % to its siblings' 10 %. Eight of the twelve pack effects carry a UI and
+# 50 of the 71 presets aim a modulator at one.
+#
+# The lever is Zynthian's own config, not a patch: config_remote_display()
+# picks jalv.gtk3 only while vncserver1 is running. vncserver0 - the UI on
+# :6080 - takes no part in that choice, and maschine-vnc-ui.service keeps it up.
+#
+# Reactivation is one command, and the guide says so: maschine-plugin-guis.sh on
+say "Plugin GUIs off (frees ~0.7 of a core per modulated GUI-hosted plugin)"
+run "/usr/local/bin/maschine-plugin-guis.sh off"
 
 # --- 7. the ctrldev driver ----------------------------------------------------
 say "ctrldev driver files"

@@ -158,7 +158,8 @@ fi
 # picture. Overwriting it from here would be a silent way to lose that flag.
 if [ "$SYSTEM" = 1 ]; then
     say "Helper scripts -> /usr/local/bin"
-    for f in maschine-jack-connect.sh maschine-clock-bridge.py maschine-clock-connect.sh; do
+    for f in maschine-jack-connect.sh maschine-clock-bridge.py maschine-clock-connect.sh \
+             maschine-plugin-guis.sh maschine-vnc-ui.sh; do
         run "scp -q '$REPO/system/$f' '$PI:/usr/local/bin/$f'"
         run "ssh '$PI' 'chmod 0755 /usr/local/bin/$f'"
         echo "  sent $f"

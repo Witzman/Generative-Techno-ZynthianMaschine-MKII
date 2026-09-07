@@ -1,0 +1,24 @@
+[Unit]
+Description=Keep the Zynthian UI's VNC (:6080) up while plugin GUIs stay off
+# The UI stops both VNC servers from inside its own startup when
+# ZYNTHIAN_VNCSERVER_ENABLED=0, so this has to run after it AND keep watching -
+# the script does the waiting, because zynthian.service reports active long
+# before that stop happens. See maschine-vnc-ui.sh.
+After=zynthian.service
+Wants=zynthian.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/maschine-vnc-ui.sh
+# DELIBERATELY NOT RemainAfterExit. A oneshot that stays `active` cannot be
+# started again, and this unit must run on EVERY zynthian start - the UI stops
+# vncserver0 from inside its own startup each time. Measured 2026-09-07: with
+# RemainAfterExit the unit sat `inactive (dead)` through a zynthian restart and
+# the owner's screen stayed down. The journal holds what happened.
+TimeoutStartSec=300
+# NOT PrivateTmp: this talks to systemd and to a TCP port, but the same trap
+# that bit the JACK units applies to any hardening added here later - measure
+# before adding a line.
+
+[Install]
+WantedBy=multi-user.target
