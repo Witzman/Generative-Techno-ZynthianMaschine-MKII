@@ -221,10 +221,17 @@ ENC_UNITS_DISCRETE = 8
 #   DL / DR - arrows beside the display. **CC 47 / 48**, not 5/6. They page
 #             through the current mode's ring.
 #   ML / MR - master section, beside the big encoder. CC 13/14, as assumed.
-#             They carry sound stepping, which used to live on DL/DR.
+#             They carry sound stepping, which used to live on DL/DR. THE
+#             BINDING IS IN lib.BUTTONS_PRESS (13 -> "sound_prev", 14 ->
+#             "sound_next"), NOT on CC_ML / CC_MR below - those two constants
+#             have no reader and are kept only because this comment names
+#             them. Grep the dispatch map, not the constants.
 #   TL / TR - transport ◀STEP / STEP▶. **CC 5 / 6, and fully emitted.** The
 #             claim that the daemon swallowed this pair was false; it was
-#             derived from the mixed-up naming above. Free surface, unbound.
+#             derived from the mixed-up naming above. **CC 5 is free; CC 6 is
+#             NOT** - it has carried beat repeat since 2026-08-20, which is
+#             what CC_TR below says. This line claimed both were unbound
+#             until 2026-09-07.
 CC_DL = 47
 CC_DR = 48
 CC_ML = 13
@@ -293,8 +300,10 @@ CC_MODE_MIXER = 51       # VOLUME - the pass-two daemon patch, measured live
 CC_MODE_FILTER = 37      # AUTO
 # Measured at G4. This block is HISTORY, not the current free list - GRID,
 # SCENE, PATTERN, PAD MODE, NAVIGATE and MUTE have all been spent since it was
-# written. The live answer is lib.CCS_MEASURED_AND_UNCLAIMED, which is 5, 12
-# and 29 and is enforced by a test:
+# written. The live answer is lib.CCS_MEASURED_AND_UNCLAIMED, which is
+# **{5, 8, 9, 25, 36}** and is enforced by a test. This comment said "5, 12
+# and 29" until 2026-09-07, by which time 12 was HOME and 29 was DUPLICATE -
+# so it named two SPENT buttons as free. Read the set, never this sentence:
 #   GRID 4 · SCENE 25 · PATTERN 26 · PAD MODE 27 · NAVIGATE 34 · MUTE 33
 #   big encoder: turn CC 15 (8 units per detent, wraps 120 -> 0), press CC 12
 # TEMPO is CC 35, measured 2026-08-16 and NOT part of G4 - it was never

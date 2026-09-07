@@ -2132,3 +2132,40 @@ class TheLabelIsNotInTheBodyChangeKey(unittest.TestCase):
                 "    def _render_display(self):\n"
                 "        a = self.leds.changed('disptabs0', (tabs, label))\n"),
             {"disptabs0": {"tabs", "label"}})
+
+
+class ADriverHeaderClaimIsCheckedAgainstTheCode(unittest.TestCase):
+    """The driver's header names which CCs are FREE. Make that sentence fail a
+    build.
+
+    2026-09-07: two comments in that header were found wrong on the same day.
+    One said CC 5 and 6 were both unbound, while CC 6 has carried beat repeat
+    since 2026-08-20. The other said the free list "is 5, 12 and 29" - by then
+    12 was HOME and 29 was DUPLICATE, so a reader looking for free surface was
+    handed two spent buttons.
+
+    Both were harmless to the instrument and expensive to a reader, which is
+    exactly the class this project keeps paying for: **a comment cannot fail a
+    build.** This one can now. It parses the number set out of the header
+    sentence and compares it with the set the rest of the code is enforced
+    against - so the prose and the frozenset cannot drift apart again."""
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def test_the_header_names_the_real_free_list(self):
+        import re
+        import techno_lib as tlib
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            src = fh.read()
+        m = re.search(r"lib\.CCS_MEASURED_AND_UNCLAIMED, which is\s*"
+                      r"(?:#\s*)?\*\*\{([0-9,\s]+)\}\*\*", src)
+        self.assertIsNotNone(
+            m, "the header no longer states the free list as **{...}** - "
+               "either restore that shape or delete the claim, but do not "
+               "leave a sentence about free CCs that nothing checks")
+        claimed = {int(n) for n in m.group(1).replace(" ", "").split(",") if n}
+        self.assertEqual(
+            claimed, set(tlib.techno_lib.CCS_MEASURED_AND_UNCLAIMED),
+            "the driver header's free-CC list disagrees with "
+            "CCS_MEASURED_AND_UNCLAIMED, which is the set a test enforces")
