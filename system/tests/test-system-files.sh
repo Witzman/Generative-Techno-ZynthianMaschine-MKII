@@ -291,14 +291,56 @@ for f in $ALL_UNITS; do
     # Every absolute path the rewritten unit names must be inside the fake repo,
     # a system location, or Zynthian's own venv. A leftover /root path means the
     # sed missed it.
-    have "$SYS/$f" "$f: no unrewritten /root or /home path" || continue
-    strays=$(grep -oE '(/root|/home)[^ ]*' <<<"$rewritten" || true)
+    have "$SYS/$f" "$f: no unrewritten install path" || continue
+    # /root was the shipped default until 2026-09-07 and /home never was, but
+    # grepping only for those two made this assertion pass TRIVIALLY the moment
+    # the template moved to /opt. So the claim is now the one that matters: the
+    # rewritten unit names the fake repo and does NOT still name the template's
+    # own default. A sed that stops matching fails here rather than on the rig.
+    # DIRECTIVES ONLY. These units carry comments that legitimately name paths -
+    # the daemon's says why /root blocked User= and what /opt fixed - and a check
+    # that reads prose fails on an explanation instead of on a bug.
+    directives=$(grep -vE '^\s*(#|$)' <<<"$rewritten")
+    strays=$(grep -oE '(/root|/home|/opt/technomaschine)[^ "]*' <<<"$directives" || true)
     if [ -z "$strays" ]; then
-        ok "$f: no unrewritten /root or /home path"
+        ok "$f: no unrewritten install path"
     else
-        bad "$f: no unrewritten /root or /home path" "$strays"
+        bad "$f: no unrewritten install path" "$strays"
+    fi
+    # Only a unit whose TEMPLATE names the install path has a rewrite to land.
+    # maschine-clock and maschine-vnc-ui run /usr/local/bin helpers and are
+    # correctly untouched by the sed - asserting otherwise tested the test.
+    if grep -vE '^\s*(#|$)' "$SYS/$f" | grep -q '/opt/technomaschine'; then
+        if grep -q "$FAKEREPO" <<<"$rewritten"; then
+            ok "$f: the rewrite actually landed"
+        else
+            bad "$f: the rewrite actually landed" "no $FAKEREPO in the rewritten unit"
+        fi
+    else
+        ok "$f: names no install path, nothing to rewrite"
     fi
 done
+
+# ------------------------------------------------- item 25: who the units run as
+# The daemon dropped to `zynthian` on 2026-09-07, once the install moved out of
+# /root (drwx------, so a non-root user cannot traverse to its own binary) and
+# the device permissions had been MEASURED off /proc/<pid>/fd rather than assumed.
+head_ "Which unit runs as whom, and why the clock cannot follow"
+assert_grep "the daemon does not run as root" '^User=zynthian$' "$SYS/maschine-mk2.service"
+assert_grep "the daemon keeps NoNewPrivileges" '^NoNewPrivileges=yes$' "$SYS/maschine-mk2.service"
+# ExecStartPost INHERITS User=, and this one runs jack_lsp plus a python JACK
+# client against a socket that is 0750 root:root. Without the `+` it fails
+# silently as zynthian and the port alias is never pinned.
+assert_grep "the alias step keeps full privileges" \
+    '^ExecStartPost=\+/usr/local/bin/maschine-jack-connect\.sh$' "$SYS/maschine-mk2.service"
+# The clock bridge IS a JACK client in its own right, so it cannot drop root at
+# all. Asserted as an absence so a future tidy-up cannot "make the units
+# consistent" and break the rig.
+assert_no_grep "the clock bridge stays root" '^User=' "$SYS/maschine-clock.service"
+assert_grep "the daemon's unit says why it can drop root" \
+    'proc/<pid>/fd'  "$SYS/maschine-mk2.service"
+assert_grep "bootstrap clones to /opt, not /root" \
+    'REPO_DIR:=/opt/technomaschine'  "$REPO/bootstrap.sh"
 
 # ------------------------------------------------- systemd-analyze verify
 head_ "systemd-analyze verify against a fake root"
@@ -313,8 +355,12 @@ else
         [ -d "$d" ] && cp -a "$d/." "$FAKE/usr/lib/systemd/system/" 2>/dev/null
     done
     # User= and Group= must resolve inside the root.
-    printf 'root:x:0:0:root:/root:/bin/bash\n'  > "$FAKE/etc/passwd"
-    printf 'root:x:0:\naudio:x:29:\n'           > "$FAKE/etc/group"
+    # `zynthian` at uid 1000 and its membership of `audio` are part of what the
+    # daemon's User= depends on, so the fake root has to carry both or
+    # systemd-analyze fails on a missing account and says nothing about the unit.
+    printf 'root:x:0:0:root:/root:/bin/bash\nzynthian:x:1000:1000::/home/zynthian:/bin/bash\n' \
+        > "$FAKE/etc/passwd"
+    printf 'root:x:0:\naudio:x:29:zynthian\nzynthian:x:1000:\n' > "$FAKE/etc/group"
 
     # Install the units exactly as install.sh would, rewritten to a path inside
     # the fake root, then stub every binary they name.
@@ -332,7 +378,11 @@ else
         case "$bin" in
             /*) install -D -m 755 /bin/true "$FAKE$bin" ;;
         esac
-    done < <(grep -hoP '^Exec[A-Za-z]*=-?\K/[^ ]+' "$FAKE"/etc/systemd/system/*.service | sort -u)
+    # The prefix class is [-+!@:], not just `-`: maschine-mk2's ExecStartPost
+    # carries `+` (run with full privileges despite User=), and a regex that
+    # only knew `-` left that command unstubbed - so verify failed on a missing
+    # file and looked like a broken unit.
+    done < <(grep -hoP '^Exec[A-Za-z]*=[-+!@:]*\K/[^ ]+' "$FAKE"/etc/systemd/system/*.service | sort -u)
 
     verify_out=$(systemd-analyze --root="$FAKE" verify \
                     --recursive-errors=no --generators=no --man=no \

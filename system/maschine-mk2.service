@@ -4,22 +4,43 @@ After=jack2.service a2jmidid.service
 Requires=jack2.service
 
 [Service]
-ExecStart=/root/Generative-Techno-ZynthianMaschine-MKII/daemon/target/release/maschine /dev/maschine
-ExecStartPost=/usr/local/bin/maschine-jack-connect.sh
+ExecStart=/opt/technomaschine/daemon/target/release/maschine /dev/maschine
+# THE `+` IS LOAD-BEARING, NOT DECORATION. ExecStartPost inherits User=,
+# and this script runs jack_lsp and a python JACK client to pin the port
+# alias - so as `zynthian` it would fail against jackd's socket, which is
+# 0750 root:root on this rig (measured 2026-09-05). The `+` runs it with
+# full privileges regardless of User=. The two halves of this unit want
+# different privileges and now get them: the daemon owns a HID device, the
+# alias step talks to a root-owned server socket.
+ExecStartPost=+/usr/local/bin/maschine-jack-connect.sh
 Restart=always
 RestartSec=5
-WorkingDirectory=/root/Generative-Techno-ZynthianMaschine-MKII/daemon
-# HARDENING, 2026-09-03, and it is deliberately only this one line.
+WorkingDirectory=/opt/technomaschine/daemon
+# HARDENING. NoNewPrivileges since 2026-09-03; User= since 2026-09-07, once
+# the install moved out of /root and the permissions were MEASURED rather than
+# assumed.
 #
-# The daemon runs as root because it needs the hidraw node, the ALSA sequencer
-# and write access to its own working directory; dropping it to a user is a
-# change that has to be verified at the rig rather than guessed here.
+# The daemon's open files were read off /proc/<pid>/fd on 2026-09-05, not
+# inferred: /dev/hidraw1, /dev/snd/seq, /dev/null and three sockets. Both
+# devices are root:audio, `zynthian` (uid 1000) is in `audio`, and both were
+# measured opening read-write as that user - 99-maschine.rules had already
+# done the work with MODE="0664", GROUP="audio". The daemon touches no JACK
+# socket of its own: ALSA-to-JACK is a2jmidid's job.
+#
+# It could not drop root while it lived under /root, which is drwx------ - a
+# non-root user cannot traverse to the binary. That, not permissions on the
+# device, was the real blocker, and moving to /opt/technomaschine is what
+# lifted it. maschine-clock.service stays root and cannot move: it IS a JACK
+# client, and jackd's /dev/shm/jack_db-0 is 0750 root:root.
 #
 # PrivateTmp is specifically WRONG for this unit. ExecStartPost runs
 # maschine-jack-connect.sh, jackd's server socket lives in /tmp, and a private
 # /tmp would leave the rig connected to nothing with no error in any log -
 # which is the exact silent failure this project spends a watchdog avoiding.
+# (On this rig the sockets measured in /dev/shm rather than /tmp, which makes
+# PrivateDevices and PrivateMounts wrong here for the same reason.)
 NoNewPrivileges=yes
+User=zynthian
 
 [Install]
 WantedBy=multi-user.target

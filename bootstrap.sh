@@ -14,7 +14,9 @@ REPO_URL=https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
 # install - these are the same literals they have always been, so the
 # fresh-Pi path is byte-for-byte what it was.
 : "${ZYNTHIAN_ROOT:=/zynthian}"
-: "${REPO_DIR:=/root/Generative-Techno-ZynthianMaschine-MKII}"
+# /opt, not /root, since 2026-09-07: /root is drwx------, so a daemon under it
+# cannot drop root - a non-root user cannot traverse to its own binary. Item 25.
+: "${REPO_DIR:=/opt/technomaschine}"
 SNAP_ROOT="$ZYNTHIAN_ROOT/zynthian-my-data/snapshots"
 SNAP_DIR="$SNAP_ROOT/000"
 # THE FACTORY SNAPSHOT IS 019-dub-factory SINCE 2026-09-06, by the owner's

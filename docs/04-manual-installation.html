@@ -75,10 +75,11 @@
 <p><strong>The first boot is an initialisation pass, not a normal boot. Give it about half an hour and do not cut the power.</strong></p>
 <p>ZynthianOS resizes its filesystem and configures itself the first time it comes up, and <strong>the touchscreen does not work reliably while that runs</strong> — a blank, frozen or garbled screen here is the install working, not a dead Pi. Nothing below can be reached until it finishes. Upstream describes it as <a href="https://wiki.zynthian.org/index.php/No_Hardware_Build#First_Boot" target="_blank" rel="noopener noreferrer external">First Boot</a>.</p>
 </div>
-<p>Run everything on the Pi, as <code>root</code>, from the repository root. ZynthianOS is administered as root, and root SSH login is enabled out of the box. There is also a <code>zynthian</code> user in the <code>sudo</code> group, but nothing here uses it — <code>bootstrap.sh</code> refuses to run below uid 0, and the steps below assume root:</p>
+<p>Run everything on the Pi, as <code>root</code>, from the repository root. ZynthianOS is administered as root, and root SSH login is enabled out of the box. <code>bootstrap.sh</code> refuses to run below uid 0 and the steps below assume root — but the <code>zynthian</code> user is no longer unused: <strong>the installed daemon runs as it</strong>, which is what decides where the repository may live.</p>
 <pre><code class="language-bash">ssh root@zynthian.local     # or the IP; password: opensynth, older images raspberry
-git clone https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII
-cd Generative-Techno-ZynthianMaschine-MKII</code></pre>
+git clone https://github.com/Witzman/Generative-Techno-ZynthianMaschine-MKII /opt/technomaschine
+cd /opt/technomaschine</code></pre>
+<p><strong><code>/opt</code>, not <code>/root</code>.</strong> The daemon runs as the <code>zynthian</code> user, and <code>/root</code> is <code>drwx------</code> — a non-root user cannot traverse into it to reach its own binary. Clone it somewhere world-traversable or the daemon will not start. <code>bootstrap.sh</code> uses <code>/opt/technomaschine</code> by default and honours <code>REPO_DIR</code> if you want another.</p>
 <hr>
 <h2 id="reaching-the-pi">Reaching the Pi</h2>
 <p>Everything below is typed on the Pi over SSH, so start by getting there. An ethernet cable straight from the Pi to your computer works, and so does a switch.</p>
@@ -124,7 +125,8 @@ install -m 0755 system/maschine-clock-connect.sh /usr/local/bin/</code></pre>
 install -m 0644 system/maschine-clock.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now maschine-mk2 maschine-clock</code></pre>
-<blockquote><p><strong>If you cloned anywhere other than <code>/root/Generative-Techno-ZynthianMaschine-MKII</code>,</strong> edit <code>ExecStart</code> and <code>WorkingDirectory</code> in <code>maschine-mk2.service</code>. <code>install.sh</code> rewrites these for you; by hand it is on you.</p></blockquote>
+<blockquote><p><strong>If you cloned anywhere other than <code>/opt/technomaschine</code>,</strong> edit <code>ExecStart</code> and <code>WorkingDirectory</code> in <code>maschine-mk2.service</code>. <code>install.sh</code> rewrites these for you; by hand it is on you. <strong>Whatever you pick has to be traversable by the <code>zynthian</code> user</strong> — the unit carries <code>User=zynthian</code>, which is why the default is no longer under <code>/root</code>.</p></blockquote>
+<blockquote><p><strong>The clock bridge stays root and cannot follow.</strong> <code>maschine-clock.service</code> is a JACK client in its own right and jackd's socket is <code>0750 root:root</code> on this rig, so that unit has no <code>User=</code> — deliberately. The daemon's own <code>ExecStartPost</code> keeps full privileges the same way, via systemd's <code>+</code> prefix, because it talks to that socket to pin the port alias.</p></blockquote>
 <h3 id="step-5b--order-the-ui-after-the-daemon">Step 5b — Order the UI after the daemon</h3>
 <p><strong>What.</strong> Drops one file into <code>zynthian.service.d/</code> so Zynthian's UI always starts after the Maschine daemon. <strong>Why.</strong> Start the daemon alone once the UI is already up and its MIDI port re-registers on a <em>new</em> router slot while the driver stays bound to the dead one — the rig goes silent with no error in any log, which is the worst failure this instrument has. This makes the boot order structural instead of something you have to remember. It is a drop-in rather than an edit to <code>zynthian.service</code>, so a ZynthianOS update leaves it alone and there is nothing to re-run afterwards. <strong>How to confirm.</strong> <code>After=</code> lists the daemon.</p>
 <pre><code class="language-bash">install -m 0644 -D system/zynthian-maschine-order.conf \
