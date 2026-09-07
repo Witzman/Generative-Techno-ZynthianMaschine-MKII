@@ -70,260 +70,230 @@
 <main>
 <article>
 <h1 id="changelog">Changelog</h1>
-<p>What arrived, and when. Dates are the day the work landed on the instrument, not the day it was thought of &mdash; nothing appears here until it is on the instrument and running.</p>
-<p>Entries are written for a player: what you can now do that you could not do before. Fixes appear only where they changed what you would see or hear.</p>
+<p>What arrived, and when. Dates are the day the work landed on the instrument &mdash; nothing appears here until it is running on the rig.</p>
+<p><strong>One line per change, newest first.</strong> How a feature actually behaves belongs on its own page: <a href="the-surface.html">The surface</a>, <a href="generating-patterns.html">Generating patterns</a>, <a href="mixing-and-effects.html">Mixing and effects</a>, <a href="modulation.html">Modulation</a>, <a href="performing.html">Performing</a>, <a href="saving.html">Saving</a>.</p>
 <hr>
 
-<h2 id="unreleased">Unreleased &mdash; built and tested, not yet played</h2>
-<p><strong>Everything below this heading is in the repository and passes its tests, and none of it has been through a gate at the instrument.</strong> It is here so it is not invisible, and it moves up into a dated entry above once it has been played.</p>
-<p>Most of this list came out of one session of somebody playing the instrument and saying that something did not sound or look right &mdash; which is how every one of these was found, and why none of them had been.</p>
+<h2 id="unreleased">Unreleased</h2>
+<p>In the repository and passing its tests; not yet played at the instrument.</p>
+<p><strong>Added</strong></p>
 <ul>
-<li><strong>A knob that cannot reach its plugin now says so instead of moving a number.</strong> The four synth columns take their controls from a measured table, and the table was trusted without checking that the synth actually in the chain publishes them &mdash; so on a chain whose plugin is missing one, the column looked live, the number moved as you turned, and nothing was ever sent. The column greys out and shows <code>----</code> now, which is what the instrument does everywhere else it cannot act. <em>A chain that has not finished loading still shows its controls rather than blanking</em>: not knowing yet is not the same as not having them.</li>
-<li><strong>A tap you played can no longer be swallowed by the machine writing at the same moment</strong>, and a pattern rewrite claims the channel properly rather than assuming it is free.</li>
-<li><strong>The snapshot tools cannot destroy a snapshot half-way through writing one.</strong> Interrupt one now and the file you had is still the file you have.</li>
-
-<li><strong>LENGTH now says which number it is showing.</strong> The word means two things &mdash; a drum&rsquo;s pattern length in beats, a voice&rsquo;s pitch register in bits &mdash; and the column showed the same name and a bare number for both. So turning it on a voice moved a number and changed nothing about how long the pattern was, which reads exactly like a broken encoder. A voice&rsquo;s column reads <code>LEN BITS</code> now. <strong>To make a voice&rsquo;s loop shorter, turn DIVIDE</strong>; a voice&rsquo;s pattern is always as long as its division says, and LENGTH sets how many steps the melody takes to repeat &mdash; which is its own kind of drift, and a good one. <a href="generating-patterns.html#voice-step">Read</a></li>
-<li><strong>HITS says when something is thinning the line.</strong> Sixteen hits with a rhythm register masking eleven of them lights five pads, and both numbers were right &mdash; nothing said they were different quantities. The column now reads <code>HITS-</code> when fewer steps are sounding than HITS asked for and <code>HITS+</code> when a tap has added some. The pads still carry how many; this says that the number above them is not the whole story. It matters most when the machine is doing it: a drifting channel keeps thinning under you, and turning HITS back is not the cure people assume.</li>
-<li><strong>A dead knob says why in the log.</strong> A greyed column correctly ignores its encoder &mdash; but when one is greyed for a reason you cannot see, &ldquo;this knob does nothing&rdquo; was unanswerable without a session at the instrument.</li>
-
-<li><strong>A step you erase stays erased.</strong> Holding ERASE and tapping a pad took the note straight out of the pattern, while an ordinary tap writes to the register the machine reads when it builds the pattern again &mdash; two gestures on the same pads writing to two different places. So on a channel the machine is generating, an erased step came back the moment anything made it rewrite: a turn of HITS, ROTATE, DIVIDE, LENGTH or RHYTHM, a reroll, or the channel simply drifting on its own, which needs no hands at all. On a channel you recorded, your notes were always the truth and the erase was always right. <a href="playing-and-recording.html#what-it-is">Read</a></li>
-<li><strong>Three of the twelve modulation rates are gone, and they were never real.</strong> Modulation is written a few times a second, so a cycle has to last several times that to come out as a shape. The three fastest &mdash; a quarter of a bar, an eighth, a sixteenth &mdash; got one or two writes per cycle, which is not a triangle or a ramp but whatever those writes happened to land on, changing bar to bar. They sat on the pad grid fully lit, promising something the instrument could not do. <strong>Nothing you have saved moves</strong>: the nine that remain are on exactly the pads they were on, and a set saved on one of the three that went comes back on the fastest one left rather than falling silent. Pads 10, 11 and 12 are dark now, and a dark pad that does nothing is the honest version of a lit one that did nothing useful. <a href="modulation.html#dropped-rates">Read</a></li>
-<li><strong>Under the lens, LENGTH says which of the two things it is showing.</strong> Spread across all eight channels it was laying pattern beats on the drums beside register bits on the voices &mdash; two quantities that cannot be compared, in the one view whose whole job is comparison. The title carries the units now: <code>ALL LENGTH BEATS/BITS</code>. The verb was deliberately not taken away from the lens; the lens replaced five pages that did this, so a verb it refuses is a control you lost.</li>
-<li><strong>The key stops walking when you have locked every voice.</strong> A preset that walks its key was moving it regardless of MOVE, so locking a channel did not lock it against the walker. <strong>The limit is worth knowing</strong>: the three voices share one key, so locking <em>one</em> of them still cannot hold it &mdash; the key moves under it while its neighbours are open. Lock all three and it holds. <a href="whats-next.html">Read</a></li>
-<li><strong>The top line says when it has been cut.</strong> It is forty-two characters wide and the panel drops whatever does not fit without a word, and what is appended last is always the newest thing &mdash; the bank you are on, a countdown, whether a part is held. An ellipsis at the end marks it now.</li>
-<li><strong>Switching banks on a channel you had switched to the other kind no longer kills the panel.</strong> A channel changed between drum and voice with SHIFT + GRID was rebuilt from the wrong kind when you moved banks, and the panel stopped repainting from that moment &mdash; every light and both screens frozen, the bank already changed underneath, the music still playing. That is this instrument's worst failure shape and it took one bank press on a channel a lot of people switch.</li>
-<li><strong>The set you left behind can no longer play over the set you loaded.</strong> Banks you had visited were kept across a snapshot load, so loading one set, visiting bank 3, then loading another and switching to bank 3 gave you the first set's patterns over the second one's sounds. Other banks come back empty now, which is the truth: what a bank holds is not in the snapshot yet.</li>
-<li><strong>Every encoder stops jumping once a revolution.</strong> All eight small encoders were sending one bogus lurch &mdash; a big jump one way followed by a big jump back &mdash; four times per turn of the knob, because half of each reading was being paired with the other half of the previous one. It has been doing that for as long as the instrument has existed. Slow turns hid it; a sweep did not.</li>
-<li><strong>A drum step you played keeps its colour across a reload, and a tap no longer takes it off a recording.</strong> Played steps show amber so you can see what is yours. On a drum, a played note and a generated one are the same note, so nothing could tell them apart on reload and the amber went &mdash; and worse, one pad tap during a session was enough to strip it off a take that was still sounding. The steps are remembered by position now, in the snapshot.</li>
-<li><strong>Every bank is in the snapshot now, and a set comes back on the bank it was saved on.</strong> Banks are scenes &mdash; a whole eight-channel arrangement each &mdash; and only the one you were playing kept its generator settings; the rest came back with fresh ones. <strong>HITS and ROTATE were worse than that</strong>: they leaked between banks as you switched, so a rotation set in one bank followed you into the next and was missing from the one you left. Neither can be worked out from the pattern afterwards, so if the instrument does not remember them nothing does. <strong>And the sequencer always reloads on bank 1</strong> whatever it was saved on, so a set saved on bank 3 came back as bank 1's patterns underneath bank 3's settings, in silence. A bank you have never visited is still blank, which is the honest answer rather than a gap. <a href="performing.html#banks-are-saved">Read</a></li>
-<li><strong>The screens stopped redrawing whole.</strong> Every repaint used to wipe the display and draw it again, so moving one number cost the same as changing everything. The screen is now three separate pieces &mdash; the channel tabs, the page line, and each of the four encoder columns &mdash; and only the piece that changed is sent. <strong>Turning one encoder costs about a seventh of what it did</strong>, and selecting a channel about a fifth. This is the last of four goes at the same problem, and it is the one that lets the previous three pay off: the instrument has been able to send just the changed patch of screen since the start of September, and the wipe at the top of every repaint was cancelling it out. Nothing looks different, which is the point &mdash; this controller stops answering when it is talked at too fast, and every one of these makes that harder to reach.</li>
-<li><strong>The web editor and the daemon's own sequencer are gone, and with them a socket anything on your network could reach.</strong> The daemon carried a browser page for remapping pads and encoder knobs, served over a connection with <strong>no password, by a program running as root</strong> &mdash; so anything on the same Wi-Fi could change what your pads send and save it to disk. It also carried a complete second sixteen-step sequencer that SHIFT + PAD MODE used to drop you into, taking the pads, PLAY, STOP and the Group buttons away from the instrument with nothing on the panel saying so. Neither had ever been used here; the sequencer this instrument plays is Zynthian's. <strong>About eight hundred lines of inherited code removed rather than switched off</strong>, and one fewer thing listening on your network. <em>The cost, stated plainly:</em> pad notes and encoder CC numbers are now edited in <code>maschine.json</code> and take a restart, instead of being changeable live in a browser. <a href="04-manual-installation.html#the-two-keys-that-went">Read</a></li>
-<li><strong>Every encoder stopped lurching four times a revolution</strong> &mdash; see above; the same round found that the reason written in the code for the guard against it had never been measured.</li>
+<li>Every bank is saved in the snapshot, and a set returns on the bank it was saved on.</li>
+<li>The top line marks itself when it has been cut short.</li>
+</ul>
+<p><strong>Changed</strong></p>
+<ul>
+<li>The screens redraw in strips instead of whole, so moving one number costs one strip.</li>
+<li>Three modulation rates were removed &mdash; too slow to come out as a shape.</li>
+<li>The daemon&rsquo;s web editor and its own sequencer are gone, and with them an unauthenticated network socket.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul>
+<li>A knob that cannot reach its plugin says so instead of moving a number.</li>
+<li>A tap you played is no longer swallowed by the machine writing at the same moment.</li>
+<li>The snapshot tools cannot leave a half-written snapshot behind.</li>
+<li>LENGTH says which of its two meanings it is showing &mdash; beats on a drum, register bits on a voice &mdash; including under the lens.</li>
+<li>HITS says when a rhythm register is thinning the line.</li>
+<li>A step you erase with ERASE stays erased.</li>
+<li>Switching banks on a kind-switched channel no longer kills the panel.</li>
+<li>Banks you visited can no longer play over the set you just loaded.</li>
+<li>The eight encoders stop lurching four times a revolution.</li>
+<li>A played drum step keeps its colour across a reload, and a tap no longer takes it off a recording.</li>
+<li>The key stops walking when every voice is locked.</li>
+<li>A greyed knob records why in the session log.</li>
 </ul>
 <hr>
 
-<h2 id="2026-09-06-gate">6 September 2026 &mdash; sixteen steps, and the knob that was stuck for two seconds</h2>
-<p><strong>Everything in this entry has now been played, and most of it had been sitting under &ldquo;built and tested, not yet played&rdquo; &mdash; some of it since the first of the month.</strong> Two of the items below had been played on 5 September and left unsettled; both are settled here. Three new faults were found in the same session and are named at the bottom rather than hidden.</p>
-<p><strong>The seventy-one presets went onto the instrument in this session too.</strong> Until today the rig was still playing the dry set: the tool that installs the instrument does not carry snapshots, only a fresh install does, so every send described below had been designed and never heard here.</p>
+<h2 id="2026-09-07">7 September 2026</h2>
+<p><strong>Changed</strong></p>
 <ul>
-<li><strong>The panel really does come back from an unplug &mdash; measured, at last.</strong> The guide has told you for weeks that pulling the USB cable and putting it back repaints the whole surface. <strong>Nobody had ever watched it happen.</strong> It was watched on 6 September: a new device appears, the instrument sends one burst of about 280 messages in that same second &mdash; a full repaint &mdash; and drops straight back to idle, with the pads, the lights and both screens restored. <em>It was that test which turned up the two uncleared rows above</em>, so the promise the guide makes is true now in a way it was not before.</li>
-<li><strong>Loading a preset puts your channels back the way the preset wants them.</strong> A channel can be switched between drum and voice by hand, and <strong>that switch used to survive every preset you loaded afterwards</strong> &mdash; silently, for as long as the instrument stayed on. None of the seventy-one presets could put it back, because none of them records channel kinds at all; only restarting cleared it. So a drum channel could go on playing as a synth voice through preset after preset, with the panel honestly showing a voice and the preset quietly not being what it says. Loading now restores exactly what the snapshot carries and clears what it does not. <em>A kind you deliberately save is still saved and still comes back.</em></li>
-<li><strong>Two rows of the screen that were never cleared are cleared now.</strong> The display stopped being redrawn whole in early September and is drawn in three strips instead &mdash; the channel tabs, the page line, and the encoder columns. <strong>The strips did not quite meet.</strong> Two single-pixel rows fell between them, one just under the page name and one just above the encoder labels, and nothing erased either: whatever landed there stayed until the instrument was restarted, and changing page could not shift it. It was found when a physical unplug and replug left the panel correct but carrying two stray lines. <em>The page strip now covers the gaps.</em></li>
-<li><strong>The sixteenth-note triplet division now says it is one.</strong> The value under an encoder had room for four characters, and five of the six divisions are four or shorter &mdash; so nothing looked wrong. <strong>But <code>1/16T</code> cut to four characters is <code>1/16</code></strong>, which is another real division in the same list. The panel did not show a mangled word, it showed a <em>different valid setting</em>: a channel could be playing triplets while the screen said straight sixteenths, and the only clue was that LENGTH refused to go past 12 &mdash; correctly, because twelve steps is the longest triplet pattern the sixteen pads can hold. That is exactly how it was found. The column holds five characters now, which is what fits. <a href="generating-patterns.html#what-it-refuses">Read</a></li>
-<li><strong>The instrument boots into a piece of music now.</strong> The factory snapshot &mdash; what a fresh install loads, and what the rig falls back to &mdash; is <code>019-dub-factory</code> instead of <code>018-generative-techno-main-insert</code>. Press Play and it plays: four on the floor with a backbeat and one drenched clap across A&ndash;D, each with its own slow modulator, a bass on F, and chords held on G and H. <strong>Nothing is taken away.</strong> <code>018</code> still ships in the same bank &mdash; the same eight channels with no genre on them, which is where to start if you want to build your own &mdash; and so does <code>017</code>, the way back from a master filter that has eaten the mix. Neither is ever the thing that loads by itself. <a href="01-fast-installation.html">Read</a> <strong>Played 6 September:</strong> the rig was restarted from a clean deploy, the factory snapshot was checksum-verified in place as both <code>019</code> and the default, and it played on the first press of PLAY.</li>
-<li><strong>The factory snapshot&rsquo;s main fader ships at 28, not 100.</strong> It was clipping: at the top of the fader the mix put more than one sample in a hundred over full scale, which on this material is the kick and the clap hitting the ceiling rather than the mix being loud. Turning the main down eleven decibels puts the loudest moment back where the mix was measured before its reverbs and delays were corrected. <strong>The balance between the eight channels is untouched</strong> &mdash; only the output level moved &mdash; so if you want it louder, turn it up knowing that the top of the range distorts. <a href="mixing-and-effects.html#any-pair">Read</a> <strong>Heard 6 September:</strong> the whole send gate below was judged on this level and nothing was too loud or too quiet at it.</li>
-<li><strong>The white block that flashed over a panel column is gone.</strong> Changing a number on either screen flashed a solid lit rectangle over that column &mdash; or over the top indicator line &mdash; for a fraction of a second before the new text appeared. <strong>Erasing a strip of screen was two instructions</strong>: light every pixel in the box, then flip them all, which leaves it dark. The panel repaints ten times a second on its own clock, so whenever that landed between the two you saw the lit half. It is one instruction now, so the lit state never exists. <em>This had been on the instrument since the screens were made to redraw in strips, and had never been reported.</em></li>
-<li><strong>The CUTOFF knob works while the filter is still fading back.</strong> Squeeze a pad hard, let go, and turn CUTOFF straight away &mdash; until today <strong>the knob did nothing for one to two seconds</strong> and then came back to life. That window is exactly the release fade, and the cause was that the instrument remembered where your knob was <em>once</em>, when the squeeze started, and never looked again: every fifth of a second during the fade it put that remembered value back over whatever you had just turned, and the last one wiped your turn completely. It now moves the remembered value with your hand, so the number follows you and the fade lands on what you left rather than on what was there before you touched it. <strong>The guide has claimed since pressure was built that &ldquo;the knob keeps working while a squeeze is live&rdquo;</strong>; it is true now. <a href="playing-and-recording.html#what-it-is">Read</a></li>
-<li><strong>The page ring answers more than twice as fast.</strong> Walking the pages waits a moment before drawing, so a walk costs one screen instead of one per page passed &mdash; and that wait was raised in September to a third of a second, against traffic that has since been cut sixfold. <strong>Nobody had ever actually turned the ring at the raised value</strong>; the feel that had been judged acceptable was the shorter one&rsquo;s. Turned at the instrument it read as lag, and the wait is back to fifteen hundredths of a second. Measured both ways at the rig, the ring walked hard for twenty seconds each time. <em>A shorter wait does mean more traffic, and this controller stops answering when it is talked at too fast &mdash; the setting is deliberately provisional, and it is the first thing to put back if the panel ever goes quiet in ordinary play.</em></li>
-<li><strong>REVERB and DELAY show what the effect is actually doing.</strong> Both columns drew a stored number that started at zero and was never read back from the effect &mdash; so a preset could be audibly wet while the panel said 0, and <strong>the first click of the knob wrote 1</strong>, collapsing the send you were listening to. It mattered little while the packs were dry and matters a great deal now that they are not. The columns read the effect itself, the way the LEVEL column has read the mixer since 2 September; a knob starts from the send that is there; and a modulator bound to REVERB captures the real value instead of yanking it to zero on its first tick. <a href="mixing-and-effects.html#any-pair">Read</a> <strong>Played 6 September:</strong> with <code>046 minimal dry</code> loaded the columns read 4 and 0, which is exactly that preset&rsquo;s designed send. The stored zero is gone.</li>
-<li><strong>Walking the page ring draws only the page you stop on.</strong> The screens showed every page you passed through. The traffic had already been cut roughly sixfold and the wait already felt right, so what was left was this: the LED repaint at the end of every detent was <em>also</em> redrawing both screens, and it cancelled the waiting that had been built to prevent exactly that. Measured off the rig over eight detents: eight full repaints became one, and 424 screen packets became 24. <strong>A single press of the page arrows still lands at once</strong> &mdash; nothing is waiting yet, so there is nothing to fold it into. <strong>Played 6 September:</strong> it draws the page you stop on, and the pages between when you turn slowly &mdash; which is the intended behaviour and settles the half left open on 5 September. <em>The wait itself was too long and is a separate entry above.</em></li>
-<li><strong>The MOD rate pads are readable again.</strong> The unselected rate pads were set to between a third and two thirds of full brightness &mdash; and on this panel <em>three tenths already looks like full</em>, measured against your own eye in September. So the pads that were meant to shade from dim to bright were all simply bright, the selected rate could not be picked out of its neighbours, and the brightness that was supposed to tell you something told you nothing. The levels now sit between a twentieth and about a seventh of full, which is the part of the range this panel can actually show, and the selected pad is plainly the brightest thing on the grid. <em>Also settled:</em> the report of twelve lit pads was of a build from before 4 September, when there were twelve rates; there are nine now, and nine light. <a href="modulation.html#pad-legend">Read</a> <strong>Played 6 September:</strong> held with nothing bound, the grid shows nine rate pads, four shape pads and three deliberately dark ones, every one barely lit.</li>
-<li><strong>A squeezed pad no longer holds the filter open for good.</strong> Press hard on a pad of a synth channel and the squeeze opens that channel&rsquo;s filter &mdash; that is what pressure is for. <strong>Letting go did not close it.</strong> The controller sends a note-off when your finger leaves but never a final &ldquo;pressure is now zero&rdquo;, so the instrument kept the last reading it saw, forever: the filter stayed where your hardest press left it, and it was rewritten four times a second so the CUTOFF knob could not take it back &mdash; turn it and the number moved, then snapped back within a fifth of a second, with the column still lit and nothing in the log. <strong>That is the whole of the &ldquo;channel F&rsquo;s CUTOFF does nothing&rdquo; report</strong>, and why it happened on one channel, on one knob, and could not be reproduced to order: it needed a pad to have been squeezed first. A pad release now ends the squeeze, and the filter fades back the way it does when you ease off gently rather than snapping. <a href="playing-and-recording.html#what-it-is">Read</a> <strong>Played 6 September, all three cases:</strong> the number stays where you put it, the filter fades rather than snapping, and <strong>with two pads held, letting one go leaves the other&rsquo;s squeeze standing</strong> &mdash; that last case had only ever been reasoned about. The same press found the two-second dead knob, which is the first entry above.</li>
-<li><strong>Every preset is sent to its own room, and nothing is left to the plugin any more.</strong> The seventy-one presets each dialled a reverb size and a delay feedback and then sent almost nothing to either, so two presets whose only difference was the room came out sounding the same &mdash; and where a preset <em>did</em> have a room, nobody here had chosen it. <strong>Half of the sends were never written down at all</strong>, which is not the same as being turned down: an effect nobody sets comes up wherever its author left it, and not one of the fourteen effects in the packs starts silent. One of them starts at nearly two thirds. So a preset&rsquo;s space was decided by whether its effects happened to differ from the ones the pack is built on top of &mdash; twenty-one presets bone dry, eighteen wet on every channel, and thirty-two half of each, none of it on purpose. <strong>All 1,136 sends are written now</strong>: 807 audible and 329 an explicit nothing, none left to a plugin. The kick gets a hint of room and never an echo, the bass stays close to dry, and the space sits on the parts that sustain &mdash; the lead and the pads &mdash; because a send is only audible on something long enough to come back. Each family has its own shape rather than one setting used everywhere: minimal is the driest, house is a small tight room, deep is bigger and warmer, trance is long, dub is the one you have already heard, and the twenty <em>space</em> presets are the wettest because the room is the point. <em>Every number traces to <code>019 dub factory</code>, the one preset in this project whose space has actually been listened to and kept.</em> <strong>Not yet played:</strong> the values are designed and checked, and no one has heard the other seventy. <a href="sound-and-presets.html#genre-pack">Read</a> <strong>Played 6 September, five of the six families:</strong> the driest, two of the wettest, house against deep house, and a drone through a full cycle of its slowest movement. The kick keeps its front edge in the wettest presets &mdash; the number most likely to be wrong, and a single one. Deep house is audibly the larger room beside house. <code>019</code> is unchanged, which it had to be. <em>Sixty-five of the seventy-one still have not been heard one by one.</em> The drone half was gated too: the bottom octave of <code>083 drone cathedral</code> is one clean pitch with no beating, its upper layers drift for ninety seconds while the foundation stays put, a reverb send of 30 is plainly audible, and turning GATE down and back restores the long sustain exactly. <strong>The remaining sixty-five are a listening backlog rather than a gate</strong> — the fault that ruined the old pack is caught by a checker, and that checker&rsquo;s threshold has now been checked against a real ear.</li>
-<li><strong>Loading a preset now brings its room with it.</strong> A snapshot saves the size and character of the reverb, and the delay&rsquo;s feedback, along with everything else &mdash; and those three were coming back as <em>numbers on the page</em> and nothing more, so the panel described a room the instrument was not in. Two of the effect-demo presets are the proof: <em>space cathedral</em> and <em>space closet</em> are the same eight parts with nothing different about them but the room, and they sounded identical, because whichever one you loaded second kept the first one&rsquo;s effect settings. Turning any of those knobs by hand always worked; it was only loading that did not. <em>The sentence that used to close this entry said the preset packs ship with every reverb and delay turned all the way down, so there was no room to hear either way. That was half right and is now fixed &mdash; see the entry below.</em> <a href="mixing-and-effects.html#any-pair">Read</a> <strong>Played 6 September:</strong> <em>space cathedral</em> and <em>space closet</em> sounded identical before and do not now. That is the proof the room arrives with the preset instead of staying on whatever the last one left behind.</li>
-<li><strong>The MOD pad menu looks inert when it is inert.</strong> At the instrument the menu came up at full brightness, but the same gesture that showed it also bound a modulator, and a bound menu is <em>meant</em> to be lit &mdash; so it is not yet known which of the two states was being looked at. The retest is one press with no bind in it. What it is meant to do: go dim when no modulator is bound &mdash; which is the state you are in after loading any snapshot &mdash; but &ldquo;dim&rdquo; was set bright enough to read as a live menu, so it looked like sixteen working pads that ignored every press. <a href="modulation.html#pad-legend">Read</a> <strong>Settled 6 September:</strong> retested with nothing bound at all, it is dim. <strong>The 5 September report was of a menu with a modulator bound to it</strong>, which is meant to be lit &mdash; the same gesture that opened the menu had also made a binding, and nothing in the report separated the two.</li>
-<li><strong>Walking the pages quickly is much cheaper.</strong> The traffic really did fall, by about six times, and the wait does not read as a lag. But the screens still show every page you pass rather than only the one you land on, which is the part you can see. Measured again on the instrument: nine hundred messages a second became a hundred and sixty. The screens wait for your hand to stop before redrawing, but the wait was short enough that an ordinary, deliberate turn defeated it and repainted both screens on every click. Measured on the instrument: a fast walk through a ring was putting nine hundred messages a second on the link the buttons come back on. The wait is longer now, which costs a fraction of a second before the page you land on appears. <strong>Settled 6 September:</strong> re-measured on the rig at 240 messages a second sustained with a busiest second of 608, against 934 and 3,852 for the same gesture before the repaint fix. The rate that has wedged this controller is 674.</li>
-</ul>
-<p><strong>Found in the same session, and not fixed:</strong> a white block flashes over the CUTOFF panel for a fraction of a second when it redraws &mdash; cosmetic, and present long before any of today&rsquo;s work; the tool that tests the panel&rsquo;s recovery from a disconnected controller <strong>reported success while the panel was dark</strong>, which has been fixed in the tool but not yet re-run at the instrument; and the tool that tests the panel&rsquo;s recovery reported success while the panel was dark, which has been fixed in the tool but not yet re-run at the instrument.</p>
-<p><strong>And one thing that was reported as broken on 5 September is not broken.</strong> The bass of <code>031 house classic</code> was said to play a B flat where the instrument showed C &mdash; two semitones out, in a key it does not belong to. Measured again on 6 September against the moment each note actually starts, <strong>it plays C</strong>, thirty-one times out of thirty-one, within a fiftieth of a semitone. <strong>The first measurement took the loudest pitch in the first third of a second of each bar, and that stretch contains a genuine B flat</strong> &mdash; the bass line has one in it &mdash; so what was measured was the loudest note in a phrase rather than the note on the beat. <em>Nothing was wrong with the instrument and nothing has been changed to fix it.</em> The retraction is recorded here rather than quietly dropped, because a preset pack was very nearly rebuilt around it.</p>
-<hr>
-
-<h2 id="2026-09-05-gate">5 September 2026 &mdash; seventeen steps at the instrument</h2>
-<p><strong>Everything in this entry was played, one control at a time, and passed.</strong> The list below had been sitting under &ldquo;built and tested, not yet played&rdquo; &mdash; some of it for two days, some for longer. Four other things were played in the same session and did <em>not</em> pass; they are still above, said plainly.</p>
-<p><strong>The send scale was the one that mattered.</strong> If it had been wrong again, very little else in the session would have meant anything &mdash; every reverb and delay judgement depends on being able to hear one.</p>
-<ul>
-<li><strong>Reverb and delay sends finally mean what they say.</strong> A send number is an amplitude now: 100 is unity, 50 is 6&nbsp;dB down, 25 is 12&nbsp;dB down, and <strong>30 is a normal, clearly audible send</strong>. It used to be a straight line across the plugin&rsquo;s decibel range, which put 30 at forty-six decibels down &mdash; inaudible &mdash; and meant you needed three quarters of the knob before a reverb arrived at all. Every effect on the instrument was quieter than its own number claimed. Sends already saved in a snapshot are not rewritten; they now <em>read</em> honestly, so one that had been sitting at an inaudible setting shows as the 0 or 1 it always sounded like. <a href="mixing-and-effects.html#what-it-is">Read</a></li>
-<li><strong>SOLO tells you when something is still soloed.</strong> Tapping out of solo mode gives the F row back to the mutes and deliberately leaves your solo alone &mdash; but nothing said so, and you could walk away from a latched solo with seven channels silent and no lit button anywhere to explain it. SOLO now blinks for as long as anything is soloed, in or out of the mode. <a href="the-surface.html#mute-solo-erase">Read</a></li>
-<li><strong>HOME clears a latched SOLO like every other latch.</strong> It was the one modifier the big encoder&rsquo;s press walked past. <a href="the-surface.html#home">Read</a></li>
-<li><strong>The first turn after HOME counts.</strong> Pressing HOME and turning used to lose that first detent &mdash; on the button you reach for precisely when you have stopped knowing where you are. <a href="the-surface.html#home">Read</a></li>
-<li><strong>MOD&rsquo;s depth multiplier is on the label.</strong> The big encoder under MOD scales every modulator at once and had no readout anywhere, so an out-and-back by hand could leave the whole rig moving less than you meant with nothing to show it. It now reads <code>x0.84</code> beside the rate whenever it is not 1. <a href="modulation.html#depth">Read</a></li>
-<li><strong>REVERB and DELAY now find whatever effect is loaded.</strong> <em>(This one is a change to the instrument rather than to a preset, so unlike the rebuilt packs above it is still waiting to be played.)</em> Both encoders used to look their plugin up by name, and only the two factory effects answered &mdash; so on a snapshot carrying any other pair both knobs did nothing, both kinds of modulator sat inert, and REVSIZE, REVTYPE, DLYTIME and DLYFBK were dead, with nothing said anywhere. It was true of <strong>forty-one of the seventy-one preset snapshots</strong>. The verbs resolve by role now. Three limits are real and the surface shows them rather than faking them: REVTYPE&rsquo;s list of rooms exists on one reverb only, six of the effects are crossfades with no separate dry, and the musical delay division reaches the delays that speak milliseconds. <a href="mixing-and-effects.html#any-pair">Read</a></li>
+<li><strong>Plugin GUIs are off by default</strong>, which gives back about three quarters of a processor core per modulated effect. The Zynthian UI&rsquo;s own remote screen on <code>:6080</code> is unaffected; only the plugins&rsquo; own screens on <code>:6081</code> go. <code>maschine-plugin-guis.sh on</code> brings them back at that price &mdash; <a href="mixing-and-effects.html#plugin-guis">the numbers</a>.</li>
+<li>The install now lives at <code>/opt/technomaschine</code> and the daemon runs as the <code>zynthian</code> user rather than as root. <a href="04-manual-installation.html">Read</a></li>
 </ul>
 <hr>
 
-<h2 id="2026-09-04-packs">4 September 2026 &mdash; all seventy-one presets rebuilt</h2>
-<p><strong>These are in the instrument, and they went in without an ear gate &mdash; deliberately, and it is worth saying which parts of that are checked and which are a judgement.</strong></p>
-<p><strong>What is checked:</strong> every one of the seventy-one crosses a new checker that renders the actual notes and refuses two sustained notes closer together than the ear can separate them at that pitch, two channels on the same note, more things starting at once than the style can carry, a bass that never plays the root of its own key, a mixing board where every fader is identical, and a drone with no layer long enough to sustain. All seventy-one pass. <strong>All seventy-one of the version before this one fail.</strong></p>
-<p><strong>What is a judgement:</strong> whether they sound good. Nobody has listened to all of them. The old ones were measurably broken in ways you would have blamed on yourself, so the trade was taken on purpose.</p>
+<h2 id="2026-09-06">6 September 2026</h2>
+<p><strong>Changed</strong></p>
 <ul>
-<li><strong>All seventy-one preset snapshots were rebuilt, and the drone and ambient ones were the point.</strong> They shared one arrangement between twenty files, every channel attacked the same step, and the chord that came out had no root, a minor second at the bottom of it and two voices in exact unison. They were not even drones: on a one-bar grid the longest note the instrument can hold is half a bar, so each one played half a bar of sound, half a bar of silence, and then all eight re-attacked together. They now run four-bar and two-bar layers whose attacks never coincide, hold continuously, and change key on a slow walk. <a href="sound-and-presets.html#genre-pack">Read</a></li>
-<li><strong>Every preset has a mix now.</strong> All seventy-one shipped with the eight faders at one identical setting, inherited and never touched &mdash; which is not a neutral starting point, it is eight things competing at one loudness. Drums sit forward and voices sit under them, per family.</li>
-<li><strong>The presets make chords, play grooves you can edit, and swing.</strong> None of them made a chord before &mdash; chords arrived after the packs were built. Their drum grooves were fixed step lists with nothing behind them, so HITS and ROTATE on the panel showed numbers that had nothing to do with what you were hearing, and the first turn of either wiped the groove; the grooves are euclidean now and the panel agrees with the pattern. Swing and humanisation were zero everywhere and are not.</li>
-<li><strong>The twenty effect-demo presets became twenty rooms.</strong> Eleven of them were note-for-note copies of another preset with a different effect pair, and fourteen could not supply both a reverb and a delay at all. They are now <code>061</code>&ndash;<code>080</code> <em>space</em>, each with its own room, its own key and its own chords.</li>
-<li><strong>Nineteen different effect pairs, chosen for character.</strong> Every preset briefly carried the same two, because that is the only pair where all six effect controls work &mdash; and while the knobs looked their plugin up by name it was the only pair that worked at all. Now that they find whatever is loaded, house goes into a small room, deep house into a hall, minimal into the driest plate, dub through a proper dub delay, and the twenty drones each have their own reverb instead of twenty settings of one. Most give up REVTYPE, whose room list exists on the factory reverb alone; on a preset whose reverb already is a particular room, that costs nothing. <a href="mixing-and-effects.html#effects-proven">Read</a></li>
-<li><strong>The foundation of a drone cannot drop out.</strong> The bottom two layers have their evolution switched off, so only the upper three drift; and a rhythm that evolves its way to silence comes back within a bar or two rather than staying gone. That was checked because there was no listening pass to catch it.</li>
+<li>The instrument boots into a piece of music: the factory snapshot is <code>019-dub-factory</code>, and its main fader ships at 28 because 100 clipped.</li>
+<li>Every preset is sent to its own room &mdash; each of the seventy-one now writes its own reverb and delay sends instead of leaving them to the plugin.</li>
+<li>A snapshot carries the reverb&rsquo;s size and character and the delay&rsquo;s feedback, so loading a preset brings its room with it.</li>
+<li>The page ring answers more than twice as fast, draws only the page you stop on, and costs about a sixth of the traffic.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul>
+<li>REVERB and DELAY show what the effect is actually doing, and find whichever effect is loaded.</li>
+<li>The CUTOFF knob works while a squeezed filter is still fading back &mdash; it was dead for one to two seconds.</li>
+<li>A squeezed pad no longer holds the filter open for good.</li>
+<li>The white block that flashed over a panel column is gone, and two screen rows that were never cleared are cleared.</li>
+<li>Loading a preset puts your channels back the way the preset wants them, kind switches included.</li>
+<li>The MOD rate pads are readable, and the MOD pad menu looks inert when it is inert.</li>
+<li><code>1/16T</code> says it is a triplet instead of drawing as <code>1/16</code>.</li>
+<li>Pulling the USB cable and putting it back repaints the whole surface &mdash; measured at last, not just claimed.</li>
 </ul>
 <hr>
 
-<h2 id="2026-09-04">4 September 2026 &mdash; the audit&rsquo;s fixes, played</h2>
-<p><strong>Everything below had been on the instrument since the audit and had never been played.</strong> It has now been, across a session at the rig: the panel came up, the pads kept their colours, the chord that used to steal the instrument did nothing and said so in the log, every modifier still meant what it meant, and it was played for a stretch without the daemon dying. The rollback path was run in both directions on purpose, while nothing was wrong.</p>
+<h2 id="2026-09-05">5 September 2026</h2>
+<p><strong>Changed</strong></p>
 <ul>
-<li><strong>SHIFT + PAD MODE no longer takes the instrument away.</strong> That chord stepped the daemon into a sixteen-step sequencer of its own, where the pads stopped sending notes, PLAY and STOP drove the daemon's transport instead of yours, and the Group buttons changed its pages rather than the pad octave. Nothing on the panel said so and it took three more presses of the same chord to get out. The chord is still swallowed, so nothing else about the panel changes; the sequencer behind it is off unless <code>internal_sequencer</code> in <code>maschine.json</code> asks for it. <a href="04-manual-installation.html#step-2--put-the-daemon-config-in-place">Read</a></li>
-<li><strong>The web editor's socket can be closed.</strong> It listens on the whole network, has no password, and the daemon runs as root &mdash; so anything on your Wi-Fi could remap what the pads send. That is unchanged by default, because closing it would take the editor away from the laptop it is meant to be opened on; what is new is that you can close it in one word, and that the daemon says out loud on every start when it is open. <a href="04-manual-installation.html#step-2--put-the-daemon-config-in-place">Read</a></li>
-<li><strong>The daemon stops dying on things it should shrug off.</strong> Sixty places turned an ordinary MIDI-send error into an ended process; a short or garbled report from the controller could crash it or invent a pad hit that nobody played; and its clock arithmetic used the wall clock on a Pi that has no battery for one &mdash; so an NTP correction, which on this machine can be days, ended the daemon mid-set. None of that is anything you could see until it happened, and then it was the whole instrument.</li>
-<li><strong>Rolling a driver back is one command.</strong> Every deploy already kept the previous three files; nothing could put them back until now &mdash; and now it has been done, on the instrument, and undone again.</li>
+<li>Reverb and delay sends are amplitudes: 100 is unity, 50 is 6&nbsp;dB down, and 30 is a normal, clearly audible send.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul>
+<li>SOLO blinks while anything is still soloed, and HOME clears a latched SOLO like every other latch.</li>
+<li>The first encoder turn after HOME counts instead of being swallowed.</li>
+<li>MOD&rsquo;s depth multiplier is drawn on the label when it is not 1.</li>
 </ul>
 <hr>
 
-<h2 id="2026-09-03">3 September 2026 &mdash; holding a button stopped redrawing the screens</h2>
-<p><strong>The overlays were the most expensive thing on the panel, and all they change is one line of text.</strong> Hold DUPLICATE and the top line names the bank you are on; hold ARM and it counts the bars down; FREEZE puts <code>HELD</code> there, and a channel you have taken over says so. Every one of those redrew <em>both whole screens</em> &mdash; once when you pressed, once when you let go. This controller stops answering when it is talked at too fast, and that made a button you hold constantly while playing four times as costly as stepping a page.</p>
-<p><strong>Now only the line that changed is redrawn.</strong> Measured on the instrument: holding DUPLICATE and pressing a Group fell from 308 messages and a peak of 186 a second to 154 and 108 &mdash; and what is left is the Group press itself, which really does change what the screens say. The overlay&rsquo;s own share went from two full screen rewrites to a single row of pixels, and the panel now sends <strong>nothing at all</strong> to clear a screen when you open one.</p>
-<p>MOD is deliberately unchanged: it hands every encoder a different job, so the whole screen genuinely does say something new. Nothing looks different anywhere &mdash; that is the point.</p>
-<hr>
-
-<h2 id="2026-09-02-debt">2 September 2026 &mdash; the knobs that lied, and a quieter panel</h2>
-<p><strong>Three knobs took a recorded pattern away without saying so.</strong> LEAN, LANE and RHYTHM on a drum each ask the generator for a different pattern, so like HITS and ROTATE they cannot leave a take standing &mdash; but where those two hand it back and say so, these three replaced your notes while the channel still called itself yours. They hand back properly now, and the indicator stops reading <code>PLAY</code> the moment they do. Turning one of them <em>down to nothing</em> keeps the take. <a href="playing-and-recording.html#who-owns-it">Read</a></p>
-<p><strong>Two knobs on a voice take were pretending to work.</strong> RANGE and VELO are only ever read when the generator writes a line, and it does not write a take &mdash; so they moved a number on the screen and changed nothing you could hear. They draw <code>----</code> now. GATE and OCTAVE stay live, and it is worth knowing why: GATE is the length of a step you tap in, and OCTAVE decides what a pad plays whoever owns the pattern.</p>
-<p><strong>The big encoder got quieter again.</strong> Every page step used to re-park all eight of the small encoders whether or not any had moved. Walking ten pages cost 456 messages to the panel; it costs 192 now, and the busiest moment halved. Nothing about it looks different &mdash; that is the point: this controller stops answering when it is talked at too fast, and yesterday&rsquo;s fix and this one together took the page ring from 674 messages a second to 98.</p>
-<p>Also: erasing a step removes a whole chord rather than one note of it, and a part that closes through EXIT can no longer be left half-closed if something goes wrong mid-fade.</p>
-<hr>
-
-<h2 id="2026-09-02-takes">2 September 2026 &mdash; a take can be edited by hand, and a tap no longer eats one</h2>
-<p><strong>A pad tap in STEP mode was deleting recorded patterns.</strong> On a channel you own, the tap did not edit the pattern &mdash; it told the generator to write the whole thing again, which on a take means the take is gone. The factory snapshot&rsquo;s hand-played chords on G and H vanished into single notes on the first tap, silently, and the CHORD knob was greyed out at the same time on the grounds that the generator never touches a take. It did.</p>
-<p><strong>Now the pads edit the pattern, which is what a step grid ought to do.</strong> Tap an empty step and a note appears, at the nearest note your take already uses, with your tap&rsquo;s velocity as its accent; tap a step that sounds and it goes, a chord as a whole chord. Everything else stays exactly where you played it. <a href="playing-and-recording.html#editing-a-take">Read</a></p>
-<p><strong>ERASE + a step now removes the whole chord too.</strong> It used to remove one note of three and leave the other two sounding while the pad went dark &mdash; a step that read as empty and was not.</p>
-<hr>
-
-<h2 id="2026-09-02-fixes">2 September 2026 &mdash; four fixes, and a knob that stopped shouting</h2>
-<p><strong>EXIT works.</strong> It has been in the instrument since 1 September and it did nothing: set a channel to <code>2bar</code>, queue its mute, and it snapped off exactly as if you had never set it. The close was reading the channel&rsquo;s level from the wrong place &mdash; a number the driver keeps that stops matching the fader the moment anything else moves it &mdash; so the first instant of a close jumped the strip to that stale value, which sounded like the mute it was supposed to replace. Worse, the landing then wrote that stale number back, so an arrangement gesture quietly rewrote your mix. Both halves are fixed: <strong>a close and an open are now a straight ramp over the bars you asked for, and the channel comes back at the level it left from.</strong> <a href="mixing-and-effects.html#exit">Read</a></p>
-<p><strong>A locked channel says so from every page.</strong> MOVE at LOCK stopped the machine touching a channel, and the only place you could see it was the page that set it. Its Group button blinks now, in its own colour &mdash; the same blink everything latched on this panel uses. <a href="generating-patterns.html#move">Read</a></p>
-<p><strong>The big encoder stopped redrawing the screens for pages nobody read.</strong> Walking the page ring cost a full repaint of both displays for every detent your hand passed through, and on this controller that traffic is what makes the panel stop answering &mdash; it did, mid-jam. The screens now draw the page you <em>stop</em> on. Measured on the instrument: twenty detents used to cost twenty repaints and a peak of 674 messages a second; they now cost <strong>one repaint</strong> and a peak of 99. Nothing is lost &mdash; a page you walk past is on the glass for about a seventh of a second.</p>
-<p>Also: the play-session log can see the big encoder at last, which matters only when something goes wrong and then matters a great deal.</p>
-<hr>
-
-<h2 id="2026-09-02">2 September 2026 &mdash; chords, and a quieter instrument</h2>
-<p><strong>The generator plays chords.</strong> CHORD is a new knob on the voice STEP page: seven voicings from a single note up to a five-note ninth, built from scale degrees so every shape stays in the key the three voices share. OFF is note-for-note what the instrument played before, so nothing you already made has changed. It draws dead, and says so, on a channel you have taken over and on a sampler &mdash; on the first the generator writes nothing, on the second a note number picks a drum.</p>
+<h2 id="2026-09-04">4 September 2026</h2>
+<p><strong>Changed</strong></p>
 <ul>
-<li><strong>RANGE moved</strong> to the voice&rsquo;s second AUTO page to make room. That page is now called LINE, because all six of its live knobs answer one question: how the line of pitches is built.</li>
-<li><strong>CHANCE below 100 breaks a chord into pieces</strong>, differently every bar. The sequencer rolls the odds once per note and each chord tone is a note. Deliberate use of it is one of the better things here; it is documented so it is not mistaken for a fault.</li>
-<li><strong>A long note no longer eats the one after it.</strong> With a wide GATE and a busy rhythm, a note reaching the next step that used the same pitch would delete it. It is shortened to fit now instead of vanishing.</li>
+<li><strong>All seventy-one presets rebuilt.</strong> Every one has its own mix instead of eight identical faders, makes chords, grooves and swings, and the twenty drone and ambient presets became twenty distinct rooms rather than one arrangement shared between them.</li>
+<li>Nineteen different effect pairs across the pack, chosen for character.</li>
+<li>A drone&rsquo;s bottom two layers no longer evolve, so its foundation cannot drop out.</li>
 </ul>
-<p><strong>The instrument stopped redrawing its own screens once a bar.</strong> The page indicator carried the bar of the phrase, and a number that changes by itself made the whole display change with it &mdash; every bar, for as long as the music ran. On this controller that traffic is the thing that makes the panel stop answering. The count now appears only while something is actually waiting to land, which is the only time it means anything; the countdown was always on the ARM lamp as well. Measured with nobody touching the controller: the display now sends nothing at all between changes.</p>
+<p><strong>Fixed</strong></p>
+<ul>
+<li>SHIFT + PAD MODE no longer hands the pads to a sequencer of the daemon&rsquo;s own.</li>
+<li>The daemon shrugs off MIDI and HID errors that used to end the process.</li>
+<li>A driver rollback is one command, and it has been tried.</li>
+</ul>
+<hr>
+
+<h2 id="2026-09-03">3 September 2026</h2>
+<p><strong>Changed</strong></p>
+<ul>
+<li>Holding a button redraws only the line that changed. Holding DUPLICATE and pressing a Group fell from 308 messages to 154.</li>
+</ul>
+<hr>
+
+<h2 id="2026-09-02">2 September 2026</h2>
+<p><strong>Added</strong></p>
+<ul>
+<li>Chords on the voices, and CHANCE below 100 breaks a chord into pieces differently every bar.</li>
+<li>The pads edit a recorded take: tap an empty step and a note appears at the nearest pitch your take uses.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul>
+<li><strong>EXIT works.</strong> It had been in the instrument since 1 September doing nothing &mdash; it read the channel&rsquo;s level from the wrong place, and a part now closes through its filter as intended.</li>
+<li>A pad tap in STEP mode no longer deletes a recorded pattern.</li>
+<li>Knobs that cannot change a take say so rather than moving a number: LEAN, LANE, RHYTHM on a drum, RANGE and VELO on a voice.</li>
+<li>A locked channel blinks its Group button from every page.</li>
+<li>Erasing a step removes the whole chord, not one note of it.</li>
+<li>A long note no longer deletes the note after it.</li>
+<li>The page ring stopped repainting both screens for pages nobody read &mdash; ten pages cost 192 messages instead of 456.</li>
+</ul>
 <hr>
 
 <h2 id="2026-09-01">1 September 2026 &mdash; the surface, redesigned</h2>
-<p><strong>Played through at the rig, and the gate found five defects.</strong> All five are fixed and in what follows: the light alphabet was unreadable because <em>dim</em> had been chosen on paper and is ten times too bright on real LEDs; the right-hand display froze on a segmented bar given the wrong kind of number; RANGE was a knob that showed a value it could not move; and a kind switch quietly reset the channel&rsquo;s own play chance, so the screen read 100 while the channel played thinner.</p>
-<p>The panel was rebuilt around four rules: four modes and a lens, one duration rule for every modifier, one alphabet for every light, and a home to come back to.</p>
+<p><strong>Changed</strong></p>
 <ul>
-<li><strong>Four modes instead of five.</strong> CONTROL, STEP, AUTO, VOLUME &mdash; how it sounds, what it plays, what the machine does by itself, what holds for everything. The generator has a button of its own. <a href="the-surface.html#modes-and-pages">Read</a></li>
-<li><strong>The lens</strong> &mdash; hold ALL and the eight encoders become whichever verb your hand last moved, on all eight channels. It replaces every page that existed for one verb. <a href="mixing-and-effects.html#how-it-works">Read</a></li>
-<li><strong>HOME</strong> &mdash; press the big encoder and you are back at STEP, page 1, latches dropped. Nothing armed is lost. <a href="the-surface.html#home">Read</a></li>
-<li><strong>One duration rule for every modifier</strong> &mdash; a tap latches, a hold is momentary, so you never have to decide which you meant first. <a href="the-surface.html#duration">Read</a></li>
-<li><strong>Every modifier lights</strong>, all saying the same five things: dark, dim, bright, a blink for latched, a pulse for counting down. FREEZE&rsquo;s two depths are visible for the first time. <a href="the-surface.html#what-the-lights-mean">Read</a></li>
-<li><strong>F1&ndash;F8 are mutes in every mode</strong>, CONTROL included. A plugin switch steps on its own column&rsquo;s encoder. <a href="deep-parameters.html#switches">Read</a></li>
-<li><strong>One button regenerates</strong> &mdash; PATTERN, both kinds, and the selected channel decides which half. A press fires it, a second press before the bar takes it back, and it goes <strong>dark when it would do nothing</strong>. <a href="generating-patterns.html#reroll">Read</a></li>
-<li><strong>ERASE + SELECT cancels everything armed</strong>, now that a tap on SELECT latches the macro pads. <a href="performing.html#arm">Read</a></li>
-<li><strong>RANGE reaches the drum CONTROL page</strong> &mdash; the kit walk&rsquo;s window has a knob at last. <a href="sound-and-presets.html#kit-window">Read</a></li>
+<li><strong>Four modes instead of five</strong> &mdash; CONTROL, STEP, AUTO, VOLUME: how it sounds, what it plays, what the machine does by itself, what holds for everything. <a href="the-surface.html">Read</a></li>
+<li><strong>The lens</strong> &mdash; hold ALL and the eight encoders become one verb across all eight channels. It replaced every per-verb spread page.</li>
+<li><strong>One duration rule for every modifier</strong>: a tap latches, a hold is momentary. Every modifier lights the same five ways.</li>
+<li>HOME on the big encoder&rsquo;s press: back to STEP page 1, latches dropped, nothing armed lost.</li>
+<li>F1&ndash;F8 are mutes in every mode, and one button &mdash; PATTERN &mdash; regenerates either kind.</li>
 </ul>
-
-<h2 id="2026-09-01-sweep">1 September 2026 &mdash; the silent-refusal sweep</h2>
-<p>After the gate, every gesture the instrument can decline was checked against what it tells you. The rule it was measured by: <strong>a refused gesture that says nothing is the same fault as a channel going quiet without explaining itself.</strong> Six were fixed, and three of them were worse than silent &mdash; they answered.</p>
+<p><strong>Added</strong></p>
 <ul>
-<li><strong>A drum pad tap adds a hit</strong>, not only removes one. The same gesture used to mean two different things on the two kinds: on a voice a tap adds a step, on a drum it did nothing wherever the generator had not already placed one. It was hidden because the tap played the drum either way &mdash; a sound that said it had worked. <a href="generating-patterns.html#drum-rhythm">Read</a></li>
-<li><strong>A knob that cannot act says so, on every page.</strong> Five controls were drawing live on channels that have no such control, and three of them moved a number on screen while changing no sound. <a href="the-surface.html#reading-the-displays">Read</a></li>
-<li><strong>NOTE REPEAT lights only when it has something to give back.</strong> A voice that has never mutated has nothing to undo, and the button now says so instead of sitting lit. <a href="generating-patterns.html#how-it-works">Read</a></li>
-<li><strong>PATTERN goes dark when a press would do nothing</strong> &mdash; a reroll refuses on a channel you have recorded onto, and that refusal used to be invisible. <a href="generating-patterns.html#reroll">Read</a></li>
-<li><strong>REC stops promising a take it cannot make</strong> while a latched overlay owns the pads.</li>
-<li><strong>A column with nothing to step through draws dead.</strong> A chain with no kits loaded used to show a kit name in normal type with a bar under it, and a knob that did nothing.</li>
+<li><strong>RULE</strong>, a cellular automaton as a second way a register evolves. <strong>LEAN</strong>, a third placement generator. <strong>LANE</strong>, how far the generators may stray. <strong>MOVE</strong>, how often the machine may touch a channel at all. <a href="generating-patterns.html">Read</a></li>
+<li><strong>PHRASE</strong> and <strong>FILL</strong> &mdash; the fourth bar answers the first. <strong>EXIT</strong> &mdash; a part leaves through its filter over a bar or four.</li>
+<li>The bank grid: hold DUPLICATE and sixteen pads are sixteen whole arrangements.</li>
+<li>A modulator&rsquo;s wave is drawn on its column, and the panel says when generation has stopped.</li>
+<li>Per-screen brightness and contrast, and half the display traffic &mdash; the two screens became independent.</li>
+</ul>
+<p><strong>Fixed</strong></p>
+<ul>
+<li>A drum pad tap adds a hit as well as removing one, so both kinds mean the same gesture.</li>
+<li>Five controls that drew live on channels with no such control now draw dead, and NOTE REPEAT, PATTERN and REC light only when they can act.</li>
 </ul>
 <hr>
-<h2 id="2026-09-01-features">1 September 2026 &mdash; twelve more things it can do</h2>
-<p>Built and on the instrument the same day. Several were played through during that day&rsquo;s run at the rig &mdash; the AUTO verbs, the bank grid, the phrase page &mdash; and the rest are running but have not yet been taken end to end by hand, which is the next thing this project does rather than something the reader has to worry about. New capabilities rather than changes to how the panel works.</p>
-<ul>
-<li><strong>RULE</strong> &mdash; a cellular automaton as a second way a register evolves, on both kinds. <a href="generating-patterns.html#rule">Read</a></li>
-<li><strong>LEAN</strong> &mdash; a third placement generator beside euclid, weighting hits toward the beat, the eighths or the offbeat. <a href="generating-patterns.html#lean">Read</a></li>
-<li><strong>LANE</strong> &mdash; how far the generators may stray, pruning the strays until a bar holds together. <a href="generating-patterns.html#lane">Read</a></li>
-<li><strong>MOVE</strong> &mdash; how often the machine may touch a channel at all, as a probability rather than a switch. <a href="generating-patterns.html#move">Read</a></li>
-<li><strong>PHRASE and FILL</strong> &mdash; the fourth bar answers the first. <a href="generating-patterns.html#phrase-fill">Read</a></li>
-<li><strong>EXIT</strong> &mdash; a part leaves through its filter over a bar or four instead of stopping dead. <a href="mixing-and-effects.html#exit">Read</a></li>
-<li><strong>The bank grid</strong> &mdash; hold DUPLICATE and sixteen pads are sixteen whole arrangements. <a href="performing.html#bank-grid">Read</a></li>
-<li><strong>A modulator&rsquo;s shape, on the screen</strong> &mdash; a bound column draws a small picture of its wave. <a href="modulation.html#shape-on-the-screen">Read</a></li>
-<li><strong>It says when it has stopped</strong> &mdash; if generation stops, the indicator says so and the pads keep playing. <a href="the-surface.html#when-it-goes-quiet">Read</a></li>
-<li><strong>Per-screen brightness and contrast</strong> &mdash; two settings the daemon applies at start-up. Absent, nothing is read and nothing is written.</li>
-<li><strong>Half the display traffic</strong> &mdash; the two screens became independent, so a change on one no longer repaints the other.</li>
-<li><strong>A style as odds</strong> &mdash; an offline tool that expresses a snapshot pack as distributions and hard rules, and blends two styles without inventing values for the fields that cannot be averaged.</li>
-</ul>
 
-<h2 id="2026-08-31">31 August 2026 &mdash; eight features, gated the same day</h2>
+<h2 id="2026-08-31">31 August 2026</h2>
+<p><strong>Added</strong></p>
 <ul>
-<li><strong>The GEN page</strong> for the three voices: ROTATE a melody, MODEL between the shift register and a bounded walk with SPAN and STRIDE, and FEED/AMOUNT so one voice drifts toward another.</li>
-<li><strong>The drum rhythm register</strong> &mdash; steps appear and disappear without the line sliding. SWING moved one page along to its spread, where it reaches all eight.</li>
-<li><strong>A pad tap now flips a bit in the rhythm register</strong> on both kinds, so a hand-chosen step survives ROTATE and RHYTHM. HITS, DIVIDE and LENGTH are the way back.</li>
-<li><strong>The chord walker</strong>: the shared root steps along the scale every few bars.</li>
-<li><strong>The pump</strong> &mdash; MOD + RESTART snaps every modulator into the same phase.</li>
-<li><strong>Gate collapse</strong> on ARM: every note shortens into the landing and returns.</li>
-<li><strong>Pad pressure</strong> reaches the voices: squeeze a held pad and the filter opens.</li>
-<li><strong>MIDI export</strong>: a tool writes a snapshot&rsquo;s eight patterns as a standard MIDI file.</li>
-<li>Seven defects were found during the gate and six fixed the same day &mdash; among them ROTATE on a voice, which counted correctly on the display and never changed the sound.</li>
+<li>The voices&rsquo; GEN page: ROTATE a melody, MODEL between shift register and bounded walk, and FEED so one voice takes another&rsquo;s register.</li>
+<li>A drum rhythm register &mdash; steps appear and disappear without the line sliding &mdash; and a pad tap flips a bit in it on both kinds, so a hand-chosen step survives ROTATE.</li>
+<li>The chord walker, the MOD + RESTART pump, gate collapse on ARM, pad pressure into the voices, and MIDI export of a snapshot&rsquo;s eight patterns.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-30">30 August 2026</h2>
+<p><strong>Fixed</strong></p>
 <ul>
-<li><strong>The surface repaints itself after a replug.</strong> Before this, everything but the pads came back dark.</li>
+<li>The surface repaints itself after a replug; before this everything but the pads came back dark.</li>
 <li>The pads stopped sticking, and a slow press sounds.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-22">22 August 2026</h2>
 <ul>
-<li><strong>A new factory snapshot</strong>, with the previous one kept beside it as the way back.</li>
+<li>A new factory snapshot, with the previous one kept beside it as the way back.</li>
 <li>A dropped pad light no longer stays wrong forever.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-21">21 August 2026</h2>
 <ul>
-<li><strong>The factory snapshot ships at 125 BPM</strong>, which the sequencer can keep exactly &mdash; 124 drifts by a bar every eight minutes.</li>
-<li><strong>The phrase clock corrects itself</strong> against the sequencer, which took its drift from 3,896 parts per million to seven.</li>
-<li>A held countdown says <code>HELD</code>, and a DROP with nobody nominated refuses out loud instead of muting all eight.</li>
+<li>The factory snapshot ships at 125 BPM, which the sequencer can keep exactly.</li>
+<li>The phrase clock corrects itself against the sequencer &mdash; drift fell from 3,896 parts per million to seven.</li>
 <li>A drone and ambient snapshot pack.</li>
+<li>A held countdown says HELD, and a DROP with nobody nominated refuses out loud instead of muting all eight.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-20">20 August 2026 &mdash; the performance package</h2>
 <ul>
-<li><strong>The phrase clock and ARM</strong>: one bar count for the whole instrument, and gestures that land on a boundary.</li>
-<li><strong>DROP</strong>, <strong>BREAK</strong>, <strong>HALF and DOUBLE</strong>, <strong>the CHANCE ramp</strong> and <strong>the ratchet ramp</strong>.</li>
-<li><strong>The mute grid</strong> on MUTE, and <strong>beat repeat</strong> on the transport arrow.</li>
-<li><strong>The PENDING page</strong>, which says what is armed and how long it has left.</li>
-<li><strong>A master insert</strong> &mdash; one filter across the whole mix.</li>
-<li>The moving sweep marker was <em>removed</em>: redrawing it was rebuilding both screens six times a second and taking the controller off the USB bus. What it said &mdash; how fast this is moving &mdash; became a word on the label instead.</li>
+<li>The phrase clock and ARM: one bar count for the whole instrument, and gestures that land on a boundary.</li>
+<li>DROP, BREAK, HALF and DOUBLE, the CHANCE ramp and the ratchet ramp.</li>
+<li>The mute grid on MUTE, beat repeat on the transport arrow, and the PENDING page.</li>
+<li>A master insert &mdash; one filter across the whole mix.</li>
+<li>The moving sweep marker was removed: redrawing it was taking the controller off the USB bus.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-19">19 August 2026</h2>
 <ul>
-<li><strong>Drift</strong> &mdash; the pattern itself moves at the wrap, and refuses on any channel you have taken over.</li>
-<li><strong>The big encoder became the page ring</strong>, so every mode can hold more than one page.</li>
-<li><strong>RATCHET</strong>, <strong>REROLL</strong> and the kit window.</li>
-<li>A plugin&rsquo;s switches reached the F row.</li>
-<li>HITS and ROTATE were being stored and displayed without reaching the pattern. Fixed at the single write path rather than at the callers.</li>
+<li>Drift &mdash; the pattern itself moves at the wrap, and refuses on any channel you have taken over.</li>
+<li>The big encoder became the page ring, so every mode can hold more than one page.</li>
+<li>RATCHET, REROLL, the kit window, and a plugin&rsquo;s switches on the F row.</li>
+<li>Fixed: HITS and ROTATE were stored and displayed without ever reaching the pattern.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-18">18 August 2026</h2>
 <ul>
-<li><strong>The genre pack</strong>: fifty ready-made arrangements.</li>
-<li>A failing wrap was isolated to its own channel, so one bad channel can no longer take the instrument silent.</li>
+<li>The genre pack: fifty ready-made arrangements.</li>
+<li>A failing wrap is isolated to its own channel, so one bad channel cannot take the instrument silent.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-16">16 August 2026</h2>
 <ul>
-<li><strong>The voice generator split in two</strong>: MELODY and RHYTHM, so a line&rsquo;s notes and its rests evolve separately.</li>
-<li>Played steps on a voice draw amber, so you can see what is yours.</li>
+<li>The voice generator split into MELODY and RHYTHM, so a line&rsquo;s notes and its rests evolve separately.</li>
+<li>Played steps on a voice draw amber.</li>
 <li>Encoder sensitivity halved, with TEMPO held restoring the old speed.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-15">15 August 2026</h2>
 <ul>
-<li>Navigation buttons stay lit, and the mode buttons go home.</li>
-<li>REC lights only where recording is possible.</li>
+<li>Navigation buttons stay lit, the mode buttons go home, and REC lights only where recording is possible.</li>
 </ul>
+<hr>
 
 <h2 id="2026-08-14">14 August 2026</h2>
 <ul>
-<li><strong>Modulation</strong>: hold MOD and an encoder sets how a value moves rather than what it is. Rates, shapes, depth, and MOD + ERASE to clear.</li>
+<li>Modulation: hold MOD and an encoder sets how a value moves rather than what it is &mdash; rates, shapes, depth, and MOD + ERASE to clear. <a href="modulation.html">Read</a></li>
 </ul>
+<hr>
 
 <h2 id="2026-08-13">13 August 2026 &mdash; the instrument becomes its own project</h2>
 <ul>
-<li>The driver, the daemon, the installer and the guide moved into one repository, self-contained, with the eight-channel instrument already playing: five euclidean drum channels and three Turing-machine voices.</li>
+<li>The driver, the daemon, the installer and the guide moved into one self-contained repository, with the eight-channel instrument already playing.</li>
 </ul>
+<hr>
 
 <h2 id="see-also">See also</h2>
 <ul>
