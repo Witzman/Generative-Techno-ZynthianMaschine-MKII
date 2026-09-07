@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coming from Maschine — Generative-Techno ZynthianMaschine MKII</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="components.css">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: {
+  primaryColor: '#17181b', primaryTextColor: '#efece4',
+  primaryBorderColor: '#8fbde0', lineColor: '#8fbde0',
+  secondaryColor: '#1e1f23', tertiaryColor: '#131316',
+  actorBkg: '#17181b', actorTextColor: '#efece4',
+  actorBorder: '#8fbde0', actorLineColor: '#8fbde0',
+  activationBkgColor: '#26272c', activationBorderColor: '#8fbde0',
+  signalColor: '#8fbde0', signalTextColor: '#17181b',
+  labelBoxBkgColor: '#17181b', labelBoxBorderColor: '#8fbde0', labelTextColor: '#efece4',
+  noteBkgColor: '#1e1f23', noteTextColor: '#efece4', noteBorderColor: '#8fbde0',
+  titleColor: '#efece4',
+  clusterBkg: '#1e1f23', clusterBorder: '#8fbde0', clusterTextColor: '#efece4',
+  fillType0: '#17181b', fillType1: '#1e1f23', fillType2: '#131316'
+} });</script>
+</head>
+<body>
+<header id="site-header">
+  <a href="index.html"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="22" height="22" class="brand-mark" fill="none" role="img" aria-label="Generative Techno ZynthianMaschine MKII"><polygon points="60,6 106.77,33 106.77,87 60,114 13.23,87 13.23,33" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><rect x="26.6" y="49" width="5.2" height="22" rx="2.4" fill="currentColor"/><rect x="35.4" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="44.2" y="38" width="5.2" height="44" rx="2.4" fill="currentColor"/><rect x="53" y="44" width="5.2" height="32" rx="2.4" fill="currentColor"/><rect x="61.8" y="48" width="5.2" height="24" rx="2.4" fill="currentColor"/><rect x="70.6" y="34" width="5.2" height="52" rx="2.4" fill="#2e7fe8"/><rect x="79.4" y="40" width="5.2" height="40" rx="2.4" fill="#2e7fe8"/><rect x="88.2" y="46" width="5.2" height="28" rx="2.4" fill="#2e7fe8"/></svg><span>Generative-Techno ZynthianMaschine MKII</span></a> &mdash; Build Guide
+</header>
+<div id="layout">
+<nav id="sidebar" aria-label="Navigation">
+<input id="nav-search" type="search" placeholder="Search…" aria-label="Search documentation" autocomplete="off">
+<div id="search-results" style="display:none">
+<p id="search-no-results" style="display:none">No results found.</p>
+<ul id="search-results-list"></ul>
+</div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Get started</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="coming-from-maschine.html" aria-current="page"><strong>Coming from Maschine</strong></a></li>
+<li><a href="00-start.html">Requirements</a></li>
+<li><a href="01-fast-installation.html">Fast installation</a></li>
+<li><a href="changelog.html">Changelog</a></li>
+<li><a href="04-manual-installation.html">Manual installation</a></li>
+</ul></div>
+<div class="track" data-collapsed="true">
+<button class="track-header" aria-expanded="false"><span class="track-label">Going deeper</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list" style="display:none">
+<li><a href="features.html">Features</a></li>
+<li><a href="05-internals.html">Internals</a></li>
+<li><a href="a1-touchscreen-patch.html">Touchscreen patch</a></li>
+<li><a href="whats-next.html">What could come next</a></li>
+</ul></div>
+<div class="track">
+<button class="track-header" aria-expanded="true"><span class="track-label">Playing the instrument</span><span class="track-arrow" aria-hidden="true">&#9660;</span></button>
+<ul class="track-list">
+<li><a href="02-features.html">What it is</a></li>
+<li><a href="03-playing.html">Quick start</a></li>
+<li><a href="the-surface.html">The surface</a></li>
+<li><a href="generating-patterns.html">Generating patterns</a></li>
+<li><a href="playing-and-recording.html">Playing and recording</a></li>
+<li><a href="performing.html">Performing</a></li>
+<li><a href="sound-and-presets.html">Sound and presets</a></li>
+<li><a href="deep-parameters.html">Deep parameter control</a></li>
+<li><a href="mixing-and-effects.html">Mixing and effects</a></li>
+<li><a href="modulation.html">Modulation</a></li>
+<li><a href="saving.html">Saving your work</a></li>
+</ul></div>
+<a class="sb-donate" href="https://paypal.me/ChristianWitzel" target="_blank" rel="noopener noreferrer external"><span aria-hidden="true">&#9829;</span> Support this project</a>
+</nav>
+<main>
+<article>
+<h1 id="coming-from-maschine">Coming from Maschine</h1>
+<p><strong>You already know this controller. You do not need to know anything about Zynthian.</strong> This page is the translation: what your MK2 becomes, what each printed button does now, and which words in the rest of the guide are borrowed from the platform underneath.</p>
+<hr>
+
+<h2 id="short-version">The short version</h2>
+<p>Your MK2 stops being a controller and becomes <strong>the whole instrument</strong>. A Raspberry Pi takes the place of your computer, and <strong>Maschine software is not involved at any point</strong> &mdash; not installed, not running, not needed. The pads, both displays, the encoders and every LED are driven directly over USB.</p>
+<p>What you get is not a Maschine clone. It is an <strong>eight-channel generative groovebox</strong>: five drum channels and three melodic voices, always alive, where <strong>the machine writes the patterns and you steer them</strong>. You set how many hits, where they sit, how much they wander &mdash; not which sixteenth is on.</p>
+<p><strong>The MK2 cannot be used by Maschine software while this is running</strong>, and nothing here writes to the controller's own memory. Unplug it from the Pi, plug it into your computer, and it is an ordinary MK2 again.</p>
+<hr>
+
+<h2 id="what-is-zynthian">What Zynthian is, and why it is underneath</h2>
+<p><strong>Zynthian is a Linux synth platform for the Raspberry Pi.</strong> It supplies the parts an instrument needs and this project does not want to reinvent: the <strong>sound engines</strong> (samplers and synths), the <strong>sequencer</strong> that holds the patterns, the <strong>effects</strong>, the mixer, and the <strong>snapshots</strong> that save all of it. You flash it to an SD card; it is a complete operating system, not an application.</p>
+<p>It normally has its own small touchscreen and four knobs. Here it is the <strong>engine room</strong>, and your MK2 is the <strong>surface</strong>. The patterns the generator writes go into Zynthian's own sequencer, which is why they survive a save and why Zynthian's pattern editor shows exactly what your pads show &mdash; the same notes, not a copy.</p>
+<p><strong>You can play without ever looking at it.</strong> A screen is needed to install and to save; everything else is on the panel in front of you.</p>
+<hr>
+
+<h2 id="printed-buttons">Your printed buttons, and what they do now</h2>
+<p><strong>Most legends still mean what they say. Four do not</strong>, and those four are the whole learning curve. Every number below was measured off the hardware, one button at a time.</p>
+<table><thead><tr><th>Printed on the panel</th><th>What it does here</th></tr></thead><tbody>
+<tr><td><strong>PAD MODE</strong></td><td><strong>FREEZE</strong> &mdash; holds the machine still so nothing evolves under your hands. A tap latches, a hold is momentary</td></tr>
+<tr><td><strong>SELECT</strong></td><td><strong>ARM</strong> &mdash; builds a gesture that fires on the next bar instead of under your finger: a drop, a break, half or double time, a ratchet ramp</td></tr>
+<tr><td><strong>SWING</strong></td><td><strong>MOD</strong> &mdash; hold it and an encoder sets how a value <em>moves</em> rather than what it is</td></tr>
+<tr><td><strong>ALL</strong></td><td><strong>The lens</strong> &mdash; hold it and the eight encoders stop being eight controls of one channel and become <em>one</em> control across all eight</td></tr>
+<tr><td>GROUP A&ndash;H</td><td>Selects the channel. Eight, fixed, always alive &mdash; no groups to create or load</td></tr>
+<tr><td>CONTROL &middot; STEP &middot; AUTO &middot; VOLUME</td><td>The four modes: how it sounds &middot; what it plays &middot; what the machine does by itself &middot; what holds for everything</td></tr>
+<tr><td>The eight encoders and two displays</td><td>Eight controls of the selected channel, labelled on the screen above them. Which eight depends on the mode and the page</td></tr>
+<tr><td>The big encoder</td><td>Turn it to walk the pages of the current mode. <strong>Press it for HOME</strong> &mdash; back to the start, latches dropped, nothing armed lost</td></tr>
+<tr><td>The two buttons beside it</td><td>Previous / next sound for the selected channel: a sample on a drum, a preset on a synth. Hold SHIFT to step the kit instead</td></tr>
+<tr><td>Arrows beside the display</td><td>Page back and forward within the current mode</td></tr>
+<tr><td>MUTE &middot; SOLO</td><td>What you expect &mdash; and MUTE's grid has a second row that <strong>lands on the bar</strong> instead of immediately</td></tr>
+<tr><td>F1&ndash;F8</td><td>Mute channels A&ndash;H, in every mode. Solo while SOLO is held</td></tr>
+<tr><td>DUPLICATE</td><td>Hold it: the sixteen pads become sixteen <strong>banks</strong> &mdash; whole eight-channel arrangements, saved with the set</td></tr>
+<tr><td>ERASE</td><td><strong>Hold only</strong>; a bare press does nothing. Held with a pad it removes that step; with other buttons it cancels what they armed</td></tr>
+<tr><td>PATTERN</td><td>Regenerates the selected channel. One press arms it, a second press before the bar takes it back</td></tr>
+<tr><td>GRID</td><td>The step division. <strong>SHIFT + GRID switches a channel between drum and voice behaviour</strong> without changing its engine</td></tr>
+<tr><td>NOTE REPEAT</td><td>Undo for a voice's melody &mdash; four deep. Dark when there is nothing to undo</td></tr>
+<tr><td>PLAY &middot; REC &middot; RESTART</td><td>Transport. <strong>SHIFT + REC</strong> records the master output to a file on the Pi</td></tr>
+<tr><td>STEP&#9654; (transport)</td><td>Beat repeat while held</td></tr>
+<tr><td>TEMPO</td><td>Tempo. Held, it restores the old encoder speed for fine moves</td></tr>
+<tr><td>NAVIGATE &middot; SHIFT</td><td>What they say</td></tr>
+<tr><td><strong>BROWSE &middot; SAMPLING &middot; ENTER &middot; SCENE &middot; &#9664;STEP</strong></td><td><strong>Nothing, and they never have.</strong> They sit dark with the rest of the unbound panel</td></tr>
+</tbody></table>
+<p><a href="the-surface.html">The surface</a> is the full grammar, button by button.</p>
+<hr>
+
+<h2 id="what-is-gone">What is gone, and what took its place</h2>
+<table><thead><tr><th>In Maschine software</th><th>Here</th></tr></thead><tbody>
+<tr><td>Sampling, slicing, the browser</td><td><strong>Not present.</strong> Sounds come from Zynthian's engines and packs; you step through them with the two buttons beside the big encoder</td></tr>
+<tr><td>Groups holding Sounds holding plugins</td><td><strong>Eight fixed channels</strong>, each with its own engine and its own pair of effects. Nothing is built or torn down while you play</td></tr>
+<tr><td>Scenes and the arranger</td><td><strong>Banks</strong> &mdash; sixteen whole arrangements under DUPLICATE, switched live and saved with the set. There is no song timeline: you perform it</td></tr>
+<tr><td>Patterns you draw</td><td><strong>Patterns the machine writes.</strong> You set hits, rotation, randomness and how far it may stray; the pads show what it wrote, and a tap edits what it knows</td></tr>
+<tr><td>Automation lanes</td><td><strong>Modulators</strong> &mdash; bar-synced shapes bound to any control, and macros that land on the bar</td></tr>
+<tr><td>Your project file</td><td><strong>Snapshots</strong>, Zynthian's own format. They hold the patterns, the mix, the effects and everything the surface was showing</td></tr>
+</tbody></table>
+<hr>
+
+<h2 id="lights">The lights say five things</h2>
+<p>NI's convention is that a Group's colour is its identity. That is kept: <strong>hue is which channel</strong>, and brightness carries the state. Every lamp on the panel says the same five things, so a light you have not seen before is still readable:</p>
+<table><thead><tr><th>The lamp is</th><th>It means</th></tr></thead><tbody>
+<tr><td>Dark</td><td>Pressing it would do nothing &mdash; either it has no job, or its job is unavailable right now</td></tr>
+<tr><td>Dim</td><td>Available</td></tr>
+<tr><td>Bright</td><td>Acting now</td></tr>
+<tr><td>Blinking</td><td>Latched &mdash; you tapped it and it stayed</td></tr>
+<tr><td>Pulsing</td><td>Counting down to a bar</td></tr>
+</tbody></table>
+<p><strong>A dark button is never a question</strong>, which is why the unbound ones are named above rather than left for you to discover.</p>
+<hr>
+
+<h2 id="glossary">Zynthian words you will meet</h2>
+<table><thead><tr><th>Word</th><th>What it means here</th></tr></thead><tbody>
+<tr><td><strong>Snapshot</strong></td><td>The save file. Everything: patterns, mix, effects, engines, and what the surface was showing</td></tr>
+<tr><td><strong>Chain</strong></td><td>One channel's signal path &mdash; its engine plus its effects. There are eight, and they are built for you</td></tr>
+<tr><td><strong>Engine</strong></td><td>The thing making the sound: a sampler for the drums, a synth for the voices</td></tr>
+<tr><td><strong>Preset</strong></td><td>A sound for one engine. Distinct from a snapshot, which is the whole instrument</td></tr>
+<tr><td><strong>webconf</strong></td><td>Zynthian's configuration page, in a browser on your computer. Used to install and to load, not to play</td></tr>
+<tr><td><strong>LV2</strong></td><td>The plugin format the effects use, like VST on your computer</td></tr>
+</tbody></table>
+<hr>
+
+<h2 id="next">Where to go next</h2>
+<ul>
+<li><a href="00-start.html">Requirements</a> &mdash; what to buy and flash, if you have not yet</li>
+<li><a href="01-fast-installation.html">Fast installation</a> &mdash; one command on the Pi</li>
+<li><a href="03-playing.html">Quick start</a> &mdash; two minutes from a running rig to something worth hearing</li>
+<li><a href="the-surface.html">The surface</a> &mdash; the whole grammar, once the four renamed buttons make sense</li>
+</ul>
+</article>
+</main>
+<div id="toc-column"></div>
+</div>
+<script src="search.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
