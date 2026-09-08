@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ctrldev:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Driver unit tests
+        working-directory: ctrldev
+        run: python3 -m unittest discover -s tests -q
+
+  daemon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config
+      - name: Cargo tests
+        working-directory: daemon
+        run: cargo test
+
+  system:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: system/ file checks
+        run: bash system/tests/test-system-files.sh
+
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: tools/ unit tests
+        run: python3 -m unittest discover -s tools/tests -q
+
+  dryrun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer dry runs against poison stubs
+        run: bash system/tests/test-dry-run.sh
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Documentation gates, read-only
+        run: python3 tools/docs-gate.py --check
+
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: No assistant attribution trailers
+        run: |
+          set -e
+          range="origin/main..HEAD"
+          git rev-parse --verify origin/main >/dev/null 2>&1 || range="HEAD"
+          if git log "$range" | grep -nE 'Co-Authored-By|Generated with \[?Claude'; then
+            echo "::error::Working rule 10 - every commit is authored by witzman alone."
+            exit 1
+          fi
+          echo "clean"
+      - name: No internal paths in the published guide
+        run: |
+          set -e
+          if grep -rnE 'notes/[A-Za-z0-9_./-]+\.(md|py|sh|json|txt)' docs/; then
+            echo "::error::Working rule 8 - docs/ may not cite a path a reader cannot reach."
+            exit 1
+          fi
+          echo "clean"
