@@ -9674,10 +9674,24 @@ class RecordKeepsTheRemainder(unittest.TestCase):
         for playpos in (0, 24, 48, 240):
             self.assertEqual(tl.record_offset(playpos, 24, 16), 0.0, playpos)
 
-    def test_an_early_hit_carries_a_negative_offset(self):
-        offset = tl.record_offset(44, 24, 16)      # 4 clocks before step 2
-        self.assertLess(offset, 0.0)
-        self.assertAlmostEqual(offset, -4 / 24, places=6)
+    def test_an_early_hit_is_clamped_to_zero_and_that_is_the_platforms_limit(self):
+        """NOT a rounding choice - a representation limit, and it is checked
+        here because it is the half of this feature that does NOT work.
+
+        fileWriteBCD (zynseq.cpp:851) writes `uint16_t(v)` and
+        `uint16_t((v - units) * 10000)`, so -0.167 is saved as 0 and 63869 and
+        comes back as +6.39 steps. With quantise on, an offset over 0.5 plays
+        the note a step LATE (track.cpp:182), so a negative offset would move a
+        take the moment it was saved and reloaded. zynseq's own recorder clamps
+        identically and says why in a comment it left in place."""
+
+        offset = tl.record_offset(44, 24, 16)      # 4 clocks BEFORE step 2
+        self.assertEqual(offset, 0.0)
+
+    def test_no_offset_is_ever_negative_anywhere_in_a_bar(self):
+        for playpos in range(0, 24 * 16):
+            self.assertGreaterEqual(tl.record_offset(playpos, 24, 16), 0.0,
+                                    playpos)
 
     def test_a_late_hit_carries_a_positive_offset(self):
         offset = tl.record_offset(52, 24, 16)      # 4 clocks after step 2
@@ -9686,37 +9700,61 @@ class RecordKeepsTheRemainder(unittest.TestCase):
 
     def test_the_offset_never_leaves_its_own_step(self):
         """Bounded by construction: record_step took the NEAREST line, so what
-        is left cannot reach the next one. Half a step either way, no more."""
+        is left cannot reach the next one - and the early half is clamped, so
+        the range is [0, 0.5] rather than [-0.5, 0.5].
+
+        THE UPPER BOUND IS WHAT KEEPS TODAY'S PLACEMENT. Quantise-on plays a
+        note one step late when its offset exceeds 0.5 (track.cpp:182-184), so
+        an offset that could reach 0.5+ would move a hit that lands on the
+        grid today."""
 
         for playpos in range(0, 24 * 16):
             offset = tl.record_offset(playpos, 24, 16)
-            self.assertGreaterEqual(offset, -0.5, playpos)
+            self.assertGreaterEqual(offset, 0.0, playpos)
             self.assertLessEqual(offset, 0.5, playpos)
 
-    def test_the_offset_and_the_step_describe_the_hit_together(self):
-        """The pair has to reconstruct where the strike actually was, or the
-        remainder is being kept and still lost."""
+    def test_a_late_hit_is_reconstructable_and_an_early_one_is_not(self):
+        """The pair must rebuild where a LATE strike was - that is the half of
+        the feature that works. An early strike cannot be rebuilt, because the
+        platform cannot store its offset, and this test says so rather than
+        leaving it to be discovered."""
 
-        for playpos in range(0, 24 * 16, 7):
+        recovered, lost = 0, 0
+        for playpos in range(0, 24 * 16):
             step = tl.record_step(playpos, 24, 16)
             offset = tl.record_offset(playpos, 24, 16)
             rebuilt = (step + offset) * 24
-            # A strike past the last step's midpoint wraps to step 0, so allow
-            # the loop length when comparing.
-            self.assertTrue(
-                abs(rebuilt - playpos) < 1.0
-                or abs(rebuilt + 24 * 16 - playpos) < 1.0,
-                f"playpos {playpos}: step {step} offset {offset}")
+            close = (abs(rebuilt - playpos) < 1.0
+                     or abs(rebuilt + 24 * 16 - playpos) < 1.0)
+            if close:
+                recovered += 1
+            else:
+                lost += 1
+                # Every unrecoverable strike is an EARLY one, clamped to 0.
+                self.assertEqual(offset, 0.0, playpos)
+        # Half the bar is recoverable, and it is the late half.
+        self.assertGreater(recovered, 0)
+        self.assertGreater(lost, 0)
 
-    def test_a_late_last_step_hit_wraps_with_a_negative_offset(self):
-        """THE LOOP WRAP IS OURS AND DIFFERS FROM ZYNSEQ'S, which is the seam
-        in this change. Our `% steps` sends a hit past the last step's midpoint
-        to step 0; track.cpp can only push an offset within the step it has, so
-        it could not express that at all."""
+    def test_a_late_hit_rebuilds_to_within_a_clock(self):
+        # LATE of their own line, every one: playpos mod 24 inside [0, 12).
+        # 70 was in this list and is 2 clocks EARLY of step 3, so it clamps -
+        # the list was wrong, not the clamp.
+        for playpos in (25, 30, 34, 49, 55, 73):
+            step = tl.record_step(playpos, 24, 16)
+            offset = tl.record_offset(playpos, 24, 16)
+            self.assertAlmostEqual((step + offset) * 24, playpos, delta=1.0)
+
+    def test_a_late_last_step_hit_wraps_to_step_zero_on_the_grid(self):
+        """THE LOOP WRAP IS OURS AND DIFFERS FROM ZYNSEQ'S. Our `% steps`
+        sends a hit past the last step's midpoint to step 0, which is right -
+        the loop wraps within one step, so the note fires immediately. Its
+        offset is clamped to 0, so it lands exactly on the grid rather than
+        carrying a fraction zynseq would read as +6.39 steps."""
 
         last = 24 * 16 - 4          # four clocks before the loop point
         self.assertEqual(tl.record_step(last, 24, 16), 0)
-        self.assertLess(tl.record_offset(last, 24, 16), 0.0)
+        self.assertEqual(tl.record_offset(last, 24, 16), 0.0)
 
     def test_a_nonsense_division_is_refused_rather_than_dividing_by_zero(self):
         self.assertEqual(tl.record_offset(10, 0, 16), 0.0)

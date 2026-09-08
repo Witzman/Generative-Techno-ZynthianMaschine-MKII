@@ -929,16 +929,42 @@ class techno_lib:
         line, so what is left over cannot reach the next one. Half a step
         either way, at most.
 
-        SIGNED, AND THAT MATTERS - it is the number we hand the library rather
-        than one it derives. The platform's own rounding is worse than ours
-        here: a negative offset is commented out at zynseq.cpp:492-497, so it
-        always floors. Ours is the number the player actually played.
+        NEVER NEGATIVE, AND THAT IS NOT OUR CHOICE - corrected 2026-09-08,
+        before it shipped, after reading two more files. An early strike is
+        clamped to 0.0 and its fraction is lost, which is half of what this
+        function is for, and the reason is that the platform cannot represent
+        it:
+
+          * `fileWriteBCD` (zynseq.cpp:851-857) writes a float as
+            `uint16_t(v)` plus `uint16_t((v - units) * 10000)`. For v = -0.167
+            that is 0 and `uint16_t(-1667)` = **63869**, so a negative offset
+            comes back off a snapshot as **+6.39 steps**. With quantise on,
+            `offset > 0.5` plays the note ONE STEP LATE (track.cpp:182-184) -
+            so a saved and reloaded take would have moved.
+          * zynseq's own recorder clamps the same way and says why in a
+            comment it left in the source: `if (offset < 0.0) offset = 0;` and
+            `/* Currently can't set negative offset => it would be nice */`
+            (zynseq.cpp:490-497).
+
+        THE ALTERNATIVE WAS REJECTED FOR A VISIBLE REASON. Storing FLOOR plus
+        a fraction in [0,1) - which is what upstream does, `nStep =
+        getPatternPlayhead()` being an integer division - represents an early
+        hit exactly, as (step - 1, 0.95). But then the PAD and the pattern
+        editor light the step before the one the player aimed at, because a
+        note's drawn position is its stored step. Humans anticipate, so
+        slightly-early is the COMMON case, and it would have moved the common
+        case backwards on the grid to buy the rare one.
+
+        So: late hits are fully reversible, early hits are not, and that
+        asymmetry is inherited rather than invented. record_step is unchanged,
+        which is what keeps the pads and today's placement exactly as they
+        were.
         """
 
         if cps <= 0 or steps <= 0:
             return 0.0
         line = int((playpos + cps // 2) // cps) * cps
-        return (playpos - line) / float(cps)
+        return max(0.0, (playpos - line) / float(cps))
 
     @staticmethod
     def record_duration(held_clocks, cps, step, steps):
