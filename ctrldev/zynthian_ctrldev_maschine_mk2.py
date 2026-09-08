@@ -5335,6 +5335,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 ctypes.c_uint32, ctypes.c_uint8, ctypes.c_uint8]
             self.libseq.getStutterCount.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
             self.libseq.getStutterCount.restype = ctypes.c_uint8
+            # THE ONE THAT WAS MISSING, found by the Zynthian-alignment audit
+            # of 2026-09-07 and fixed 2026-09-08 (item 72). It is called in
+            # _pattern_notes and was read back through ctypes' default c_int
+            # over a uint8_t return (zynseq.h:527) - which is the failure this
+            # function's own docstring is about, in this function. Three of
+            # four registered is the shape: setStutterDur is right there on the
+            # line above, so the pair LOOKED done.
+            self.libseq.getStutterDur.argtypes = [ctypes.c_uint32, ctypes.c_uint8]
+            self.libseq.getStutterDur.restype = ctypes.c_uint8
         except AttributeError:
             logging.warning("Maschine: libzynseq has no stutter - RATCHET is "
                             "unavailable on this build")

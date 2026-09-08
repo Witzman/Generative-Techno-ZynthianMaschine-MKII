@@ -2169,3 +2169,87 @@ class ADriverHeaderClaimIsCheckedAgainstTheCode(unittest.TestCase):
             claimed, set(tlib.techno_lib.CCS_MEASURED_AND_UNCLAIMED),
             "the driver header's free-CC list disagrees with "
             "CCS_MEASURED_AND_UNCLAIMED, which is the set a test enforces")
+
+
+class EveryProbedSymbolIsFullyRegistered(unittest.TestCase):
+    """A ctypes call with no argtypes is silently WRONG, not an error - and the
+    driver's own probe docstrings say so at length. That is the whole reason
+    the probes exist: `zynseq.py` registers nothing for the per-step calls
+    (`:94-:125` there), so the driver must.
+
+    ITEM 72, 2026-09-08: `_probe_stutter` registered three of its four symbols.
+    `getStutterDur` was called with neither argtypes nor restype, so a
+    `uint8_t` return (`zynseq.h:527`) was read back through ctypes' default
+    `c_int`. Three of four is this project's commonest shape - one verb has an
+    unrelated reason to work and hides the rest.
+
+    SO THIS GUARD IS ABOUT THE CLASS AND NOT THE INSTANCE. It walks every
+    `_probe_*` function there is, present and future, and asks the two
+    questions that can be asked of the text: is every symbol you touched given
+    argtypes, and is every GETTER given a restype as well. A future probe that
+    forgets one fails here rather than on the rig.
+    """
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _probes(self):
+        """{probe name: {symbol: {"argtypes", "restype"}}}, from the source."""
+
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        probes = {}
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.FunctionDef)
+                    and node.name.startswith("_probe_")):
+                continue
+            found = {}
+            for leaf in ast.walk(node):
+                if not isinstance(leaf, ast.Assign):
+                    continue
+                target = leaf.targets[0]
+                kind = getattr(target, "attr", None)
+                if kind not in ("argtypes", "restype"):
+                    continue
+                # self.libseq.<symbol>.<kind> = ...
+                symbol = getattr(getattr(target, "value", None), "attr", None)
+                if symbol:
+                    found.setdefault(symbol, set()).add(kind)
+            probes[node.name] = found
+        return probes
+
+    def test_there_are_probes_to_check(self):
+        # If this ever reads zero, the guard has stopped guarding and the two
+        # tests below would pass over an empty set.
+        probes = self._probes()
+        self.assertGreaterEqual(len(probes), 2, sorted(probes))
+        for name, symbols in probes.items():
+            self.assertTrue(symbols, f"{name} registers nothing")
+
+    def test_every_symbol_a_probe_touches_gets_argtypes(self):
+        for probe, symbols in self._probes().items():
+            for symbol, kinds in symbols.items():
+                self.assertIn("argtypes", kinds,
+                              f"{probe} sets no argtypes for {symbol} - an "
+                              f"unregistered call is silently wrong")
+
+    def test_every_getter_a_probe_touches_gets_a_restype(self):
+        for probe, symbols in self._probes().items():
+            for symbol, kinds in symbols.items():
+                if not symbol.startswith("get"):
+                    continue
+                self.assertIn("restype", kinds,
+                              f"{probe} sets no restype for {symbol} - the "
+                              f"default is c_int, whatever the header says")
+
+    def test_the_stutter_probe_covers_all_four_stutter_symbols(self):
+        """Named explicitly as well, because the generic tests above can only
+        see symbols the probe MENTIONS. A symbol left out entirely is invisible
+        to them, and getStutterDur was left out entirely."""
+
+        symbols = self._probes().get("_probe_stutter", {})
+        for symbol in ("setStutterCount", "setStutterDur",
+                       "getStutterCount", "getStutterDur"):
+            self.assertIn(symbol, symbols,
+                          f"_probe_stutter never touches {symbol}")
