@@ -1562,3 +1562,94 @@ class TheMixerIsHeardRatherThanPolled(DispatchCase):
                         "the plugin-port half of the fact is not stated")
         self.assertTrue("THE MIXER DOES SIGNAL" in src,
                         "the mixer half of the fact is not stated")
+
+
+class TheTouchscreenKeymapFollowsTheSurface(DispatchCase):
+    """Item 73. setScale (zynseq.h:625) and setTonic (:635) are per-pattern and
+    read by nothing but the GUI, so this is display-only and cannot change a
+    note - and the driver never wrote either, so the stock pattern editor's
+    keymap contradicted the surface's own ROOT and SCALE.
+
+    WHAT THESE CANNOT SEE: whether the tonic row on the touchscreen actually
+    moves. libseq is a recorder here. They check that the write HAPPENS, on
+    every channel, from every path that changes the key - which is the half
+    that has been wrong eight times in this project under the name STORED,
+    DRAWN, NEVER WRITTEN.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # What _probe_keymap() decides on the rig. False on an unbound driver,
+        # so every write path below would return early - which is correct
+        # behaviour and useless as a test.
+        self.d.has_keymap = True
+
+    def _wrote(self, name):
+        return [c for c in self.d.libseq.calls if c[0] == name]
+
+    def test_pushing_the_keymap_writes_both_on_every_channel(self):
+        self.d.libseq.calls.clear()
+        self.d._push_keymap()
+        self.assertEqual(len(self._wrote("setTonic")), 8)
+        self.assertEqual(len(self._wrote("setScale")), 8)
+
+    def test_it_writes_the_mapped_index_and_not_our_own(self):
+        # Our PENT is index 5; zynseq's Pentatonic Minor is 9. A pass-through
+        # would write 5 and the editor would draw Harmonic Minor.
+        self.d.globals["scale"] = [s[0] for s in self.mod.tlib.SCALES].index("PENT")
+        self.d.libseq.calls.clear()
+        self.d._push_keymap()
+        self.assertEqual({c[1][0] for c in self._wrote("setScale")}, {9})
+
+    def test_the_tonic_is_the_root_the_player_dialled(self):
+        self.d.globals["root"] = 7
+        self.d.libseq.calls.clear()
+        self.d._push_keymap()
+        self.assertEqual({c[1][0] for c in self._wrote("setTonic")}, {7})
+
+    def test_an_unmapped_scale_writes_no_scale_but_still_writes_the_tonic(self):
+        tlib = self.mod.tlib
+        original = dict(tlib.ZYNSEQ_SCALE)
+        try:
+            for key in tlib.ZYNSEQ_SCALE:
+                tlib.ZYNSEQ_SCALE[key] = None
+            self.d.libseq.calls.clear()
+            self.d._push_keymap()
+            self.assertEqual(self._wrote("setScale"), [])
+            self.assertEqual(len(self._wrote("setTonic")), 8)
+        finally:
+            tlib.ZYNSEQ_SCALE.clear()
+            tlib.ZYNSEQ_SCALE.update(original)
+
+    def test_a_resync_pushes_it(self):
+        """A snapshot load and a bank switch both replace the patterns under
+        the driver, and both go through _resync_all - so the keymap has to be
+        rewritten there or it describes the outgoing bank."""
+
+        self.d.libseq.calls.clear()
+        self.d._resync_all()
+        self.assertTrue(self._wrote("setTonic"))
+
+    def test_every_path_that_changes_the_key_pushes_it(self):
+        """THREE of four broken is this project's commonest shape, so the call
+        sites are counted rather than sampled: _resync_all (snapshot, bank
+        switch, drift), the bar-synced landing in _voice_wraps, and
+        apply_global for the case where there is no voice to wait for."""
+
+        import ast
+        with open(rig_stub.DRIVER_PATH, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        callers = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            for leaf in ast.walk(node):
+                if (isinstance(leaf, ast.Call)
+                        and getattr(leaf.func, "attr", None) == "_push_keymap"):
+                    callers.add(node.name)
+        # _wrap_channel is where a voice takes a pending key - the bar-synced
+        # landing - not _voice_wraps, which only dispatches to it.
+        for expected in ("_resync_all", "_wrap_channel", "apply_global", "init"):
+            self.assertIn(expected, callers,
+                          f"{expected} does not push the keymap; callers are "
+                          f"{sorted(callers)}")

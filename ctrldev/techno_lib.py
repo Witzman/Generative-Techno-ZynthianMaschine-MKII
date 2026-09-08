@@ -941,6 +941,33 @@ class techno_lib:
 
     BASE_NOTE = 36          # C2 - BASS sits here with OCTAVE at 0
 
+    # THE INDEX IS WHAT A SNAPSHOT STORES, so the first six may never move and
+    # anything new is APPENDED. Reordering them would silently re-key every
+    # snapshot already written - a house set saved in MIN would come back in
+    # whatever now sits at index 0.
+    #
+    # NINE MORE ADDED 2026-09-08 by owner decision, asked as "are there even
+    # more uncommon scales - oriental, asian - we could include?" and settled
+    # with the cost stated first: SCALE is a discrete encoder walk over
+    # len(SCALES), so fifteen entries is two and a half times the turning six
+    # was. That is the whole price; no new page, button or verb.
+    # notes/specs/2026-09-08-nine-more-scales.md carries what was rejected -
+    # all 60 of the Pi's list (a drawer), scales of our own invention (they
+    # would have no zynseq equivalent, so the touchscreen keymap could not
+    # follow them), the 3-degree entries, and Chromatic.
+    #
+    # EVERY ONE IS TAKEN FROM THE PI'S OWN scales.json, and that is deliberate
+    # rather than convenient: it is what lets ZYNSEQ_SCALE below map all
+    # fifteen exactly, so the stock pattern editor's keymap agrees with the
+    # surface for every value a player can dial.
+    #
+    # DEGREE COUNTS VARY AND THAT NEEDS NO CODE. degree_note, pitch_degree and
+    # chord_notes all divmod by len(intervals) rather than assuming seven, so
+    # a 4- or 5-degree scale works unaltered. Measured before shipping, at
+    # RANGE 2: MIN gives 14 distinct notes over 22 semitones, JAPAN 10 over 20,
+    # DIM7 8 over 21. A sparser scale covers the same pitch span with fewer
+    # notes, which is the musical point - DIM7 is an arpeggio generator rather
+    # than a key, and it is in the list on purpose.
     SCALES = (
         ("MIN",  (0, 2, 3, 5, 7, 8, 10)),
         ("MAJ",  (0, 2, 4, 5, 7, 9, 11)),
@@ -948,7 +975,57 @@ class techno_lib:
         ("PHR",  (0, 1, 3, 5, 7, 8, 10)),
         ("HMIN", (0, 2, 3, 5, 7, 8, 11)),
         ("PENT", (0, 3, 5, 7, 10)),
+        # --- appended 2026-09-08, never reordered ---
+        ("PHRMJ", (0, 1, 4, 5, 7, 8, 10)),   # Phrygian Major: b2 over a major
+                                             # third, the hard-techno interval
+        ("WHOLE", (0, 2, 4, 6, 8, 10)),      # no tonic pull at all
+        ("DIM7",  (0, 3, 6, 9)),             # the diminished stab
+        ("BLUES", (0, 3, 5, 6, 7, 10)),      # six notes, the b5
+        ("JAPAN", (0, 1, 5, 7, 8)),          # semitone and fourth, dark
+        ("IWATO", (0, 1, 5, 6, 10)),         # tritone, maximum tension
+        ("PELOG", (0, 1, 3, 7, 10)),         # gamelan, unequal steps
+        ("BALI",  (0, 1, 3, 7, 8)),          # close to JAPAN, brighter
+        ("HUNG",  (0, 2, 3, 6, 7, 8, 11)),   # the augmented second
     )
+
+    # OUR SCALE INDEX IS NOT ZYNSEQ'S, and this is a MAPPING rather than a
+    # pass-through. It exists so the stock pattern editor's keymap agrees with
+    # the surface's own SCALE (item 73): setScale (zynseq.h:625) and setTonic
+    # (:635) are per-pattern and read by nothing but the GUI
+    # (zynthian_gui_patterneditor.py:426, :822-823, :1466), so this is
+    # DISPLAY-ONLY and cannot change a note - which is also why no ear and no
+    # unit test on the audio can ever catch a wrong number here.
+    #
+    # MATCHED BY DEGREES, NEVER BY NAME. "Minor" alone could be natural,
+    # harmonic or melodic. Every one of the fifteen matches EXACTLY ONE entry
+    # in the Pi's list by its interval set, verified programmatically against
+    # notes/reference/2026-09-08-pi-scales-json.md - which is transcribed here
+    # because /zynthian/zynthian-data/ is on the rig and in none of our
+    # reference checkouts.
+    #
+    # NONE OF THESE MAY BE 0. The pattern editor treats scale 0 as the
+    # custom-keymap case (:822), not as a scale.
+    #
+    # None would mean "no honest equivalent, write nothing" - better a keymap
+    # the editor last set than one that is nearly right. Nothing needs it
+    # today, and the write path still handles it.
+    ZYNSEQ_SCALE = {
+        "MAJ":   1,    # Natural Major
+        "MIN":   2,    # Natural Minor
+        "HMIN":  5,    # Harmonic Minor
+        "BLUES": 7,    # Blues
+        "PENT":  9,    # Pentatonic Minor
+        "DOR":   13,   # Dorian
+        "PHR":   32,   # Phrygian
+        "PHRMJ": 33,   # Phrygian Major
+        "BALI":  37,   # Balinese
+        "JAPAN": 39,   # Japanese
+        "HUNG":  47,   # Hungarian Minor
+        "PELOG": 51,   # Pelog
+        "IWATO": 52,   # Iwato
+        "WHOLE": 53,   # Whole Tone
+        "DIM7":  55,   # 3 Semitone
+    }
 
     NOTE_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 

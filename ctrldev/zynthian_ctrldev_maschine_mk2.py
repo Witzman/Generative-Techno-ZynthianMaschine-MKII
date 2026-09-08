@@ -861,6 +861,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # _probe_step_chance() rather than assumed - see its docstring.
         self.has_step_chance = False
         self.has_stutter = False
+        # Decided by _probe_keymap() in init(), on the machine that runs the
+        # call. False here so a driver constructed but not bound - which is
+        # what every off-rig test does - writes nothing.
+        self.has_keymap = False
         # The sleeping state set per channel and kind: channel -> kind -> dict,
         # plus "<kind>:hits" and "<kind>:rot" from the legacy arrays. Pure
         # driver state - nothing in zynseq mirrors it, so there is nothing to
@@ -1735,6 +1739,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.globals["pending"].add(param)
             self._key_dirty = {i for i, ch in enumerate(tlib.CHANNELS)
                                if self.channel_kind(i) == "voice"}
+            if not self._key_dirty:
+                # NO VOICE TO WAIT FOR, so there is no wrap coming to land it
+                # on and the touchscreen would keep the old key for the rest
+                # of the session. Eight channels on drum kinds is a legal
+                # instrument, and it is the one shape where the bar-synced
+                # push in _voice_wraps never runs. Item 73.
+                #
+                # `pending` is left exactly as it was: whether a marker that
+                # nothing can clear should be set at all is a separate
+                # question about the SURFACE, logged rather than fixed here.
+                self._push_keymap()
         elif param == "bpm":
             with self.lock:
                 self.libseq.setTempo(float(value))
@@ -3374,6 +3389,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # libseq is only reliably usable once the driver is bound.
         self.has_step_chance = self._probe_step_chance()
         self.has_stutter = self._probe_stutter()
+        self.has_keymap = self._probe_keymap()
+        # The keymap the pattern editor draws is stale from the moment the
+        # driver binds - the globals are restored before this point - so push
+        # it once here rather than waiting for the first key change (item 73).
+        self._push_keymap()
         self.stopping.clear()
         self.playhead_thread = Thread(
             target=self._playhead_loop, name="maschine_mk2_playhead", daemon=True)
@@ -7482,6 +7502,77 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.keymap_cache[group] = notes
         return notes
 
+    def _probe_keymap(self):
+        """Register argtypes for setTonic and setScale, and report usability.
+
+        Same shape as _probe_stutter and for the same reason: `zynseq.py`
+        registers argtypes for neither (`:94`-`:125` there), and an
+        unregistered ctypes call is silently wrong rather than an error. These
+        two would happen to work today - both are small unsigned ints and the
+        header says uint8_t and uint32_t (zynseq.h:635, :625) - which is
+        exactly when it is cheap to pin them, before someone upstream changes
+        a type and the failure is a keymap that quietly stops following.
+        """
+
+        try:
+            self.libseq.setTonic.argtypes = [ctypes.c_uint8]
+            self.libseq.setScale.argtypes = [ctypes.c_uint32]
+            # THE GETTERS ARE DELIBERATELY NOT REGISTERED HERE, because
+            # nothing reads them: this driver is the writer and the pattern
+            # editor is the reader. They were registered in the first draft and
+            # the probe guard in test_maschine_mk2_lib caught the half-done
+            # pair immediately - restype without argtypes. Registering a
+            # symbol we never call is a claim that we do.
+        except AttributeError:
+            logging.warning("Maschine: libzynseq has no setTonic/setScale - "
+                            "the pattern editor's keymap cannot follow ROOT "
+                            "and SCALE on this build")
+            return False
+        return True
+
+    def _push_keymap(self):
+        """Tell the stock pattern editor what the surface's ROOT and SCALE are.
+
+        DISPLAY ONLY, and the reason to do it anyway: setScale (zynseq.h:625)
+        and setTonic (:635) are read by nothing but the GUI
+        (zynthian_gui_patterneditor.py:426, :822-823, :1466), so they enforce
+        nothing and cannot change a note - and until 2026-09-08 the driver
+        never wrote either, so the touchscreen's own keymap contradicted the
+        instrument's ROOT and SCALE. Item 73.
+
+        PER PATTERN, VIA THE SELECTION, like everything else in this API, so
+        this walks the eight channels rather than writing once. A channel owns
+        a pattern here, which is what makes a per-pattern field per channel.
+
+        THE INDEX IS MAPPED, NOT PASSED THROUGH. tlib.ZYNSEQ_SCALE carries the
+        translation and the reasoning; our PENT is 5 and zynseq's Pentatonic
+        Minor is 9, so a pass-through would draw Harmonic Minor on the
+        touchscreen and look like an unrelated bug.
+
+        AN UNMAPPED SCALE WRITES NO SCALE AT ALL - the tonic still lands. A
+        keymap the editor last set is better than one that is nearly right,
+        and there is no honest number to write for a scale zynseq does not
+        have.
+
+        NOTHING HERE CAN FAIL LOUDLY, which is the danger. Every surface will
+        agree with itself whatever this writes, because the only reader is a
+        screen we are not looking at - so the tests count the WRITES and the
+        rig gate looks at the tonic row.
+        """
+
+        if not self.has_keymap:
+            return
+        root = int(self.globals.get("root", 0)) % 12
+        index = self.globals.get("scale", 0)
+        name = (tlib.SCALES[index][0]
+                if 0 <= index < len(tlib.SCALES) else None)
+        scale = tlib.ZYNSEQ_SCALE.get(name)
+        for group in range(8):
+            self._select_pattern(group)
+            self.libseq.setTonic(root)
+            if scale is not None:
+                self.libseq.setScale(scale)
+
     def _load_keymap(self, group):
         """The notes available to a group: its kit's own list.
 
@@ -9438,6 +9529,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self._write_voice_pattern(channel)
                 if not self._key_dirty:
                     self.globals["pending"].clear()
+                    # AND ONLY NOW does the touchscreen get the new key. The
+                    # keymap is pushed where the key LANDS, not where it is
+                    # dialled: a voice adopts it at its own next wrap, so a
+                    # push from apply_global would move the pattern editor's
+                    # tonic row up to a bar before anything sounded in the new
+                    # key - the editor's grid and its own labels disagreeing,
+                    # with nothing on that screen to say why. Item 73.
+                    self._push_keymap()
             self._rewrite_voice(channel)
 
     def _log_poll_error(self, key, exc):
@@ -11185,6 +11284,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.leds.clear()
         for group in range(8):
             self._derive_params(group)
+        # A snapshot or a bank switch replaces the patterns underneath us, and
+        # a pattern carries its own tonic and scale - so the keymap describes
+        # the OUTGOING bank until this runs. Item 73.
+        self._push_keymap()
 
     def _reset_kit_cache(self):
         """Drop everything _kit_list()/_apply_kit() cached. Used wherever the

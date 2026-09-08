@@ -66,9 +66,48 @@ class TestRegisterRing(unittest.TestCase):
 
 class TestPitch(unittest.TestCase):
 
-    def test_six_scales_in_the_ratified_order(self):
-        self.assertEqual([s[0] for s in tl.SCALES],
+    def test_the_first_six_scales_keep_their_ratified_positions(self):
+        """THE INDEX IS WHAT A SNAPSHOT STORES, so the original six may never
+        move. Nine more were appended 2026-09-08 (owner decision, spec
+        2026-09-08-nine-more-scales); reordering any of the six would silently
+        re-key every snapshot already written."""
+
+        self.assertEqual([s[0] for s in tl.SCALES[:6]],
                          ["MIN", "MAJ", "DOR", "PHR", "HMIN", "PENT"])
+
+    def test_the_nine_added_scales_are_in_the_agreed_order(self):
+        self.assertEqual([s[0] for s in tl.SCALES[6:]],
+                         ["PHRMJ", "WHOLE", "DIM7", "BLUES",
+                          "JAPAN", "IWATO", "PELOG", "BALI", "HUNG"])
+
+    def test_every_scale_starts_on_the_root_and_stays_inside_an_octave(self):
+        for name, degrees in tl.SCALES:
+            self.assertEqual(degrees[0], 0, name)
+            self.assertEqual(sorted(set(degrees)), list(degrees),
+                             f"{name} is not strictly ascending or repeats")
+            self.assertLess(degrees[-1], 12, name)
+
+    def test_every_label_fits_the_value_column(self):
+        """5 chars of double-height text fit a column (VALUE_CHARS), and a
+        label that overflows is silently truncated on the screen rather than
+        refused - so a 6-character scale would read as a different one."""
+
+        import maschine_mk2_lib as mlib
+        for name, _degrees in tl.SCALES:
+            self.assertLessEqual(len(name), mlib.maschine_mk2_lib.VALUE_CHARS, name)
+
+    def test_the_sparse_scales_survive_the_whole_register_range(self):
+        """A 4-degree scale is the shape nothing else in this file exercises.
+        Every consumer divmods by len(intervals), so this is a guard on that
+        staying true rather than on the arithmetic."""
+
+        for idx, (name, degrees) in enumerate(tl.SCALES):
+            notes = {tl.pitch(v, 8, root=0, scale_idx=idx, octave=0,
+                              range_octaves=2) for v in range(256)}
+            self.assertTrue(all(0 <= n <= 127 for n in notes), name)
+            # Every note sounded must be a degree of the scale it claims.
+            for n in notes:
+                self.assertIn((n - 36) % 12, degrees, f"{name} sounded {n}")
 
     def test_zero_value_lands_on_the_root(self):
         self.assertEqual(tl.pitch(0, 8, root=0, scale_idx=0, octave=0, range_octaves=1), 36)
@@ -9474,3 +9513,69 @@ class TheModLegendSwellIsInsideTheEyesRange(unittest.TestCase):
         so a level chosen against them can be checked by a test."""
 
         self.assertEqual(tl.LIGHT_READS_FULL, 0.30)
+
+
+class TheZynseqScaleMappingIsHonest(unittest.TestCase):
+    """Item 73. The driver writes ROOT and SCALE into zynseq so the stock
+    pattern editor's keymap agrees with the surface. That mapping is
+    DISPLAY-ONLY - grep confirms the GUI is the only reader - which is exactly
+    why nothing else will ever catch a wrong number in it.
+
+    The index authority is the Pi's own
+    /zynthian/zynthian-data/zynseq/scales.json, transcribed to
+    notes/reference/2026-09-08-pi-scales-json.md because it is in none of our
+    reference checkouts. Matched by DEGREES, never by name: "minor" alone could
+    be natural, harmonic or melodic.
+    """
+
+    # Copied from the transcription, degrees included, so this test can fail
+    # when the table is edited rather than agreeing with whatever is there.
+    EXPECTED = {
+        "MAJ":   (1,  (0, 2, 4, 5, 7, 9, 11)),
+        "MIN":   (2,  (0, 2, 3, 5, 7, 8, 10)),
+        "HMIN":  (5,  (0, 2, 3, 5, 7, 8, 11)),
+        "BLUES": (7,  (0, 3, 5, 6, 7, 10)),
+        "PENT":  (9,  (0, 3, 5, 7, 10)),
+        "DOR":   (13, (0, 2, 3, 5, 7, 9, 10)),
+        "PHR":   (32, (0, 1, 3, 5, 7, 8, 10)),
+        "PHRMJ": (33, (0, 1, 4, 5, 7, 8, 10)),
+        "BALI":  (37, (0, 1, 3, 7, 8)),
+        "JAPAN": (39, (0, 1, 5, 7, 8)),
+        "HUNG":  (47, (0, 2, 3, 6, 7, 8, 11)),
+        "PELOG": (51, (0, 1, 3, 7, 10)),
+        "IWATO": (52, (0, 1, 5, 6, 10)),
+        "WHOLE": (53, (0, 2, 4, 6, 8, 10)),
+        "DIM7":  (55, (0, 3, 6, 9)),
+    }
+
+    def test_every_scale_we_ship_has_an_entry(self):
+        for name, _degrees in tl.SCALES:
+            self.assertIn(name, tl.ZYNSEQ_SCALE, name)
+
+    def test_no_entry_is_zero(self):
+        """Index 0 is the custom-keymap case in the pattern editor
+        (zynthian_gui_patterneditor.py:822), not a scale - so 0 is never a
+        legal value to write, however tempting Chromatic looks."""
+
+        for name, index in tl.ZYNSEQ_SCALE.items():
+            self.assertNotEqual(index, 0, name)
+
+    def test_an_index_is_an_int_or_an_honest_none(self):
+        for name, index in tl.ZYNSEQ_SCALE.items():
+            self.assertTrue(index is None or isinstance(index, int), name)
+
+    def test_each_index_is_the_one_whose_degrees_match(self):
+        for name, (index, degrees) in self.EXPECTED.items():
+            self.assertEqual(tl.ZYNSEQ_SCALE.get(name), index, name)
+            ours = dict(tl.SCALES)[name]
+            self.assertEqual(tuple(ours), degrees,
+                             f"{name}'s own degrees have changed - re-derive "
+                             f"the index from scales.json before editing this")
+
+    def test_pent_and_dim7_are_not_mapped_onto_a_seven_note_scale(self):
+        """Five degrees against seven is where an off-by-one shows, and the
+        sparse scales are the ones with no near neighbour to hide in."""
+
+        seven = {tl.ZYNSEQ_SCALE[n] for n, d in tl.SCALES if len(d) == 7}
+        for sparse in ("PENT", "DIM7", "JAPAN", "IWATO", "PELOG", "BALI"):
+            self.assertNotIn(tl.ZYNSEQ_SCALE[sparse], seven, sparse)
