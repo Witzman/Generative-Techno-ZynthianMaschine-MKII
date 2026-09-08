@@ -23,7 +23,7 @@ believed over it.
 """
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import rig_stub
 
@@ -1786,3 +1786,66 @@ class SleepStaysAsleep(DispatchCase):
                        "shift", "mute", "navigate", "duplicate",
                        "rec", "grid", "solo", "swing", "stop"):
             self.assertIn(missed, names, missed)
+
+
+class PlayingThePanelCountsAsBeingAwake(DispatchCase):
+    """The half item 74 did not ask for and cannot ship without.
+
+    Zynthian's power save fires after ZYNTHIAN_UI_POWER_SAVE_MINUTES, default
+    SIXTY (zynthian_gui_config.py:614), and the idle timer is reset only by
+    set_event_flag() - every caller of which is a touchscreen, hardware-encoder
+    or CUIA path in zyngui/. NOTHING in the MIDI-in path sets it, and no
+    upstream ctrldev driver calls it either.
+
+    So before item 74 the screensaver was invisible on this instrument: it
+    fired, and the poll thread relit the panel within 200 ms. Making sleep
+    STICK without this would mean an hour of playing the MK2 turns the panel
+    off under the player's hands and leaves it off until somebody touches a
+    screen that is not required to be connected.
+
+    One call fixes both directions, because power_save_check() clears the mode
+    on the same flag it uses to defer it: playing the panel keeps it awake, and
+    the first press on a sleeping panel wakes it.
+    """
+
+    def test_a_pad_marks_the_instrument_as_in_use(self):
+        self.d.state_manager.set_event_flag = MagicMock()
+        self.pad(0)
+        self.d.state_manager.set_event_flag.assert_called()
+
+    def test_a_button_marks_the_instrument_as_in_use(self):
+        self.d.state_manager.set_event_flag = MagicMock()
+        self.press("shift", True)
+        self.d.state_manager.set_event_flag.assert_called()
+
+    def test_an_encoder_marks_the_instrument_as_in_use(self):
+        self.d.state_manager.set_event_flag = MagicMock()
+        self.cc(16, 1)
+        self.d.state_manager.set_event_flag.assert_called()
+
+    def test_a_state_manager_without_the_method_does_not_raise(self):
+        """Older builds may not have it, and a driver that crashes on every
+        MIDI event because of a screensaver nicety is worse than a panel that
+        sleeps at the wrong time."""
+
+        # `getattr(..., None)` is the guard, so an absent method and a None
+        # attribute take the same branch; None is the one a test can produce
+        # without deleting a method off the fake's class.
+        self.d.state_manager.set_event_flag = None
+        self.pad(0)
+
+    def test_a_raising_state_manager_does_not_kill_the_midi_thread(self):
+        boom = MagicMock(side_effect=RuntimeError("no"))
+        self.d.state_manager.set_event_flag = boom
+        self.pad(0)          # must not raise
+        boom.assert_called()
+
+    def test_it_is_marked_even_while_asleep(self):
+        """This is the wake path. The flag must be set BEFORE the driver's own
+        asleep gate is consulted, or the first press on a dark panel would be
+        swallowed and the player would press harder."""
+
+        self.d.sleep_on()
+        self.d.state_manager.set_event_flag = MagicMock()
+        self.pad(0)
+        self.d.state_manager.set_event_flag.assert_called()

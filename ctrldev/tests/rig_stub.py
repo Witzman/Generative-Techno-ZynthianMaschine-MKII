@@ -187,9 +187,17 @@ class FakeStateManager:
         self.chain_manager = FakeChainManager()
         self.busy = set()
 
+        # WHAT THE POWER-SAVE TIMER READS. The real state manager resets its
+        # idle clock on this (zynthian_state_manager.py:943), and nothing in
+        # the MIDI path upstream calls it - which is why this driver has to.
+        self.event_flags = 0
+
         # The signals the driver registers for. SS_LOAD_SNAPSHOT is read off
         # the state manager, so it has to exist.
         self.SS_LOAD_SNAPSHOT = "load_snapshot"
+
+    def set_event_flag(self):
+        self.event_flags += 1
 
     def _select_bank(self, bank, force=False):
         self.zynseq.bank = bank

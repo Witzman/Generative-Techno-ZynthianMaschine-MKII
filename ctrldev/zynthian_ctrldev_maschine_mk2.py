@@ -4275,6 +4275,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     # --- MIDI ----------------------------------------------------------
 
     def midi_event(self, ev):
+        # PLAYING THIS PANEL IS ACTIVITY, and until 2026-09-08 the platform did
+        # not know that. Power save fires after
+        # ZYNTHIAN_UI_POWER_SAVE_MINUTES - default SIXTY - and the idle timer
+        # is reset only by set_event_flag(), whose every caller upstream is a
+        # touchscreen, hardware-encoder or CUIA path. Nothing in the MIDI path
+        # sets it and no upstream ctrldev driver calls it, so an hour of
+        # playing the MK2 with nobody near the screen counts as an hour idle.
+        #
+        # THAT WAS INVISIBLE UNTIL ITEM 74. The screensaver did fire, and the
+        # poll thread repainted the panel within 200 ms - so making sleep STICK
+        # without this line would have turned the panel off under a player's
+        # hands and left it off until somebody touched a screen this rig does
+        # not require to be connected. The fix and the regression are the same
+        # change, which is why they ship together.
+        #
+        # ONE CALL COVERS BOTH DIRECTIONS: power_save_check() defers sleep on
+        # this flag and also LEAVES sleep on it, so a press on a dark panel is
+        # what wakes it. Before the lock and before the asleep gate, so the
+        # first press is never the one that gets swallowed.
+        flag = getattr(self.state_manager, "set_event_flag", None)
+        if flag is not None:
+            try:
+                flag()
+            except Exception:
+                # A screensaver nicety may never take the MIDI thread down.
+                logging.debug("Maschine: set_event_flag failed", exc_info=True)
         with self.lock:
             return self._midi_event(ev)
 
