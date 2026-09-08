@@ -72,7 +72,14 @@ jobs:
           set -e
           range="origin/main..HEAD"
           git rev-parse --verify origin/main >/dev/null 2>&1 || range="HEAD"
-          if git log "$range" | grep -nE 'Co-Authored-By|Generated with \[?Claude'; then
+          # A TRAILER, not a mention. `git log` indents the body four spaces,
+          # so anchor to start-of-line-plus-space and require the colon and the
+          # link form. Matching the bare words failed this job's own commit,
+          # whose message explains why the job exists.
+          if git log --format='%n%B' "$range" \
+               | grep -nE '^[[:space:]]*(Co-Authored-By:|Co-authored-by:)' \
+               || git log --format='%n%B' "$range" \
+               | grep -nE 'Generated with \[Claude Code\]|🤖 Generated with'; then
             echo "::error::Working rule 10 - every commit is authored by witzman alone."
             exit 1
           fi
