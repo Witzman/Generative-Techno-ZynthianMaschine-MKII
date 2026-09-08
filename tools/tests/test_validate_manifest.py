@@ -99,28 +99,102 @@ class TheCleanTemplateCase(unittest.TestCase):
     def test_the_plans_template_passes(self):
         self.assertEqual(fails(CLEAN), [])
 
-    def test_it_passes_in_every_non_pentatonic_scale(self):
-        # PENT is the known exception - five degrees make a TRI span 1.6
-        # octaves, so MID reaches into HIGH. It needs the four-layer variant
-        # and there is a test for that below.
+    # WHICH SCALES THE DRONE TEMPLATE VALIDATES IN, MEASURED 2026-09-08 across
+    # all fifteen scales at all twelve roots. Nine scales were added that day
+    # and this test failed - correctly - because it walked every scale rather
+    # than a sample. It said "non-pentatonic" and skipped PENT BY NAME.
+    #
+    # TWO GUESSES WERE WRONG BEFORE THE GRID WAS RUN, and both are worth
+    # keeping so nobody re-guesses:
+    #   "fewer than seven degrees needs the variant" - WHOLE has six and
+    #   passes, so the boundary is not seven.
+    #   "it is a degree count at all" - BLUES has six and fails at half the
+    #   roots, so it is not purely a count either.
+    #
+    # THE MEASURED TRUTH:
+    #   7 degrees (MIN MAJ DOR PHR HMIN PHRMJ HUNG) - clean template, every root
+    #   WHOLE (6)                                   - clean template, every root
+    #   BLUES (6)                                   - FAILS at C..F, passes F#..B
+    #   PENT DIM7 JAPAN IWATO BALI (4-5)            - fails every root; the
+    #                                                 four-layer variant fixes
+    #                                                 every root
+    #   PELOG (5)                                   - four-layer variant fixes
+    #                                                 ten roots, NOT C or C#
+    #
+    # NONE OF THIS AFFECTS PLAYING. It constrains AUTHORING a drone preset in
+    # one of these scales; a player who dials PELOG in C is unaffected.
+    FULL_OCTAVE = 7
+    PASSES_EVERY_ROOT = ("MIN", "MAJ", "DOR", "PHR", "HMIN", "PHRMJ", "HUNG",
+                         "WHOLE")
+    NEEDS_VARIANT = ("PENT", "DIM7", "JAPAN", "IWATO", "PELOG", "BALI")
+    VARIANT_STILL_FAILS = {"PELOG": ("C", "C#")}
+
+    def _name(self, scale):
+        return tlib.SCALES[scale][0]
+
+    def _four_layer(self, e):
+        """Drop HIGH and take MID down to a fifth: the four-layer template."""
+        four = copy.deepcopy(e)
+        four["voices"]["rhythm_reg"][0] = 0
+        four["overrides"]["2"]["chord"] = 2
+        four["voices"]["register"][1] = 4
+        return four
+
+    def test_the_clean_template_passes_in_the_scales_it_is_built_for(self):
+        checked = 0
         for scale in range(len(tlib.SCALES)):
-            if tlib.SCALES[scale][0] == "PENT":
+            if self._name(scale) not in self.PASSES_EVERY_ROOT:
                 continue
             for root in range(12):
                 e = broken(scale=scale, root=root)
                 self.assertEqual(fails(e), [],
-                                 f"{tlib.NOTE_NAMES[root]} "
-                                 f"{tlib.SCALES[scale][0]}")
+                                 f"{tlib.NOTE_NAMES[root]} {self._name(scale)}")
+            checked += 1
+        # A guard on the guard: an empty set would pass silently.
+        self.assertEqual(checked, len(self.PASSES_EVERY_ROOT))
 
-    def test_pentatonic_needs_the_sparse_variant(self):
-        five = broken(scale=5)
-        self.assertNotEqual(fails(five), [])
-        four = copy.deepcopy(five)
-        # Drop HIGH and take MID down to a fifth: the four-layer template.
-        four["voices"]["rhythm_reg"][0] = 0
-        four["overrides"]["2"]["chord"] = 2
-        four["voices"]["register"][1] = 4
-        self.assertEqual(fails(four), [])
+    def test_every_seven_degree_scale_is_in_that_set(self):
+        """The property worth having, rather than a list to maintain: a scale
+        with a full seven degrees needs no variant, and that includes the two
+        added in 2026-09-08 (PHRMJ's flat second and HUNG's augmented second
+        are the awkward ones and both pass)."""
+
+        for scale, (name, degrees) in enumerate(tlib.SCALES):
+            if len(degrees) == self.FULL_OCTAVE:
+                self.assertIn(name, self.PASSES_EVERY_ROOT, name)
+
+    def test_the_sparse_scales_need_the_four_layer_variant(self):
+        for scale in range(len(tlib.SCALES)):
+            name = self._name(scale)
+            if name not in self.NEEDS_VARIANT:
+                continue
+            e = broken(scale=scale)
+            self.assertNotEqual(fails(e), [], f"{name} should need the variant")
+            still_bad = self.VARIANT_STILL_FAILS.get(name, ())
+            for root in range(12):
+                four = self._four_layer(broken(scale=scale, root=root))
+                note = tlib.NOTE_NAMES[root]
+                if note in still_bad:
+                    self.assertNotEqual(fails(four), [],
+                                        f"{name} at {note} was expected to "
+                                        f"resist the variant and did not - "
+                                        f"re-run the grid")
+                else:
+                    self.assertEqual(fails(four), [], f"{name} at {note}")
+
+    def test_blues_is_the_root_dependent_one(self):
+        """Six degrees and it fails at half the roots - the case that proved
+        this is not a degree count. Pinned because it is the shape a future
+        scale addition is most likely to repeat."""
+
+        bad = [r for r in range(12) if fails(broken(scale=9, root=r))]
+        self.assertEqual(self._name(9), "BLUES", "scale order changed")
+        self.assertTrue(0 < len(bad) < 12,
+                        f"BLUES failed at {len(bad)} of 12 roots, not some")
+        for root in bad:
+            self.assertEqual(fails(self._four_layer(broken(scale=9, root=root))),
+                             [], f"the variant should fix BLUES at "
+                                 f"{tlib.NOTE_NAMES[root]}")
 
 
 class OneThingBrokenCase(unittest.TestCase):
