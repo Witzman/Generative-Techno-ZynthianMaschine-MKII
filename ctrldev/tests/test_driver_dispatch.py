@@ -1933,3 +1933,85 @@ class HumanReachesTheAudioThread(DispatchCase):
         # 0 - the point is that the STATE moved to what the pattern said, not
         # that it kept what the driver remembered.
         self.assertEqual(self.d.param_get(0, "human"), 0)
+
+
+class TheCapturedNoteCarriesItsOffset(DispatchCase):
+    """Item 75. A live strike was rounded to the nearest step and written with
+    offset 0.0, so the played timing was gone the moment it was stored and
+    quantise could never be turned back off. Now the fraction is stored and
+    zynseq rounds at PLAYBACK instead, gated per pattern by setQuantizeNotes.
+
+    WHAT THIS CANNOT SEE: where the note sounds. libseq is a recorder. It
+    checks that the number handed over is the played one rather than zero, and
+    that the flag which makes today's placement identical is actually set.
+    """
+
+    STEPS = 16
+
+    def setUp(self):
+        super().setUp()
+        self.d.has_quantise = True
+        self.d.cps[0] = 24                       # 24 clocks per step
+        # FakeLibseq's catch-all answers 0 for getSteps, and `_capture` opens
+        # with `if steps <= 0: return` - so the live-recording path is
+        # unreachable off the rig unless a test says how long the pattern is.
+        # Patched here rather than in the stub: giving every test a 16-step
+        # pattern breaks two bank-scene tests that rest on the empty shape,
+        # and that is a separate piece of work (todo.md 77).
+        self.d.libseq.getSteps = lambda: self.STEPS
+
+    def _added(self):
+        return [c[1] for c in self.d.libseq.calls if c[0] == "addNote"]
+
+    def test_a_hit_off_the_line_is_not_written_as_if_it_were_on_it(self):
+        self.d.libseq.calls.clear()
+        self.d._capture(0, note=36, velocity=100, start=52, end=None)
+        added = self._added()
+        self.assertTrue(added, self.d.libseq.calls)
+        self.assertNotEqual(added[-1][-1], 0.0,
+                            "the remainder was thrown away again")
+
+    def test_the_offset_written_is_the_one_the_pure_function_derived(self):
+        self.d.libseq.calls.clear()
+        self.d._capture(0, note=36, velocity=100, start=52, end=None)
+        expected = self.mod.tlib.record_offset(52, 24, self.STEPS)
+        self.assertAlmostEqual(self._added()[-1][-1], expected, places=6)
+
+    def test_a_dead_on_hit_still_writes_zero(self):
+        self.d.libseq.calls.clear()
+        self.d._capture(0, note=36, velocity=100, start=48, end=None)
+        self.assertEqual(self._added()[-1][-1], 0.0)
+
+    def test_quantise_is_turned_on_for_the_pattern(self):
+        """NOT OPTIONAL. With an offset stored and quantise off, the note plays
+        where it was PLAYED - which is a different instrument from the one the
+        player has today. On, it plays exactly where it does now, and the
+        fraction is only there to be given back."""
+
+        self.d.libseq.calls.clear()
+        self.d._capture(0, note=36, velocity=100, start=52, end=None)
+        names = [c[0] for c in self.d.libseq.calls]
+        self.assertIn("setQuantizeNotes", names)
+        flags = [c[1] for c in self.d.libseq.calls if c[0] == "setQuantizeNotes"]
+        self.assertEqual(flags[-1], (True,), flags)
+
+    def test_the_flag_is_set_before_the_note_is_added(self):
+        """Order matters: a note added while the flag is still off would be
+        placed by its offset for as long as it took the next write to arrive."""
+
+        self.d.libseq.calls.clear()
+        self.d._capture(0, note=36, velocity=100, start=52, end=None)
+        names = [c[0] for c in self.d.libseq.calls]
+        self.assertLess(names.index("setQuantizeNotes"), names.index("addNote"))
+
+    def test_a_build_without_the_flag_writes_no_offset_either(self):
+        """If setQuantizeNotes is unavailable, storing an offset would MOVE
+        every recorded note - so the old destructive behaviour is the correct
+        fallback, not a degraded one."""
+
+        self.d.has_quantise = False
+        self.d.libseq.calls.clear()
+        self.d._capture(0, note=36, velocity=100, start=52, end=None)
+        self.assertEqual(self._added()[-1][-1], 0.0)
+        self.assertNotIn("setQuantizeNotes",
+                         [c[0] for c in self.d.libseq.calls])

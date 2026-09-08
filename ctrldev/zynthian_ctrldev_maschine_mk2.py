@@ -905,6 +905,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the poll thread, not the mixer signal, not the playhead. Cleared by
         # sleep_off(), which repaints from scratch.
         self.asleep = False
+        # Decided by _probe_quantise() in init(). False here means a driver
+        # that is constructed but not bound records exactly as it always did.
+        self.has_quantise = False
         # The sleeping state set per channel and kind: channel -> kind -> dict,
         # plus "<kind>:hits" and "<kind>:rot" from the legacy arrays. Pure
         # driver state - nothing in zynseq mirrors it, so there is nothing to
@@ -3454,6 +3457,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.has_step_chance = self._probe_step_chance()
         self.has_stutter = self._probe_stutter()
         self.has_keymap = self._probe_keymap()
+        self.has_quantise = self._probe_quantise()
         # The keymap the pattern editor draws is stale from the moment the
         # driver binds - the globals are restored before this point - so push
         # it once here rather than waiting for the first key change (item 73).
@@ -7652,6 +7656,31 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self.keymap_cache[group] = notes
         return notes
 
+    def _probe_quantise(self):
+        """Register argtypes for the quantise flag, and report usability.
+
+        Same shape as the other probes: `zynseq.py` registers nothing for this
+        one (`:94`-`:125` there), and a `bool` argument passed as ctypes'
+        default `c_int` is the kind of thing that works until it does not.
+        `zynseq.h:671` is `void setQuantizeNotes(bool flag)`.
+
+        THE ANSWER GATES THE WHOLE OF ITEM 75, and in the strict direction: if
+        this flag cannot be set, storing a per-note offset would MOVE every
+        recorded note - the note would play where it was played rather than on
+        the grid. So a build without it keeps the old destructive rounding,
+        which is the correct fallback rather than a degraded one.
+        """
+
+        try:
+            self.libseq.setQuantizeNotes.argtypes = [ctypes.c_bool]
+            self.libseq.getQuantizeNotes.restype = ctypes.c_bool
+            self.libseq.getQuantizeNotes.argtypes = []
+        except AttributeError:
+            logging.warning("Maschine: libzynseq has no quantise flag - a "
+                            "recorded note keeps the old destructive rounding")
+            return False
+        return True
+
     def _probe_keymap(self):
         """Register argtypes for setTonic and setScale, and report usability.
 
@@ -7935,7 +7964,34 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.libseq.getNoteVelocity(step, note):
             self.libseq.removeNote(step, note)
         vel = max(1, min(127, velocity))
-        self.libseq.addNote(step, note, vel, duration, 0.0)
+        # THE FRACTION, NOT ZERO - item 75, 2026-09-08. We rounded to the
+        # nearest step and wrote 0.0, so the timing the player actually played
+        # was gone the moment it was stored and quantise could never be turned
+        # back off. zynseq keeps the offset and rounds at PLAYBACK
+        # (track.cpp:181-184), gated per pattern by setQuantizeNotes - which
+        # is a control the stock pattern editor already exposes
+        # (zynthian_gui_patterneditor.py:484).
+        #
+        # THE FLAG IS NOT OPTIONAL AND IT GOES FIRST. With an offset stored
+        # and quantise off, the note plays where it was PLAYED, which is a
+        # different instrument from the one the player has today. On, it plays
+        # exactly where it does now and the fraction is only there to be given
+        # back. A note added before the flag was set would be placed by its
+        # offset until the next write arrived.
+        #
+        # AND ON A BUILD WITHOUT THE FLAG WE KEEP THE OLD ROUNDING, rather
+        # than storing an offset nothing will round. That is a fallback, not a
+        # degradation: it is exactly what this instrument did until today.
+        #
+        # THE LOOP WRAP IS OURS AND STAYS OURS. record_step's `% steps` sends
+        # a late last-step hit to step 0 with a negative offset; track.cpp can
+        # only push an offset within the step it has, so it could not express
+        # that at all.
+        offset = 0.0
+        if self.has_quantise:
+            self.libseq.setQuantizeNotes(True)
+            offset = tlib.record_offset(start, cps, steps)
+        self.libseq.addNote(step, note, vel, duration, offset)
         self._slog("capture_note", channel=channel, note=note, written=True,
                    step=step, vel=vel, dur=duration)
         self.libseq.updateSequenceInfo()
