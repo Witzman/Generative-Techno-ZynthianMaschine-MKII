@@ -82,8 +82,56 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
     let mut last_reopen = Instant::now();
     let mut backoff_until = Instant::now();
     let mut announced_backoff = Duration::from_millis(0);
-    let input_timeout = Duration::from_millis(50);
+    // 50 ms unless overridden. The override exists for ONE experiment that
+    // cannot be run any other way (item 79, 2026-09-08): with the watchdog's
+    // window widened, the input-gap histogram shows how long the device's
+    // dropouts ACTUALLY last, and therefore whether the reopen is what ends
+    // them or they end by themselves. A bad value is ignored, and there is no
+    // config key on purpose - this is an instrument, not a setting.
+    let input_timeout = env::var("MASCHINE_INPUT_TIMEOUT_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|&ms| ms >= 50 && ms <= 10_000)
+        .map(|ms| {
+            println!("watchdog: input_timeout overridden to {}ms", ms);
+            Duration::from_millis(ms)
+        })
+        .unwrap_or_else(|| Duration::from_millis(50));
+    // ITEM 79 instrumentation, 2026-09-08: WHICH SIDE OF THE FD the window is
+    // measuring. `watchdog::StallWindow` explains the shapes; the flags are
+    // accumulated because a POLLERR or POLLHUP anywhere inside the window is
+    // the device's own answer and it is gone by the time we look.
+    let mut window = watchdog::StallWindow::default();
+    let mut lap_mark = Instant::now();
+    let mut stall_revents = PollFlags::empty();
+    // The gap distribution of the input stream itself, off unless asked for.
+    // It measures the "~750 reports/s unconditionally" claim the 50 ms timeout
+    // rests on, which nothing has ever done.
+    let input_stats = env::var("MASCHINE_INPUT_STATS").is_ok();
+    let mut gaps = watchdog::InputGaps::default();
+    // ITS OWN CLOCK, AND THAT IS THE WHOLE POINT. `last_report` is the
+    // WATCHDOG's bookkeeping and the watchdog resets it after every reopen, so
+    // a histogram built on it reported `max gap 6ms` for a minute containing
+    // two stalls - the dropout was hidden by the recovery from it. Measured
+    // 2026-09-08 18:10, and it is exactly the shape of the whole item.
+    let mut last_seen = Instant::now();
+    let mut gaps_since = Instant::now();
+    let gaps_interval = Duration::from_secs(60);
+    // ITEM 79/22, 2026-09-08. The 2026-08-22 write-budget curve is denominated
+    // in reopens per minute and shows the rate DOUBLING as our HID writes
+    // saturate - but it never ran the other end of the axis, so nobody knows
+    // what the rate is with NO writes at all. This holds every HID write back
+    // (LEDs go stale, screens stop repainting; input is untouched) so the
+    // dropout rate can be measured against zero write traffic. An experiment,
+    // and not a mode anything should ship enabled.
+    let no_hid_writes = env::var("MASCHINE_NO_HID_WRITES").is_ok();
+    if no_hid_writes {
+        println!("watchdog: HID WRITES SUPPRESSED - lights and screens are frozen");
+    }
     loop {
+        let mark = Instant::now();
+        window.lap(mark - lap_mark);
+        lap_mark = mark;
         // poll() returns EINTR on any signal the process is handed, and
         // `.unwrap()` on that ended the daemon. There is nothing to do about
         // an interrupted wait except take the next lap.
@@ -94,9 +142,17 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             continue;
         }
 
+        stall_revents |= fds[0].revents().unwrap_or_else(PollFlags::empty);
+
         if fds[0].revents().unwrap_or_else(PollFlags::empty).contains(PollFlags::POLLIN) {
             dev.readable(mhandler);
+            if input_stats {
+                gaps.record(last_seen.elapsed());
+                last_seen = Instant::now();
+            }
             last_report = Instant::now();
+            window.reset();
+            stall_revents = PollFlags::empty();
             // Input is flowing. If it has been flowing long enough, the storm
             // is over and the next isolated stall gets an immediate retry
             // again - which is the common, recovering case and must stay fast.
@@ -115,9 +171,17 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
         // delivering to our fd (verified with usbmon: the URBs keep completing
         // with data while read() returns EAGAIN forever). A fresh open() is the
         // only known recovery.
+        //
+        // MEASURED 2026-09-08, both halves of that: 724-745 reports/s over
+        // seven consecutive minutes, 95 % of gaps under 2 ms and the worst
+        // normal gap 22 ms — so a 50 ms silence is 35x the spacing and the
+        // distribution is bimodal with nothing in between. And with the window
+        // widened to 2 s the stream never came back on its own, so "the only
+        // known recovery" is now the only MEASURED one.
         if last_report.elapsed() >= input_timeout
             && Instant::now() >= backoff_until
         {
+            let gap = last_report.elapsed();
             // Close BEFORE reopening: usbhid only tears down and resubmits the
             // interrupt URB when the device user count drops to zero, and that
             // teardown is what actually revives the stream. Opening first left
@@ -133,7 +197,19 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                     dev.invalidate_lights();
                     fds[0] = PollFd::new(new_fd, PollFlags::POLLIN);
                     reopens += 1;
-                    println!("watchdog: input stalled, reopened {} (reopen #{})", dev_path, reopens);
+                    // The leading text is load-bearing: `grep -c "input
+                    // stalled, reopened"` is this project's primary diagnostic
+                    // and replug-heal-test.py counts it. Item 79's numbers are
+                    // appended, never substituted.
+                    println!(
+                        "watchdog: input stalled, reopened {} (reopen #{}) gap={}ms laps={} lap_max={}ms revents={:?}",
+                        dev_path,
+                        reopens,
+                        gap.as_millis(),
+                        window.laps,
+                        window.longest_lap.as_millis(),
+                        stall_revents
+                    );
                 }
                 Err(err) => {
                     println!("watchdog: reopen of {} failed: {}", dev_path, err);
@@ -160,6 +236,8 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
                 }
             }
             last_report = Instant::now();
+            window.reset();
+            stall_revents = PollFlags::empty();
         }
 
         if fds[1].revents().unwrap_or_else(PollFlags::empty).contains(PollFlags::POLLIN) {
@@ -201,8 +279,16 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             }
         }
 
+        if input_stats && gaps_since.elapsed() >= gaps_interval {
+            println!("{}", gaps.line(gaps_since.elapsed()));
+            gaps.reset();
+            gaps_since = Instant::now();
+        }
+
         if now.elapsed() >= timer_interval {
-            dev.write_lights();
+            if !no_hid_writes {
+                dev.write_lights();
+            }
             now = Instant::now();
         }
         if now_display.elapsed() >= display_interval {
@@ -211,11 +297,15 @@ fn ev_loop(dev: &mut dyn Maschine, mhandler: &mut MHandler, dev_path: &str) {
             // both-screen rebuild is 16 of them (this comment said 521 bytes
             // until 2026-08-30; the write COUNT was always the half that
             // mattered). Calibration redraws are rate-limited to this timer.
-            dev.calib_flush();
+            if !no_hid_writes {
+                dev.calib_flush();
+            }
             // Screen framebuffers written over OSC land here too, for the same
             // reason: pushing them from the OSC handler would interleave HID
             // writes with the input reads.
-            dev.display_fb_flush();
+            if !no_hid_writes {
+                dev.display_fb_flush();
+            }
             now_display = Instant::now();
         }
 
