@@ -449,10 +449,22 @@ PAD_RESYNC_TICKS = 90
 DEVICE_NODE = "/dev/maschine"
 DEVICE_POLL_TICKS = 30
 
-# The same thread re-reads the group volumes every Nth tick, because nothing
-# signals a zctrl change: zynthian_controller emits no zynsigman signal, so a
-# volume moved on the touchscreen is invisible until something asks. Only the
-# led_cache diff reaches the wire, so a quiet poll costs nothing.
+# The same thread re-reads the group volumes every Nth tick. TWO DIFFERENT
+# FACTS USED TO SHARE ONE SENTENCE HERE, and that is why the mixer was polled
+# for weeks while it was signalling all along - item 71, 2026-09-08:
+#
+#   PLUGIN PORTS DO NOT SIGNAL. zynthian_controller's only zynsigman use is
+#   SS_GUI_SHOW_FILE_SELECTOR (zynthian_controller.py:380), so a cutoff moved
+#   on the touchscreen is invisible until something asks. Polling those is
+#   correct and stays.
+#
+#   THE MIXER DOES SIGNAL. Level, balance, mute and solo all dispatch
+#   S_AUDIO_MIXER / SS_ZCTRL_SET_VALUE, and _on_mixer_strip is registered for
+#   it. This tick is no longer how the mute and Group rows FIND OUT; what it
+#   is still for is the blinking - a LOCKed level and a latched SOLO - which
+#   needs a periodic writer, and the writer needs the value.
+#
+# Only the led_cache diff reaches the wire, so a quiet poll costs nothing.
 VOLUME_POLL_TICKS = 6          # every ~200ms
 POLL_ERROR_S = 30.0            # between repeats of one poll error
 
@@ -3325,6 +3337,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         zynsigman.register_queued(
             zynsigman.S_STATE_MAN, self.state_manager.SS_LOAD_SNAPSHOT,
             self._on_snapshot)
+        # THE MIXER SIGNALS - so listen, rather than re-reading it at 5 Hz and
+        # finding out up to 200 ms late (item 71, 2026-09-08). Level, balance,
+        # mute and solo all dispatch this one. _on_mixer_strip says why it is
+        # registered here instead of inheriting zynthian_ctrldev_zynmixer, and
+        # why our own writes re-entering through it are harmless.
+        zynsigman.register_queued(
+            zynsigman.S_AUDIO_MIXER,
+            self.state_manager.zynmixer.SS_ZCTRL_SET_VALUE,
+            self._on_mixer_strip)
         # Peak metering is off by default and costs nothing until a mixer page
         # asks for it. Two signatures exist and the Pi runs the older one:
         # enable_dpm(enable) here, enable_dpm(start, end, enable) there.
@@ -3381,6 +3402,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         zynsigman.unregister(
             zynsigman.S_STATE_MAN, self.state_manager.SS_LOAD_SNAPSHOT,
             self._on_snapshot)
+        zynsigman.unregister(
+            zynsigman.S_AUDIO_MIXER,
+            self.state_manager.zynmixer.SS_ZCTRL_SET_VALUE,
+            self._on_mixer_strip)
         self.light_off()
         # BOTH HANDLES, and neither was ever closed. A driver is unbound and
         # rebound by every snapshot load that changes the MIDI device list, so
@@ -11044,6 +11069,52 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_pads()
             self._render_transport()
+
+    def _on_mixer_strip(self, *args, **kwargs):
+        """zynsigman callback for S_AUDIO_MIXER / SS_ZCTRL_SET_VALUE - a level,
+        mute, solo or balance moved, from anywhere: the touchscreen, MIDI
+        learn, another control device, or this driver itself.
+
+        WHY THIS EXISTS, 2026-09-08, item 71. The mixer SIGNALS and we were
+        polling it. zynthian_engine_audio_mixer dispatches on set_level (:206),
+        set_balance (:221), set_mute (:256), toggle_mute (:279), set_solo
+        (:334) and the solo clear (:341), and the Group and F rows were finding
+        out on the next ~200 ms tick instead. Registered here rather than
+        inherited from zynthian_ctrldev_zynmixer (zynthian_ctrldev_base.py:266)
+        because this driver already owns its init/end signal pairs, and taking
+        a second base class would set the dev_zynmixer classification flag and
+        change the MRO of a 10,000-line class to gain one line.
+
+        THE ARGUMENTS ARE TAKEN LOOSELY ON PURPOSE. The base class documents
+        update_mixer_strip(chan, symbol, value) and register_queued forwards
+        whatever the emitter sent; a signature that pinned three positionals
+        would raise on the SIGNAL thread, where the only symptom is a surface
+        that quietly stops following.
+
+        RE-ENTRY IS NOT A RISK, and it is worth saying why rather than hoping.
+        Our own set_level / set_mute calls re-emit this signal - :4516 records
+        eight dispatches from one set_mute - so this runs again for a change we
+        made ourselves. Every write it makes goes through led_cache.changed(),
+        which swallows the repeat, and _display_soon() coalesces rather than
+        draws. So the second pass puts nothing on the wire, and it cannot
+        recurse at all: this handler calls no mixer setter.
+
+        THE PERIODIC WRITER STAYS, and this item does not remove it. The Group
+        row blinks a LOCKed channel's level and the F row blinks a latched
+        SOLO; a blink needs a periodic writer and the writer needs the value.
+        So this makes the surface PROMPT, not cheaper. Making it cheaper needs
+        a driver-side mixer cache and is a decision rather than a step -
+        notes/findings/2026-09-08-queued-six-premises.md carries the split.
+        """
+
+        with self.lock:
+            self._render_groups()
+            self._render_mutes()
+            # COALESCED, NOT DRAWN. A touchscreen fader drag emits per pixel,
+            # and a full both-screen repaint per emission is the 674 msg/s
+            # shape that wedged the controller. _display_soon carries the
+            # measurement.
+            self._display_soon()
 
     def _on_snapshot(self, *args, **kwargs):
         """A restored snapshot brings its own patterns, chains and mixer

@@ -43,6 +43,12 @@ from unittest.mock import MagicMock
 
 CTRLDEV = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# The driver's own source, for the guards that ask questions about the TEXT
+# rather than about an instance - a registration and its unregister being
+# symmetric, a corrected comment staying corrected. An instance cannot answer
+# either: `init()` is never called here.
+DRIVER_PATH = os.path.join(CTRLDEV, "zynthian_ctrldev_maschine_mk2.py")
+
 
 class FakeLibseq:
     """Records what the driver asks of libzynseq and answers plausibly.
@@ -110,6 +116,11 @@ class FakeMixer:
         self.mutes = {}
         self.solos = {}
         self.MAX_NUM_CHANNELS = 17
+        # THE REAL ZYNMIXER PUBLISHES ITS OWN SUB-SIGNAL NAME and the driver
+        # registers against it by attribute, exactly as it does with
+        # zynseq.SS_SEQ_PROGRESS. Without this, `init()` raises here rather
+        # than on the rig - which is the right place for it to raise.
+        self.SS_ZCTRL_SET_VALUE = "zctrl_set_value"
 
     def get_level(self, chan):
         return self.levels.get(chan, 0.67)

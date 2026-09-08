@@ -1462,3 +1462,103 @@ class ThePageRingDrawsOnlyThePageTheHandStopsOn(DispatchCase):
         self.drawn.clear()
         self.d._render_display()
         self.assertEqual(len(self.drawn), 1)
+
+
+class TheMixerIsHeardRatherThanPolled(DispatchCase):
+    """Item 71. zynmixer dispatches on every change - set_level
+    (zynthian_engine_audio_mixer.py:206), set_balance (:221), set_mute (:256),
+    toggle_mute (:279), set_solo (:334) and the solo clear (:341) - and until
+    2026-09-08 this driver re-read it at 5 Hz instead, so a fader moved on the
+    touchscreen was up to 200 ms late on the LEDs.
+
+    WHAT THESE DO NOT TEST: that the LEDs are right. The mixer is a dict here.
+    They test that the callback EXISTS, that it repaints the two rows the mixer
+    owns, that it survives the argument shape register_queued will hand it, and
+    that init and end are symmetric - a registration without its unregister
+    leaks a handler into a driver that has been unbound.
+    """
+
+    def test_the_driver_has_a_mixer_callback(self):
+        self.assertTrue(callable(getattr(self.d, "_on_mixer_strip", None)))
+
+    def test_the_callback_repaints_the_rows_the_mixer_owns(self):
+        painted = []
+        self.d._render_groups = lambda: painted.append("groups")
+        self.d._render_mutes = lambda: painted.append("mutes")
+        self.d._display_soon = lambda: painted.append("display")
+        self.d._on_mixer_strip(0, "level", 0.5)
+        self.assertEqual(painted, ["groups", "mutes", "display"])
+
+    def test_it_survives_the_signals_own_argument_shape(self):
+        # register_queued forwards whatever the emitter sent; a signature that
+        # pinned three positionals would raise on the SIGNAL thread, where the
+        # only symptom is a surface that quietly stops following.
+        self.d._render_groups = lambda: None
+        self.d._render_mutes = lambda: None
+        self.d._display_soon = lambda: None
+        self.d._on_mixer_strip(chan=3, symbol="mute", value=1)
+
+    def test_the_display_is_coalesced_and_never_drawn_here(self):
+        # A touchscreen fader drag emits per pixel. A full both-screen repaint
+        # per emission is the 674 msg/s shape that wedged the controller.
+        drawn = []
+        self.d._render_groups = lambda: None
+        self.d._render_mutes = lambda: None
+        self.d._render_display = lambda: drawn.append("drawn")
+        self.d._on_mixer_strip(0, "level", 0.5)
+        self.assertEqual(drawn, [])
+        self.assertTrue(self.d._display_due)
+
+    # A SOURCE GUARD NEVER ASSERTS ON THE SOURCE ITSELF. `assertIn` against a
+    # 500 KB string prints the whole file on a failure, which buries the one
+    # line that says what went wrong. Reduce to a bool first, every time.
+    @staticmethod
+    def _src():
+        with open(rig_stub.DRIVER_PATH, encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_init_registers_and_end_unregisters_the_mixer_signal(self):
+        """A registration without its unregister leaks a handler into a driver
+        that has been unbound, and this driver is unbound and rebound by every
+        snapshot load that changes the MIDI device list.
+
+        PARSED, NOT COUNTED. The first version of this guard counted the name
+        in the text and failed at 5 != 3 - because the comments in init() and
+        above VOLUME_POLL_TICKS both NAME the handler, which is exactly what
+        they should do. A guard that forbids explaining itself is a guard that
+        will be deleted.
+        """
+
+        import ast
+        tree = ast.parse(self._src())
+        defs, registered, unregistered = 0, [], []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "_on_mixer_strip":
+                defs += 1
+            if not isinstance(node, ast.Call):
+                continue
+            called = getattr(node.func, "attr", None)
+            if called not in ("register_queued", "unregister"):
+                continue
+            names = [getattr(a, "attr", None) for a in node.args]
+            if "_on_mixer_strip" not in names:
+                continue
+            (registered if called == "register_queued" else unregistered).append(node)
+        self.assertEqual(defs, 1, "expected exactly one def _on_mixer_strip")
+        self.assertEqual(len(registered), 1, "expected one register_queued")
+        self.assertEqual(len(unregistered), 1, "expected one unregister")
+        self.assertTrue("S_AUDIO_MIXER" in self._src(),
+                        "S_AUDIO_MIXER is not used")
+
+    def test_the_comment_no_longer_says_nothing_signals(self):
+        """The comment above VOLUME_POLL_TICKS covered two different facts in
+        one sentence - plugin ports do not signal, the mixer does - and that is
+        how the mixer came to be polled for a month. Item 71's second bullet."""
+
+        src = self._src()
+        self.assertFalse("because nothing\n# signals a zctrl change" in src,
+                         "the over-general sentence is still there")
+        self.assertTrue("PLUGIN PORTS DO NOT SIGNAL" in src,
+                        "the plugin-port half of the fact is not stated")
+        self.assertTrue("THE MIXER DOES SIGNAL" in src,
+                        "the mixer half of the fact is not stated")
