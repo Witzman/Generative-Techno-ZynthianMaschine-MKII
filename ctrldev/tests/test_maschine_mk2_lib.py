@@ -2253,3 +2253,50 @@ class EveryProbedSymbolIsFullyRegistered(unittest.TestCase):
                        "getStutterCount", "getStutterDur"):
             self.assertIn(symbol, symbols,
                           f"_probe_stutter never touches {symbol}")
+
+
+class NoCommentNamesACheckoutInsteadOfAFact(unittest.TestCase):
+    """`_probe_step_chance` carried a sentence saying "the newer checkout
+    declares the third argument as a float". It was TRUE when written - the
+    reference checkouts were on `vangelis` then - and the re-pin of 2026-08-19
+    made it stale without changing a character of it. Item 72, 2026-09-08.
+
+    THE LESSON THE COMMENT NOW HAS TO CARRY is not which checkout says what.
+    It is that `vangelis`, the development train, HAS already changed this to a
+    float (`3e4b4f21`, 2025-11-13, not an ancestor of our pinned HEAD), so the
+    type will flip under this driver whenever the Pi moves to an image built
+    from that line - which is what makes the explicit registration
+    load-bearing rather than belt-and-braces.
+
+    A COMMENT ABOUT A CHECKOUT AGES. A comment about a header and a divergence
+    does not.
+    """
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _src(self):
+        # Reduced to a bool before asserting, always: assertIn against a 500 KB
+        # string prints the whole driver and buries the reason.
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            return fh.read()
+
+    def test_the_stale_sentence_is_gone(self):
+        self.assertFalse(
+            "declares the third argument as a float" in self._src(),
+            "the sentence naming 'the newer checkout' is still there")
+
+    def test_the_header_quotation_stays_as_the_evidence(self):
+        # The two lines the probe quotes from zynseq.h are what make the
+        # registration checkable by a reader. Deleting the stale sentence must
+        # not take them with it.
+        src = self._src()
+        self.assertTrue("uint8_t getNotePlayChance" in src,
+                        "the header quotation is gone")
+        self.assertTrue("setNotePlayChance(uint32_t step, uint8_t note, uint8_t chance)"
+                        in src, "the setter's quoted signature is gone")
+
+    def test_the_divergence_is_named_rather_than_a_checkout(self):
+        self.assertTrue("vangelis" in self._src(),
+                        "the comment no longer says WHERE the float lives, so "
+                        "the next reader cannot tell a stale pin from a bug")

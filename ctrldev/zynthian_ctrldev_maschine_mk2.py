@@ -5299,11 +5299,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         try:
             # uint8 CHANCE, 0-100 - NOT the float 0.0-1.0 the per-PATTERN
-            # setPlayChance() takes, and NOT what our checkout's header says.
-            # The Pi's own zynseq.h is the authority:
+            # setPlayChance() takes. The Pi's own zynseq.h is the authority:
             #     uint8_t getNotePlayChance(uint32_t step, uint8_t note);
             #     void setNotePlayChance(uint32_t step, uint8_t note, uint8_t chance);
-            # while the newer checkout declares the third argument as a float.
+            #
+            # AND UPSTREAM HAS ALREADY CHANGED IT, WHICH IS WHY THIS
+            # REGISTRATION IS LOAD-BEARING AND NOT BELT-AND-BRACES. `vangelis`,
+            # the development train, made both of those a float in `3e4b4f21`
+            # "Use consistent note play chance" (2025-11-13) - a commit that is
+            # NOT an ancestor of the oram-2601.1 pin this instrument runs. So
+            # the type flips under this driver the day the Pi moves to an image
+            # built from that line, and the failure would be silent in both
+            # directions. Re-run the probe against the header before believing
+            # any of this on a new image; do not read the type off a comment.
+            #
+            # This used to be one sentence naming "the newer checkout" as the
+            # place the float lives, and it was TRUE when written - the
+            # reference checkouts were on vangelis then. The re-pin of
+            # 2026-08-19 made it stale without changing a character of it, and
+            # it cost the 2026-09-07 audit a re-derivation. A comment about a
+            # CHECKOUT ages; one about a header and a named divergence does
+            # not. Corrected 2026-09-08, item 72.
             # Registered as float first time round, which made every write pass
             # garbage and every read return garbage, and BOTH FAILED SILENTLY -
             # Pattern::setPlayChance simply returns when no event matches, and
