@@ -2420,16 +2420,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Pattern::m_fHumanTime), and persisted into the .zss (:1267), so
             # a snapshot brings it back - which is why _on_snapshot pushes it.
             #
-            # 0-100 ON THE SURFACE, 0.0-1.0 TO ZYNSEQ, converted HERE and
-            # nowhere else. A number the surface shows and a number the
-            # library receives are different claims; one conversion site is
-            # what keeps them one claim.
+            # 0-100 ON THE SURFACE, AND THE TWO VERBS SCALE DIFFERENTLY -
+            # corrected 2026-09-08 by ear, item 78. `value / 100.0` shipped for
+            # both, and the two values are in different units: humanTime is a
+            # sigma in STEPS (1.0 = 121 ms at 124 BPM, a third of the notes
+            # more than a step out) and humanVelo is a sigma in raw VELOCITY
+            # UNITS (1.0 = one velocity step on a kick at 110, truncated to
+            # nothing - HUMNV did not work at all).
+            #
+            # tlib.human_native / humanvelo_native carry the ceilings and the
+            # measurement behind them. Converted THERE and nowhere else: two
+            # verbs sharing one conversion is what this bug WAS.
             with self.lock:
                 self._select_pattern(channel)
                 if param == "human":
-                    self.libseq.setHumanTime(value / 100.0)
+                    self.libseq.setHumanTime(tlib.human_native(value))
                 else:
-                    self.libseq.setHumanVelo(value / 100.0)
+                    self.libseq.setHumanVelo(tlib.humanvelo_native(value))
         elif param == "rhythm" and self.channel_kind(channel) == "voice":
             # Setting the evolve RATE writes nothing new by itself - the
             # register is untouched - but the pattern is rewritten so a move
@@ -5749,8 +5756,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 #
                 # zynseq.py registers the restype for both getters (`:111`,
                 # `:113` there), so these read as the floats they are.
-                state["human"] = int(round(self.libseq.getHumanTime() * 100))
-                state["humanvelo"] = int(round(self.libseq.getHumanVelo() * 100))
+                # Through the same pair, inverted - so a restore returns the
+                # number the player dialled rather than a rescaled one. A
+                # `* 100` here against a ceiling of 0.60 there would have made
+                # the column read 33 for a knob left at 20.
+                state["human"] = tlib.human_surface(self.libseq.getHumanTime())
+                state["humanvelo"] = tlib.humanvelo_surface(
+                    self.libseq.getHumanVelo())
             except Exception:
                 logging.debug("Maschine: no readable chance/swing/human on "
                               "this libzynseq")

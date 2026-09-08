@@ -9759,3 +9759,70 @@ class RecordKeepsTheRemainder(unittest.TestCase):
     def test_a_nonsense_division_is_refused_rather_than_dividing_by_zero(self):
         self.assertEqual(tl.record_offset(10, 0, 16), 0.0)
         self.assertEqual(tl.record_offset(10, 24, 0), 0.0)
+
+
+class TheHumaniseScalesAreDerivedFromAnEar(unittest.TestCase):
+    """Item 78. HUMAN and HUMNV shipped on 2026-09-08 sharing one conversion,
+    `value / 100.0`, and the two verbs take values in DIFFERENT UNITS:
+
+      * `humanTime` is a standard deviation in STEPS (track.cpp:197 multiplies
+        a `normal_distribution{0.0, 1.0}` by it). At 124 BPM a 1/16 step is
+        121 ms, so 1.0 was sigma = 121 ms and a third of the notes landed more
+        than a whole step out.
+      * `humanVelo` is a standard deviation in RAW VELOCITY UNITS
+        (`int16_t(humanVelo * d(gen))`, :226). 1.0 was sigma = ONE velocity
+        step on a kick at 110, and the int16 truncation took most draws to
+        zero, so HUMNV did nothing whatsoever.
+
+    THE CEILINGS ARE MEASURED, NOT CHOSEN. The owner at the rig: "at about 20
+    it starts to change, 100 is way too much", and then "about 60" for where it
+    becomes too much. 20/100 was sigma 0.20 steps = 24 ms, which is where real
+    drummers sit; 60/100 was 0.60 steps = 73 ms. So the top of the knob is
+    0.60 - the measured edge of usefulness - and the breathing point lands at
+    a third of the travel instead of a fifth.
+    """
+
+    def test_zero_is_exactly_zero_on_both(self):
+        """A ceiling change must not make an existing snapshot humanise. Every
+        pattern ever saved carries 0, and 0 has to stay silent."""
+
+        self.assertEqual(tl.human_native(0), 0.0)
+        self.assertEqual(tl.humanvelo_native(0), 0.0)
+
+    def test_the_top_of_the_knob_is_the_measured_edge(self):
+        self.assertAlmostEqual(tl.human_native(100), 0.60, places=6)
+
+    def test_the_breathing_point_lands_a_third_of_the_way_up(self):
+        # The owner heard it start at sigma 0.20 steps. That must now be
+        # reachable near the middle rather than at a fifth of the travel.
+        self.assertAlmostEqual(tl.human_native(33), 0.198, places=3)
+
+    def test_it_is_monotonic_and_never_leaves_the_band(self):
+        last = -1.0
+        for v in range(101):
+            native = tl.human_native(v)
+            self.assertGreaterEqual(native, last)
+            self.assertLessEqual(native, 0.60)
+            last = native
+
+    def test_velocity_humanisation_can_actually_be_heard(self):
+        """The defect was a ceiling twenty-five times too LOW. A sigma of one
+        velocity unit is inaudible and truncates to nothing."""
+
+        self.assertGreater(tl.humanvelo_native(100), 10.0)
+        self.assertLessEqual(tl.humanvelo_native(100), 30.0)
+
+    def test_the_surface_value_survives_a_round_trip(self):
+        """_derive_params reads these back off the pattern after a snapshot
+        load, so the inverse has to return the number the player dialled -
+        otherwise the column moves on every restore."""
+
+        for v in (0, 1, 20, 33, 50, 60, 99, 100):
+            self.assertEqual(tl.human_surface(tl.human_native(v)), v)
+            self.assertEqual(tl.humanvelo_surface(tl.humanvelo_native(v)), v)
+
+    def test_a_value_from_outside_is_clamped_rather_than_trusted(self):
+        # A pattern authored elsewhere can carry anything at all.
+        self.assertEqual(tl.human_surface(9.9), 100)
+        self.assertEqual(tl.human_surface(-1.0), 0)
+        self.assertEqual(tl.humanvelo_surface(500.0), 100)

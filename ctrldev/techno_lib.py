@@ -913,6 +913,77 @@ class techno_lib:
             return 0
         return int((playpos + cps // 2) // cps) % steps
 
+    # THE TWO HUMANISE CEILINGS, MEASURED AT THE RIG 2026-09-08 (item 78).
+    #
+    # These verbs shipped sharing one conversion, `value / 100.0`, and the two
+    # values are in DIFFERENT UNITS - which is the law this project has paid
+    # for seven times: a number the surface shows and a number the library
+    # receives are different claims.
+    #
+    #   humanTime  is a standard deviation in STEPS. track.cpp:197 is
+    #              `m_fEventOffset += humanTime * d(gen)` against a
+    #              `normal_distribution{0.0, 1.0}` (:13). At 124 BPM a 1/16
+    #              step is 121 ms, so 1.0 meant sigma = 121 ms and a THIRD of
+    #              the notes landed more than a whole step out.
+    #   humanVelo  is a standard deviation in RAW VELOCITY UNITS -
+    #              `int16_t(humanVelo * d(gen))` (:226). 1.0 meant sigma = ONE
+    #              velocity step on a kick at 110, and the int16 truncation
+    #              took most draws to zero, so HUMNV DID NOTHING AT ALL.
+    #
+    # THE NUMBERS ARE AN EAR'S, NOT A GUESS. The owner, on a 4-on-the-floor
+    # kick: "at about 20 it starts to change" - sigma 0.20 steps, 24 ms, which
+    # is where real drummers sit - and "about 60" for where it becomes too
+    # much, sigma 0.60 steps, 73 ms. So the TOP of the knob is that measured
+    # edge and the breathing point lands a third of the way up instead of at a
+    # fifth.
+    HUMAN_MAX_STEPS = 0.60
+    # PROVISIONAL, and it says so: the velocity half could not be judged by
+    # ear until this fix existed, because at sigma = 1 there was nothing to
+    # hear. 20 is chosen against the packs' own VELO of 110 - typical swings of
+    # +/-20, reaching +/-60 at three sigma, which varies audibly without
+    # clipping at 127 or dropping a hit to nothing. Re-measure it the same way
+    # HUMAN's was and move this line.
+    HUMNV_MAX_VELOCITY = 20.0
+
+    @staticmethod
+    def human_native(value):
+        """Surface 0-100 to the sigma in STEPS that zynseq wants.
+
+        ONE PLACE, for both directions and both verbs, because two verbs
+        sharing one conversion is exactly what item 78 was."""
+
+        v = max(0, min(100, int(value)))
+        return v * techno_lib.HUMAN_MAX_STEPS / 100.0
+
+    @staticmethod
+    def human_surface(native):
+        """The sigma in steps back to the 0-100 the surface shows.
+
+        Clamped rather than trusted: a pattern authored anywhere else can
+        carry any float at all, and this is read back off one after every
+        snapshot load."""
+
+        try:
+            v = float(native) * 100.0 / techno_lib.HUMAN_MAX_STEPS
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(100, int(round(v))))
+
+    @staticmethod
+    def humanvelo_native(value):
+        """Surface 0-100 to the sigma in RAW VELOCITY UNITS."""
+
+        v = max(0, min(100, int(value)))
+        return v * techno_lib.HUMNV_MAX_VELOCITY / 100.0
+
+    @staticmethod
+    def humanvelo_surface(native):
+        try:
+            v = float(native) * 100.0 / techno_lib.HUMNV_MAX_VELOCITY
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(100, int(round(v))))
+
     @staticmethod
     def record_offset(playpos, cps, steps):
         """How far off its grid line a live strike actually was, as a signed

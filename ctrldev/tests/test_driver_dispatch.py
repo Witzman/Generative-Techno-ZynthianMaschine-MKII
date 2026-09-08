@@ -1874,13 +1874,30 @@ class HumanReachesTheAudioThread(DispatchCase):
         self.d.apply(0, "humanvelo", 40)
         self.assertTrue(self._args("setHumanVelo"), self.d.libseq.calls)
 
-    def test_the_surface_percentage_becomes_a_zero_to_one_float(self):
+    def test_each_verb_is_scaled_by_its_own_measured_ceiling(self):
+        """Item 78: they took `value / 100.0` each, and the two values are in
+        different units - steps for one, raw velocity for the other. A shared
+        conversion made HUMAN four times too strong and HUMNV inert."""
+
+        tlib = self.mod.tlib
         self.d.libseq.calls.clear()
         self.d.apply(0, "human", 50)
-        self.assertEqual(self._args("setHumanTime"), [(0.5,)])
+        self.assertEqual(self._args("setHumanTime"),
+                         [(tlib.human_native(50),)])
+        self.assertAlmostEqual(self._args("setHumanTime")[0][0], 0.30, places=6)
+
         self.d.libseq.calls.clear()
         self.d.apply(0, "humanvelo", 100)
-        self.assertEqual(self._args("setHumanVelo"), [(1.0,)])
+        self.assertEqual(self._args("setHumanVelo"),
+                         [(tlib.humanvelo_native(100),)])
+        self.assertGreater(self._args("setHumanVelo")[0][0], 10.0)
+
+    def test_zero_still_writes_exactly_zero(self):
+        # A ceiling change must not make a pattern that reads 0 humanise.
+        self.d.apply(0, "human", 40)
+        self.d.libseq.calls.clear()
+        self.d.apply(0, "human", 0)
+        self.assertEqual(self._args("setHumanTime"), [(0.0,)])
 
     def test_it_selects_the_channels_own_pattern_first(self):
         """Per pattern via the selection, like everything else in this API. A
@@ -1925,6 +1942,22 @@ class HumanReachesTheAudioThread(DispatchCase):
         self.d._resync_all()
         self.assertEqual(len(self._args("getHumanTime")), 8)
         self.assertEqual(len(self._args("getHumanVelo")), 8)
+
+    def test_the_read_back_INVERTS_the_ceiling_rather_than_rescaling(self):
+        """The stub answers 0 for every getter, and 0 converts to 0 under any
+        scale - so a test that only reads the default cannot see a wrong
+        conversion here. A mutation that put `* 100` back passed the whole
+        suite until this existed.
+
+        0.30 steps is what the surface's 50 writes, so 50 is what must come
+        back. Under the old `* 100` it would read 30 and the column would move
+        on every snapshot load."""
+
+        self.d.libseq.getHumanTime = lambda: 0.30
+        self.d.libseq.getHumanVelo = lambda: 10.0
+        self.d._derive_params(0)
+        self.assertEqual(self.d.param_get(0, "human"), 50)
+        self.assertEqual(self.d.param_get(0, "humanvelo"), 50)
 
     def test_the_read_back_lands_in_the_state_the_surface_draws(self):
         self.d.apply(0, "human", 40)
