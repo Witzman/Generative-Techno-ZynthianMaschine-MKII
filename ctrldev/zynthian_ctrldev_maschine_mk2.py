@@ -395,6 +395,36 @@ PADS = 16              # a pattern longer than the pad grid is not displayable
 CC_F1 = 39             # F1..F8 = CC 39..46, one mute per group
 F_BUTTON_NAMES = ("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8")
 
+# EVERY LED THIS DRIVER CAN WRITE, in one place, because something finally
+# needed the WHOLE panel rather than a row of it: light_off() has to darken all
+# of it for the screensaver (item 74, 2026-09-08), and until then it darkened
+# the pads, the Group buttons, PLAY and the screens - so a sleeping instrument
+# still showed eight mutes, a lit mode and two arrows.
+#
+# ASSEMBLED FROM THE TABLES THAT ALREADY EXIST wherever there is one, so this
+# cannot drift from them, and listed literally only for the LEDs that have no
+# table. A guard in tests/test_maschine_mk2_lib.py parses every literal name
+# passed to button_osc out of this file and fails if one is missing here - so
+# the next LED added to the panel cannot be forgotten by the thing that turns
+# the panel off.
+#
+# Group buttons and pads are NOT here: they are index-generated
+# (`group_{a..h}`) and pad_osc respectively, and light_off walks both directly.
+ALL_LED_NAMES = F_BUTTON_NAMES + (
+    # transport and the named singles
+    "play", "stop", "rec", "restart", "grid", "solo", "swing", "tempo",
+    "note_repeat", "step_left", "step_right",
+    # the display arrows and the two action arrows
+    "page_left", "page_right", "nav_left", "nav_right",
+    # the modifier alphabet, and the three LEDs that carry a name of their own
+    # because the daemon's index table names them for a different button
+    "shift", "duplicate", "mute", "navigate",
+    LED_ARM,        # "select"
+    LED_FREEZE,     # "pad_mode"
+    LED_LENS,       # "all"
+    "mod", "freeze",
+) + tuple(MODE_LED_NAMES.values())
+
 PREVIEW_VELOCITY = 100
 PREVIEW_MS = 200       # playNote spawns its own note-off after this
 
@@ -865,6 +895,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # call. False here so a driver constructed but not bound - which is
         # what every off-rig test does - writes nothing.
         self.has_keymap = False
+        # THE SCREENSAVER, item 74. While this is true nothing may paint: not
+        # the poll thread, not the mixer signal, not the playhead. Cleared by
+        # sleep_off(), which repaints from scratch.
+        self.asleep = False
         # The sleeping state set per channel and kind: channel -> kind -> dict,
         # plus "<kind>:hits" and "<kind>:rot" from the legacy arrays. Pure
         # driver state - nothing in zynseq mirrors it, so there is nothing to
@@ -3489,6 +3523,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 self.libseq.setPlayMode(self.bank, grp, zynseq_lib.SEQ_LOOP)
 
     def light_off(self):
+        """Dark, everywhere. The base class routes both the screensaver and an
+        unbind here (zynthian_ctrldev_base.py:173 sleep_on, and our own end()).
+
+        THE WHOLE PANEL SINCE 2026-09-08, item 74. This used to darken the 16
+        pads, the 8 Group buttons, PLAY and the two screens - and nothing else,
+        so a sleeping instrument still showed eight mute states, a lit mode
+        button and two page arrows. ALL_LED_NAMES is the full set and is
+        guarded against the literals in this file, so a new LED cannot be added
+        to the panel without being added to what turns the panel off.
+        """
+
         self._release_all()
         self.leds.clear()
         self.head_shown = None
@@ -3496,9 +3541,42 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._send_osc(lib.pad_osc(pad, 0x000000, 0.0))
         for group in range(8):
             self._send_osc(lib.button_osc(f"group_{chr(ord('a') + group)}", 0x000000, 0.0))
-        self._send_osc(lib.button_osc("play", COLOR_PLAY, 0.0))
+        for name in ALL_LED_NAMES:
+            self._send_osc(lib.button_osc(name, 0x000000, 0.0))
         for screen in (0, 1):
             self._send_osc(lib.display_clear_osc(screen))
+
+    def sleep_on(self):
+        """The screensaver has started: go dark, and STAY dark.
+
+        The base class's default is light_off() alone
+        (zynthian_ctrldev_base.py:173) and that was never enough here - see
+        _poll_render for what put the panel straight back on within 200 ms.
+        Item 74, and the entry's premise was wrong: sleep was not
+        unimplemented, it was UNDONE.
+
+        THE FLAG IS SET BEFORE light_off(), not after. A tick already in
+        flight on the poll thread would otherwise repaint between the two, and
+        that race is the whole defect in miniature.
+        """
+
+        self.asleep = True
+        self.light_off()
+
+    def sleep_off(self):
+        """Woken: a full repaint, trusting no cache.
+
+        refresh() drops the note, keymap and kit caches and repaints
+        everything. The LED cache is cleared here as well rather than relying
+        on light_off() having done it on the way in - a wake that trusts the
+        cache leaves a stale surface, and a stale surface after a screensaver
+        reads exactly like a driver that has died.
+        """
+
+        self.asleep = False
+        self.leds.clear()
+        self.head_shown = None
+        self.refresh()
 
     # --- persistence ----------------------------------------------------
 
@@ -9668,7 +9746,19 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         The caller keeps the tick arithmetic and the error handling: this
         method raises rather than logging, so the loop's own rate-limited
         _log_poll_error still sees everything it used to.
+
+        AND THE SLEEP GATE IS THE FIRST THING IN IT, which is why the
+        extraction happened at all (item 74). light_off() CLEARS the LED
+        cache, so after a sleep every renderer below sees a changed value and
+        writes - the whole panel and both screens came back on the next
+        VOLUME_POLL_TICKS tick, inside a fifth of a second of the screensaver
+        starting. Sleep was never unimplemented; it was undone, fast enough
+        that a gate looking at the rig would have called it broken and never
+        found out why.
         """
+
+        if self.asleep:
+            return
 
         with self.lock:
             # Before anything else this tick: if the controller has
@@ -11205,7 +11295,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _on_progress(self, *args, **kwargs):
         """zynsigman callback for SS_SEQ_PROGRESS and SS_SEQ_PLAY_STATE -
         called with each signal's own arguments, which neither the playhead
-        nor the transport LED needs."""
+        nor the transport LED needs.
+
+        THE OTHER SIGNAL-THREAD DOOR, gated for the same reason as
+        _on_mixer_strip: a sequence left playing through the screensaver would
+        otherwise walk a white playhead across a dark panel. Item 74."""
+
+        if self.asleep:
+            return
 
         with self.lock:
             self._render_pads()
@@ -11246,7 +11343,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         So this makes the surface PROMPT, not cheaper. Making it cheaper needs
         a driver-side mixer cache and is a decision rather than a step -
         notes/findings/2026-09-08-queued-six-premises.md carries the split.
+
+        WHILE ASLEEP THIS PAINTS NOTHING. A fader moved on the touchscreen
+        during the screensaver would otherwise light the Group and F rows on a
+        panel that is supposed to be dark - the poll thread is gated, but this
+        arrives on the signal thread with no tick involved, so it needs its
+        own door. Item 74.
         """
+
+        if self.asleep:
+            return
 
         with self.lock:
             self._render_groups()

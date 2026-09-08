@@ -244,6 +244,27 @@ def _install_fake_zynthian():
         def end(self):
             pass
 
+        # THE UPSTREAM SLEEP DEFAULTS, VERBATIM - zynthian_ctrldev_base.py:173
+        # and :178. They are NOT stubs, which is the whole correction behind
+        # item 74: sleep routes to the driver's own light_off and wake to its
+        # refresh, both of which this driver implements. So the defect was
+        # never "sleep is unimplemented" - it was that the poll thread painted
+        # the panel straight back.
+        # `refresh` and `light_off` ARE the stubs upstream - both `pass`
+        # (zynthian_ctrldev_base.py:155, :168) - and this driver overrides
+        # both. They exist here because our own refresh() calls super().
+        def refresh(self):
+            pass
+
+        def light_off(self):
+            pass
+
+        def sleep_on(self):
+            self.light_off()
+
+        def sleep_off(self):
+            self.refresh()
+
     _module("zyngine.ctrldev.zynthian_ctrldev_base",
             zynthian_ctrldev_base=ZynthianCtrldevBase)
 

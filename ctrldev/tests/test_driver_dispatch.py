@@ -1653,3 +1653,136 @@ class TheTouchscreenKeymapFollowsTheSurface(DispatchCase):
             self.assertIn(expected, callers,
                           f"{expected} does not push the keymap; callers are "
                           f"{sorted(callers)}")
+
+
+class SleepStaysAsleep(DispatchCase):
+    """Item 74, against the CORRECTED premise. The entry said `sleep_on` and
+    `sleep_off` were unimplemented; they are not. The base class's defaults
+    call this driver's own `light_off()` and `refresh()`
+    (zynthian_ctrldev_base.py:173, :178), both of which exist here.
+
+    The two real faults, neither of which the entry named:
+
+    1. `light_off()` calls `self.leds.clear()`, so on the next poll tick every
+       renderer sees a changed value and writes - the panel and both screens
+       came back inside 200 ms, which is why a glance at the rig would have
+       reported sleep as simply broken.
+    2. `light_off()` darkened the pads, the Group buttons, PLAY and the
+       screens, and nothing else. The F row, the transport and the mode
+       buttons stayed lit through the screensaver.
+    """
+
+    def test_sleep_sets_the_flag_and_wake_clears_it(self):
+        self.d.sleep_on()
+        self.assertTrue(self.d.asleep)
+        self.d.sleep_off()
+        self.assertFalse(self.d.asleep)
+
+    def test_the_flag_is_set_before_the_panel_is_darkened(self):
+        """ORDER, not just presence. light_off() clears the LED cache, so a
+        poll tick already in flight between the darkening and the flag would
+        repaint the whole panel and both screens - and then stop, leaving a
+        surface that is lit, stale and unattended.
+
+        This test exists because the ordering was documented in a comment and
+        a mutation that swapped the two lines passed the whole suite. A comment
+        cannot fail a build."""
+
+        seen = []
+        self.d.light_off = lambda: seen.append(self.d.asleep)
+        self.d.sleep_on()
+        self.assertEqual(seen, [True],
+                         "light_off ran before asleep was set")
+
+    def test_wake_clears_the_flag_before_repainting(self):
+        """The mirror image: refresh() paints, and _poll_render and both
+        signal handlers refuse to paint while asleep - so a repaint that ran
+        before the flag cleared would be a no-op through most of its callees
+        and the surface would come back partly drawn."""
+
+        self.d.sleep_on()
+        seen = []
+        self.d.refresh = lambda: seen.append(self.d.asleep)
+        self.d.sleep_off()
+        self.assertEqual(seen, [False], "refresh ran while still asleep")
+
+    def test_the_poll_thread_paints_nothing_while_asleep(self):
+        self.d.sleep_on()
+        painted = []
+        for name in ("_render_groups", "_render_mutes", "_render_grid",
+                     "_render_pads", "_render_display", "_render_mod"):
+            setattr(self.d, name, lambda n=name: painted.append(n))
+        self.d._poll_render(tick=0)
+        self.assertEqual(painted, [], painted)
+
+    def test_it_paints_again_once_awake(self):
+        self.d.sleep_on()
+        self.d.sleep_off()
+        painted = []
+        for name in ("_render_groups", "_render_mutes"):
+            setattr(self.d, name, lambda n=name: painted.append(n))
+        self.d._poll_render(tick=0)
+        self.assertTrue(painted)
+
+    def test_a_mixer_signal_while_asleep_does_not_light_the_panel(self):
+        """The signal threads are the other way back onto the panel: item 71's
+        mixer callback and the playhead's repaint both fire on an EVENT with no
+        tick involved, so gating _poll_render alone would leave two doors."""
+
+        self.d.sleep_on()
+        painted = []
+        self.d._render_groups = lambda: painted.append("groups")
+        self.d._render_mutes = lambda: painted.append("mutes")
+        self.d._display_soon = lambda: painted.append("display")
+        self.d._on_mixer_strip(0, "level", 0.5)
+        self.assertEqual(painted, [])
+
+    def test_a_progress_signal_while_asleep_does_not_light_the_pads(self):
+        self.d.sleep_on()
+        painted = []
+        self.d._render_pads = lambda: painted.append("pads")
+        self.d._render_transport = lambda: painted.append("transport")
+        self.d._on_progress()
+        self.assertEqual(painted, [])
+
+    def test_wake_drops_the_led_cache_so_the_repaint_is_not_swallowed(self):
+        """`light_off` cleared it on the way in and the poll thread has been
+        silent since, but a wake must not TRUST that: the cache is the thing
+        that decides whether a write reaches the wire, and a stale one leaves
+        a surface that looks exactly like a driver fault."""
+
+        self.d.sleep_on()
+        self.d.leds.changed("mute0", ("x", 1.0))   # something survives sleep
+        self.d.sleep_off()
+        self.assertTrue(self.d.leds.changed("mute0", ("x", 1.0)),
+                        "the wake trusted the LED cache")
+
+    def test_light_off_darkens_every_led_the_driver_can_write(self):
+        """There was no single list of them before item 74 - the panel was
+        darkened row by row, and three rows were missing. ALL_LED_NAMES is the
+        list, and this asserts light_off walks all of it."""
+
+        sent = []
+        self.d._send_osc = lambda payload: sent.append(payload)
+        self.d.light_off()
+        blob = b"".join(p for p in sent if isinstance(p, bytes))
+        for name in self.mod.ALL_LED_NAMES:
+            self.assertIn(f"/maschine/button/{name}".encode(), blob, name)
+        # The two surfaces that are not buttons.
+        self.assertIn(b"/maschine/pad", blob)
+        self.assertIn(b"/maschine/display/fbclear", blob)
+
+    def test_the_named_rows_that_used_to_be_missed_are_in_the_list(self):
+        """Named explicitly as well as walked, because ALL_LED_NAMES being
+        complete is the claim - and a test that only walks whatever the tuple
+        holds would pass over a tuple with three rows deleted."""
+
+        names = set(self.mod.ALL_LED_NAMES)
+        for missed in self.mod.F_BUTTON_NAMES:
+            self.assertIn(missed, names, missed)
+        for missed in self.mod.MODE_LED_NAMES.values():
+            self.assertIn(missed, names, missed)
+        for missed in ("page_left", "page_right", "nav_left", "nav_right",
+                       "shift", "mute", "navigate", "duplicate",
+                       "rec", "grid", "solo", "swing", "stop"):
+            self.assertIn(missed, names, missed)

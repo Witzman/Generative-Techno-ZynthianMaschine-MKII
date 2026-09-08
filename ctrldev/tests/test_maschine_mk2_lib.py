@@ -2300,3 +2300,65 @@ class NoCommentNamesACheckoutInsteadOfAFact(unittest.TestCase):
         self.assertTrue("vangelis" in self._src(),
                         "the comment no longer says WHERE the float lives, so "
                         "the next reader cannot tell a stale pin from a bug")
+
+
+class NothingCanBeLitThatCannotBeTurnedOff(unittest.TestCase):
+    """ALL_LED_NAMES is what light_off() walks, and light_off() is what the
+    screensaver and every unbind route through (item 74, 2026-09-08). Before
+    it existed the panel was darkened row by row and three rows were missed -
+    the F row, the transport and the mode buttons stayed lit through a sleep.
+
+    So the claim this guards is: EVERY LED THIS DRIVER CAN LIGHT IS IN THAT
+    LIST. It reads the literal names the driver passes to `button_osc` out of
+    its own source, which is the only place that fact lives - the daemon's
+    index table names several buttons for a different function, so a name
+    cannot be inferred from what is printed on the panel.
+    """
+
+    DRIVER = os.path.join(os.path.dirname(__file__), "..",
+                          "zynthian_ctrldev_maschine_mk2.py")
+
+    def _literal_button_names(self):
+        """Every string constant handed to button_osc as its first argument."""
+
+        import ast
+        with open(self.DRIVER, encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
+        names = set()
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call)
+                    and getattr(node.func, "attr", None) == "button_osc"
+                    and node.args):
+                continue
+            first = node.args[0]
+            if isinstance(first, ast.Constant) and isinstance(first.value, str):
+                names.add(first.value)
+        return names
+
+    def test_there_are_literal_names_to_check(self):
+        found = self._literal_button_names()
+        self.assertGreater(len(found), 8, sorted(found))
+
+    def test_every_literal_led_the_driver_writes_can_be_turned_off(self):
+        import rig_stub
+        mod = rig_stub.load_driver()
+        listed = set(mod.ALL_LED_NAMES)
+        for name in sorted(self._literal_button_names()):
+            self.assertIn(
+                name, listed,
+                f"the driver lights '{name}' and light_off() never darkens it "
+                f"- add it to ALL_LED_NAMES, or the screensaver leaves it on")
+
+    def test_the_tables_are_folded_in_rather_than_retyped(self):
+        """F_BUTTON_NAMES and MODE_LED_NAMES already exist, so ALL_LED_NAMES is
+        assembled from them - two lists of the same eight buttons would drift,
+        and the drifting copy would be the one that turns them off."""
+
+        import rig_stub
+        mod = rig_stub.load_driver()
+        listed = set(mod.ALL_LED_NAMES)
+        self.assertTrue(set(mod.F_BUTTON_NAMES) <= listed)
+        self.assertTrue(set(mod.MODE_LED_NAMES.values()) <= listed)
+        self.assertIn(mod.LED_ARM, listed)
+        self.assertIn(mod.LED_FREEZE, listed)
+        self.assertIn(mod.LED_LENS, listed)
