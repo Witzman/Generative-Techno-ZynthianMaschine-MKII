@@ -644,6 +644,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # distinction: scoped Lock layers in pass three are impossible later
         # without re-tagging every field.
         self.GENERATOR_PARAMS = {"hits", "rotate", "div", "length", "chance",
+                                 # HUMAN and HUMNV, 2026-09-08. Here because
+                                 # membership is what routes a verb to
+                                 # _apply_generator, and NOT in
+                                 # HANDBACK_VERBS - so neither regenerates a
+                                 # pattern, which is the point of them.
+                                 "human", "humanvelo",
                                  "velo", "swing", "random", "gate", "octave",
                                  "range", "kit_range", "register", "rhythm",
                                  "rhythm_reg", "ratchet", "lane",
@@ -2343,9 +2349,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def _apply_generator(self, channel, param, value):
         """Generator writes reach zynseq from here.
 
-        CHANCE and SWING are native per-pattern properties, persisted in the
-        .zss and costing zero pattern writes, which is what keeps the write
-        burst - the largest risk in this design - as small as it is.
+        CHANCE, SWING, HUMAN and HUMNV are native per-pattern properties,
+        persisted in the .zss and costing zero pattern writes, which is what
+        keeps the write burst - the largest risk in this design - as small as
+        it is. HUMAN and HUMNV joined them 2026-09-08.
 
         A STILL-OWNED CHANNEL IS NOT REGENERATED, 2026-09-02, and the guard is
         the second half of widening HANDBACK_VERBS. Every branch below that
@@ -2397,6 +2404,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             with self.lock:
                 self._select_pattern(channel)
                 self.libseq.setSwingAmount((value - 50) / 50.0)
+        elif param in ("human", "humanvelo"):
+            # APPLIED AT PLAYBACK, NOT WRITTEN INTO THE PATTERN. track.cpp:195
+            # and :224 add these per note in the audio thread, so the grid the
+            # pads and the touchscreen editor show stays exact and NOTHING on
+            # either surface can show what this verb is doing. That is a
+            # surface-honesty constraint rather than a bug: HUMAN has to read
+            # as a feel control, and the guide says so.
+            #
+            # Zero pattern writes, the same shape as CHANCE and SWING above.
+            # Per pattern via the selection (zynseq.cpp:1691-1707 reach
+            # Pattern::m_fHumanTime), and persisted into the .zss (:1267), so
+            # a snapshot brings it back - which is why _on_snapshot pushes it.
+            #
+            # 0-100 ON THE SURFACE, 0.0-1.0 TO ZYNSEQ, converted HERE and
+            # nowhere else. A number the surface shows and a number the
+            # library receives are different claims; one conversion site is
+            # what keeps them one claim.
+            with self.lock:
+                self._select_pattern(channel)
+                if param == "human":
+                    self.libseq.setHumanTime(value / 100.0)
+                else:
+                    self.libseq.setHumanVelo(value / 100.0)
         elif param == "rhythm" and self.channel_kind(channel) == "voice":
             # Setting the evolve RATE writes nothing new by itself - the
             # register is untouched - but the pattern is rewritten so a move
@@ -5704,8 +5734,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             try:
                 state["chance"] = int(round(self.libseq.getPlayChance() * 100))
                 state["swing"] = int(round(self.libseq.getSwingAmount() * 50 + 50))
+                # HUMAN AND HUMNV ARE READ BACK, NOT PUSHED, 2026-09-08. They
+                # are per-pattern and written into the .zss (zynseq.cpp:1267),
+                # so the PATTERN is the source of truth after a load and the
+                # surface has to follow it - the same relationship CHANCE and
+                # SWING have on the two lines above. Pushing the driver's
+                # remembered value here would overwrite what the snapshot
+                # actually carries, which is the mirror image of STORED, DRAWN,
+                # NEVER WRITTEN and just as wrong.
+                #
+                # zynseq.py registers the restype for both getters (`:111`,
+                # `:113` there), so these read as the floats they are.
+                state["human"] = int(round(self.libseq.getHumanTime() * 100))
+                state["humanvelo"] = int(round(self.libseq.getHumanVelo() * 100))
             except Exception:
-                logging.debug("Maschine: no readable chance/swing on this libzynseq")
+                logging.debug("Maschine: no readable chance/swing/human on "
+                              "this libzynseq")
             # RATCHET is stutter, and stutter is SAVED IN THE RIFF - so a
             # snapshot comes back with the pattern still stuttering. Read it
             # back rather than defaulting to 1, or the surface would say OFF
@@ -6427,6 +6471,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     VERB_RANGES = {
         "velo": (1, 127, None),
         "chance": (0, 100, None),
+        "human": (0, 100, None),
+        "humanvelo": (0, 100, None),
         "rhythm": (0, 100, None),
         "swing": (50, 75, ENC_UNITS_DISCRETE),
         "level": (0, 100, None),

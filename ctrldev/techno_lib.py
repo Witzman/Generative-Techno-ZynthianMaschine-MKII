@@ -1502,6 +1502,13 @@ class techno_lib:
         spread pages went on 2026-09-01 and the lens replaced them.)"""
         state = dict(level=19, reverb=0, delay=0, swing=50, velo=110,
                      chance=100, pending=set(),
+                     # HUMAN AND HUMNV, 2026-09-08, both kinds. Per-pattern
+                     # zynseq properties like chance and swing, so the lens
+                     # reaches either kind with them. 0 IS THE MIGRATION -
+                     # no humanisation at all, which is exactly what every
+                     # channel did before these existed, so an old snapshot
+                     # plays identically.
+                     human=0, humanvelo=0,
                      # A PHRASE, NOT A BAR, 2026-09-01. `phrase` is how many
                      # bars the phrase is and `fill` is how full its last bar
                      # gets. 1 and 0 ARE THE MIGRATION: no bar is ever a fill
@@ -3654,6 +3661,19 @@ class techno_lib:
     AUTO_DRAWS = frozenset(("rule", "lean", "model", "random", "rhythm",
                             "lane", "rotate", "walk_span", "walk_stride",
                             "feed", "amount",
+                            # HUMAN AND HUMNV joined the LINE page 2026-09-08.
+                            # They belong to the left half by the rule above:
+                            # how far out the machine may go, in TIME and in
+                            # VELOCITY rather than in pitch - the same family
+                            # as AMOUNT and MELODY, which are also deviation
+                            # sizes. They are arrangement in no sense: nothing
+                            # about them says when or for how long.
+                            #
+                            # These two also appear on drum CONTROL, which is
+                            # not an AUTO page, so this set never speaks for
+                            # them there. The asymmetry is the accepted cost
+                            # in notes/specs/2026-09-08-human-on-the-surface.md
+                            "human", "humanvelo",
                             # RANGE joined the LINE page 2026-09-02, when
                             # CHORD took its slot on STEP. It belongs to the
                             # left half by the rule above: how far out the
@@ -4461,6 +4481,7 @@ class techno_lib:
         "rhythm": 0, "ratchet": 1, "rotate": 0, "amount": 0,
         "walk_span": 32, "walk_stride": 4, "move": 100, "phrase": 1,
         "fill": 0, "exit": 0, "swing": 50, "chance": 100,
+        "human": 0, "humanvelo": 0,
         "rule": "rand", "lean": "off", "model": "reg",
     }
 
@@ -6305,6 +6326,17 @@ techno_lib.VERB_COLS = {
     "velo":    ("VELO", "uni", _127, _plain),
     "gate":    ("GATE", "uni", _over(float(techno_lib.GATE_MAX)), _plain),
     "chance":  ("CHANCE", "uni", _pct, _plain),
+    # HUMAN AND HUMNV, 2026-09-08. Same shape as CHANCE and SWING and for the
+    # same reason: per pattern, applied in the audio thread per note
+    # (track.cpp:195, :224), zero pattern writes.
+    #
+    # THE LABELS ARE FIVE CHARACTERS BECAUSE THAT IS THE COLUMN. HUMNV rather
+    # than HUMANVELO, and it is not an abbreviation anybody will love - the
+    # value column holds five characters of double-height text and a longer
+    # label is silently truncated on the screen, which would have read as a
+    # different verb.
+    "human":     ("HUMAN", "uni", _pct, _plain),
+    "humanvelo": ("HUMNV", "uni", _pct, _plain),
     "swing":   ("SWING", "uni", lambda v, s=None, k=None: (v - 50) / 25.0,
                 _plain),
     "ratchet": ("RATCH", "seg", _ratchet_frac, _ratchet_fmt),
@@ -6412,8 +6444,26 @@ techno_lib.PAGE_RINGS = {
     # the SoundFont CC 74/71 route is a measured dead end - the kits ship with
     # the filter wide open at 13500 cents, so there is no headroom to act in.
     ("CONTROL", "drum"): (
+        # HUMAN AND HUMNV TAKE THE TWO DEAD COLUMNS, 2026-09-08, by owner
+        # decision - notes/specs/2026-09-08-human-on-the-surface.md.
+        #
+        # THE QUESTION MISMATCH IS REAL AND ACCEPTED. CONTROL asks how a
+        # channel SOUNDS and humanisation is closer to "what the machine does
+        # by itself", which is AUTO. But AUTO is eight live verbs on a drum and
+        # voice CONTROL is eight live verbs, so no page had room on BOTH kinds -
+        # the alternatives were a drum AUTO page 2 carrying two live columns and
+        # six dead, or displacing a verb somebody reaches for. Neither is worth
+        # more than the inconsistency.
+        #
+        # CONSEQUENCE, and the guide says it out loud: HUMAN is on CONTROL for a
+        # drum and on AUTO page 2 for a voice. A verb that moves when a channel
+        # changes kind reads as a bug unless a player has been told.
+        #
+        # These two slots were dead honestly rather than reserved: LinuxSampler
+        # publishes no controller for anything and the SoundFont CC 74/71 route
+        # is a measured dead end, so no sound parameter was ever coming here.
         _d(techno_lib.SHAPE_CHANNEL, "CTRL",
-           verbs=("kit", "sample", "range", None, None,
+           verbs=("kit", "sample", "range", "human", "humanvelo",
                   "level", "reverb", "delay")),
     ),
     ("CONTROL", "voice"): (
@@ -6483,9 +6533,11 @@ techno_lib.PAGE_RINGS = {
         # question - how is this voice's line of pitches built - and RANGE, the
         # span of octaves the line is spread across, is the plainest member of
         # that set. Six live columns now, up from five.
+        # AND HUMAN LANDS HERE FOR A VOICE, 2026-09-08 - the same two verbs in
+        # this page's own two dead columns. Eight live columns now, up from six.
         _d(techno_lib.SHAPE_CHANNEL, "LINE",
            verbs=("rotate", "walk_span", "walk_stride", "feed", "amount",
-                  "range", None, None)),
+                  "range", "human", "humanvelo")),
     ),
     ("VOLUME", None): (
         # REVTYPE and DLYFBK left this page so WALK and SPAN could land on it,

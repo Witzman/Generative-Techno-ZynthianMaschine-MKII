@@ -1849,3 +1849,87 @@ class PlayingThePanelCountsAsBeingAwake(DispatchCase):
         self.d.state_manager.set_event_flag = MagicMock()
         self.pad(0)
         self.d.state_manager.set_event_flag.assert_called()
+
+
+class HumanReachesTheAudioThread(DispatchCase):
+    """The law this is under: STORED, DRAWN, NEVER WRITTEN - eight occurrences
+    in this project, and three of four broken is its commonest shape. So every
+    path is asserted separately: the dial, the read-back, and the restore.
+
+    setHumanTime / setHumanVelo take a FLOAT 0..1 and the surface reads 0-100,
+    so the conversion is asserted too - a verb whose surface number and plugin
+    number are different claims is the other law on this list.
+    """
+
+    def _args(self, name):
+        return [c[1] for c in self.d.libseq.calls if c[0] == name]
+
+    def test_setting_human_writes_it_to_the_pattern(self):
+        self.d.libseq.calls.clear()
+        self.d.apply(0, "human", 40)
+        self.assertTrue(self._args("setHumanTime"), self.d.libseq.calls)
+
+    def test_setting_human_velo_writes_the_other_one(self):
+        self.d.libseq.calls.clear()
+        self.d.apply(0, "humanvelo", 40)
+        self.assertTrue(self._args("setHumanVelo"), self.d.libseq.calls)
+
+    def test_the_surface_percentage_becomes_a_zero_to_one_float(self):
+        self.d.libseq.calls.clear()
+        self.d.apply(0, "human", 50)
+        self.assertEqual(self._args("setHumanTime"), [(0.5,)])
+        self.d.libseq.calls.clear()
+        self.d.apply(0, "humanvelo", 100)
+        self.assertEqual(self._args("setHumanVelo"), [(1.0,)])
+
+    def test_it_selects_the_channels_own_pattern_first(self):
+        """Per pattern via the selection, like everything else in this API. A
+        write without the select lands on whichever pattern was last touched."""
+
+        self.d.libseq.calls.clear()
+        self.d.apply(3, "human", 20)
+        names = [c[0] for c in self.d.libseq.calls]
+        self.assertIn("selectPattern", names)
+        self.assertLess(names.index("selectPattern"),
+                        names.index("setHumanTime"))
+
+    def test_it_is_read_back_through_param_get(self):
+        # A VERB WHOSE STORAGE IS NOT self.state MUST BE READ THROUGH
+        # param_get - seven occurrences. Every surface agreeing while only the
+        # audio is wrong is the dangerous shape.
+        self.d.apply(0, "human", 40)
+        self.assertEqual(self.d.param_get(0, "human"), 40)
+        self.d.apply(0, "humanvelo", 70)
+        self.assertEqual(self.d.param_get(0, "humanvelo"), 70)
+
+    def test_a_restore_READS_both_back_rather_than_pushing_them(self):
+        """The direction matters and it is the opposite of the usual law here.
+        These live in the PATTERN and the pattern is saved into the .zss
+        (zynseq.cpp:1267), so after a load the snapshot is the source of truth
+        and the surface must follow it - exactly as CHANCE and SWING do.
+
+        Pushing the driver's remembered value would overwrite what the
+        snapshot carries, which is the mirror image of STORED, DRAWN, NEVER
+        WRITTEN and just as wrong."""
+
+        self.d.libseq.calls.clear()
+        self.d._derive_params(0)
+        names = [c[0] for c in self.d.libseq.calls]
+        self.assertIn("getHumanTime", names)
+        self.assertIn("getHumanVelo", names)
+        self.assertNotIn("setHumanTime", names)
+        self.assertNotIn("setHumanVelo", names)
+
+    def test_every_channel_is_read_back_on_a_resync(self):
+        self.d.libseq.calls.clear()
+        self.d._resync_all()
+        self.assertEqual(len(self._args("getHumanTime")), 8)
+        self.assertEqual(len(self._args("getHumanVelo")), 8)
+
+    def test_the_read_back_lands_in_the_state_the_surface_draws(self):
+        self.d.apply(0, "human", 40)
+        self.d._derive_params(0)
+        # FakeLibseq answers 0 for an unnamed getter, so the restored value is
+        # 0 - the point is that the STATE moved to what the pattern said, not
+        # that it kept what the driver remembered.
+        self.assertEqual(self.d.param_get(0, "human"), 0)

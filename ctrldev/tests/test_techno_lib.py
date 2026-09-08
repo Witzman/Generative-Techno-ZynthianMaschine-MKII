@@ -287,12 +287,16 @@ class TestColumnModel(unittest.TestCase):
         # draws dead here and comes alive the moment the channel is switched
         # to voice behaviour.
         #
-        # The names are the page title plus the slot number since 2026-09-01.
-        # A slot with no verb has nothing else to be called, and a made-up
-        # instrument name ("tune", "filtr") on a control that does not exist
-        # was a promise the sampler could never keep.
-        self.assertEqual([c["name"] for c in grey],
-                         ["range", "ctrl4", "ctrl5"])
+        # ONE GREY COLUMN SINCE 2026-09-08, down from three: HUMAN and HUMNV
+        # took slots 4 and 5 (owner decision, spec
+        # 2026-09-08-human-on-the-surface). Those two were dead HONESTLY
+        # rather than reserved - LinuxSampler publishes no controller and the
+        # SoundFont CC 74/71 route is a measured dead end - so no sound
+        # parameter was ever coming for them.
+        #
+        # RANGE stays grey on a euclidean drum for the reason above, and that
+        # is the one this test is really about.
+        self.assertEqual([c["name"] for c in grey], ["range"])
         for c in grey:
             self.assertEqual(c["value"], "----")
             self.assertIsNone(c["bar"])
@@ -471,10 +475,18 @@ class TestPageRings(unittest.TestCase):
     def test_control_channel_page_verbs_match_the_shipped_layout(self):
         # RANGE took slot 3 on the drum page, 2026-09-01: the kit-walk window
         # was reachable from no page at all, and it is a sound parameter, so
-        # it fills one of the three slots a sampler could never fill.
+        # it filled one of the three slots a sampler could never fill.
+        #
+        # HUMAN AND HUMNV TOOK THE LAST TWO, 2026-09-08, so this page has no
+        # dead columns left. The question mismatch is on the record - CONTROL
+        # asks how a channel SOUNDS, and humanisation is nearer "what the
+        # machine does by itself" - and it was accepted because no page had
+        # room on BOTH kinds: voice CONTROL and drum AUTO are eight live verbs
+        # each. notes/specs/2026-09-08-human-on-the-surface.md.
         self.assertEqual(
             tl.PAGE_RINGS[("CONTROL", "drum")][0]["verbs"],
-            ("kit", "sample", "range", None, None, "level", "reverb", "delay"))
+            ("kit", "sample", "range", "human", "humanvelo",
+             "level", "reverb", "delay"))
         self.assertEqual(
             tl.PAGE_RINGS[("CONTROL", "voice")][0]["verbs"],
             ("preset", "cutoff", "reso", "env", "decay", "level", "reverb", "delay"))
@@ -6911,7 +6923,7 @@ class TestGenPage(unittest.TestCase):
         desc = _page("AUTO", "voice", "LINE")
         self.assertEqual(desc["verbs"],
                          ("rotate", "walk_span", "walk_stride", "feed",
-                          "amount", "range", None, None))
+                          "amount", "range", "human", "humanvelo"))
         # On the WALK model every one of the six is live. On the register
         # model SPAN and STRIDE draw dead - see the test below.
         cols = tl.columns(desc, "voice", self._state(model=tl.MODEL_WALK))
@@ -6925,14 +6937,17 @@ class TestGenPage(unittest.TestCase):
         self.assertEqual(auto[1], "model")
 
     def test_the_UNUSED_columns_draw_dead(self):
-        # A lit column that does nothing is the fault this surface must never
-        # commit - law L4, draw dead rather than a number the knob cannot move.
-        # TWO slots are spare since RANGE arrived here on 2026-09-02, and
-        # both are honest about it. It was three.
+        # NO SPARE SLOTS LEFT ON THIS PAGE SINCE 2026-09-08. It was three
+        # before RANGE arrived (2026-09-02), then two, and HUMAN and HUMNV
+        # took the last two - eight live columns. What this test now guards is
+        # that they are LIVE rather than drawn dead, because a verb that
+        # writes while its column is grey is the same lie in reverse.
         desc = _page("AUTO", "voice", "LINE")
         cols = tl.columns(desc, "voice", self._state())
         for index in (6, 7):
-            self.assertTrue(cols[index]["grey"], f"column {index + 1}")
+            self.assertFalse(cols[index]["grey"], f"column {index + 1}")
+        self.assertEqual([cols[6]["name"], cols[7]["name"]],
+                         ["HUMAN", "HUMNV"])
         # And the column RANGE landed in is LIVE, which is the point of
         # moving it here rather than dropping it.
         self.assertFalse(cols[5]["grey"])
@@ -9579,3 +9594,57 @@ class TheZynseqScaleMappingIsHonest(unittest.TestCase):
         seven = {tl.ZYNSEQ_SCALE[n] for n, d in tl.SCALES if len(d) == 7}
         for sparse in ("PENT", "DIM7", "JAPAN", "IWATO", "PELOG", "BALI"):
             self.assertNotIn(tl.ZYNSEQ_SCALE[sparse], seven, sparse)
+
+
+class HumanIsTwoVerbsAndTheyAreNotSteps(unittest.TestCase):
+    """new_features.md entry 36's HUMAN half, queued 5th by the owner.
+    setHumanTime / setHumanVelo (zynseq.h:375, :385) are per pattern via the
+    selection, applied in the audio thread per note (track.cpp:195, :224), and
+    cost ZERO pattern writes - the same shape as CHANCE and SWING.
+
+    THE SURFACE-HONESTY CONSTRAINT: the pattern keeps its exact grid, so
+    nothing in the pads or the touchscreen editor can show what this verb is
+    doing. It has to read as a feel control and never as a step edit.
+    """
+
+    def test_both_verbs_are_in_the_verb_table(self):
+        keys = sorted(tl.VERB_COLS)
+        self.assertIn("human", keys, keys)
+        self.assertIn("humanvelo", keys, keys)
+
+    def test_the_labels_fit_the_value_column(self):
+        import maschine_mk2_lib as mlib
+        for verb in ("human", "humanvelo"):
+            label = tl.VERB_COLS[verb][0]
+            self.assertLessEqual(len(label),
+                                 mlib.maschine_mk2_lib.VALUE_CHARS, label)
+
+    def test_both_are_reachable_on_both_kinds(self):
+        """A verb no page names is a verb no player can turn. Both kinds,
+        because HUMAN is per pattern and a drum channel is a pattern too - and
+        the two land on DIFFERENT MODES, which the spec accepts and the guide
+        states: drum CONTROL, voice AUTO page 2."""
+
+        reach = {}
+        for (mode, kind), pages in tl.PAGE_RINGS.items():
+            for page in pages:
+                for verb in page["verbs"] or ():
+                    if verb in ("human", "humanvelo"):
+                        reach.setdefault(verb, set()).add((mode, kind))
+        self.assertIn(("CONTROL", "drum"), reach.get("human", set()))
+        self.assertIn(("AUTO", "voice"), reach.get("human", set()))
+        self.assertIn(("CONTROL", "drum"), reach.get("humanvelo", set()))
+        self.assertIn(("AUTO", "voice"), reach.get("humanvelo", set()))
+
+    def test_nothing_was_displaced_to_make_room(self):
+        """The decision was to fill dead columns, not to move a verb. If a
+        previously live verb has gone missing, that is a different change than
+        the one the owner approved."""
+
+        reach = set()
+        for pages in tl.PAGE_RINGS.values():
+            for page in pages:
+                reach.update(v for v in (page["verbs"] or ()) if v)
+        for kept in ("kit", "sample", "range", "level", "reverb", "delay",
+                     "rotate", "walk_span", "walk_stride", "feed", "amount"):
+            self.assertIn(kept, reach, kept)
