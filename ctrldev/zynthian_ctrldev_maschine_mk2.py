@@ -9655,6 +9655,131 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # A watchdog that can die is not a watchdog.
                 logging.error(f"Maschine watchdog: {e}")
 
+    def _poll_render(self, tick):
+        """Everything the poll thread PAINTS, once per tick. Takes the lock.
+
+        A PURE EXTRACTION out of _playhead_loop, 2026-09-08, and it earns
+        its own commit: item 74 needs one early return in front of all of
+        this, and adding that inside the loop body would have meant editing
+        the most wedge-implicated function in the driver and its sleep
+        behaviour in the same step. The block below is what ran inside the
+        loop, dedented and otherwise untouched.
+
+        The caller keeps the tick arithmetic and the error handling: this
+        method raises rather than logging, so the loop's own rate-limited
+        _log_poll_error still sees everything it used to.
+        """
+
+        with self.lock:
+            # Before anything else this tick: if the controller has
+            # been replugged, everything below would be written into
+            # a cache that describes a surface which no longer exists.
+            if tick % DEVICE_POLL_TICKS == 0:
+                self._check_device()
+            owner = self._pad_owner()
+            # THE MOD LEGEND IS NO LONGER ANIMATED FROM HERE, and
+            # it is not a throttling question any more. Repainting
+            # sixteen pads on a timer - at 30 Hz, and then at 10 Hz -
+            # starved the daemon's reader and wedged the controller
+            # three times in one session, each within seconds of a
+            # modulator being bound. It does not recover from a daemon
+            # restart or from USB re-enumeration; only a physical
+            # replug brings it back.
+            #
+            # The legend is now painted from _render_pads on the
+            # EVENTS that change it - MOD pressed, a rate or shape
+            # picked, the selection moved - so a still grid costs
+            # nothing at all. What is lost is the fade that showed
+            # what a rate FEELS like. That was a genuine nicety and it
+            # is written up in new_features.md; a controller that dies
+            # when you bind a modulator is not a trade worth making.
+            if tlib.overlay_is_stepwise(owner):
+                head = self._playhead()
+                if head != self.head_shown:
+                    self._move_playhead(head)
+            # A non-stepwise overlay that is NOT animated - ARM - is
+            # left alone. Asked by the predicate rather than by name so
+            # the next such overlay inherits it: moving a playhead
+            # across pads that no longer stand for steps would paint
+            # white over whatever they DO stand for, once per tick.
+            if tick % PAD_RESYNC_TICKS == 0:
+                # The pads are the one surface with no periodic
+                # writer - deliberately, because a full repaint at the
+                # poll rate is what wedged the controller. This is the
+                # same repaint at 1/90th of that rate, and it exists
+                # so PAD_LED_REFRESH_S has something to ride on: a
+                # single lost write heals within three seconds instead
+                # of never. It goes through _render_pads rather than a
+                # pad loop of its own so that whatever owns the pads -
+                # the step grid, MUTE, MOD, ARM, NAVIGATE - is redrawn
+                # as itself and not painted over.
+                self._render_pads()
+            if tick % VOLUME_POLL_TICKS == 0:
+                self._render_groups()
+                # GRID blinks while the selected channel is on an
+                # overridden kind, so it needs a periodic writer
+                # rather than an event-driven one. Same sub-rate as
+                # everything else here; the LED cache still swallows
+                # every repeat, so a steady GRID costs nothing.
+                self._render_grid()
+                # PATTERN goes dark when a press would do nothing, and
+                # what it would do changes without a button being
+                # touched - a take recorded, a channel selected.
+                self._render_reroll()
+                # NOTE REPEAT likewise: its ring fills at a WRAP, on
+                # this thread, with no gesture involved. Without a
+                # periodic writer the button would stay dark through
+                # the first pass that gave it something to undo.
+                self._render_register_undo()
+                                # REC promises a take only while the pads can make
+                # one, and an overlay can be latched with no button
+                # touched since.
+                self._render_rec()
+                # SWING blinks while MOD is LATCHED, so it needs the
+                # same periodic writer GRID does. The LED cache
+                # swallows every unchanged repeat, so a steady or dark
+                # SWING still puts nothing on the wire.
+                self._render_mod()
+                # The modifier lights BLINK while latched, so they
+                # need a periodic writer for the same reason GRID
+                # does. The LED cache swallows every unchanged
+                # repeat, so a panel with nothing latched puts
+                # nothing on the wire.
+                self._render_overlay_leds()
+                self._render_freeze()
+                # The display arrows go dark on a one-page ring, and
+                # the ring changes with the selected channel's kind
+                # and with the lens.
+                self._render_page_arrows()
+                # The F row follows the page in CONTROL, and a switch
+                # can also move from the touchscreen - so it needs a
+                # periodic writer for the same reason GRID does. Eight
+                # dict lookups against the LED cache when nothing has
+                # changed.
+                self._render_mutes()
+            # THE SCREENS, and the one surface here with two rates.
+            #
+            # Volume, pan and the mutes can all move on the
+            # touchscreen with nothing signalling it, so the screens
+            # are polled - at the same ~200 ms sub-rate as everything
+            # above.
+            #
+            # UNLESS A REPAINT IS BEING COALESCED, in which case the
+            # periodic one is suppressed entirely and the draw happens
+            # on the first 30 Hz tick after the hand stops. Both
+            # halves matter: without the suppression a hand on the big
+            # encoder still pays five full both-screen repaints a
+            # second, which is the 674 msg/s that wedged the
+            # controller; without the 30 Hz check the page would land
+            # up to a whole sub-rate tick late and the knob would feel
+            # slow. _display_soon() carries the measurement.
+            if self._display_due:
+                if not tlib.display_held(time.monotonic(),
+                                         self._display_hold_until):
+                    self._render_display()
+            elif tick % VOLUME_POLL_TICKS == 0:
+                self._render_display()
+
     def _playhead_loop(self):
         """Repaint just the two pads the playhead moves between. A full
         _render_pads() at this rate would mean 16 getNoteVelocity() calls
@@ -9752,115 +9877,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # whatever a modulator was doing to its level, because it
                     # is leaving.
                     self._exit_write()
-                with self.lock:
-                    # Before anything else this tick: if the controller has
-                    # been replugged, everything below would be written into
-                    # a cache that describes a surface which no longer exists.
-                    if tick % DEVICE_POLL_TICKS == 0:
-                        self._check_device()
-                    owner = self._pad_owner()
-                    # THE MOD LEGEND IS NO LONGER ANIMATED FROM HERE, and
-                    # it is not a throttling question any more. Repainting
-                    # sixteen pads on a timer - at 30 Hz, and then at 10 Hz -
-                    # starved the daemon's reader and wedged the controller
-                    # three times in one session, each within seconds of a
-                    # modulator being bound. It does not recover from a daemon
-                    # restart or from USB re-enumeration; only a physical
-                    # replug brings it back.
-                    #
-                    # The legend is now painted from _render_pads on the
-                    # EVENTS that change it - MOD pressed, a rate or shape
-                    # picked, the selection moved - so a still grid costs
-                    # nothing at all. What is lost is the fade that showed
-                    # what a rate FEELS like. That was a genuine nicety and it
-                    # is written up in new_features.md; a controller that dies
-                    # when you bind a modulator is not a trade worth making.
-                    if tlib.overlay_is_stepwise(owner):
-                        head = self._playhead()
-                        if head != self.head_shown:
-                            self._move_playhead(head)
-                    # A non-stepwise overlay that is NOT animated - ARM - is
-                    # left alone. Asked by the predicate rather than by name so
-                    # the next such overlay inherits it: moving a playhead
-                    # across pads that no longer stand for steps would paint
-                    # white over whatever they DO stand for, once per tick.
-                    if tick % PAD_RESYNC_TICKS == 0:
-                        # The pads are the one surface with no periodic
-                        # writer - deliberately, because a full repaint at the
-                        # poll rate is what wedged the controller. This is the
-                        # same repaint at 1/90th of that rate, and it exists
-                        # so PAD_LED_REFRESH_S has something to ride on: a
-                        # single lost write heals within three seconds instead
-                        # of never. It goes through _render_pads rather than a
-                        # pad loop of its own so that whatever owns the pads -
-                        # the step grid, MUTE, MOD, ARM, NAVIGATE - is redrawn
-                        # as itself and not painted over.
-                        self._render_pads()
-                    if tick % VOLUME_POLL_TICKS == 0:
-                        self._render_groups()
-                        # GRID blinks while the selected channel is on an
-                        # overridden kind, so it needs a periodic writer
-                        # rather than an event-driven one. Same sub-rate as
-                        # everything else here; the LED cache still swallows
-                        # every repeat, so a steady GRID costs nothing.
-                        self._render_grid()
-                        # PATTERN goes dark when a press would do nothing, and
-                        # what it would do changes without a button being
-                        # touched - a take recorded, a channel selected.
-                        self._render_reroll()
-                        # NOTE REPEAT likewise: its ring fills at a WRAP, on
-                        # this thread, with no gesture involved. Without a
-                        # periodic writer the button would stay dark through
-                        # the first pass that gave it something to undo.
-                        self._render_register_undo()
-                                        # REC promises a take only while the pads can make
-                        # one, and an overlay can be latched with no button
-                        # touched since.
-                        self._render_rec()
-                        # SWING blinks while MOD is LATCHED, so it needs the
-                        # same periodic writer GRID does. The LED cache
-                        # swallows every unchanged repeat, so a steady or dark
-                        # SWING still puts nothing on the wire.
-                        self._render_mod()
-                        # The modifier lights BLINK while latched, so they
-                        # need a periodic writer for the same reason GRID
-                        # does. The LED cache swallows every unchanged
-                        # repeat, so a panel with nothing latched puts
-                        # nothing on the wire.
-                        self._render_overlay_leds()
-                        self._render_freeze()
-                        # The display arrows go dark on a one-page ring, and
-                        # the ring changes with the selected channel's kind
-                        # and with the lens.
-                        self._render_page_arrows()
-                        # The F row follows the page in CONTROL, and a switch
-                        # can also move from the touchscreen - so it needs a
-                        # periodic writer for the same reason GRID does. Eight
-                        # dict lookups against the LED cache when nothing has
-                        # changed.
-                        self._render_mutes()
-                    # THE SCREENS, and the one surface here with two rates.
-                    #
-                    # Volume, pan and the mutes can all move on the
-                    # touchscreen with nothing signalling it, so the screens
-                    # are polled - at the same ~200 ms sub-rate as everything
-                    # above.
-                    #
-                    # UNLESS A REPAINT IS BEING COALESCED, in which case the
-                    # periodic one is suppressed entirely and the draw happens
-                    # on the first 30 Hz tick after the hand stops. Both
-                    # halves matter: without the suppression a hand on the big
-                    # encoder still pays five full both-screen repaints a
-                    # second, which is the 674 msg/s that wedged the
-                    # controller; without the 30 Hz check the page would land
-                    # up to a whole sub-rate tick late and the knob would feel
-                    # slow. _display_soon() carries the measurement.
-                    if self._display_due:
-                        if not tlib.display_held(time.monotonic(),
-                                                 self._display_hold_until):
-                            self._render_display()
-                    elif tick % VOLUME_POLL_TICKS == 0:
-                        self._render_display()
+                self._poll_render(tick)
             except Exception as e:
                 # NEVER return. Everything that makes the instrument evolve
                 # lives in this loop - the Turing rewrite at every wrap, the
