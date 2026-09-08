@@ -79,11 +79,17 @@
 <p>In the repository and passing its tests; not yet played at the instrument.</p>
 <p><strong>Added</strong></p>
 <ul>
+<li><strong>HUMAN and HUMNV</strong> &mdash; the machine stops playing perfectly. Each note&rsquo;s timing and velocity is nudged at random, per channel. <a href="generating-patterns.html#human">Read</a></li>
+<li><strong>Nine more scales</strong>: PHRMJ, WHOLE, DIM7, BLUES, JAPAN, IWATO, PELOG, BALI and HUNG. SCALE has fifteen positions. <a href="generating-patterns.html#chord-walker">Read</a></li>
+<li>The touchscreen pattern editor&rsquo;s keymap follows the surface&rsquo;s own ROOT and SCALE, instead of whatever it last showed.</li>
 <li>Every bank is saved in the snapshot, and a set returns on the bank it was saved on.</li>
 <li>The top line marks itself when it has been cut short.</li>
 </ul>
 <p><strong>Changed</strong></p>
 <ul>
+<li><strong>The panel goes dark with the screen and stays dark</strong>, and any press brings the whole surface back. Playing keeps it awake; the music never stops. <a href="the-surface.html#when-the-panel-sleeps">Read</a></li>
+<li>A fader moved on the touchscreen reaches the button lights at once rather than up to a fifth of a second later.</li>
+<li>A hit played late is stored with the timing you played, so quantising it is no longer one&ndash;way. Nothing sounds different until a control for it exists.</li>
 <li>The screens redraw in strips instead of whole, so moving one number costs one strip.</li>
 <li>Three modulation rates were removed &mdash; too slow to come out as a shape.</li>
 <li>The daemon&rsquo;s web editor and its own sequencer are gone, and with them an unauthenticated network socket.</li>
