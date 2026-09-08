@@ -9648,3 +9648,76 @@ class HumanIsTwoVerbsAndTheyAreNotSteps(unittest.TestCase):
         for kept in ("kit", "sample", "range", "level", "reverb", "delay",
                      "rotate", "walk_span", "walk_stride", "feed", "amount"):
             self.assertIn(kept, reach, kept)
+
+
+class RecordKeepsTheRemainder(unittest.TestCase):
+    """Item 75. We rounded a live strike to the nearest step at WRITE time and
+    threw the fraction away, so quantise could never be turned back off. zynseq
+    keeps a per-note offset and rounds at PLAYBACK instead - track.cpp:181-184,
+    gated by getQuantizeNotes() - which is reversible, and lands on a control
+    the stock pattern editor already exposes.
+
+    Only the STORAGE changes. Which step a strike belongs to is unchanged, and
+    that is asserted first: this must not move a single note anybody has
+    already recorded.
+    """
+
+    def test_the_step_is_exactly_what_it_was(self):
+        # 24 clocks per step, 16 steps. The contract for WHICH step is
+        # record_step's and this change does not touch it.
+        for playpos, expected in ((0, 0), (11, 0), (12, 1), (24, 1),
+                                  (36, 2), (48, 2)):
+            self.assertEqual(tl.record_step(playpos, 24, 16), expected,
+                             f"playpos {playpos}")
+
+    def test_a_dead_on_hit_has_no_offset(self):
+        for playpos in (0, 24, 48, 240):
+            self.assertEqual(tl.record_offset(playpos, 24, 16), 0.0, playpos)
+
+    def test_an_early_hit_carries_a_negative_offset(self):
+        offset = tl.record_offset(44, 24, 16)      # 4 clocks before step 2
+        self.assertLess(offset, 0.0)
+        self.assertAlmostEqual(offset, -4 / 24, places=6)
+
+    def test_a_late_hit_carries_a_positive_offset(self):
+        offset = tl.record_offset(52, 24, 16)      # 4 clocks after step 2
+        self.assertGreater(offset, 0.0)
+        self.assertAlmostEqual(offset, 4 / 24, places=6)
+
+    def test_the_offset_never_leaves_its_own_step(self):
+        """Bounded by construction: record_step took the NEAREST line, so what
+        is left cannot reach the next one. Half a step either way, no more."""
+
+        for playpos in range(0, 24 * 16):
+            offset = tl.record_offset(playpos, 24, 16)
+            self.assertGreaterEqual(offset, -0.5, playpos)
+            self.assertLessEqual(offset, 0.5, playpos)
+
+    def test_the_offset_and_the_step_describe_the_hit_together(self):
+        """The pair has to reconstruct where the strike actually was, or the
+        remainder is being kept and still lost."""
+
+        for playpos in range(0, 24 * 16, 7):
+            step = tl.record_step(playpos, 24, 16)
+            offset = tl.record_offset(playpos, 24, 16)
+            rebuilt = (step + offset) * 24
+            # A strike past the last step's midpoint wraps to step 0, so allow
+            # the loop length when comparing.
+            self.assertTrue(
+                abs(rebuilt - playpos) < 1.0
+                or abs(rebuilt + 24 * 16 - playpos) < 1.0,
+                f"playpos {playpos}: step {step} offset {offset}")
+
+    def test_a_late_last_step_hit_wraps_with_a_negative_offset(self):
+        """THE LOOP WRAP IS OURS AND DIFFERS FROM ZYNSEQ'S, which is the seam
+        in this change. Our `% steps` sends a hit past the last step's midpoint
+        to step 0; track.cpp can only push an offset within the step it has, so
+        it could not express that at all."""
+
+        last = 24 * 16 - 4          # four clocks before the loop point
+        self.assertEqual(tl.record_step(last, 24, 16), 0)
+        self.assertLess(tl.record_offset(last, 24, 16), 0.0)
+
+    def test_a_nonsense_division_is_refused_rather_than_dividing_by_zero(self):
+        self.assertEqual(tl.record_offset(10, 0, 16), 0.0)
+        self.assertEqual(tl.record_offset(10, 24, 0), 0.0)

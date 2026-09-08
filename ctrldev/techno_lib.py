@@ -914,6 +914,33 @@ class techno_lib:
         return int((playpos + cps // 2) // cps) % steps
 
     @staticmethod
+    def record_offset(playpos, cps, steps):
+        """How far off its grid line a live strike actually was, as a signed
+        fraction of one step: negative early, positive late.
+
+        THE HALF record_step THREW AWAY. Item 75: we rounded at write time and
+        dropped the remainder, so a take could never be UN-quantised - the
+        played timing was gone the moment it was stored. zynseq keeps a
+        per-note offset and rounds at PLAYBACK instead (track.cpp:181-184,
+        gated by getQuantizeNotes), which is reversible and is a control the
+        stock pattern editor already shows.
+
+        BOUNDED BY CONSTRUCTION, not by a clamp: record_step picked the NEAREST
+        line, so what is left over cannot reach the next one. Half a step
+        either way, at most.
+
+        SIGNED, AND THAT MATTERS - it is the number we hand the library rather
+        than one it derives. The platform's own rounding is worse than ours
+        here: a negative offset is commented out at zynseq.cpp:492-497, so it
+        always floors. Ours is the number the player actually played.
+        """
+
+        if cps <= 0 or steps <= 0:
+            return 0.0
+        line = int((playpos + cps // 2) // cps) * cps
+        return (playpos - line) / float(cps)
+
+    @staticmethod
     def record_duration(held_clocks, cps, step, steps):
         """A played note's length in steps: how long the pad was held, rounded
         to whole steps, never shorter than one and never past the loop point.
