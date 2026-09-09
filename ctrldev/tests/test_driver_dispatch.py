@@ -1647,12 +1647,130 @@ class TheTouchscreenKeymapFollowsTheSurface(DispatchCase):
                 if (isinstance(leaf, ast.Call)
                         and getattr(leaf.func, "attr", None) == "_push_keymap"):
                     callers.add(node.name)
-        # _wrap_channel is where a voice takes a pending key - the bar-synced
-        # landing - not _voice_wraps, which only dispatches to it.
-        for expected in ("_resync_all", "_wrap_channel", "apply_global", "init"):
+        # _key_taken is where a voice STOPS owing a pending key - the
+        # bar-synced landing, reached from _wrap_channel, and since item 76
+        # also from _toggle_kind when the last voice ceases to be one. Not
+        # _voice_wraps, which only dispatches to _wrap_channel.
+        for expected in ("_resync_all", "_key_taken", "apply_global", "init"):
             self.assertIn(expected, callers,
                           f"{expected} does not push the keymap; callers are "
                           f"{sorted(callers)}")
+
+
+class ABracketThatNothingCanClear(DispatchCase):
+    """Item 76. The bracket beside ROOT and SCALE means "dialled, not yet
+    sounding": `apply_global` marks the verb pending and builds `_key_dirty`
+    from the voices, each of which discards itself at its own wrap, the last
+    one clearing the marker. Two shapes have no last voice.
+
+    ALL EIGHT ON DRUM KINDS is a legal instrument, and there is then no wrap
+    to land the key on - so the marker was set and nothing could ever clear
+    it, describing for the rest of the session a landing that had already
+    happened.
+
+    A KIND SWITCH WHILE THE KEY IS IN FLIGHT is the worse half, found while
+    settling the first: `_toggle_kind` never touched `_key_dirty`, and
+    `_wrap_channel` returns at `if not voice` before the discard - so a voice
+    switched to drum between the dial and its own wrap stranded the marker
+    AND the keymap push that rides on it, leaving the stock pattern editor in
+    the old key with nothing on the surface to say why.
+
+    THE RULE THE BRACKET NOW KEEPS: it is drawn only while some voice has not
+    yet taken the key. Where no voice can, the key has already landed
+    everywhere it can land and the bracket is never drawn at all.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # What _probe_keymap() decides on the rig. False off it, and every
+        # push below would return early.
+        self.d.has_keymap = True
+
+    def _wrote(self, name):
+        return [c for c in self.d.libseq.calls if c[0] == name]
+
+    def _all_drums(self):
+        for channel in range(8):
+            self.d.kind_override[channel] = "drum"
+
+    def _switch_to_drum(self, channel):
+        """The player's own gesture, SHIFT + GRID, not a poke at the field."""
+        self.d.group = channel
+        self.d._toggle_kind()
+        self.assertEqual(self.d.channel_kind(channel), "drum")
+
+    # --- with voices, nothing changes -----------------------------------
+
+    def test_a_voice_still_gets_the_bracket(self):
+        self.d.apply_global("root", 5)
+        self.assertEqual(self.d.globals["pending"], {"root"})
+        self.assertEqual(self.d._key_dirty, {5, 6, 7})
+
+    def test_scale_gets_it_too(self):
+        self.d.apply_global("scale", 3)
+        self.assertEqual(self.d.globals["pending"], {"scale"})
+
+    # --- all eight on drums ---------------------------------------------
+
+    def test_no_voice_means_no_bracket(self):
+        self._all_drums()
+        self.d.apply_global("root", 5)
+        self.assertEqual(self.d.globals["pending"], set(),
+                         "a bracket nothing can clear is a bracket that "
+                         "describes a landing which already happened")
+
+    def test_no_voice_means_no_bracket_for_scale_either(self):
+        self._all_drums()
+        self.d.apply_global("scale", 3)
+        self.assertEqual(self.d.globals["pending"], set())
+
+    def test_no_voice_pushes_the_keymap_at_once(self):
+        """The other half of the same rule: the bracket may only go away
+        because the key HAS landed. Item 73's immediate push is what makes
+        that true, so it is asserted beside it."""
+
+        self._all_drums()
+        self.d.libseq.calls.clear()
+        self.d.apply_global("root", 5)
+        self.assertEqual({c[1][0] for c in self._wrote("setTonic")}, {5})
+
+    # --- a kind switch with the key in flight ---------------------------
+
+    def test_switching_one_of_three_voices_away_keeps_the_bracket(self):
+        self.d.apply_global("root", 5)
+        self._switch_to_drum(5)
+        self.assertEqual(self.d.globals["pending"], {"root"},
+                         "two voices still owe the key")
+        self.assertEqual(self.d._key_dirty, {6, 7})
+
+    def test_switching_the_last_voice_away_clears_the_bracket(self):
+        self.d.apply_global("root", 5)
+        for channel in (5, 6, 7):
+            self._switch_to_drum(channel)
+        self.assertEqual(self.d._key_dirty, set())
+        self.assertEqual(self.d.globals["pending"], set())
+
+    def test_switching_the_last_voice_away_pushes_the_keymap(self):
+        """The push rides on the LAST voice out of `_key_dirty`, and a
+        channel that leaves by changing kind is out of it just as finally as
+        one that leaves by wrapping."""
+
+        self.d.apply_global("root", 5)
+        self._switch_to_drum(5)
+        self._switch_to_drum(6)
+        self.d.libseq.calls.clear()
+        self._switch_to_drum(7)
+        self.assertEqual({c[1][0] for c in self._wrote("setTonic")}, {5})
+
+    def test_a_kind_switch_with_no_key_in_flight_touches_nothing(self):
+        """The guard against the opposite defect: `_key_taken` clears the
+        globals' whole pending set, so calling it for a channel that owes
+        nothing would drop a marker some other verb is waiting on."""
+
+        self.d.globals["pending"].add("scale")
+        self.d._key_dirty = set()
+        self._switch_to_drum(5)
+        self.assertEqual(self.d.globals["pending"], {"scale"})
 
 
 class SleepStaysAsleep(DispatchCase):

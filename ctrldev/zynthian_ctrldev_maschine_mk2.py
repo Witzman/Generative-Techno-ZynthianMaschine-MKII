@@ -1779,19 +1779,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # on the next poll: clearing it eagerly meant a key change only
             # ever landed if a wrap happened to fall inside the same 33 ms
             # tick, which is why it appeared to work exactly once.
-            self.globals["pending"].add(param)
             self._key_dirty = {i for i, ch in enumerate(tlib.CHANNELS)
                                if self.channel_kind(i) == "voice"}
-            if not self._key_dirty:
+            if self._key_dirty:
+                self.globals["pending"].add(param)
+            else:
                 # NO VOICE TO WAIT FOR, so there is no wrap coming to land it
                 # on and the touchscreen would keep the old key for the rest
                 # of the session. Eight channels on drum kinds is a legal
                 # instrument, and it is the one shape where the bar-synced
                 # push in _voice_wraps never runs. Item 73.
                 #
-                # `pending` is left exactly as it was: whether a marker that
-                # nothing can clear should be set at all is a separate
-                # question about the SURFACE, logged rather than fixed here.
+                # AND NO BRACKET EITHER. Item 76: the bracket means "dialled
+                # but not yet sounding", and here the key has already landed
+                # everywhere it can land - so a marker set now would be false
+                # the moment it was drawn and, with no voice to clear it,
+                # would stay on the value for the rest of the session.
                 self._push_keymap()
         elif param == "bpm":
             with self.lock:
@@ -8120,6 +8123,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.kind_override[channel] = (
             None if new == self._chain_kind(channel) else new)
 
+        if new != "voice" and channel in self._key_dirty:
+            # It can no longer take the key it was waiting to take. Guarded
+            # on membership because _key_taken clears the globals' whole
+            # pending set: calling it for a channel that owes nothing would
+            # drop a marker some other verb is waiting on. Item 76.
+            self._key_taken(channel)
+
         if new == "voice":
             self._write_voice_pattern(channel)
         else:
@@ -9743,19 +9753,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # A key change lands on the bar, and it must be heard even
                 # on a voice that is locked - the line keeps its shape and
                 # changes key, which is the point of a global root.
-                self._key_dirty.discard(channel)
                 self._write_voice_pattern(channel)
-                if not self._key_dirty:
-                    self.globals["pending"].clear()
-                    # AND ONLY NOW does the touchscreen get the new key. The
-                    # keymap is pushed where the key LANDS, not where it is
-                    # dialled: a voice adopts it at its own next wrap, so a
-                    # push from apply_global would move the pattern editor's
-                    # tonic row up to a bar before anything sounded in the new
-                    # key - the editor's grid and its own labels disagreeing,
-                    # with nothing on that screen to say why. Item 73.
-                    self._push_keymap()
+                self._key_taken(channel)
             self._rewrite_voice(channel)
+
+    def _key_taken(self, channel):
+        """One channel stops owing the pending key. Item 76.
+
+        TWO WAYS OUT, ONE RULE. A voice leaves this set by wrapping - it has
+        taken the key - or by ceasing to be a voice, which is just as final:
+        `_wrap_channel` returns at `if not voice` before the discard, so a
+        channel that leaves by changing kind and is not taken out here stays
+        in `_key_dirty` for ever, holding the bracket AND the keymap push
+        that rides on it. Both callers come through here so the "last one
+        out" rule cannot be written down twice and drift.
+
+        The push is where the key LANDS, not where it is dialled: a voice
+        adopts it at its own next wrap, so a push from apply_global would
+        move the pattern editor's tonic row up to a bar before anything
+        sounded in the new key - the editor's grid and its own labels
+        disagreeing, with nothing on that screen to say why. Item 73."""
+
+        self._key_dirty.discard(channel)
+        if self._key_dirty:
+            return
+        self.globals["pending"].clear()
+        self._push_keymap()
 
     def _log_poll_error(self, key, exc):
         """Report an exception raised on the poll thread, rate limited.
