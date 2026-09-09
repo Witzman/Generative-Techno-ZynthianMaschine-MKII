@@ -2166,3 +2166,58 @@ class TheCapturedNoteCarriesItsOffset(DispatchCase):
         self.assertEqual(self._added()[-1][-1], 0.0)
         self.assertNotIn("setQuantizeNotes",
                          [c[0] for c in self.d.libseq.calls])
+
+
+class APresetListOutlivesItsChain(DispatchCase):
+    """Item 80. `_resync_all` says it drops every cache and did not drop
+    `preset_cache`, so a voice's preset list - and the emptiness of one -
+    survived the snapshot that replaced the chain it was read from.
+
+    THE VISIBLE HALF IS A NAME THAT IS NOT THERE. `state_view` draws the
+    PRESET column dead where the cache PROVES the list empty, which is
+    correct for a chain with nothing to step through and wrong for the
+    chain that replaced it. `_preset_list` caches `[]` for any processor
+    whose `load_preset_list()` returns nothing - a chain saved with no
+    bank selected, which is what `030-maschine-house` holds on F and G -
+    so ONE detent on the preset encoder there marks that column dead for
+    the rest of the session, across every later snapshot load, while
+    every other knob on the page keeps changing the sound.
+
+    Measured on the rig 2026-09-09, reading the MK2's own displays off
+    the wire: on `030` channel F drew `PRESET ----` after the load and
+    `preset` - lower case, the dead form - after a single detent.
+    """
+
+    def _dead_channel(self):
+        """A voice whose cached preset list proves there is nothing to step
+        through, as `_preset_list` leaves it for a chain with no bank."""
+
+        channel = next(c for c in range(8) if not self.d._is_sampler(c))
+        self.d.preset_cache[channel] = []
+        self.assertIsNone(self.d.state_view(channel)["preset"],
+                          "the column is meant to draw dead here")
+        return channel
+
+    def test_a_resync_drops_it(self):
+        channel = self._dead_channel()
+        self.d._resync_all()
+        self.assertEqual(self.d.preset_cache, {})
+        self.assertIsNotNone(self.d.state_view(channel)["preset"])
+
+    def test_a_refresh_drops_it(self):
+        """A chain added, removed or moved is the other way the processor
+        under a channel changes without a snapshot."""
+
+        channel = self._dead_channel()
+        self.d.refresh()
+        self.assertEqual(self.d.preset_cache, {})
+        self.assertIsNotNone(self.d.state_view(channel)["preset"])
+
+    def test_a_pending_load_does_not_cross_a_snapshot(self):
+        """`preset_pending` is an INDEX into the list this cache held. Left
+        alone it lands on the new chain's engine a fifth of a second after
+        the load, loading whatever sits at the old list's position."""
+
+        self.d.preset_pending = (5, 12, 0.0)
+        self.d._resync_all()
+        self.assertIsNone(self.d.preset_pending)

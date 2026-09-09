@@ -3610,8 +3610,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def sleep_off(self):
         """Woken: a full repaint, trusting no cache.
 
-        refresh() drops the note, keymap and kit caches and repaints
-        everything. The LED cache is cleared here as well rather than relying
+        refresh() drops the note and keymap caches, the per-chain kit and
+        preset lists, and repaints everything. The LED cache is cleared here as well rather than relying
         on light_off() having done it on the way in - a wake that trusts the
         cache leaves a stale surface, and a stale surface after a screensaver
         reads exactly like a driver that has died.
@@ -7532,7 +7532,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """Which of `kits` is actually loaded on `group` right now.
 
         self.kit_index[group] is only a remembered position, and
-        _reset_kit_cache() deliberately snaps it back to 0 on every snapshot
+        _reset_chain_caches() deliberately snaps it back to 0 on every snapshot
         load or chain change (see its docstring) - the chain itself keeps
         whatever preset it was saved or left with, which is very rarely kit
         0. Trusting kit_index here would make the first turn of encoder 7
@@ -11563,7 +11563,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
 
         self.note_cache = [None] * 8
         self.keymap_cache = [None] * 8
-        self._reset_kit_cache()
+        self._reset_chain_caches()
         # The LED cache suppresses writes whose value has not changed. After a
         # snapshot load its idea of "unchanged" is about the previous state,
         # so it has to be emptied or the repaint below is a no-op.
@@ -11575,10 +11575,29 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # the OUTGOING bank until this runs. Item 73.
         self._push_keymap()
 
-    def _reset_kit_cache(self):
-        """Drop everything _kit_list()/_apply_kit() cached. Used wherever the
-        chains underneath the driver may have changed: a restored snapshot,
-        or a chain added/removed/moved (refresh() below).
+    def _reset_chain_caches(self):
+        """Drop everything read out of the chains: the kit list _kit_list()/
+        _apply_kit() built, and the per-voice preset list behind it. Used
+        wherever the chains underneath the driver may have changed: a
+        restored snapshot, or a chain added/removed/moved (refresh() below).
+
+        IT WAS THE KIT HALF ALONE UNTIL 2026-09-09, and _resync_all's own
+        docstring said "drop every cache" while `preset_cache` sat through
+        the load - item 80. A cached list belongs to the chain it was read
+        from, and after a snapshot that chain may be a different engine
+        entirely; an EMPTY one is worse still, because `state_view` draws the
+        PRESET column dead where the cache proves the list empty, and
+        `_preset_list` caches `[]` for any processor whose load_preset_list()
+        returns nothing - a chain saved with no bank selected, which is what
+        `030-maschine-house` holds on F and G. So one detent on the preset
+        encoder there took that column dead for the rest of the session,
+        through every later snapshot load, while every other knob on the page
+        kept changing the sound. Measured on the rig 2026-09-09 off the MK2's
+        own display traffic.
+
+        `preset_pending` goes with it: it is an INDEX into the list this
+        cache held, and _commit_preset would otherwise land it on the new
+        chain's engine a fifth of a second after the load.
 
         kit_index resets to 0 as well, not just kits/kit_cache. A restored
         snapshot's chains carry whatever preset THEY were saved with, chosen
@@ -11614,11 +11633,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self.kit_pending = None
         self._kit_warned = None
         self._empty_keymap_warned = set()
+        self.preset_cache = {}
+        self.preset_pending = None
 
     def refresh(self):
         super().refresh()
         with self.lock:
             self.note_cache = [None] * 8
             self.keymap_cache = [None] * 8
-            self._reset_kit_cache()
+            self._reset_chain_caches()
             self._render_all()
