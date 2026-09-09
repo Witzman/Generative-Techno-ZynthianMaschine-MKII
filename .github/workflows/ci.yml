@@ -61,6 +61,24 @@ jobs:
       - name: Documentation gates, read-only
         run: python3 tools/docs-gate.py --check
 
+  lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: A change a player can see carries its changelog line
+        # Rule 7, and only the half that needs no secrets. The ISSUE-side
+        # rules - the runbook, the gate - cannot run here: this repo is
+        # public, the issues are private, and an Action here cannot read them
+        # without a PAT stored where any merged workflow could read it. Those
+        # live in tools/hooks/pre-push, on a machine where gh is already
+        # authenticated.
+        run: python3 tools/release_rules.py branch --offline
+
   hygiene:
     runs-on: ubuntu-latest
     steps:
