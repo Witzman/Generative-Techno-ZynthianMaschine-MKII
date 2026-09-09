@@ -3610,8 +3610,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
     def sleep_off(self):
         """Woken: a full repaint, trusting no cache.
 
-        refresh() drops the note, keymap and kit caches and repaints
-        everything. The LED cache is cleared here as well rather than relying
+        refresh() drops the note and keymap caches, the per-chain kit and
+        preset lists, and repaints everything. The LED cache is cleared here as well rather than relying
         on light_off() having done it on the way in - a wake that trusts the
         cache leaves a stale surface, and a stale surface after a screensaver
         reads exactly like a driver that has died.
