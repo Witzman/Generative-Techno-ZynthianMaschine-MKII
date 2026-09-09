@@ -1,0 +1,5 @@
+#!/bin/sh
+# Rule 6, refused at the moment the commit is written rather than by a red
+# PR twenty minutes later. `hygiene` still fails the build - this is the
+# cheaper of the two doors, not a replacement for it.
+exec python3 "$(git rev-parse --show-toplevel)/tools/release_rules.py" commit-msg "$1"

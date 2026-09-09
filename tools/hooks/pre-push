@@ -1,0 +1,18 @@
+#!/bin/sh
+# The lifecycle, refused before it leaves the machine: rule 7 (a change a
+# player can see needs its changelog line) and the runbook rule (an issue this
+# branch would close needs its steps written). The issue half runs here rather
+# than in CI because the guide repo is public and the issues are private.
+#
+# A push straight to main is refused as well: the gate happens on a branch,
+# and "issue and PR close together" is the only thing that closes an issue.
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+    case "$remote_ref" in
+        refs/heads/main)
+            echo "REFUSED: main is reached by a merged PR, not by a push." >&2
+            echo "The lifecycle is branch -> CI -> gate -> PR -> merge (README)." >&2
+            exit 1
+            ;;
+    esac
+done
+exec python3 "$(git rev-parse --show-toplevel)/tools/release_rules.py" branch
