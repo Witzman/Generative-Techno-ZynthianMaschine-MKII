@@ -2221,3 +2221,37 @@ class APresetListOutlivesItsChain(DispatchCase):
         self.d.preset_pending = (5, 12, 0.0)
         self.d._resync_all()
         self.assertIsNone(self.d.preset_pending)
+
+
+class ChordDriftsAtTheWrap(DispatchCase):
+    """#12. A drift modulator on CHORD moves the shape once per wrap, through
+    apply() - and never on a channel where CHORD draws dead."""
+
+    ENTRY = {"depth": 100, "rate": 1, "shape": "tri", "phase0": 0.25,
+             "base": 3, "seed": 1}
+
+    def drift(self, channel):
+        self.d.mod[(channel, "chord")] = dict(self.ENTRY)
+        with patch.object(self.d, "apply") as apply:
+            self.d._drift_channel(channel)
+        return [c for c in apply.call_args_list if c.args[1] == "chord"]
+
+    def test_a_voice_chord_drifts_through_apply(self):
+        calls = self.drift(5)
+        self.assertEqual(len(calls), 1)
+        channel, verb, value = calls[0].args
+        self.assertEqual((channel, verb), (5, "chord"))
+        self.assertIsInstance(value, int)
+        self.assertTrue(0 <= value < len(self.mod.tlib.CHORD_SHAPES))
+
+    def test_a_drum_never_receives_a_chord(self):
+        self.assertEqual(self.drift(0), [])
+
+    def test_a_sampler_behaving_as_a_voice_never_receives_one(self):
+        with patch.object(self.d, "channel_kind", return_value="voice"), \
+             patch.object(self.d, "_is_sampler", return_value=True):
+            self.assertEqual(self.drift(0), [])
+
+    def test_a_take_is_never_rewritten(self):
+        self.d.owner[5] = "player"
+        self.assertEqual(self.drift(5), [])

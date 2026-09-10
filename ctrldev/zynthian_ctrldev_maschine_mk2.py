@@ -2198,6 +2198,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         for (chan, verb), entry in list(self.mod.items()):
             if chan != channel or not tlib.is_drift(verb):
                 continue
+            if verb == "chord" and (self.channel_kind(channel) != "voice"
+                                    or self._is_sampler(channel)):
+                # CHORD DRAWS DEAD HERE (verb_is_dead), and apply() would
+                # store a shape no writer reads: a drum's writer has no chord
+                # branch and a sampler's notes force shape 0. A bind cannot
+                # reach this - _column_dead refuses it - but a snapshot's mods
+                # block or SHIFT+GRID after the bind can. The entry is kept,
+                # for the reason the ownership check above keeps its own.
+                continue
             span = self._mod_range(channel, verb)
             if span is None:
                 continue
