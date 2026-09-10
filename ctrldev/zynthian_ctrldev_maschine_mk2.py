@@ -3821,6 +3821,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # iteration, and takes the whole snapshot save with it.
                 for (ch, verb), e in list(self.mod.items())
             },
+            # AUTO (#24): macro -> armed length for every macro that re-arms
+            # itself. Only the flag and the length - where it is in its cycle
+            # is a bar on a phrase clock that PLAY restarts, so a load waits
+            # for PLAY and lands it one length in.
+            "autopilot": dict(self._autopilot),
             # The seed counter itself. Without it a load restarts it at 0 and
             # the next bind collides with a restored entry's seed - two
             # sample-and-holds on the same rate would then step in lockstep,
@@ -4060,6 +4065,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         mult = state.get("mod_depth_mult", 1.0)
         self.mod_depth_mult = (float(mult) if isinstance(mult, (int, float))
                                and 0.0 <= mult <= 2.0 else 1.0)
+        # AUTO (#24). STAGED, NOT APPLIED: the macro queue belongs to the poll
+        # thread and set_state runs on the manager's. Validated on the way in
+        # - a hand can edit the file - and ABSENT MEANS NONE, which is what a
+        # snapshot from before the key honestly recorded. Always a dict, so the
+        # outgoing snapshot's AUTO macros are retired even by a file with none.
+        self._autopilot_seed = tlib.autopilot_in(state.get("autopilot"))
 
         for key, entry in (state.get("mods") or {}).items():
             chan_s, _, verb = str(key).partition("|")
@@ -9675,6 +9686,27 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             return tlib.autopilot_cycle(self._autopilot[macro])
         return self._arm_bars.get(macro, default)
 
+    def _autopilot_land(self, seed):
+        """Replace the AUTO set with a snapshot's (#24). Poll thread.
+
+        The OUTGOING snapshot's AUTO macros are cancelled first - left running
+        they would keep firing a macro from a file that is no longer loaded,
+        the `_bank_state` lesson of 2026-09-04. A one-shot the player armed by
+        hand is left alone, as a load always has."""
+        for macro in list(self._autopilot):
+            self._pending_macros.cancel(macro)
+            self._armed_while_stopped.pop(macro, None)
+            self._arm_bars.pop(macro, None)
+        self._autopilot = dict(seed)
+        for macro, bars in self._autopilot.items():
+            self._arm_bars[macro] = bars
+            if self._phrase_anchor is None:
+                self._armed_while_stopped[macro] = bars
+            else:
+                self._pending_macros.arm(macro, bars, self._phrase_bar or 0)
+        self._slog("arm", result="auto_restored",
+                   autopilot=dict(self._autopilot))
+
     def _fire_macro(self, macro, bar):
         """Dispatch one landed macro.
 
@@ -10199,6 +10231,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # thread that is allowed to reach an engine.
                     self._fx_globals_due = False
                     self._push_fx_globals()
+                if self._autopilot_seed is not None:
+                    # A load brought its AUTO macros, or none. Landed here, on
+                    # the thread that drains the macro queue.
+                    seed, self._autopilot_seed = self._autopilot_seed, None
+                    self._autopilot_land(seed)
                 if tick % VOLUME_POLL_TICKS == 0:
                     # ~200ms. Deliberately the existing sub-rate: an unthrottled
                     # 30 Hz modulator is 30 writes/s per moving target, each

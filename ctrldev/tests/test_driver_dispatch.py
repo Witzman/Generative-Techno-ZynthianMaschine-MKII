@@ -2398,3 +2398,49 @@ class AnAutoMacroComesBack(DispatchCase):
         with patch.object(self.d, "_any_playing", return_value=False):
             self.d._toggle_transport()
         self.assertEqual(self.d._pending_macros.remaining("drop", 0), 8)
+
+
+class ASnapshotCarriesTheAutopilot(DispatchCase):
+    """#24. Saved beside the modulators; staged on load, landed on the poll
+    thread, and waiting for PLAY - a load leaves the transport stopped."""
+
+    def test_it_round_trips_through_a_snapshot(self):
+        self.d._autopilot = {"drop": 8}
+        other = rig_stub.make_driver()
+        other.set_state(self.d.get_state())
+        self.assertEqual(other._autopilot_seed, {"drop": 8})
+        self.assertEqual(other._autopilot, {}, "set_state must only stage it")
+
+    def test_an_old_snapshot_has_none(self):
+        state = self.d.get_state()
+        state.pop("autopilot", None)
+        self.d.set_state(state)
+        self.assertEqual(self.d._autopilot_seed, {})
+
+    def test_landing_it_on_a_stopped_rig_waits_for_play(self):
+        self.d._autopilot_land({"drop": 8})
+        self.assertEqual(self.d._autopilot, {"drop": 8})
+        self.assertEqual(self.d._armed_while_stopped, {"drop": 8})
+        self.assertEqual(self.d._arm_bars["drop"], 8)
+
+    def test_landing_it_on_a_running_rig_counts_from_now(self):
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 5
+        self.d._autopilot_land({"drop": 8})
+        self.assertEqual(self.d._pending_macros.remaining("drop", 5), 8)
+
+    def test_a_load_retires_the_outgoing_autopilot(self):
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+        self.d._autopilot = {"chance": 4}
+        self.d._pending_macros.arm("chance", 4, 0)
+        self.d._autopilot_land({"drop": 8})
+        self.assertNotIn("chance", self.d._pending_macros.pending())
+        self.assertEqual(self.d._autopilot, {"drop": 8})
+
+    def test_a_hand_armed_one_shot_survives_a_load(self):
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+        self.d._pending_macros.arm("half", 4, 0)
+        self.d._autopilot_land({"drop": 8})
+        self.assertIn("half", self.d._pending_macros.pending())
