@@ -2199,6 +2199,37 @@ class techno_lib:
     # power of two.
     ARM_LENGTHS = (1, 2, 3, 4, 6, 8, 12, 16)
 
+    # AUTO (#24): an armed macro that arms itself again when it lands. BREAK
+    # is refused - it fires the moment it is armed, so there is no landing to
+    # re-arm from, and DROP is its bar-landed twin.
+    AUTOPILOT_REFUSED = frozenset({"break"})
+
+    @staticmethod
+    def autopilot_allowed(macro):
+        """May this macro be put on AUTO?"""
+        return (macro in techno_lib.ARM_MACROS
+                and macro not in techno_lib.AUTOPILOT_REFUSED)
+
+    @staticmethod
+    def autopilot_cycle(bars):
+        """Bars from one AUTO landing to the next: the length ON and the
+        length OFF. Every macro but BREAK runs for its armed length after it
+        lands - UNDROP and RETURN land N bars later, the ramps walk N bars -
+        so re-arming for N would land DROP on the bar its own UNDROP does."""
+        return 2 * max(1, int(bars))
+
+    @staticmethod
+    def autopilot_in(saved):
+        """A snapshot's `autopilot` block, validated: {macro: length} for
+        macros that may repeat and lengths the ARM ring offers. Anything else
+        is dropped, never held - the file can be edited by hand."""
+        if not isinstance(saved, dict):
+            return {}
+        return {macro: bars for macro, bars in saved.items()
+                if techno_lib.autopilot_allowed(macro)
+                and isinstance(bars, int) and not isinstance(bars, bool)
+                and bars in techno_lib.ARM_LENGTHS}
+
     # ARM's three colours, and they are three because the grid says three
     # different kinds of thing. Amber for "which macro", green for "how many
     # bars", red for the countdown - red only ever means time running out, so
@@ -2210,16 +2241,21 @@ class techno_lib:
     PAD_OFF = 0.0
 
     @staticmethod
-    def arm_legend_pad(index, picked=None, armed_bars=None, remaining=None):
+    def arm_legend_pad(index, picked=None, armed_bars=None, remaining=None,
+                       auto=False, now=0.0):
         """(colour, brightness) for one pad of the ARM overlay.
 
         TWO pictures on one grid, chosen by whether anything is pending.
 
         Nothing pending - a PICKER. Pads 0..len(ARM_MACROS)-1 are the macros,
         the picked one at full and the others dim; pads 8-15 are the length
-        ring. **Everything between them is dark**, because pads 2-7 have no
-        macro behind them yet and a lit pad that does nothing is the fault
+        ring. **Everything between them is dark**, because pad 7 has no
+        macro behind it yet and a lit pad that does nothing is the fault
         this surface must never commit.
+
+        AUTO (#24): with `auto` set, the PICKED pad blinks between full and
+        dim at the panel's one blink rate, read from `now`. The ruler never
+        blinks.
 
         Something pending - the COUNTDOWN RULER. One pad per bar of the armed
         length, extinguishing from the top left as the bars pass, so the pads
@@ -2240,9 +2276,14 @@ class techno_lib:
 
         if index < len(techno_lib.ARM_MACROS):
             macro = techno_lib.ARM_MACROS[index]
-            bright = (techno_lib.PAD_FULL if macro == picked
-                      else techno_lib.ARM_DIM)
-            return (techno_lib.COLOR_ARM_MACRO, bright)
+            if macro != picked:
+                return (techno_lib.COLOR_ARM_MACRO, techno_lib.ARM_DIM)
+            if auto and not techno_lib.blink_phase(now):
+                # AUTO (#24) blinks the picked pad - the panel's one word for
+                # a standing decision. Dim rather than dark in the off half:
+                # it is still the pad that was picked.
+                return (techno_lib.COLOR_ARM_MACRO, techno_lib.ARM_DIM)
+            return (techno_lib.COLOR_ARM_MACRO, techno_lib.PAD_FULL)
         if index >= 8:
             # The whole ring is lit whether or not a macro is picked. It is a
             # menu of lengths, not a confirmation - dimming it until a macro
@@ -2355,7 +2396,7 @@ class techno_lib:
         return f"{label} RPT{int(count)}"
 
     @staticmethod
-    def arm_label(label, arm_down, picked):
+    def arm_label(label, arm_down, picked, auto=False):
         """Name the macro the player has picked, while ARM is held.
 
         Added 2026-08-20 after the first play test: the picker brightened the
@@ -2374,7 +2415,9 @@ class techno_lib:
         if picked is None:
             return f"{label} ARM?"
         name = techno_lib.PENDING_NAMES.get(picked, str(picked).upper())
-        return f"{label} ARM {name}"
+        # AUTO (#24) is said in a word: the blinking pad is the only other
+        # sign, and seven amber pads look alike in a dark room.
+        return f"{label} ARM {name}{' AUTO' if auto else ''}"
 
     @staticmethod
     def phase_error(pos, ref, length):
@@ -5652,8 +5695,14 @@ class techno_lib:
 
         rows = techno_lib.pending_sort(entries)[:8]
         out = []
-        for macro, left, armed in rows:
+        for entry in rows:
+            macro, left, armed = entry[:3]
+            auto = len(entry) > 3 and bool(entry[3])
             name = techno_lib.PENDING_NAMES.get(macro, str(macro).upper()[:4])
+            if auto:
+                # AUTO (#24). One character, and `*` is in the panel font
+                # (daemon/src/font.rs, 0x2A).
+                name += "*"
             armed = max(1, int(armed))
             left = max(0, min(armed, int(left)))
             # A seg bar counting DOWN, so the ink on the glass shrinks as the
