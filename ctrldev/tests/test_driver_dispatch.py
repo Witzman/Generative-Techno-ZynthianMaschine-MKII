@@ -2444,3 +2444,34 @@ class ASnapshotCarriesTheAutopilot(DispatchCase):
         self.d._pending_macros.arm("half", 4, 0)
         self.d._autopilot_land({"drop": 8})
         self.assertIn("half", self.d._pending_macros.pending())
+
+
+class ThePickBlinksOnePad(DispatchCase):
+    """#24. The only pad a timer paints, and only while the picker shows an
+    AUTO pick. Sixteen pads on a timer wedged the controller on 2026-08-20.
+    Measured 2026-09-10: with ARM holding the pads, _poll_render paints no
+    pad at all, so any paint below is the blink."""
+
+    def setUp(self):
+        super().setUp()
+        self.step = self.mod.tlib.ARM_MACROS.index("drop")
+        self.press("arm")
+        self.pad(self.step)
+
+    def painted(self, tick=1):
+        with patch.object(self.d, "_paint_pad") as paint:
+            self.d._poll_render(tick)
+        return {c.args[0] for c in paint.call_args_list}
+
+    def test_an_auto_pick_paints_exactly_its_own_pad(self):
+        self.pad(self.step)                      # the second tap: AUTO
+        for tick in (1, 2, 3):
+            self.assertEqual(self.painted(tick), {self.step})
+
+    def test_a_plain_pick_paints_nothing(self):
+        self.assertEqual(self.painted(), set())
+
+    def test_nothing_blinks_over_the_countdown(self):
+        self.pad(self.step)
+        self.d._pending_macros.arm("drop", 8, 0)
+        self.assertEqual(self.painted(), set())

@@ -10044,6 +10044,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if tick % DEVICE_POLL_TICKS == 0:
                 self._check_device()
             owner = self._pad_owner()
+            if (owner == "arm" and self._arm_auto
+                    and self._arm_picked is not None
+                    and not (self._pending_macros.pending()
+                             or self._armed_while_stopped)):
+                # THE ONE PAD A TIMER PAINTS (#24): the AUTO pick blinks.
+                # _paint_pad goes through leds.changed, so it SENDS only on
+                # the 1 Hz phase flip - about two messages a second against
+                # the measured 50/s budget (THE-SURFACE.md: budget the RATE).
+                # Only while the PICKER is showing - once something is
+                # pending the grid is the countdown, and a blink over it
+                # would lie.
+                step = tlib.ARM_MACROS.index(self._arm_picked)
+                self._paint_pad(step, tlib.arm_legend_pad(
+                    step, picked=self._arm_picked, auto=True,
+                    now=time.monotonic()))
             # THE MOD LEGEND IS NO LONGER ANIMATED FROM HERE, and
             # it is not a throttling question any more. Repainting
             # sixteen pads on a timer - at 30 Hz, and then at 10 Hz -
