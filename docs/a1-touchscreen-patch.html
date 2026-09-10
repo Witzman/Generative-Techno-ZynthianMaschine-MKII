@@ -75,7 +75,7 @@
 <h2 id="who-needs-this">Who needs this</h2>
 <p>Your touchscreen reports touches at the wrong place — usually compressed into one corner or scaled toward one edge — while the same screen displays correctly.</p>
 <p>That happens when the panel's touch controller reports coordinates in its own native resolution while Zynthian's UI is running at a different configured display size. Zynthian passes the raw touch value straight through, so a panel reporting 0-4095 on a 800×480 UI puts every touch in the top-left eighth of the screen.</p>
-<p>This was the case on the rig this guide was written from: an Elecrow 5" 800×480 panel, HDMI for video and USB for touch.</p>
+<p>This was the case on the rig this guide was written from: first an Elecrow 5" 800×480 panel, and now a 10.1" 1024×600 panel with the same USB touch controller. Both use HDMI for video and USB for touch.</p>
 <p><strong>If your touch already lands where you press, skip this page.</strong> The patch edits a Zynthian core file, and there is no reason to carry a change you do not need.</p>
 <hr>
 <h2 id="the-patch">The patch</h2>
