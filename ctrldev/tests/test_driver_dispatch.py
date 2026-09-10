@@ -2255,3 +2255,79 @@ class ChordDriftsAtTheWrap(DispatchCase):
     def test_a_take_is_never_rewritten(self):
         self.d.owner[5] = "player"
         self.assertEqual(self.drift(5), [])
+
+
+class ASecondTapPutsAMacroOnAuto(DispatchCase):
+    """#24, the owner's gesture (2026-09-10): hold ARM, tap a macro, tap it
+    again - it blinks, it is on AUTO - then a length."""
+
+    def setUp(self):
+        super().setUp()
+        tl = self.mod.tlib
+        self.drop = tl.ARM_MACROS.index("drop")
+        self.chance = tl.ARM_MACROS.index("chance")
+        self.brk = tl.ARM_MACROS.index("break")
+        self.eight = 8 + tl.ARM_LENGTHS.index(8)
+        # A running transport: the phrase clock is anchored.
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+
+    def auto_drop(self):
+        self.press("arm")
+        self.pad(self.drop)
+        self.pad(self.drop)
+
+    def test_the_second_tap_is_auto_and_the_third_takes_it_back(self):
+        self.press("arm")
+        self.pad(self.drop)
+        self.assertFalse(self.d._arm_auto)
+        self.pad(self.drop)
+        self.assertTrue(self.d._arm_auto)
+        self.pad(self.drop)
+        self.assertFalse(self.d._arm_auto)
+
+    def test_picking_another_macro_starts_without_auto(self):
+        self.auto_drop()
+        self.pad(self.chance)
+        self.assertEqual(self.d._arm_picked, "chance")
+        self.assertFalse(self.d._arm_auto)
+
+    def test_break_refuses_auto(self):
+        self.press("arm")
+        self.pad(self.brk)
+        self.pad(self.brk)
+        self.assertFalse(self.d._arm_auto)
+
+    def test_a_length_under_auto_puts_it_on_the_autopilot(self):
+        self.auto_drop()
+        self.pad(self.eight)
+        self.assertEqual(self.d._autopilot, {"drop": 8})
+        self.assertEqual(self.d._pending_macros.remaining("drop", 0), 8)
+
+    def test_a_length_without_auto_is_a_one_shot(self):
+        self.press("arm")
+        self.pad(self.drop)
+        self.pad(self.eight)
+        self.assertEqual(self.d._autopilot, {})
+
+    def test_pressing_arm_again_forgets_the_auto_pick(self):
+        self.auto_drop()
+        self.press("arm", False)
+        self.press("arm")
+        self.assertFalse(self.d._arm_auto)
+
+    def test_cancel_all_clears_the_autopilot(self):
+        self.auto_drop()
+        self.pad(self.eight)
+        self.press("arm", False)
+        self.press("erase")
+        self.press("arm", True)
+        self.assertEqual(self.d._autopilot, {})
+        self.assertEqual(self.d._pending_macros.pending(), [])
+
+    def test_cancelling_its_pending_column_clears_its_auto(self):
+        self.d._autopilot = {"drop": 8}
+        self.d._arm_bars["drop"] = 8
+        self.d._pending_macros.arm("drop", 8, 0)
+        self.assertTrue(self.d._cancel_pending(0))
+        self.assertEqual(self.d._autopilot, {})

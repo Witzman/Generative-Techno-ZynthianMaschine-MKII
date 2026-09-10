@@ -787,6 +787,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._armed_while_stopped = {}
         self._arm_picked = None
         self._arm_bars = {}
+        # AUTO (#24). `_autopilot` is macro -> armed length for every macro
+        # that re-arms itself when it lands; `_arm_auto` is the picker's flag
+        # while ARM is held, set by a second tap on the picked pad.
+        self._autopilot = {}
+        self._arm_auto = False
+        # A snapshot's AUTO block, staged by set_state for the poll thread.
+        self._autopilot_seed = None
         # Who survives a DROP. Nominated on the Group buttons while ARM is
         # held; empty means the drop takes everything, which is a real and
         # useful setting rather than an unconfigured one.
@@ -4600,6 +4607,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._modifier_edge("arm", down)
         if down:
             self._arm_picked = None
+            self._arm_auto = False
             self._render_overlay_leds()
             with self.lock:
                 self._render_pads()
@@ -4613,6 +4621,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # ERASE + SELECT kills all of them, ERASE + the encoder under a column
         # kills that one.
         self._arm_picked = None
+        self._arm_auto = False
         self._render_overlay_leds()
         with self.lock:
             self._render_all()
@@ -4625,11 +4634,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         none at all, and the surgical version already exists on the PENDING
         page for when the player wants it."""
 
-        if not (self._pending_macros.pending() or self._armed_while_stopped):
+        if not (self._pending_macros.pending() or self._armed_while_stopped
+                or self._autopilot):
             return False
         self._pending_macros.clear()
         self._armed_while_stopped.clear()
         self._arm_bars.clear()
+        # AUTO goes with it (#24): a panic gesture that left a macro to come
+        # back on its own would not be a panic gesture.
+        self._autopilot.clear()
         self._slog("arm", result="cancel_all")
         with self.lock:
             self._render_all()
@@ -4665,9 +4678,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                        stopped=list(self._armed_while_stopped))
             return
         if step < len(tlib.ARM_MACROS):
-            self._arm_picked = tlib.ARM_MACROS[step]
-            self._slog("arm", result="picked", step=step,
-                       macro=self._arm_picked)
+            macro = tlib.ARM_MACROS[step]
+            if macro == self._arm_picked:
+                # THE SECOND TAP IS AUTO (#24, the owner's gesture): the
+                # picked pad blinks, and the length that follows arms a macro
+                # that re-arms itself. BREAK is refused - see
+                # tlib.AUTOPILOT_REFUSED - and says so in the log; its pad
+                # simply does not blink.
+                if tlib.autopilot_allowed(macro):
+                    self._arm_auto = not self._arm_auto
+                    self._slog("arm", result="auto", macro=macro,
+                               on=self._arm_auto)
+                else:
+                    self._slog("arm", result="auto_refused", macro=macro)
+            else:
+                self._arm_picked = macro
+                self._arm_auto = False
+                self._slog("arm", result="picked", step=step, macro=macro)
         elif step >= 8:
             if self._arm_picked is None:
                 # A length with nothing to arm. Deliberately silent rather
@@ -4694,6 +4721,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # many pads to extinguish - so the length is kept here rather than
             # widening the queue's contract for a display.
             self._arm_bars[self._arm_picked] = bars
+            if self._arm_auto:
+                self._autopilot[self._arm_picked] = bars
+            else:
+                self._autopilot.pop(self._arm_picked, None)
             if self._arm_picked in tlib.MUTEPATH_MACROS:
                 # One capture of the mute picture, so only one of DROP and
                 # BREAK may be live. Arming either drops the other and its
@@ -4705,6 +4736,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         self._pending_macros.cancel(other)
                         self._armed_while_stopped.pop(other, None)
                         self._arm_bars.pop(other, None)
+                        self._autopilot.pop(other, None)
             if self._arm_picked == "break":
                 # BREAK fires NOW and resolves in N bars, so the length is
                 # only the SECOND number. There is no "fires in N" for a macro
@@ -4778,9 +4810,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         """The sixteen pads as ARM's grid. Caller holds the lock."""
 
         picked, bars, left = self._arm_state()
+        now = time.monotonic()
         for pad in range(16):
             self._paint_pad(pad, tlib.arm_legend_pad(
-                pad, picked=picked, armed_bars=bars, remaining=left))
+                pad, picked=picked, armed_bars=bars, remaining=left,
+                auto=self._arm_auto, now=now))
 
     def _act_repeat(self, down):
         """STEP > held: every generated channel collapses to its first beat.
@@ -6297,6 +6331,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         macro = rows[column][0]
         self._armed_while_stopped.pop(macro, None)
         self._arm_bars.pop(macro, None)
+        self._autopilot.pop(macro, None)
         self._pending_macros.cancel(macro)
         logging.debug("Maschine: cancelled pending macro %s", macro)
         return True
@@ -11324,7 +11359,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # between held and broken.
         if self.bank_down:
             label = tlib.bank_label(self._bank_page, self.bank)
-        label = tlib.arm_label(label, self.arm_down, self._arm_picked)
+        label = tlib.arm_label(label, self.arm_down, self._arm_picked,
+                               auto=self._arm_auto)
         # WHICH OVERLAY OWNS THE PADS, while it is latched. Six of them
         # compete for the same sixteen pads and the colours cannot tell them
         # apart - the eight channel hues leave two gaps wider than fifty
