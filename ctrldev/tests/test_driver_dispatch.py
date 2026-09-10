@@ -2331,3 +2331,70 @@ class ASecondTapPutsAMacroOnAuto(DispatchCase):
         self.d._pending_macros.arm("drop", 8, 0)
         self.assertTrue(self.d._cancel_pending(0))
         self.assertEqual(self.d._autopilot, {})
+
+
+class AnAutoMacroComesBack(DispatchCase):
+    """#24. It lands, runs its length, rests its length, and lands again."""
+
+    def setUp(self):
+        super().setUp()
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+
+    def arm(self, macro, bars, auto=True):
+        self.d._arm_bars[macro] = bars
+        if auto:
+            self.d._autopilot[macro] = bars
+        self.d._pending_macros.arm(macro, bars, 0)
+
+    def tick_to(self, bar):
+        # Measured 2026-09-10: this is enough for _phrase_tick to reach a bar
+        # on the stub and drain the queue.
+        self.d._phrase_bar = bar - 1
+        with patch.object(self.d, "_elapsed_beats",
+                          return_value=bar * 4 + 0.1), \
+             patch.object(self.d, "_reanchor_phrase"):
+            self.d._phrase_tick()
+
+    def test_it_is_armed_again_for_a_whole_cycle(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire") as fire:
+            self.tick_to(8)
+        fire.assert_called_once_with(8)
+        self.assertEqual(self.d._pending_macros.remaining("drop", 8), 16)
+
+    def test_it_lands_again_on_the_cycle(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire") as fire:
+            self.tick_to(8)
+            self.tick_to(24)
+        self.assertEqual([c.args[0] for c in fire.call_args_list], [8, 24])
+
+    def test_a_one_shot_is_not_armed_again(self):
+        self.arm("drop", 8, auto=False)
+        with patch.object(self.d, "_drop_fire"):
+            self.tick_to(8)
+        self.assertEqual(self.d._pending_macros.pending(), [])
+
+    def test_a_fire_that_raises_still_comes_back(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire",
+                          side_effect=RuntimeError("boom")):
+            self.tick_to(8)
+        self.assertEqual(self.d._pending_macros.remaining("drop", 8), 16)
+
+    def test_the_countdown_is_drawn_against_the_cycle(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire"):
+            self.tick_to(8)
+        self.assertIn(("drop", 16, 16, True), self.d._pending_view())
+
+    def test_a_stop_moves_the_landing_to_wait_for_play(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_any_playing", return_value=True):
+            self.d._toggle_transport()
+        self.assertEqual(self.d._armed_while_stopped, {"drop": 8})
+        self.assertNotIn("drop", self.d._pending_macros.pending())
+        with patch.object(self.d, "_any_playing", return_value=False):
+            self.d._toggle_transport()
+        self.assertEqual(self.d._pending_macros.remaining("drop", 0), 8)

@@ -4804,7 +4804,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 soonest, left = macro, rem
         if soonest is None:
             return (self._arm_picked, None, None)
-        return (self._arm_picked, self._arm_bars.get(soonest, left), left)
+        return (self._arm_picked, self._shown_length(soonest, left), left)
 
     def _paint_arm_legend(self):
         """The sixteen pads as ARM's grid. Caller holds the lock."""
@@ -6306,12 +6306,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Armed while stopped: nothing is counting down yet, so the whole
             # length is still to come. Drawn rather than hidden - a macro the
             # player armed and cannot see is exactly what this page is for.
-            out.append((macro, bars, bars))
+            out.append((macro, bars, bars, macro in self._autopilot))
         for macro in self._pending_macros.pending():
             left = self._pending_macros.remaining(macro, bar)
             if left is None:
                 continue
-            out.append((macro, left, self._arm_bars.get(macro, left)))
+            # The fourth field is AUTO (#24): pending_columns stars the name.
+            out.append((macro, left, self._shown_length(macro, left),
+                        macro in self._autopilot))
         return out
 
     def _cancel_pending(self, column):
@@ -8229,6 +8231,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._release_all()
             self._phrase_anchor = None
             self._phrase_bar = None
+            # AN AUTO MACRO WAITS FOR PLAY (#24). Its landing is an absolute
+            # bar on a phrase clock that PLAY restarts at 0, so left in the
+            # queue a stop at bar 40 would hold a landing at bar 48 - 48 bars
+            # after the next PLAY. Moved to the stopped set with its length,
+            # it lands that many bars after PLAY, as a macro armed while
+            # stopped always has.
+            for macro, bars in self._autopilot.items():
+                if self._pending_macros.cancel(macro):
+                    self._armed_while_stopped[macro] = bars
         self._slog("transport",
                    state="start" if target == zynseq_lib.SEQ_STARTING
                    else "stop",
@@ -9163,6 +9174,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # a single raise would abort the rest of the drain, and in a
                 # fixed order the same macros would lose it every time.
                 self._log_poll_error(f"macro {macro}", e)
+            self._autopilot_rearm(macro, bar)
         self._chance_tick(bar)
         self._ratchet_tick(bar)
         self._gate_tick(bar)
@@ -9636,6 +9648,32 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         with self.lock:
             self._render_mutes()
             self._render_groups()
+
+    def _autopilot_rearm(self, macro, bar):
+        """An AUTO macro that has just landed is armed again (#24).
+
+        For its whole CYCLE - the length on and the length off, see
+        tlib.autopilot_cycle - counted from the bar it landed on. `_arm_bars`
+        keeps the armed LENGTH, because _fire_macro reads it as how long the
+        episode runs; the cycle is only ever the countdown.
+
+        Called after the fire whether or not the fire raised: a macro that
+        failed once must not silently fall off the autopilot."""
+        bars = self._autopilot.get(macro)
+        if bars is None:
+            return
+        self._arm_bars[macro] = bars
+        self._pending_macros.arm(macro, tlib.autopilot_cycle(bars), bar)
+        self._slog("arm", result="auto_rearm", macro=macro, bars=bars,
+                   at_bar=bar)
+
+    def _shown_length(self, macro, default):
+        """The length a countdown is drawn against. An AUTO macro counts down
+        its whole cycle (#24), so the number on PENDING is the real distance
+        to its next landing; everything else counts its armed length."""
+        if macro in self._autopilot:
+            return tlib.autopilot_cycle(self._autopilot[macro])
+        return self._arm_bars.get(macro, default)
 
     def _fire_macro(self, macro, bar):
         """Dispatch one landed macro.
