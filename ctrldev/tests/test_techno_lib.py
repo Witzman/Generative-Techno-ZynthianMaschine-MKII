@@ -1623,7 +1623,7 @@ class TestModulatorMaths(unittest.TestCase):
         # must be checked against _apply_generator/_write_pattern first.
         rewrites = {"hits", "rotate", "div", "length", "rhythm", "chance",
                     "gate", "velo", "octave", "range", "random", "root",
-                    "scale", "kit", "preset", "sample"}
+                    "scale", "kit", "preset", "sample", "chord"}
         self.assertEqual(tl.MOD_TIMBRE & rewrites, frozenset())
 
     def test_generated_plugin_ports_are_allowed(self):
@@ -1641,7 +1641,7 @@ class TestModulatorMaths(unittest.TestCase):
         # unconditionally because drift was deferred and blocked on the
         # SP2-ownership rule; the owner confirmed that rule, so they are
         # bindable on an UNOWNED channel and refused on an owned one.
-        for verb in ("hits", "rotate", "chance"):
+        for verb in ("hits", "rotate", "chance", "chord"):
             self.assertTrue(tl.mod_allowed(verb, owned=False), verb)
             self.assertFalse(tl.mod_allowed(verb, owned=True), verb)
         # RHYTHM is still refused outright: it is a voice's evolve knob, not a
@@ -4560,11 +4560,11 @@ class TestDriftAllowed(unittest.TestCase):
             self.assertTrue(tl.mod_allowed(verb, owned=True))
 
     def test_drift_verbs_bind_on_an_unowned_channel(self):
-        for verb in ("hits", "rotate", "chance"):
+        for verb in ("hits", "rotate", "chance", "chord"):
             self.assertTrue(tl.mod_allowed(verb, owned=False))
 
     def test_drift_verbs_refuse_on_an_owned_channel(self):
-        for verb in ("hits", "rotate", "chance"):
+        for verb in ("hits", "rotate", "chance", "chord"):
             self.assertFalse(tl.mod_allowed(verb, owned=True))
 
     def test_density_is_not_resurrected(self):
@@ -4595,7 +4595,8 @@ class TestDriftIsWrapRate(unittest.TestCase):
     the lock, five times a second, forever. That IS the velo defect."""
 
     def test_drift_verbs_are_named(self):
-        self.assertEqual(tl.DRIFT_VERBS, frozenset({"hits", "rotate", "chance"}))
+        self.assertEqual(tl.DRIFT_VERBS,
+                         frozenset({"hits", "rotate", "chance", "chord"}))
 
     def test_a_drift_verb_is_wrap_rate(self):
         for verb in tl.DRIFT_VERBS:
@@ -8929,16 +8930,17 @@ class ChordRefusesWhereItCannotAct(unittest.TestCase):
         self.assertEqual("".join("." if c["grey"] else "#" for c in cols),
                          ".....###")
 
-    def test_chord_may_not_take_a_modulator(self):
-        # It rewrites the pattern, which is why gate and velo are out of
-        # MOD_TIMBRE. It is not a drift verb either: drift on a PITCH verb has
-        # never been played, and shipping it in the same round as the verb
-        # itself would mean two untested things at once.
-        self.assertFalse(tl.mod_allowed("chord"))
+    def test_chord_is_a_drift_verb_and_not_timbre(self):
+        # CHANGED for #12. Still NOT timbre - it rewrites the pattern, which
+        # is why gate and velo are out of MOD_TIMBRE, and an LFO on it would
+        # be the velo defect. It IS drift: wrap-applied and refused on a take,
+        # like hits, rotate and chance. Held back on 2026-09-02 until CHORD
+        # itself was gated; it passed that day.
+        self.assertTrue(tl.mod_allowed("chord"))
         self.assertFalse(tl.mod_allowed("chord", owned=True))
-        self.assertFalse(tl.is_drift("chord"))
+        self.assertTrue(tl.is_drift("chord"))
         self.assertNotIn("chord", tl.MOD_TIMBRE)
-        self.assertNotIn("chord", tl.DRIFT_VERBS)
+        self.assertIn("chord", tl.DRIFT_VERBS)
 
 
 class ChordMigratesSilently(unittest.TestCase):

@@ -4878,9 +4878,9 @@ class techno_lib:
     # branch has no ownership check, so it destroyed the recorded take over
     # and over with nobody touching the panel.
     #
-    # HITS, ROTATE, DENSITY and CHANCE are absent for the same structural
-    # reason plus one more: they are the bar-rate DRIFT targets, and drift
-    # does not ship until the SP2 ownership rule is settled.
+    # HITS, ROTATE, CHANCE and CHORD are absent for the same structural
+    # reason plus one more: they are the bar-rate DRIFT targets (DRIFT_VERBS
+    # below), applied at the wrap and never on this 200 ms tick.
     MOD_TIMBRE = frozenset({
         "level", "reverb", "delay", "cutoff", "reso", "env", "decay"})
 
@@ -4896,7 +4896,14 @@ class techno_lib:
     # handback verbs too, but they change the pattern's STRUCTURE, land on the
     # bar through `pending` and rescale note positions, so drifting them means a
     # bar whose length changes under the player. Different feature.
-    DRIFT_VERBS = frozenset({"hits", "rotate", "chance"})
+    #
+    # CHORD JOINED FOR #12 - "the chord thickens over eight bars". The first
+    # PITCH verb here: every earlier target is a count or a probability.
+    # Same two halves as the other three - applied at the wrap, refused on a
+    # take - plus one guard in _drift_channel: it skips a channel where CHORD
+    # draws dead (a drum, or a sampler behaving as a voice), because apply()
+    # would store a shape there that no writer reads.
+    DRIFT_VERBS = frozenset({"hits", "rotate", "chance", "chord"})
 
     @staticmethod
     def is_drift(verb):
