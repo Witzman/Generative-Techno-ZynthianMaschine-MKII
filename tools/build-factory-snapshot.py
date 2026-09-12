@@ -147,7 +147,7 @@ def chord_event(template, step, note, velocity, duration):
     return bytes(ev)
 
 
-def set_chord_pattern(body, stabs, template):
+def set_chord_pattern(body, stabs, template, steps=STEPS):
     """A pattern holding CHORDS - more than one note on a step.
 
     THE GENERATOR CANNOT DO THIS AND IS NOT MEANT TO. _write_voice_pattern
@@ -161,8 +161,8 @@ def set_chord_pattern(body, stabs, template):
     out = bytearray(body[:genre.PATN_HEADER])
     for stab in sorted(stabs, key=lambda s: s["step"]):
         step = int(stab["step"])
-        if not 0 <= step < STEPS:
-            raise ValueError(f"stab step {step} outside 0..{STEPS - 1}")
+        if not 0 <= step < steps:
+            raise ValueError(f"stab step {step} outside 0..{steps - 1}")
         # CLAMPED SO A NOTE CANNOT OUTLIVE ITS PATTERN, which is the rule the
         # driver's own tlib.note_duration enforces and for the reason its
         # docstring gives: the Pi probe proved libzynseq STORES a duration
@@ -171,7 +171,7 @@ def set_chord_pattern(body, stabs, template):
         # failure this instrument has" - and a pad is exactly what asks for a
         # note this long. The 0.05 floor is the same one: a zero-length note
         # is a note that never sounds.
-        room = float(max(1, STEPS - step))
+        room = float(max(1, steps - step))
         duration = max(0.05, min(float(stab.get("duration", 1.0)), room))
         for note in stab["notes"]:
             out += chord_event(template, step, int(note),
@@ -179,7 +179,8 @@ def set_chord_pattern(body, stabs, template):
     return out
 
 
-def set_voice_pattern(body, saved, chords, steps, template):
+def set_voice_pattern(body, saved, chords, sounding, template,
+                      steps=STEPS):
     """A GENERATED line, written as real notes rather than as a placeholder.
 
     The courtesy write below this one exists because `set_state` ends by
@@ -202,9 +203,9 @@ def set_voice_pattern(body, saved, chords, steps, template):
     # the sixteen-bit register the manifest carries. Handing it the int reads
     # as a working call and dies on len() - which is the cheap half of the
     # same confusion that would otherwise clamp against the wrong steps.
-    mask = [bool(int(saved["rhythm_reg"]) >> s & 1) for s in range(STEPS)]
-    for step in steps:
-        duration = tlib.note_duration(int(saved["gate"]), step, STEPS, mask)
+    mask = [bool(int(saved["rhythm_reg"]) >> s & 1) for s in range(steps)]
+    for step in sounding:
+        duration = tlib.note_duration(int(saved["gate"]), step, steps, mask)
         for note in chords[step]:
             out += chord_event(template, step, int(note),
                                saved["velo"], duration)
@@ -285,7 +286,7 @@ def set_preset(proc, spec):
                                                  or {}).items()}
 
 
-def drum_pattern(spec):
+def drum_pattern(spec, steps=STEPS):
     """The steps a drum channel sounds, through the instrument's own
     generators: euclid, rotated, thinned by the subtractive rhythm register,
     then the hand register laid on top."""
@@ -293,7 +294,7 @@ def drum_pattern(spec):
     rotate = int(spec.get("rotate", 0))
     rhythm_reg = int(spec.get("rhythm_reg", 0xFFFF))
     hand_reg = int(spec.get("hand_reg", 0))
-    line = lib.build_pattern_steps(STEPS, hits, rotate)
+    line = lib.build_pattern_steps(steps, hits, rotate)
     sounding = tlib.drum_steps(line, rhythm_reg, hand_reg)
     return [i for i, on in enumerate(sounding) if on]
 
@@ -393,6 +394,75 @@ def build(base, manifest, kit_notes):
     template = bytes(patns[0][1][genre.PATN_HEADER:
                                  genre.PATN_HEADER + genre.PATN_EVENT])
 
+    # --- the division and the groove, per channel ---------------------------
+    #
+    # BOTH WRITE INTO THE 32-BYTE HEADER AND set_pattern COPIES THAT HEADER
+    # WHOLE, so this must run before any events are replaced. It also returns
+    # the step count every later block validates against: a step list written
+    # for sixteen 1/16ths would land in the wrong bar at 1/8, and the triplet
+    # divisions have TWELVE steps, not sixteen.
+    #
+    # WHY A DIVISION IS A PHRASE LENGTH HERE. The step COUNT barely moves -
+    # 16 straight, 12 triplet - but the time one step occupies does, so 1/8
+    # is a TWO-bar loop and 1/4 a FOUR-bar one on the same sixteen steps. It
+    # is also the sustain ceiling, because note_duration clamps a note to the
+    # loop point: at 1/16 the longest note this instrument can hold is half a
+    # bar, and at 1/4 it is nearly four bars. A dub pad that hangs over the
+    # bar line is unreachable any other way.
+    #
+    # ONLY ON F, G AND H, and the builder refuses anywhere else. `_derive_
+    # params` reads stepsPerBeat back off zynseq after a load - which is what
+    # makes a voice's DIVIDE survive at all - and its loop tests the CHANNELS
+    # table's kind, so it never reaches channels A-E. A drum written at 1/8
+    # would play at 1/8 while the panel read 1/16, and the first turn of HITS
+    # would silently re-stamp the bar.
+    steps_of = {}
+    divs = manifest.get("div")
+    groove = manifest.get("groove") or {}
+    for channel in range(len(tlib.CHANNELS)):
+        body = patns[channel][1]
+        if divs is not None and divs[channel] is not None:
+            idx = genre.div_index(divs[channel])
+            if idx != 1 and tlib.CHANNELS[channel][2] != "voice" \
+                    and str(channel) not in (manifest.get("chords") or {}):
+                raise ValueError(
+                    f"div names {divs[channel]!r} on channel {channel}, which "
+                    f"the CHANNELS table calls a drum and which this manifest "
+                    f"does not author a take on - `_derive_params` reads "
+                    f"stepsPerBeat back only for F, G and H, so the panel "
+                    f"would read 1/16 over a bar playing something else and "
+                    f"the first turn of a step-owning knob would re-stamp it. "
+                    f"A PLAYER-OWNED channel is the exception: nothing "
+                    f"rewrites its pattern, so the riff's division stands.")
+            steps_of[channel] = genre.set_division(body, idx)
+        else:
+            spb = struct.unpack(">H", bytes(
+                body[genre.PATN_SPB:genre.PATN_SPB + 2]))[0]
+            beats = struct.unpack(">I", bytes(
+                body[genre.PATN_BEATS:genre.PATN_BEATS + 4]))[0]
+            # `or STEPS` is the old behaviour, kept rather than inferred: this
+            # block used to be a hardcoded sixteen, and a base whose patn
+            # header carries zeros - a hand-built one in a test, or any riff
+            # written before the header mattered - would otherwise validate
+            # every step list against 0..-1 and refuse a bar it accepted
+            # yesterday.
+            steps_of[channel] = (spb * beats) or STEPS
+        swing = (groove.get("swing") or [0.0] * 8)[channel]
+        if swing or (groove.get("human_time") or [0.0] * 8)[channel] \
+                or (groove.get("human_velo") or [0.0] * 8)[channel]:
+            genre.set_groove(
+                body, swing=swing,
+                human_time=(groove.get("human_time") or [0.0] * 8)[channel],
+                human_velo=(groove.get("human_velo") or [0.0] * 8)[channel])
+    if divs is not None or groove:
+        report.append("division  " + "  ".join(
+            f"{tlib.CHANNELS[c][0]}:{lib.DIVISIONS[genre.div_index(divs[c])][0] if divs and divs[c] else '1/16'}"
+            f"({steps_of[c]})" for c in range(len(tlib.CHANNELS))))
+        if groove.get("swing"):
+            report.append("swing     " + "  ".join(
+                f"{tlib.CHANNELS[c][0]}:{groove['swing'][c]:.2f}"
+                for c in range(len(tlib.CHANNELS)) if groove["swing"][c]))
+
     # --- the drums ----------------------------------------------------------
     drums_out = dict(state.get("drums") or {})
     for key, spec in sorted((manifest.get("drums") or {}).items()):
@@ -404,9 +474,10 @@ def build(base, manifest, kit_notes):
             raise ValueError(f"kit {kit!r} is not usable - see tools/scan-drum-kits.py")
         genre.set_kit(procs[pid], kit)
         note = kit_notes[kit][channel]
-        steps = drum_pattern(spec)
+        steps = drum_pattern(spec, steps_of[channel])
         patns[channel][1] = genre.set_pattern(
-            patns[channel][1], steps, note, int(spec["velo"]), template)
+            patns[channel][1], steps, note, int(spec["velo"]), template,
+            steps_of[channel])
         drums_out[str(channel)] = drum_state(spec)
         report.append(
             f"  {chain['title']:11} {kit:14} note {note:3}  "
@@ -485,25 +556,26 @@ def build(base, manifest, kit_notes):
         channel = int(key)
         voices_out[str(channel)] = voice_state(spec)
         saved = voices_out[str(channel)]
-        steps = [s for s in range(STEPS) if saved["rhythm_reg"] >> s & 1]
+        n = steps_of[channel]
+        steps = [s for s in range(n) if saved["rhythm_reg"] >> s & 1]
         # THROUGH chord_line, NOT line - the report has to show what the
         # driver will write, and with CHORD on those are different
         # things. A report that shows the single note while the rig plays
         # a triad is a report that cannot be used to verify a build.
         chords = tlib.chord_line(
-            saved["register"], saved["length"], STEPS,
+            saved["register"], saved["length"], n,
             state["globals"].get("root", 0),
             state["globals"].get("scale", 0),
             saved["octave"], saved["range"], saved["chord"])
         if tlib.CHANNELS[channel][2] == "voice":
             # A courtesy write - _write_voice_pattern replaces it on load.
             patns[channel][1] = genre.set_pattern(
-                patns[channel][1], steps, 60, saved["velo"], template)
+                patns[channel][1], steps, 60, saved["velo"], template, n)
         else:
             # NOT a courtesy: the load-time rewrite never reaches a channel
             # the CHANNELS table calls a drum. See set_voice_pattern.
             patns[channel][1] = set_voice_pattern(
-                patns[channel][1], saved, chords, steps, template)
+                patns[channel][1], saved, chords, steps, template, n)
         if spec.get("empty"):
             report.append(f"  channel {channel} EMPTY (rhythm_reg 0)")
         else:
@@ -562,7 +634,8 @@ def build(base, manifest, kit_notes):
             raise ValueError(
                 f"channel {channel} has chords and no voice entry - it needs "
                 f"one for its octave, which is what the pads colour against")
-        patns[channel][1] = set_chord_pattern(patns[channel][1], stabs, template)
+        patns[channel][1] = set_chord_pattern(patns[channel][1], stabs,
+                                              template, steps_of[channel])
         # OWNERSHIP IS WHAT MAKES A CHORD SURVIVE. Without it the load's
         # _write_voice_pattern replaces the whole pattern with a monophonic
         # line within a second, and nothing says so.

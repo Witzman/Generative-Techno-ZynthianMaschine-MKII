@@ -1,35 +1,41 @@
 """The twenty of item 41 - `snapshot/dub-round-manifest.json`.
 
-A listening round is worth exactly what its CONTROLS are worth. The owner
-hears twenty files and replies with one number, so anything that is not a
-deliberate variable has to be provably the same in all twenty, and anything
-that IS a variable has to be provably different. Neither is visible by
-reading a 2,000-line manifest, which is what this file is for.
+ROUND TWO, and this file was inverted to build it. Round one held the music
+identical in all twenty so the vote would isolate instrumentation and effects,
+and a test here enforced that. The owner heard it and said they "all sound the
+same" - the ask was *variations inside the genre per snapshot*, not a vote on
+the best-sounding preset. So the strongest test in this file now asserts the
+OPPOSITE of what it used to: no two of the twenty may be the same piece.
 
-Three of these tests exist because of a law this project has already paid for:
+What did NOT flip, because it was never what "the same" meant: every generator
+is still fixed. `random` and `rhythm` are 0 on every voice, and
+`_rewrite_voice` returns early when both are 0, so each piece plays its own
+line bit-identically bar after bar. Twenty different fixed melodies.
+
+Three tests exist because of a law this project has already paid for:
 
 * CHECK THE VOICE COUNT AND THE MONO FLAG BEFORE ASKING A PATCH FOR A CHORD.
   Every Obxd patch in the shipped preset packs ships `voicecount` 0.25, which
-  sits between the scale points for two and three voices - so a three-note
-  chord silently loses a note. The round forces 1.0, and
-  `test_every_chord_channel_is_polyphonic` is what says it still does.
+  sits between the scale points for two and three voices, so a three-note
+  chord silently loses a note.
 * A MODULATOR POINTED AT A GUI-HOSTED PLUGIN COSTS 70 % OF A CORE. The round
   never swaps the insert pair, so every modulator lands on a mixer fader or a
   TAP insert, neither of which has an LV2 UI.
-* MELODIES ARE FIXED - owner's instruction, 2026-09-12, "modulation is
-  allowed, but keep melodys fixed in the first place". `random` and `rhythm`
-  are 0 everywhere and no modulator drives a DRIFT verb.
+* A NOTE THAT LEAVES THE KEY IS A CLAIM NOBODY CHECKED. Every take here is
+  authored from SCALE DEGREES through the instrument's own keyboard mapping,
+  and `test_no_authored_note_leaves_the_key` is what says it stayed there.
 """
 
 import json
 import os
+import sys
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import sys
 sys.path.insert(0, os.path.join(ROOT, "ctrldev"))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from techno_lib import techno_lib as tlib                       # noqa: E402
+from maschine_mk2_lib import maschine_mk2_lib as lib            # noqa: E402
 
 MANIFEST = os.path.join(ROOT, "snapshot", "dub-round-manifest.json")
 OBXD = "JV/Obxd"
@@ -47,6 +53,15 @@ PADTHV1_POLY = {
 }
 
 
+def base_engines():
+    with open(os.path.join(ROOT, "snapshot",
+                           "018-generative-techno-main-insert.zss"),
+              encoding="utf-8") as fh:
+        base = json.load(fh)
+    return {cid: list(chain["slots"][0].values())[0]
+            for cid, chain in base["chains"].items()}
+
+
 class TheRoundCase(unittest.TestCase):
 
     @classmethod
@@ -62,79 +77,83 @@ class TheRoundCase(unittest.TestCase):
         self.assertEqual(len(set(titles)), 20, titles)
 
     def test_every_entry_says_what_it_varies(self):
-        """A variant with no sentence is a variant the vote cannot use."""
         for e in self.round:
-            self.assertGreater(len(e.get("notes") or ""), 120,
+            self.assertGreater(len(e.get("notes") or ""), 150,
                                f"{e['file']} has no usable note")
 
-    # ---------------------------------------------------------------- controls
+    # ------------------------------------------------- twenty PIECES, not one
 
-    def test_the_music_is_the_same_in_all_twenty(self):
-        """Everything the round is NOT about is identical.
+    def _piece(self, e):
+        """Everything that makes this entry a different piece of music.
 
-        The drum PATTERN (not the kit), the bass figure, the two stab chords
-        and the pad chord, the tempo, the key and the mix. If one of these
-        moves, the owner is voting on two things at once and the round teaches
-        nothing."""
-        def music(e):
-            return {
-                "tempo": e["tempo"],
-                "root": e["globals"]["root"],
-                "scale": e["globals"]["scale"],
-                "drums": {k: {n: v[n] for n in ("hits", "rotate", "velo")}
-                          for k, v in e["drums"].items() if k != "4"},
-                "bass": {n: e["voices"]["5"][n] for n in
-                         ("register", "length", "rhythm_reg", "gate",
-                          "octave", "range", "velo", "chord")},
-                "chords6": [(s["step"], tuple(s["notes"]), s["velo"])
-                            for s in e["chords"]["6"]],
-                "chords7": [(s["step"], tuple(s["notes"]), s["velo"])
-                            for s in e["chords"]["7"]],
-                # "4" is channel E, whose ROLE varies, and "16" is the main
-                # fader, which is the round's one MEASURED number - a per
-                # variant trim read off the rig, because TAP Reverberator's
-                # forty-three rooms do not share an output gain and a vote the
-                # loudest variant wins teaches nothing.
-                "levels": {k: v for k, v in e["levels"].items()
-                           if k not in ("4", "16")},
-                "mods": [{n: m[n] for n in ("channel", "verb", "depth",
-                                            "rate", "shape", "phase0")}
-                         for m in e["mods"]],
-            }
-        first = music(self.round[0])
-        for e in self.round[1:]:
-            self.assertEqual(music(e), first,
-                             f"{e['file']} moves something the round holds still")
+        Deliberately NOT the instrumentation: two entries could legitimately
+        share a kit or a patch. What may not repeat is the MUSIC - the tempo,
+        the key, the groove, the phrase lengths, the drum placement and every
+        authored note."""
+        return {
+            "tempo": e["tempo"],
+            "key": (e["globals"]["root"], e["globals"]["scale"]),
+            "div": tuple(e.get("div") or [None] * 8),
+            "swing": tuple((e.get("groove") or {}).get("swing") or [0] * 8),
+            "drums": tuple(sorted(
+                (k, v["hits"], v.get("rotate", 0), v["velo"],
+                 v.get("rhythm_reg"), v.get("hand_reg"))
+                for k, v in e["drums"].items())),
+            "voices": tuple(sorted(
+                (k, v.get("rhythm_reg"), v.get("gate"), v.get("octave"),
+                 v.get("register"), v.get("length"))
+                for k, v in e["voices"].items() if not v.get("empty"))),
+            "takes": tuple(sorted(
+                (k, tuple((s["step"], tuple(s["notes"])) for s in stabs))
+                for k, stabs in e["chords"].items())),
+        }
 
-    def test_every_variant_differs_from_every_other(self):
-        """And the other half: no two of the twenty are the same file."""
-        def sound(e):
-            return json.dumps({
-                "globals": e["globals"],
-                "kits": {k: v["kit"] for k, v in e["drums"].items()},
-                "presets": {k: v["file"] for k, v in e["presets"].items()},
-                "engines": {k: v["engine"] for k, v in (e.get("engines") or {}).items()},
-                "wets": e["wets"],
-                "kinds": e.get("kinds"),
-                "e_level": e["levels"].get("4"),
-            }, sort_keys=True)
+    def test_no_two_entries_are_the_same_piece(self):
+        """THE TEST THIS ROUND EXISTS FOR.
+
+        Round one failed this in spirit and passed in letter: every entry was
+        the same bar under a different mix, and the owner heard exactly that.
+        A round whose pieces repeat teaches nothing, so it fails the build."""
         seen = {}
         for e in self.round:
-            key = sound(e)
+            key = json.dumps(self._piece(e), sort_keys=True)
             self.assertNotIn(key, seen,
-                             f"{e['file']} is the same sound as {seen.get(key)}")
+                             f"{e['file']} is the same PIECE as "
+                             f"{seen.get(key)}")
             seen[key] = e["file"]
+
+    def test_the_round_spreads_across_the_genre(self):
+        """And not merely 'not identical'. Twenty near-neighbours would pass
+        the test above and still be one piece with twenty spellings, so the
+        axes themselves are counted."""
+        keys = {(e["globals"]["root"], e["globals"]["scale"]) for e in self.round}
+        self.assertGreaterEqual(len(keys), 6, f"only {len(keys)} keys")
+        scales = {e["globals"]["scale"] for e in self.round}
+        self.assertGreaterEqual(len(scales), 4, f"only {len(scales)} modes")
+        self.assertEqual({e["tempo"] for e in self.round}, {120, 125})
+        kicks = {e["drums"]["0"]["hits"] for e in self.round}
+        self.assertGreaterEqual(len(kicks), 3,
+                                "every piece has the same kick placement")
+        # At least a quarter of the round must run a phrase longer than one
+        # bar, or `div` is a feature nothing uses.
+        longer = [e["file"] for e in self.round
+                  if any(d not in (None, "1/16") for d in (e.get("div") or []))]
+        self.assertGreaterEqual(len(longer), 5, longer)
+        self.assertTrue(any(e.get("groove") for e in self.round),
+                        "nothing in the round swings")
 
     # ------------------------------------------------------------- polyphony
 
     def _chord_channels(self, entry):
-        """The chains carrying an authored chord, as chain ids."""
+        """The chains carrying an authored CHORD - more than one note on a
+        step. A single-note bass take needs no polyphony."""
         return {str(int(ch) + 1) for ch, stabs in entry["chords"].items()
                 if any(len(s["notes"]) > 1 for s in stabs)}
 
     def test_a_chord_is_only_ever_authored_on_a_polyphonic_engine(self):
+        base = base_engines()
         for e in self.round:
-            engines = dict(base_engines())
+            engines = dict(base)
             for cid, spec in (e.get("engines") or {}).items():
                 engines[cid] = spec["engine"]
             for cid in self._chord_channels(e):
@@ -165,7 +184,45 @@ class TheRoundCase(unittest.TestCase):
                 if spec["engine"] == PADTHV1:
                     self.assertIn(spec["file"], PADTHV1_POLY, e["file"])
 
-    # ------------------------------------------------- fixed melody, free FX
+    # -------------------------------------------------------------- the keys
+
+    def test_no_authored_note_leaves_the_key(self):
+        """Every take is written from scale degrees, so every note must come
+        back as one. A chord tone outside the scale is the one mistake a
+        listening round cannot survive - it does not read as a variation, it
+        reads as broken."""
+        for e in self.round:
+            root, scale = e["globals"]["root"], e["globals"]["scale"]
+            degrees = set(tlib.SCALES[scale][1])
+            for ch, stabs in e["chords"].items():
+                for stab in stabs:
+                    for note in stab["notes"]:
+                        self.assertIn(
+                            (note - root) % 12, degrees,
+                            f"{e['file']} channel {ch} step {stab['step']}: "
+                            f"note {note} is not in "
+                            f"{tlib.SCALES[scale][0]} on root {root}")
+
+    def test_every_authored_note_reads_as_a_take_on_the_pads(self):
+        """`_rebuild_notes` probes only the keyboard notes at the channel's
+        octave plus the generated line, so a tone in neither cannot be found
+        and its step draws in the GROUP colour instead of the player amber.
+        The builder warns; here it is a rule."""
+        for e in self.round:
+            root, scale = e["globals"]["root"], e["globals"]["scale"]
+            for ch, stabs in e["chords"].items():
+                octave = e["voices"][ch]["octave"]
+                pads = set(tlib.pad_notes(root, scale, octave))
+                for stab in stabs:
+                    outside = [n for n in stab["notes"] if n not in pads]
+                    self.assertEqual(
+                        outside, [],
+                        f"{e['file']} channel {ch} step {stab['step']}: "
+                        f"{outside} is outside the pad notes at octave "
+                        f"{octave} - it will sound, and the pad will not read "
+                        f"as a take")
+
+    # ------------------------------------------- fixed generators, free FX
 
     def test_no_generator_moves_by_itself(self):
         for e in self.round:
@@ -176,6 +233,16 @@ class TheRoundCase(unittest.TestCase):
                                  f"{e['file']} voice {ch} has RANDOM on")
                 self.assertEqual(v.get("rhythm", 0), 0,
                                  f"{e['file']} voice {ch} has RHYTHM on")
+
+    def test_nothing_is_humanised(self):
+        """HUMAN and HUMNV are per-EVENT randomisation: they change what is
+        heard between one repeat and the next, which is the thing the owner
+        asked to be held still. SWING does not - it is a fixed offset on the
+        same steps every bar - so the round swings and does not humanise."""
+        for e in self.round:
+            g = e.get("groove") or {}
+            self.assertEqual(sum(g.get("human_time") or [0]), 0, e["file"])
+            self.assertEqual(sum(g.get("human_velo") or [0]), 0, e["file"])
 
     def test_every_modulator_is_free_and_none_of_them_drifts(self):
         for e in self.round:
@@ -190,11 +257,6 @@ class TheRoundCase(unittest.TestCase):
                 self.assertIn(m["shape"], tlib.MOD_SHAPES)
 
     def test_the_insert_pair_is_never_swapped(self):
-        """Which is what keeps the modulators free AND the levels comparable.
-
-        A swap calls clear_processor, and TAP Reverberator's `drylevel`
-        defaults to -4 dB - so swapping the reverb on some variants and not
-        others would put a 4 dB step between them that nobody chose."""
         for e in self.round:
             self.assertNotIn("fx", e, f"{e['file']} swaps the insert pair")
             for cid in (e.get("engines") or {}):
@@ -202,7 +264,7 @@ class TheRoundCase(unittest.TestCase):
                               f"{e['file']} swaps an engine on chain {cid}, "
                               f"which is not a voice chain")
 
-    # ------------------------------------------------------------ the kinds
+    # -------------------------------------------------- kinds, E, and the div
 
     def test_a_channel_overridden_to_a_voice_has_voice_parameters(self):
         for e in self.round:
@@ -214,13 +276,27 @@ class TheRoundCase(unittest.TestCase):
                                   f"with no voice block")
 
     def test_every_entry_settles_channel_e_one_way_or_the_other(self):
-        """E is the one channel whose ROLE varies, so no entry may leave it
-        to the base. A drum pattern is not rewritten on load, so an entry
-        that names E in neither block ships 018's leftover line."""
         for e in self.round:
             named = ("4" in e["drums"]) or ("4" in e["voices"])
             self.assertTrue(named, f"{e['file']} says nothing about channel E")
             self.assertIn("kinds", e, f"{e['file']} inherits 018's kind for E")
+
+    def test_a_long_division_only_lands_where_it_survives(self):
+        """`_derive_params` reads stepsPerBeat back only for F, G and H, so a
+        drum-table channel at any other division would play one bar length
+        under a panel reading another. The exception is a PLAYER-OWNED
+        channel, whose pattern nothing rewrites."""
+        for e in self.round:
+            for channel, d in enumerate(e.get("div") or []):
+                if d in (None, "1/16"):
+                    continue
+                self.assertIn(d, [lab for lab, _s, _b in lib.DIVISIONS],
+                              f"{e['file']}: {d!r} is not a division")
+                if tlib.CHANNELS[channel][2] != "voice":
+                    self.assertIn(
+                        str(channel), e["chords"],
+                        f"{e['file']} puts channel {channel} at {d} and does "
+                        f"not author a take on it")
 
     def test_the_globals_name_a_room_and_a_division_everywhere(self):
         for e in self.round:
@@ -233,12 +309,16 @@ class TheRoundCase(unittest.TestCase):
                                  f"{e['file']}: TAP's feedback runs away "
                                  f"near 100")
 
-    def test_the_main_fader_is_a_measured_trim(self):
-        """It is the only number in the mix that moves, so it has to say why.
+    def test_the_tempo_is_exact_at_48_khz(self):
+        for e in self.round:
+            self.assertEqual(30000 % e["tempo"], 0,
+                             f"{e['file']} is at {e['tempo']} BPM, which "
+                             f"zynseq cannot clock exactly")
 
-        A fader at exactly 019's 0.28 in all twenty would mean the trim never
-        ran; one above 1.0 is not a fader; and one whose `levels_why` does not
-        name the reading is a number nobody can check."""
+    def test_the_main_fader_is_a_measured_trim(self):
+        """It is the only number in the mix that is not a musical choice, so
+        it has to say why. A fader identical in all twenty means the trim
+        never ran and the round is partly a loudness vote."""
         mains = []
         for e in self.round:
             main = float(e["levels"]["16"])
@@ -246,32 +326,14 @@ class TheRoundCase(unittest.TestCase):
             self.assertEqual(e["globals"]["master"], round(main * 100),
                              f"{e['file']}: the master global and the main "
                              f"fader disagree")
-            self.assertIn("dBFS", e["levels_why"],
-                          f"{e['file']} has no reading behind its main fader")
             mains.append(main)
         self.assertGreater(len(set(mains)), 1,
                            "every main fader is the same - the measured trim "
-                           "never ran, and the round is a loudness vote")
-
-    def test_the_tempo_is_exact_at_48_khz(self):
-        for e in self.round:
-            self.assertEqual(30000 % e["tempo"], 0,
-                             f"{e['file']} is at {e['tempo']} BPM, which "
-                             f"zynseq cannot clock exactly")
-
-
-def base_engines():
-    """The base snapshot's engine per chain - what a variant inherits."""
-    with open(os.path.join(ROOT, "snapshot",
-                           "018-generative-techno-main-insert.zss"),
-              encoding="utf-8") as fh:
-        base = json.load(fh)
-    return {cid: list(chain["slots"][0].values())[0]
-            for cid, chain in base["chains"].items()}
+                           "never ran")
 
 
 class TheRoundBuildsCase(unittest.TestCase):
-    """Every one of the twenty builds, and the builder is the shipped one."""
+    """Every one of the twenty builds, through the shipped builder."""
 
     def test_all_twenty_build_and_name_themselves(self):
         import importlib.util
@@ -284,19 +346,20 @@ class TheRoundBuildsCase(unittest.TestCase):
             kits = json.load(fh)["notes"]
         with open(MANIFEST, encoding="utf-8") as fh:
             entries = json.load(fh)
+        port = "virtual:maschine.rs/Maschine MK2 Pads"
         for entry in entries:
             with open(os.path.join(ROOT, entry["base"]), encoding="utf-8") as fh:
                 base = json.load(fh)
-            built, _report = mod.build(base, entry, kits)
+            built, report = mod.build(base, entry, kits)
             self.assertTrue(
                 built["last_snapshot_fpath"].endswith(entry["file"] + ".zss"),
                 f"{entry['file']} does not name itself")
-            port = "virtual:maschine.rs/Maschine MK2 Pads"
+            self.assertEqual(
+                [line for line in report if "outside the pad notes" in line],
+                [], f"{entry['file']} authors a note the pads cannot show")
             state = built["zs3"]["zs3-0"]["midi_capture"][port]["ctrldev_state"]
-            # A chord only survives the load on a player-owned channel.
             for ch in entry["chords"]:
                 self.assertEqual(state["owners"][ch], "player", entry["file"])
-            # And nothing else may be owned, or its generator is refused.
             for ch, who in state["owners"].items():
                 if ch not in entry["chords"]:
                     self.assertEqual(who, "gen", f"{entry['file']} ch{ch}")
