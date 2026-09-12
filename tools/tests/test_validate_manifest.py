@@ -557,8 +557,18 @@ class TheShippedPacksAllPassCase(unittest.TestCase):
                                                   "*-manifest.json"))):
             with open(path) as fh:
                 doc = json.load(fh)
+            # WHICH MANIFESTS ARE PACKS, and it is a SHAPE question rather
+            # than a count one. This used to skip anything that was not a
+            # list - "the factory manifest is one entry" - and that stopped
+            # being the same question on 2026-09-12, when item 41's listening
+            # round shipped TWENTY entries in the FACTORY shape. A factory
+            # entry names its own `base`; a pack entry never does, because the
+            # pack builder takes one base for the whole pack on the command
+            # line. That key is the discriminator.
             if not isinstance(doc, list):
-                continue                  # the factory manifest is one entry
+                continue                  # a single factory manifest
+            if any(isinstance(e, dict) and "base" in e for e in doc):
+                continue                  # factory-shaped entries, not a pack
             yield os.path.basename(path), doc, kits
 
     def test_there_are_packs_to_check(self):
@@ -762,9 +772,18 @@ class ANoteIsAClaimCase(unittest.TestCase):
                                                   "*-manifest.json"))):
             with open(path) as fh:
                 doc = json.load(fh)
-            if isinstance(doc, list):
-                for e in doc:
-                    yield e
+            if not isinstance(doc, list):
+                continue
+            # THE SAME SHAPE FILTER AS TheShippedPacksAllPassCase.packs, and
+            # for the same reason: `claims` reads the PACK shape - voices as
+            # parallel lists, `scale` at the top level - and a factory-shaped
+            # entry has neither. Item 41's round is twenty factory entries in
+            # one list. Its `notes` are checked by the round's own test, which
+            # reads the factory shape.
+            if any(isinstance(e, dict) and "base" in e for e in doc):
+                continue
+            for e in doc:
+                yield e
 
     def claims(self, entry):
         """[(claim, holds)] for every checkable sentence in `notes`."""

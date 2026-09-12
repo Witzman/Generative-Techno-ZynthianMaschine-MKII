@@ -33,8 +33,10 @@ under the wrong name.
 tools/fix-snapshot-identity.py --check snapshot/*.zss snapshot/*/*.zss
 ```
 
-**Must print `73 of 73 name themselves`.** Both generators stamp it now
-(`build-genre-snapshots.py`, `add-main-insert.py`), so this is a guard against
+**Must print `94 of 94 name themselves`** — 73 until 2026-09-12, when item
+41's twenty landed in `dub-round/` and the count moved with them. All three
+generators stamp it now (`build-genre-snapshots.py`,
+`build-factory-snapshot.py`, `add-main-insert.py`), so this is a guard against
 the next path that copies a snapshot, not a chore.
 `notes/findings/2026-08-22-every-snapshot-claimed-to-be-017.md`
 
@@ -254,6 +256,73 @@ The assertions were proved able to fail by pointing the installer back at
 rather than showing dead columns — which is what the guide's mixing page says.
 
 ---
+
+# The dub round — `dub-round/`, twenty snapshots for one ear-vote
+
+**Built 2026-09-12 for `Witzman/ZynthianMaschine-Workshop#41`. This is not a
+pack and it is not shipped**: `bootstrap.sh` does not place it, nothing here
+is a default, and nineteen of the twenty are a record of what was tried. The
+owner plays all twenty, replies with one number, and that number becomes the
+next round.
+
+```bash
+python3 tools/build-factory-snapshot.py \
+    --manifest snapshot/dub-round-manifest.json --out snapshot/dub-round
+```
+
+`snapshot/dub-round-manifest.json` is a LIST of twenty factory-shaped entries,
+which is why the builder learned to take a list. Every entry carries its own
+`notes` saying what it asks.
+
+## What varies, and what is nailed down
+
+The round's brief is **instrumentation and effects**, so everything else is
+identical in all twenty and a test says so
+(`tools/tests/test_dub_round.py::test_the_music_is_the_same_in_all_twenty`):
+the same tempo, the same key, the same drum placement, the same bass figure,
+the same two stab chords and the same pad chord, the same eight faders, the
+same main at 0.28, and the same six modulators.
+
+| Varies | Where |
+|---|---|
+| the drum machine | `drums[*].kit` — five channels of one machine in 211-215 |
+| the synth patch on F, G and H | `presets`, always with the engine named in `engines` |
+| the room | `globals.revtype` (TAP Reverberator's 43 rooms) and `revsize` |
+| the echo | `globals.dlytime` (1/16 to 1/2) and `dlyfbk` |
+| the sends | `wets`, per chain |
+| what channel E is | silent, the fifth drum, glitch percussion, or a second pad |
+
+**Three axes the issue names are NOT in the round, each for a reason.**
+Polymetry is out because a Turing register of a length other than sixteen
+walks the melody, and the owner's instruction on 2026-09-12 was *"modulation
+is allowed, but keep melodys fixed in the first place"* — so `random` and
+`rhythm` are 0 on every voice in all twenty. The ghost-kick sidechain is out
+because no shipped `.zss` spells an `audio_out` sidechain route and the issue
+refuses to guess one. A continuous noise bed is out because `C* White` is an
+Audio Generator, not a MIDI synth, and putting one in a synth slot is
+unmeasured here.
+
+## The insert pair is never swapped, and that is three decisions at once
+
+Every chain keeps 018's `TAP Stereo Echo` + `TAP Reverberator`.
+
+1. **Modulation stays free.** A modulator pointed at a plugin Zynthian hosts
+   in `jalv.gtk3` costs about 70 % of a core, and eight of the twelve effects
+   this project uses are GUI-hosted. Neither TAP is.
+2. **`REVTYPE` only exists on TAP Reverberator.** `mode` 0-42 is on no other
+   reverb here, so the 43-room palette — the widest effect axis available —
+   is reachable only by keeping it.
+3. **The twenty stay level-comparable.** An engine swap calls
+   `clear_processor`, and TAP Reverberator's `drylevel` defaults to **-4 dB**
+   where 018 ships it at 0 — so swapping the reverb on some variants and not
+   others would put a 4 dB step between them that nobody chose.
+
+## What is still owed
+
+**A measured level-match.** Holding 019's mix is the strongest control
+available offline, and it is not a measurement: a variant whose patch is
+simply louder wins a vote it did not earn. The reading is `zynmixer:output_17a`
+over forty-eight bars, per the trap `019`'s own main fader was set by.
 
 # The genre pack
 

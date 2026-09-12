@@ -179,6 +179,38 @@ def set_chord_pattern(body, stabs, template):
     return out
 
 
+def set_voice_pattern(body, saved, chords, steps, template):
+    """A GENERATED line, written as real notes rather than as a placeholder.
+
+    The courtesy write below this one exists because `set_state` ends by
+    calling `_write_voice_pattern()` and the riff is replaced within a second
+    of loading. THAT IS ONLY TRUE FOR F, G AND H. The load-time loop is
+
+        for channel, ch in enumerate(tlib.CHANNELS):
+            if ch[2] == "voice" and self.channel_kind(channel) == "voice":
+
+    - the CHANNELS table's kind, not the override - so a drum channel that
+    `kinds` turns into a voice is never rewritten, and whatever this tool put
+    in the riff is what plays for as long as nobody touches the panel. A
+    placeholder note 60 there is a channel playing one wrong pitch forever.
+
+    Duration goes through the driver's own `tlib.note_duration` with the MASK,
+    for the reason its docstring gives: a note that reaches the next sounding
+    step is DELETED by zynseq when that step writes the same pitch."""
+    out = bytearray(body[:genre.PATN_HEADER])
+    # `note_duration` wants the SOUNDING MASK as a sequence it can index, not
+    # the sixteen-bit register the manifest carries. Handing it the int reads
+    # as a working call and dies on len() - which is the cheap half of the
+    # same confusion that would otherwise clamp against the wrong steps.
+    mask = [bool(int(saved["rhythm_reg"]) >> s & 1) for s in range(STEPS)]
+    for step in steps:
+        duration = tlib.note_duration(int(saved["gate"]), step, STEPS, mask)
+        for note in chords[step]:
+            out += chord_event(template, step, int(note),
+                               saved["velo"], duration)
+    return bytes(out)
+
+
 def chain_of_channel(channel):
     """The chain id carrying channel 0-7. The tables are 1-based and in order."""
     return str(channel + 1)
@@ -454,30 +486,71 @@ def build(base, manifest, kit_notes):
         voices_out[str(channel)] = voice_state(spec)
         saved = voices_out[str(channel)]
         steps = [s for s in range(STEPS) if saved["rhythm_reg"] >> s & 1]
-        # A courtesy write - _write_voice_pattern replaces it on load.
-        patns[channel][1] = genre.set_pattern(
-            patns[channel][1], steps, 60, saved["velo"], template)
+        # THROUGH chord_line, NOT line - the report has to show what the
+        # driver will write, and with CHORD on those are different
+        # things. A report that shows the single note while the rig plays
+        # a triad is a report that cannot be used to verify a build.
+        chords = tlib.chord_line(
+            saved["register"], saved["length"], STEPS,
+            state["globals"].get("root", 0),
+            state["globals"].get("scale", 0),
+            saved["octave"], saved["range"], saved["chord"])
+        if tlib.CHANNELS[channel][2] == "voice":
+            # A courtesy write - _write_voice_pattern replaces it on load.
+            patns[channel][1] = genre.set_pattern(
+                patns[channel][1], steps, 60, saved["velo"], template)
+        else:
+            # NOT a courtesy: the load-time rewrite never reaches a channel
+            # the CHANNELS table calls a drum. See set_voice_pattern.
+            patns[channel][1] = set_voice_pattern(
+                patns[channel][1], saved, chords, steps, template)
         if spec.get("empty"):
             report.append(f"  channel {channel} EMPTY (rhythm_reg 0)")
         else:
-            # THROUGH chord_line, NOT line - the report has to show what the
-            # driver will write, and with CHORD on those are different
-            # things. A report that shows the single note while the rig plays
-            # a triad is a report that cannot be used to verify a build.
-            chords = tlib.chord_line(
-                saved["register"], saved["length"], STEPS,
-                state["globals"].get("root", 0),
-                state["globals"].get("scale", 0),
-                saved["octave"], saved["range"], saved["chord"])
             shape = tlib.CHORD_SHAPES[saved["chord"]][0]
+            written = ("written" if tlib.CHANNELS[channel][2] != "voice"
+                       else "regenerated on load")
             report.append(
                 f"  channel {channel} register {saved['register']} "
                 f"steps {steps} chord {shape} "
                 f"notes {[list(chords[s]) for s in steps]} "
-                f"gate {saved['gate']}")
+                f"gate {saved['gate']} ({written})")
     state["voices"] = voices_out
 
+    # --- which kind each channel BEHAVES as ---------------------------------
+    #
+    # REPLACED, not merged, and only when the manifest names the key. The base
+    # carries `kinds` of its own - 018 has {"4": "voice"}, channel E as a
+    # sampler walked by the Turing register - so merging would make "this
+    # variant's E is a drum again" unsayable: the inherited override would
+    # survive and the channel would come up a voice with a drum's parameters.
+    # An absent key therefore means "keep the base's", and `{}` means "every
+    # channel is whatever the CHANNELS table says", which are different
+    # answers and both wanted.
+    if "kinds" in manifest:
+        kinds = {str(k): v for k, v in (manifest["kinds"] or {}).items()}
+        for channel, kind in sorted(kinds.items()):
+            if kind not in tlib.KINDS:
+                raise ValueError(f"kinds[{channel}] is {kind!r}, and the two "
+                                 f"kinds are {sorted(tlib.KINDS)}")
+            if str(channel) not in voices_out and kind == "voice":
+                raise ValueError(
+                    f"channel {channel} is overridden to a voice and has no "
+                    f"`voices` entry - it would come up on the driver's "
+                    f"defaults, which is a register nobody chose")
+        state["kinds"] = kinds
+        report.append("kinds " + (", ".join(f"{c}={k}" for c, k in
+                                            sorted(kinds.items())) or "(none)"))
+
     # --- the chords ---------------------------------------------------------
+    #
+    # OWNERSHIP IS RESET FIRST. `owners` is inherited from the base like every
+    # other block, and a channel that comes back player-owned is one the
+    # generator refuses to write - so a variant that does NOT author a chord
+    # on a channel the base owned would play the placeholder line for ever,
+    # silently. 018 is all "gen", so this changes nothing for the factory
+    # manifest and stops the next base from being a trap.
+    state["owners"] = {str(i): "gen" for i in range(len(tlib.CHANNELS))}
     # A chord is a TAKE, not a generated line - see set_chord_pattern. This
     # runs AFTER the voices step so a channel can carry both: the chord notes
     # are what sounds, and the voice state beside them is what the generator
@@ -493,7 +566,6 @@ def build(base, manifest, kit_notes):
         # OWNERSHIP IS WHAT MAKES A CHORD SURVIVE. Without it the load's
         # _write_voice_pattern replaces the whole pattern with a monophonic
         # line within a second, and nothing says so.
-        state["owners"] = dict(state.get("owners") or {})
         state["owners"][str(channel)] = "player"
         pads = tlib.pad_notes(state["globals"].get("root", 0),
                               state["globals"].get("scale", 0),
@@ -545,6 +617,73 @@ def build(base, manifest, kit_notes):
     if delay_ms is not None:
         report.append(f"delay time {delay_ms} ms on every chain "
                       f"(1/8 at {tempo} BPM is {30000.0 / tempo:.1f} ms)")
+
+    # --- the room and the division, written into the PLUGINS too ------------
+    #
+    # `revsize`, `revtype`, `dlyfbk` and `dlytime` are driver GLOBALS, and the
+    # driver does push all four to the plugins after a load - `_push_fx_globals`
+    # since 2026-09-06 and `_push_delay_time` since before that. So this block
+    # is not what makes them sound. It is what makes the FILE agree with
+    # itself: without it a snapshot carries one room in its globals and a
+    # different one in its nineteen plugin ports, and the only thing joining
+    # them is a driver version. `064-space-cathedral` and `079-space-closet`
+    # hold BIT-IDENTICAL plugin state and differ only in those numbers, which
+    # is exactly the shape this avoids - and it means a reader of the .zss, or
+    # a measurement taken off it, sees the room that will be playing.
+    #
+    # ONLY THE KEYS THE MANIFEST ITSELF NAMES. `state["globals"]` is the base's
+    # globals with the manifest merged over them, so iterating that would make
+    # every build write the BASE's room into the plugins - a change to every
+    # snapshot ever built from this tool, on behalf of a number nobody in the
+    # manifest asked for.
+    asked = manifest.get("globals") or {}
+    for role_which, role, key in (("reverb", "REVSIZE", "revsize"),
+                                  ("reverb", "REVTYPE", "revtype"),
+                                  ("delay", "DLYFBK", "dlyfbk"),
+                                  ("delay", "DLYTIME", "dlytime")):
+        if key not in asked:
+            continue
+        value = asked[key]
+        wrote = 0
+        for cid, chain in sorted(chains.items()):
+            if chain.get("midi_chan") is None:
+                continue
+            pair = genre.insert_role_procs(chain, procs)[role_which]
+            if pair is None:
+                continue
+            proc, spec = pair
+            if role not in spec:
+                # REVTYPE is the sharp case: TAP Reverberator's `mode` exists
+                # on no other reverb, so the column draws dead there and this
+                # writes nothing rather than faking it onto `size`.
+                continue
+            entry_spec = spec[role]
+            ctrls = proc.get("controllers") or {}
+            if role == "DLYTIME":
+                if len(entry_spec) < 4 or entry_spec[3] != "ms":
+                    # Three unit systems across the shipped delays; a
+                    # tempo-derived millisecond count in a 0..1 port sets the
+                    # delay to its maximum and calls it a division.
+                    continue
+                target = max(entry_spec[1],
+                             min(entry_spec[2], tlib.delay_ms(tempo, int(value))))
+                symbols = [entry_spec[0]] + list(spec.get("DLYTIME_ALSO", ()))
+            elif role == "REVTYPE":
+                # An index into the plugin's rooms, not a percentage.
+                target = max(entry_spec[1], min(entry_spec[2], float(value)))
+                symbols = [entry_spec[0]]
+            else:
+                lo, hi = entry_spec[1], entry_spec[2]
+                target = lo + (hi - lo) * (float(value) / 100.0)
+                symbols = [entry_spec[0]]
+            for symbol in symbols:
+                if symbol in ctrls:
+                    ctrls[symbol]["value"] = target
+                    wrote += 1
+        report.append(f"{key} {value} -> {wrote} port(s)"
+                      + (f"  ({tlib.DELAY_DIVISIONS[int(value)][0]} = "
+                         f"{tlib.delay_ms(tempo, int(value)):.1f} ms)"
+                         if key == "dlytime" else ""))
 
     # --- plugin controllers -------------------------------------------------
     for cid, wants in sorted((manifest.get("controllers") or {}).items()):
@@ -634,21 +773,33 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     manifest = json.load(open(args.manifest))
-    base_path = args.base or manifest["base"]
-    base = json.load(open(base_path))
     kit_notes = json.load(open(args.kits))["notes"]
-
-    d, report = build(base, manifest, kit_notes)
     os.makedirs(args.out, exist_ok=True)
-    path = os.path.join(args.out, manifest["file"] + ".zss")
-    # Atomically: this is pointed at the snapshot directory the rig boots
-    # from, where a half-written file is the only copy. See tools/atomic_write.
-    atomic_write.write_json(path, d)
 
-    print(f"base     {base_path}")
-    for line in report:
-        print(line)
-    print(f"\nwritten  {path}  ({os.path.getsize(path)} bytes)")
+    # A MANIFEST MAY BE A LIST, since 2026-09-12 and item 41: a listening
+    # ROUND is twenty files that differ in a dozen fields each and agree in
+    # every other, and twenty near-identical files on disk is how one of them
+    # comes to be edited and the other nineteen not. A single object is still
+    # a single object - `snapshot/factory-manifest.json` is unchanged and
+    # builds exactly the file it built before.
+    #
+    # The base is re-read per entry rather than deep-copied once: `build()`
+    # copies it anyway, and re-reading is the only form that cannot leak a
+    # mutation from one entry into the next if that ever stops being true.
+    entries = manifest if isinstance(manifest, list) else [manifest]
+    for entry in entries:
+        base_path = args.base or entry["base"]
+        base = json.load(open(base_path))
+        d, report = build(base, entry, kit_notes)
+        path = os.path.join(args.out, entry["file"] + ".zss")
+        # Atomically: this is pointed at the snapshot directory the rig boots
+        # from, where a half-written file is the only copy. See
+        # tools/atomic_write.
+        atomic_write.write_json(path, d)
+        print(f"base     {base_path}")
+        for line in report:
+            print(line)
+        print(f"\nwritten  {path}  ({os.path.getsize(path)} bytes)\n")
     return 0
 
 
