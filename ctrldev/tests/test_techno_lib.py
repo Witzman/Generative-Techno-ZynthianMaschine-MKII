@@ -1623,7 +1623,7 @@ class TestModulatorMaths(unittest.TestCase):
         # must be checked against _apply_generator/_write_pattern first.
         rewrites = {"hits", "rotate", "div", "length", "rhythm", "chance",
                     "gate", "velo", "octave", "range", "random", "root",
-                    "scale", "kit", "preset", "sample"}
+                    "scale", "kit", "preset", "sample", "chord"}
         self.assertEqual(tl.MOD_TIMBRE & rewrites, frozenset())
 
     def test_generated_plugin_ports_are_allowed(self):
@@ -1641,7 +1641,7 @@ class TestModulatorMaths(unittest.TestCase):
         # unconditionally because drift was deferred and blocked on the
         # SP2-ownership rule; the owner confirmed that rule, so they are
         # bindable on an UNOWNED channel and refused on an owned one.
-        for verb in ("hits", "rotate", "chance"):
+        for verb in ("hits", "rotate", "chance", "chord"):
             self.assertTrue(tl.mod_allowed(verb, owned=False), verb)
             self.assertFalse(tl.mod_allowed(verb, owned=True), verb)
         # RHYTHM is still refused outright: it is a voice's evolve knob, not a
@@ -4560,11 +4560,11 @@ class TestDriftAllowed(unittest.TestCase):
             self.assertTrue(tl.mod_allowed(verb, owned=True))
 
     def test_drift_verbs_bind_on_an_unowned_channel(self):
-        for verb in ("hits", "rotate", "chance"):
+        for verb in ("hits", "rotate", "chance", "chord"):
             self.assertTrue(tl.mod_allowed(verb, owned=False))
 
     def test_drift_verbs_refuse_on_an_owned_channel(self):
-        for verb in ("hits", "rotate", "chance"):
+        for verb in ("hits", "rotate", "chance", "chord"):
             self.assertFalse(tl.mod_allowed(verb, owned=True))
 
     def test_density_is_not_resurrected(self):
@@ -4595,7 +4595,8 @@ class TestDriftIsWrapRate(unittest.TestCase):
     the lock, five times a second, forever. That IS the velo defect."""
 
     def test_drift_verbs_are_named(self):
-        self.assertEqual(tl.DRIFT_VERBS, frozenset({"hits", "rotate", "chance"}))
+        self.assertEqual(tl.DRIFT_VERBS,
+                         frozenset({"hits", "rotate", "chance", "chord"}))
 
     def test_a_drift_verb_is_wrap_rate(self):
         for verb in tl.DRIFT_VERBS:
@@ -5364,6 +5365,57 @@ class TestArmLegendPad(unittest.TestCase):
         self.assertEqual(tl.overlay_owner(shift=True, arm=True), "shift")
         self.assertEqual(tl.overlay_owner(arm=True), "arm")
 
+    def test_an_auto_pick_blinks_between_full_and_dim(self):
+        on = tl.arm_legend_pad(0, picked="drop", auto=True, now=0.0)
+        off = tl.arm_legend_pad(0, picked="drop", auto=True, now=tl.BLINK_S)
+        self.assertEqual(on, (tl.COLOR_ARM_MACRO, tl.PAD_FULL))
+        self.assertEqual(off, (tl.COLOR_ARM_MACRO, tl.ARM_DIM))
+
+    def test_auto_moves_only_the_picked_pad(self):
+        for now in (0.0, tl.BLINK_S):
+            self.assertEqual(
+                tl.arm_legend_pad(1, picked="drop", auto=True, now=now),
+                tl.arm_legend_pad(1, picked="drop"))
+
+    def test_the_ruler_ignores_auto(self):
+        for index in range(16):
+            self.assertEqual(
+                tl.arm_legend_pad(index, picked="drop", armed_bars=8,
+                                  remaining=3, auto=True, now=tl.BLINK_S),
+                tl.arm_legend_pad(index, picked="drop", armed_bars=8,
+                                  remaining=3))
+
+
+class TestAutopilotRules(unittest.TestCase):
+    """#24. Which macros may repeat, how long a cycle is, and what a saved
+    block may carry."""
+
+    def test_every_macro_but_break_may_repeat(self):
+        for macro in tl.ARM_MACROS:
+            self.assertEqual(tl.autopilot_allowed(macro), macro != "break",
+                             macro)
+
+    def test_a_return_leg_or_a_stranger_may_not(self):
+        for macro in ("drop_end", "timescale_end", "bogus", None):
+            self.assertFalse(tl.autopilot_allowed(macro), macro)
+
+    def test_a_cycle_is_the_length_on_and_the_length_off(self):
+        self.assertEqual(tl.autopilot_cycle(8), 16)
+        self.assertEqual(tl.autopilot_cycle(16), 32)
+        self.assertEqual(tl.autopilot_cycle(0), 2)
+
+    def test_a_saved_block_keeps_only_what_can_be_armed(self):
+        # break refused; 5 is not on the length ring; a string and a bool are
+        # not lengths - and True == 1 IS on the ring, so the bool must be
+        # caught explicitly.
+        saved = {"drop": 8, "break": 4, "bogus": 2, "chance": 5,
+                 "gate": "8", "half": True, "ratchet": 16}
+        self.assertEqual(tl.autopilot_in(saved), {"drop": 8, "ratchet": 16})
+
+    def test_anything_but_a_dict_is_none(self):
+        for saved in (None, [], "drop", 8):
+            self.assertEqual(tl.autopilot_in(saved), {})
+
 
 class TestChanceRamp(unittest.TestCase):
     """The breakdown that thins instead of muting."""
@@ -5744,6 +5796,16 @@ class TestPendingPage(unittest.TestCase):
         self.assertEqual(cols[0]["value"], "0003")
         self.assertEqual(cols[0]["bar"], "uni")
         self.assertAlmostEqual(cols[0]["frac"], 0.75)
+
+    def test_an_auto_macro_is_starred(self):
+        # #24. One character, and `*` is in the panel font.
+        cols = tl.pending_columns([("drop", 4, 16, True), ("chance", 2, 8)])
+        self.assertEqual({c["name"] for c in cols[:2]}, {"DROP*", "THIN"})
+
+    def test_an_auto_countdown_runs_against_the_whole_cycle(self):
+        col = tl.pending_columns([("drop", 12, 16, True)])[0]
+        self.assertEqual(col["value"], "0012")
+        self.assertAlmostEqual(col["frac"], 0.75)
 
     def test_the_bar_never_leaves_0_to_1(self):
         # A "seg" bar divides by (count - 1), so a FULL ruler gave a fraction
@@ -6201,6 +6263,14 @@ class TestArmLabel(unittest.TestCase):
             out = tl.arm_label("X", True, macro)
             self.assertNotEqual(out, "X ARM?")
             self.assertTrue(out.startswith("X ARM "))
+
+    def test_auto_says_so(self):
+        self.assertEqual(tl.arm_label("STEP", True, "drop", auto=True),
+                         "STEP ARM DROP AUTO")
+
+    def test_auto_with_nothing_picked_still_asks(self):
+        self.assertEqual(tl.arm_label("STEP", True, None, auto=True),
+                         "STEP ARM?")
 
 
 class TestModRateLabel(unittest.TestCase):
@@ -8929,16 +8999,17 @@ class ChordRefusesWhereItCannotAct(unittest.TestCase):
         self.assertEqual("".join("." if c["grey"] else "#" for c in cols),
                          ".....###")
 
-    def test_chord_may_not_take_a_modulator(self):
-        # It rewrites the pattern, which is why gate and velo are out of
-        # MOD_TIMBRE. It is not a drift verb either: drift on a PITCH verb has
-        # never been played, and shipping it in the same round as the verb
-        # itself would mean two untested things at once.
-        self.assertFalse(tl.mod_allowed("chord"))
+    def test_chord_is_a_drift_verb_and_not_timbre(self):
+        # CHANGED for #12. Still NOT timbre - it rewrites the pattern, which
+        # is why gate and velo are out of MOD_TIMBRE, and an LFO on it would
+        # be the velo defect. It IS drift: wrap-applied and refused on a take,
+        # like hits, rotate and chance. Held back on 2026-09-02 until CHORD
+        # itself was gated; it passed that day.
+        self.assertTrue(tl.mod_allowed("chord"))
         self.assertFalse(tl.mod_allowed("chord", owned=True))
-        self.assertFalse(tl.is_drift("chord"))
+        self.assertTrue(tl.is_drift("chord"))
         self.assertNotIn("chord", tl.MOD_TIMBRE)
-        self.assertNotIn("chord", tl.DRIFT_VERBS)
+        self.assertIn("chord", tl.DRIFT_VERBS)
 
 
 class ChordMigratesSilently(unittest.TestCase):

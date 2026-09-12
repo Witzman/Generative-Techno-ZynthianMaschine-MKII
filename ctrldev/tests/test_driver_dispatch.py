@@ -2240,6 +2240,77 @@ class APresetListOutlivesItsChain(DispatchCase):
         self.assertIsNone(self.d.preset_pending)
 
 
+class AChainWithNoBankIsNotAChainWithNoPresets(DispatchCase):
+    """#39, split out of #2 - which fixed the cache that made this permanent
+    and closed with this half still open.
+
+    `_preset_list` cannot tell "this engine has no presets" from "this chain
+    has no bank selected". It files both as `[]` and caches it, and
+    `state_view` then draws the PRESET column DEAD - lower case, no bar,
+    encoder refused - which is this instrument's precise way of saying a
+    control cannot act.
+
+    zynthian's `load_preset_list` RETURNS EARLY while `bank_info` is falsy
+    (zyngine/zynthian_processor.py:314), leaving `preset_list` untouched. That
+    is exactly what `030-maschine-house` ships on F and G: both chains were
+    built by writing 168 Dexed controller values rather than by choosing a
+    preset, and Dexed's banks are sitting on disk. So two of the three voices
+    tell the player their preset knob cannot move, about a chain with presets
+    waiting behind a bank nobody picked. Measured on the rig 2026-09-09.
+
+    ERRING LIVE IS THE DOCUMENTED DIRECTION. `_known_empty`'s own docstring:
+    a column wrongly drawn dead is a control the player stops reaching for,
+    while one wrongly drawn live corrects itself the moment anything populates
+    the cache. Nothing here selects a bank - moving what a chain points at
+    from a render path is the decision this deliberately does not take.
+    """
+
+    def no_bank(self):
+        """A voice chain whose processor has no bank selected, as the rig's
+        does. `load_preset_list` is the real one's behaviour: it returns
+        without touching `preset_list`."""
+
+        channel = next(c for c in range(8) if not self.d._is_sampler(c))
+        proc = rig_stub.fit_voice_chain(self.d, channel)
+        proc.bank_info = None
+        proc.preset_list = []
+        proc.load_preset_list = lambda: None
+        return channel, proc
+
+    def test_an_unselected_bank_is_not_filed_as_an_empty_list(self):
+        channel, _proc = self.no_bank()
+        self.d._preset_list(channel)
+        self.assertNotIn(
+            channel, self.d.preset_cache,
+            "a chain with no bank was cached as a chain with no presets, "
+            "which is what takes the column dead for the rest of the session")
+
+    def test_the_column_is_drawn_live(self):
+        """The half a player meets. Dead is the instrument saying this knob
+        cannot act, and here it can - nobody has picked the bank yet."""
+
+        channel, _proc = self.no_bank()
+        self.d._preset_list(channel)
+        self.assertIsNotNone(
+            self.d.state_view(channel)["preset"],
+            "the knob was drawn dead over a chain whose presets are waiting")
+
+    def test_an_engine_that_really_has_none_is_still_cached_and_still_dead(self):
+        """THE COUNTERPART, and without it the fix would read as "stop drawing
+        this column dead", which is not what was wrong. A bank IS selected and
+        it holds nothing: that is a proven-empty list, the cache is right to
+        keep it, and the column is right to refuse the knob."""
+
+        channel = next(c for c in range(8) if not self.d._is_sampler(c))
+        proc = rig_stub.fit_voice_chain(self.d, channel)
+        proc.bank_info = ["", 0, "Bank", ""]
+        proc.preset_list = []
+        proc.load_preset_list = lambda: None
+        self.d._preset_list(channel)
+        self.assertEqual(self.d.preset_cache.get(channel), [])
+        self.assertIsNone(self.d.state_view(channel)["preset"])
+
+
 class TheLiveRecordingPathOffTheRig(DispatchCase):
     """Item 77. The harness made the recorder unreachable, and nothing said so.
 
@@ -2290,3 +2361,343 @@ class TheLiveRecordingPathOffTheRig(DispatchCase):
             self.libseq.named("addNote"),
             "nothing reached the pattern; libseq saw "
             + repr([name for name, _ in self.libseq.calls]))
+class ChordDriftsAtTheWrap(DispatchCase):
+    """#12. A drift modulator on CHORD moves the shape once per wrap, through
+    apply() - and never on a channel where CHORD draws dead."""
+
+    ENTRY = {"depth": 100, "rate": 1, "shape": "tri", "phase0": 0.25,
+             "base": 3, "seed": 1}
+
+    def drift(self, channel):
+        self.d.mod[(channel, "chord")] = dict(self.ENTRY)
+        with patch.object(self.d, "apply") as apply:
+            self.d._drift_channel(channel)
+        return [c for c in apply.call_args_list if c.args[1] == "chord"]
+
+    def test_a_voice_chord_drifts_through_apply(self):
+        calls = self.drift(5)
+        self.assertEqual(len(calls), 1)
+        channel, verb, value = calls[0].args
+        self.assertEqual((channel, verb), (5, "chord"))
+        self.assertIsInstance(value, int)
+        self.assertTrue(0 <= value < len(self.mod.tlib.CHORD_SHAPES))
+
+    def test_a_drum_never_receives_a_chord(self):
+        self.assertEqual(self.drift(0), [])
+
+    def test_a_sampler_behaving_as_a_voice_never_receives_one(self):
+        with patch.object(self.d, "channel_kind", return_value="voice"), \
+             patch.object(self.d, "_is_sampler", return_value=True):
+            self.assertEqual(self.drift(0), [])
+
+    def test_a_take_is_never_rewritten(self):
+        self.d.owner[5] = "player"
+        self.assertEqual(self.drift(5), [])
+
+
+class ASecondTapPutsAMacroOnAuto(DispatchCase):
+    """#24, the owner's gesture (2026-09-10): hold ARM, tap a macro, tap it
+    again - it blinks, it is on AUTO - then a length."""
+
+    def setUp(self):
+        super().setUp()
+        tl = self.mod.tlib
+        self.drop = tl.ARM_MACROS.index("drop")
+        self.chance = tl.ARM_MACROS.index("chance")
+        self.brk = tl.ARM_MACROS.index("break")
+        self.eight = 8 + tl.ARM_LENGTHS.index(8)
+        # A running transport: the phrase clock is anchored.
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+
+    def auto_drop(self):
+        self.press("arm")
+        self.pad(self.drop)
+        self.pad(self.drop)
+
+    def test_the_second_tap_is_auto_and_the_third_takes_it_back(self):
+        self.press("arm")
+        self.pad(self.drop)
+        self.assertFalse(self.d._arm_auto)
+        self.pad(self.drop)
+        self.assertTrue(self.d._arm_auto)
+        self.pad(self.drop)
+        self.assertFalse(self.d._arm_auto)
+
+    def test_picking_another_macro_starts_without_auto(self):
+        self.auto_drop()
+        self.pad(self.chance)
+        self.assertEqual(self.d._arm_picked, "chance")
+        self.assertFalse(self.d._arm_auto)
+
+    def test_break_refuses_auto(self):
+        self.press("arm")
+        self.pad(self.brk)
+        self.pad(self.brk)
+        self.assertFalse(self.d._arm_auto)
+
+    def test_a_length_under_auto_puts_it_on_the_autopilot(self):
+        self.auto_drop()
+        self.pad(self.eight)
+        self.assertEqual(self.d._autopilot, {"drop": 8})
+        self.assertEqual(self.d._pending_macros.remaining("drop", 0), 8)
+
+    def test_a_length_without_auto_is_a_one_shot(self):
+        self.press("arm")
+        self.pad(self.drop)
+        self.pad(self.eight)
+        self.assertEqual(self.d._autopilot, {})
+
+    def test_pressing_arm_again_forgets_the_auto_pick(self):
+        self.auto_drop()
+        self.press("arm", False)
+        self.press("arm")
+        self.assertFalse(self.d._arm_auto)
+
+    def test_cancel_all_clears_the_autopilot(self):
+        self.auto_drop()
+        self.pad(self.eight)
+        self.press("arm", False)
+        self.press("erase")
+        self.press("arm", True)
+        self.assertEqual(self.d._autopilot, {})
+        self.assertEqual(self.d._pending_macros.pending(), [])
+
+    def test_cancelling_its_pending_column_clears_its_auto(self):
+        self.d._autopilot = {"drop": 8}
+        self.d._arm_bars["drop"] = 8
+        self.d._pending_macros.arm("drop", 8, 0)
+        self.assertTrue(self.d._cancel_pending(0))
+        self.assertEqual(self.d._autopilot, {})
+
+
+class AnAutoMacroComesBack(DispatchCase):
+    """#24. It lands, runs its length, rests its length, and lands again."""
+
+    def setUp(self):
+        super().setUp()
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+
+    def arm(self, macro, bars, auto=True):
+        self.d._arm_bars[macro] = bars
+        if auto:
+            self.d._autopilot[macro] = bars
+        self.d._pending_macros.arm(macro, bars, 0)
+
+    def tick_to(self, bar):
+        # Measured 2026-09-10: this is enough for _phrase_tick to reach a bar
+        # on the stub and drain the queue.
+        self.d._phrase_bar = bar - 1
+        with patch.object(self.d, "_elapsed_beats",
+                          return_value=bar * 4 + 0.1), \
+             patch.object(self.d, "_reanchor_phrase"):
+            self.d._phrase_tick()
+
+    def test_it_is_armed_again_for_a_whole_cycle(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire") as fire:
+            self.tick_to(8)
+        fire.assert_called_once_with(8)
+        self.assertEqual(self.d._pending_macros.remaining("drop", 8), 16)
+
+    def test_it_lands_again_on_the_cycle(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire") as fire:
+            self.tick_to(8)
+            self.tick_to(24)
+        self.assertEqual([c.args[0] for c in fire.call_args_list], [8, 24])
+
+    def test_a_one_shot_is_not_armed_again(self):
+        self.arm("drop", 8, auto=False)
+        with patch.object(self.d, "_drop_fire"):
+            self.tick_to(8)
+        self.assertEqual(self.d._pending_macros.pending(), [])
+
+    def test_a_fire_that_raises_still_comes_back(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire",
+                          side_effect=RuntimeError("boom")):
+            self.tick_to(8)
+        self.assertEqual(self.d._pending_macros.remaining("drop", 8), 16)
+
+    def test_the_countdown_is_drawn_against_the_cycle(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_drop_fire"):
+            self.tick_to(8)
+        self.assertIn(("drop", 16, 16, True), self.d._pending_view())
+
+    def test_a_stop_moves_the_landing_to_wait_for_play(self):
+        self.arm("drop", 8)
+        with patch.object(self.d, "_any_playing", return_value=True):
+            self.d._toggle_transport()
+        self.assertEqual(self.d._armed_while_stopped, {"drop": 8})
+        self.assertNotIn("drop", self.d._pending_macros.pending())
+        with patch.object(self.d, "_any_playing", return_value=False):
+            self.d._toggle_transport()
+        self.assertEqual(self.d._pending_macros.remaining("drop", 0), 8)
+
+
+class ASnapshotCarriesTheAutopilot(DispatchCase):
+    """#24. Saved beside the modulators; staged on load, landed on the poll
+    thread, and waiting for PLAY - a load leaves the transport stopped."""
+
+    def test_it_round_trips_through_a_snapshot(self):
+        self.d._autopilot = {"drop": 8}
+        other = rig_stub.make_driver()
+        other.set_state(self.d.get_state())
+        self.assertEqual(other._autopilot_seed, {"drop": 8})
+        self.assertEqual(other._autopilot, {}, "set_state must only stage it")
+
+    def test_an_old_snapshot_has_none(self):
+        state = self.d.get_state()
+        state.pop("autopilot", None)
+        self.d.set_state(state)
+        self.assertEqual(self.d._autopilot_seed, {})
+
+    def test_landing_it_on_a_stopped_rig_waits_for_play(self):
+        self.d._autopilot_land({"drop": 8})
+        self.assertEqual(self.d._autopilot, {"drop": 8})
+        self.assertEqual(self.d._armed_while_stopped, {"drop": 8})
+        self.assertEqual(self.d._arm_bars["drop"], 8)
+
+    def test_landing_it_on_a_running_rig_counts_from_now(self):
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 5
+        self.d._autopilot_land({"drop": 8})
+        self.assertEqual(self.d._pending_macros.remaining("drop", 5), 8)
+
+    def test_a_load_retires_the_outgoing_autopilot(self):
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+        self.d._autopilot = {"chance": 4}
+        self.d._pending_macros.arm("chance", 4, 0)
+        self.d._autopilot_land({"drop": 8})
+        self.assertNotIn("chance", self.d._pending_macros.pending())
+        self.assertEqual(self.d._autopilot, {"drop": 8})
+
+    def test_a_hand_armed_one_shot_survives_a_load(self):
+        self.d._phrase_anchor = 0.0
+        self.d._phrase_bar = 0
+        self.d._pending_macros.arm("half", 4, 0)
+        self.d._autopilot_land({"drop": 8})
+        self.assertIn("half", self.d._pending_macros.pending())
+
+
+class ThePickBlinksOnePad(DispatchCase):
+    """#24. The only pad a timer paints, and only while the picker shows an
+    AUTO pick. Sixteen pads on a timer wedged the controller on 2026-08-20.
+    Measured 2026-09-10: with ARM holding the pads, _poll_render paints no
+    pad at all, so any paint below is the blink."""
+
+    def setUp(self):
+        super().setUp()
+        self.step = self.mod.tlib.ARM_MACROS.index("drop")
+        self.press("arm")
+        self.pad(self.step)
+
+    def painted(self, tick=1):
+        with patch.object(self.d, "_paint_pad") as paint:
+            self.d._poll_render(tick)
+        return {c.args[0] for c in paint.call_args_list}
+
+    def test_an_auto_pick_paints_exactly_its_own_pad(self):
+        self.pad(self.step)                      # the second tap: AUTO
+        for tick in (1, 2, 3):
+            self.assertEqual(self.painted(tick), {self.step})
+
+    def test_a_plain_pick_paints_nothing(self):
+        self.assertEqual(self.painted(), set())
+
+    def test_nothing_blinks_over_the_countdown(self):
+        self.pad(self.step)
+        self.d._pending_macros.arm("drop", 8, 0)
+        self.assertEqual(self.painted(), set())
+
+
+class ModEraseGroupClearsOneChannel(DispatchCase):
+    """#11, asked for at the rig 2026-09-04: "is there a shortcut for removing
+    all modulation from one group?"
+
+    One verb clears with MOD + ERASE + that encoder, and every channel clears
+    with MOD + ERASE + ALL. The middle scope had no gesture, so stripping one
+    channel meant remembering which of its verbs carried modulators - or using
+    the all-channels clear and flattening the other seven.
+
+    THE GROUP EDGE MUST TEST `mod_down` BEFORE IT REACHES THE SILENCE BRANCH.
+    ERASE + Group already means "silence that channel", so without the order
+    the new chord would clear the modulators AND silence the channel.
+    """
+
+    CH = 2
+    OTHER = 5
+    ENTRY = {"depth": 100, "rate": 1, "shape": "tri", "phase0": 0.0,
+             "base": 40, "seed": 1}
+
+    def setUp(self):
+        super().setUp()
+        self.d.mod[(self.CH, "cutoff")] = dict(self.ENTRY)
+        self.d.mod[(self.CH, "level")] = dict(self.ENTRY)
+        self.d.mod[(self.OTHER, "cutoff")] = dict(self.ENTRY)
+
+    def chord(self, group):
+        """MOD latched, ERASE held, then the Group press."""
+        self.tap("mod")
+        self.press("erase")
+        return self.cc(self.mod.GROUP_CC_FIRST + group, 127)
+
+    def test_it_clears_that_channel_and_leaves_the_others(self):
+        self.chord(self.CH)
+        self.assertEqual(set(self.d.mod), {(self.OTHER, "cutoff")},
+                         "the wrong channels were cleared")
+
+    def test_the_bases_are_queued_and_not_written_on_this_thread(self):
+        """The reason _mod_clear_all defers, and it is load bearing: this runs
+        on the MIDI thread under self.lock, and a generated lv2:/fx: base
+        reaches the plugin, where a write can block on a socket for seconds."""
+
+        with patch.object(self.d, "_mod_base_set") as wrote:
+            self.chord(self.CH)
+        wrote.assert_not_called()
+        self.assertEqual(
+            sorted((c, v) for c, v, _base in self.d._mod_restore_due),
+            [(self.CH, "cutoff"), (self.CH, "level")])
+        self.assertEqual({base for _c, _v, base in self.d._mod_restore_due},
+                         {self.ENTRY["base"]})
+
+    def test_it_does_not_also_silence_the_channel(self):
+        """ERASE + Group already means silence. Tested the other way round,
+        the chord would clear AND silence - the trap this ordering exists
+        for."""
+
+        with patch.object(self.d, "_silence_channel") as silenced:
+            self.chord(self.CH)
+        silenced.assert_not_called()
+
+    def test_erase_and_group_without_mod_still_silences(self):
+        """The gesture this one sits on top of must survive it."""
+
+        self.press("erase")
+        with patch.object(self.d, "_silence_channel") as silenced:
+            self.cc(self.mod.GROUP_CC_FIRST + self.CH, 127)
+        silenced.assert_called_once_with(self.CH)
+        self.assertEqual(len(self.d.mod), 3, "nothing should have been cleared")
+
+    def test_a_global_verb_is_not_on_any_one_channel_and_survives(self):
+        """`_mod_key` files an `fx:` verb under channel None because one
+        insert is ganged across all eight. Clearing "this group" must not
+        reach it, or naming one channel would take the reverb sweep off the
+        other seven."""
+
+        self.d.mod[(None, "fx:reverb")] = dict(self.ENTRY)
+        self.chord(self.CH)
+        self.assertIn((None, "fx:reverb"), self.d.mod)
+
+    def test_it_asks_for_the_pad_base_back(self):
+        """Intercepting a Group button kills the pads unless the note base is
+        re-asserted from the poll thread - the daemon re-bases on every Group
+        press, on both edges, and the driver only sees the press."""
+
+        self.d._note_base_due = False
+        self.chord(self.CH)
+        self.assertTrue(self.d._note_base_due)

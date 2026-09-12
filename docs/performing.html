@@ -90,7 +90,7 @@
 <h2 id="arm">ARM &mdash; landing a change on a bar</h2>
 <p><strong>SELECT is ARM.</strong> Hold it and compose two things on the pads: <em>what</em> is going to happen, and <em>how many bars away</em>. Tap it instead and the grid stays, like every other modifier here.</p>
 <table><thead><tr><th>Pads while ARM is held</th><th>What they are</th></tr></thead><tbody>
-<tr><td>1&ndash;7</td><td>the macro &mdash; <strong>DROP</strong>, <strong>CHANCE ramp</strong>, <strong>HALF</strong>, <strong>DOUBLE</strong>, <strong>BREAK</strong>, <strong>ratchet ramp</strong>, <strong><a href="#gate-collapse">gate collapse</a></strong>. Amber, and the one you picked lights full</td></tr>
+<tr><td>1&ndash;7</td><td>the macro &mdash; <strong>DROP</strong>, <strong>CHANCE ramp</strong>, <strong>HALF</strong>, <strong>DOUBLE</strong>, <strong>BREAK</strong>, <strong>ratchet ramp</strong>, <strong><a href="#gate-collapse">gate collapse</a></strong>. Amber, and the one you picked lights full. Tap the one you picked <strong>again</strong> and it blinks: that macro is on <a href="#auto">AUTO</a></td></tr>
 <tr><td>8</td><td>dark, and it does nothing. This is where a later macro goes</td></tr>
 <tr><td>9&ndash;16</td><td>the length in bars &mdash; 1, 2, 3, 4, 6, 8, 12, 16. Green</td></tr>
 </tbody></table>
@@ -106,6 +106,13 @@
 <p><strong>With MOD active, ARM belongs to the modulators instead.</strong> MOD latches, so MOD held or latched plus ARM is the gesture that makes a modulator sweep once &mdash; see <a href="modulation.html#rise">RISE</a>. Tap MOD off first if you want to arm a macro. <strong>SHIFT outranks both</strong>: a pad under SHIFT is a step's odds, whatever else is latched.</p>
 <p><strong>BREAK is the exception to the length.</strong> Every other macro fires in N bars; BREAK fires <em>immediately</em> and comes back in N. There is no &ldquo;in N bars&rdquo; for a gesture whose whole point is that it happens now.</p>
 <p><strong>DROP and BREAK cannot both be armed.</strong> They are the same mechanism with its ends swapped and they share one snapshot of who was muted, so arming either quietly drops the other. Only one thing may own the mutes at a time.</p>
+<h3 id="auto">AUTO &mdash; a macro that keeps coming back</h3>
+<p><strong>Tap the macro you picked a second time and its pad blinks</strong> &mdash; the indicator reads <code>ARM DROP AUTO</code>. The length you tap next arms it as usual, and when it lands it arms itself again. A third tap before the length takes AUTO back.</p>
+<p><strong>It comes back every two lengths: on for the length, off for the length.</strong> DROP at 8 drops on bar 8, returns on 16 and drops again on 24 &mdash; a sixteen-bar cycle; at 16 it is thirty-two. Two lengths rather than one because every macro runs for its length after it lands, and a DROP re-armed for one length would land on the same bar as its own return.</p>
+<p><strong>BREAK cannot repeat.</strong> It fires the moment you arm it, so there is no landing to repeat from; DROP is the same move on a bar. Its pad does not blink.</p>
+<p><strong>Stopping it.</strong> ERASE + SELECT cancels everything, AUTO included; on the <a href="#pending">PENDING</a> page, ERASE and the encoder under its column cancels that one. Cancelling only its return (<code>UNDROP</code>) leaves the cycle running.</p>
+<p><strong>It is saved in the snapshot.</strong> A load leaves the transport stopped, so an AUTO macro waits for Play and lands one length in &mdash; and so does one you stop the transport on. Loading a snapshot replaces the AUTO macros that were running; a one-shot you armed by hand is left alone.</p>
+<p><strong>The pad ruler holds sixteen bars.</strong> A thirty-two-bar cycle shows a full ruler for its first sixteen, then counts down; the number on PENDING is exact throughout.</p>
 <p>Each macro is written up where it lands: <a href="mixing-and-effects.html#drop">DROP and BREAK</a>, the <a href="generating-patterns.html#chance-ramp">CHANCE ramp</a>, <a href="generating-patterns.html#half-double">HALF and DOUBLE</a>, and the <a href="generating-patterns.html#ratchet-ramp">ratchet ramp</a>.</p>
 <hr>
 <h2 id="pending">PENDING &mdash; what is armed, and how to kill one</h2>
@@ -113,6 +120,7 @@
 <p><strong>Hold ERASE and turn the encoder under a column to cancel that one.</strong> ERASE + SELECT still cancels everything &mdash; that is the panic gesture. This is the surgical version, and the two share a modifier because they are the same verb at two sizes.</p>
 <p>The columns are sorted by how soon each lands and only move when something really overtakes something else, so the page stays readable while it counts.</p>
 <p><strong>Every macro shows up twice &mdash; once going out, once coming back.</strong> The names are short enough for a column head, so learn the twelve of them: <code>DROP</code> and <code>UNDROP</code>, <code>BREAK</code> and <code>UNBREAK</code>, <code>HALF</code> or <code>DOUBLE</code> and their <code>RETURN</code>, <code>ROLL</code> and <code>UNROLL</code> for the ratchet ramp, <code>TIGHT</code> and <code>UNTIGHT</code> for gate collapse, and <code>THIN</code> for the CHANCE ramp. <code>THIN</code> is the one that does not match its name elsewhere in this guide: the ramp is called CHANCE where you arm it and <code>THIN</code> where it counts down, because it is thinning the bar out.</p>
+<p>An AUTO macro carries a star &mdash; <code>DROP*</code> &mdash; and counts down to its next landing rather than to its length.</p>
 <hr>
 <h2 id="freeze">FREEZE &mdash; stop the machine evolving</h2>
 <p><strong>PAD MODE is FREEZE, and it has two depths.</strong></p>

@@ -81,6 +81,9 @@
 <ul>
 <li>Every bank is saved in the snapshot, and a set returns on the bank it was saved on.</li>
 <li>The top line marks itself when it has been cut short.</li>
+<li>CHORD can drift: bind MOD to it on a voice and the chord changes shape once a bar.</li>
+<li>ARM can repeat a macro: tap it twice and it lands every two lengths until you cancel it.</li>
+<li>Every modulator on one channel clears in a single gesture &mdash; hold MOD and ERASE and press that channel&rsquo;s Group button. The other seven channels keep theirs.</li>
 </ul>
 <p><strong>Changed</strong></p>
 <ul>
@@ -103,6 +106,7 @@
 <li>The key stops walking when every voice is locked.</li>
 <li>A greyed knob records why in the session log.</li>
 <li>The preset name comes back after a snapshot load. A voice whose chain had no presets to step through kept that verdict for the rest of the session, so its preset name stayed off the screen through every set you loaded afterwards while every other knob on the page still changed the sound.</li>
+<li>A voice whose chain has no bank chosen yet no longer says its preset knob cannot move. It was drawn greyed &mdash; the instrument&rsquo;s way of saying a control cannot act &mdash; over an engine whose presets were sitting on disk the whole time, which is what two of the three voices in the shipped house set do. A chain whose bank really is empty still greys out, because there the knob really cannot move.</li>
 <li>On an instrument with no voices, a key change no longer leaves ROOT and SCALE in brackets for the rest of the session &mdash; and switching your last voice to a drum while a key change is waiting now lands it instead of stranding it.</li>
 </ul>
 <hr>
