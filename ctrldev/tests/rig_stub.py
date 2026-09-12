@@ -60,15 +60,65 @@ class FakeLibseq:
 
     def __init__(self):
         self.calls = []
-        self.notes = {}                 # step -> [(note, velocity)]
+        # ONE NOTE STORE PER PATTERN - item 77. It was a single dict shared by
+        # all eight patterns in every bank, and `selectPattern` was a pure
+        # recorder, so a bank switch read the OUTGOING bank's notes straight
+        # back out of the incoming one. `restore()` in test_driver_dispatch
+        # carried a docstring about seeding "afterwards" that was describing
+        # exactly this, and called it "the fake's constraint".
+        #
+        # `notes` remains the SELECTED pattern's dict, so every existing test
+        # that writes `libseq.notes[step]` still addresses the pattern the
+        # driver is looking at.
+        self._by_pattern = {}
+        self.selected = self.pattern_id(1, 0)
+        self.notes = self._by_pattern.setdefault(self.selected, {})
         self.tempo = 125.0
-        self.play_state = {}
+        # WHAT A PATTERN IS WHEN NOBODY HAS SAID - item 77. The catch-all
+        # below answers 0 to every question the RECORDER asks: how long the
+        # pattern is, whether the sequence is playing, where the playhead is.
+        # `_capture` refuses on each of them in turn, so the whole
+        # live-recording path - every pad capture, the overdub replace, the
+        # duration clamp, the ownership claim - was unreachable off the rig
+        # and the suite stayed green over the hole.
+        #
+        # A stopped pattern of zero steps at clock zero is not a state a real
+        # sequencer can be in, so these answer what one really would. Sixteen
+        # steps at 24 clocks each is the shipped 1/16 bar.
+        self.steps = 16
+        self.clocks_per_step = 24
+        self.positions = {}             # sequence -> playhead clock
+        self.play_state = {}            # sequence -> SEQ_*, default STOPPED
         # WHICH BANKS EXIST. `getSequencesInBank` is the driver's only test
         # for "is there a bank here", and it decides two different refusals:
         # `_bank_switch` AUTHORS an empty bank, and `_land_bank` REFUSES to
         # follow a snapshot onto one. The catch-all below would answer 0 for
         # every bank, so a test about landing needs to say which exist.
         self.banks = {1: 8}
+
+    @staticmethod
+    def pattern_id(bank, sequence):
+        """Distinct per bank AND per channel, as the rig's patterns are."""
+        return bank * 100 + sequence
+
+    def getPattern(self, bank, sequence, track, position):
+        self.calls.append(("getPattern", (bank, sequence, track, position)))
+        return self.pattern_id(bank, sequence)
+
+    def selectPattern(self, pattern):
+        self.calls.append(("selectPattern", (pattern,)))
+        self.selected = pattern
+        self.notes = self._by_pattern.setdefault(pattern, {})
+
+    def seed_notes(self, bank, sequence, steps, note, velocity=100):
+        """Put notes into one pattern without selecting it.
+
+        For a test that has to say what a bank it is NOT currently on holds -
+        which is every test about what a switch brings back.
+        """
+        pattern = self._by_pattern.setdefault(self.pattern_id(bank, sequence), {})
+        for step in steps:
+            pattern[step] = [(note, velocity)]
 
     def getSequencesInBank(self, bank):
         self.calls.append(("getSequencesInBank", (bank,)))
@@ -89,6 +139,26 @@ class FakeLibseq:
     def getTempo(self):
         self.calls.append(("getTempo", ()))
         return self.tempo
+
+    def getSteps(self):
+        self.calls.append(("getSteps", ()))
+        return self.steps
+
+    def getClocksPerStep(self):
+        self.calls.append(("getClocksPerStep", ()))
+        return self.clocks_per_step
+
+    def getPlayState(self, bank, sequence):
+        # `play_state` EXISTED HERE AND NOTHING READ IT. With no getPlayState
+        # on the fake, the catch-all won and every sequence was stopped
+        # forever - a field that looks like it works and does nothing, which
+        # is the shape item 77 is about. 0 is SEQ_STOPPED.
+        self.calls.append(("getPlayState", (bank, sequence)))
+        return self.play_state.get(sequence, 0)
+
+    def getPlayPosition(self, bank, sequence):
+        self.calls.append(("getPlayPosition", (bank, sequence)))
+        return self.positions.get(sequence, 0)
 
     def addNote(self, step, note, velocity, duration, offset):
         self.calls.append(("addNote", (step, note, velocity, duration, offset)))
