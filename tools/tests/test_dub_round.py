@@ -90,8 +90,13 @@ class TheRoundCase(unittest.TestCase):
                             for s in e["chords"]["6"]],
                 "chords7": [(s["step"], tuple(s["notes"]), s["velo"])
                             for s in e["chords"]["7"]],
+                # "4" is channel E, whose ROLE varies, and "16" is the main
+                # fader, which is the round's one MEASURED number - a per
+                # variant trim read off the rig, because TAP Reverberator's
+                # forty-three rooms do not share an output gain and a vote the
+                # loudest variant wins teaches nothing.
                 "levels": {k: v for k, v in e["levels"].items()
-                           if k not in ("4",)},
+                           if k not in ("4", "16")},
                 "mods": [{n: m[n] for n in ("channel", "verb", "depth",
                                             "rate", "shape", "phase0")}
                          for m in e["mods"]],
@@ -227,6 +232,26 @@ class TheRoundCase(unittest.TestCase):
             self.assertLessEqual(g["dlyfbk"], 75,
                                  f"{e['file']}: TAP's feedback runs away "
                                  f"near 100")
+
+    def test_the_main_fader_is_a_measured_trim(self):
+        """It is the only number in the mix that moves, so it has to say why.
+
+        A fader at exactly 019's 0.28 in all twenty would mean the trim never
+        ran; one above 1.0 is not a fader; and one whose `levels_why` does not
+        name the reading is a number nobody can check."""
+        mains = []
+        for e in self.round:
+            main = float(e["levels"]["16"])
+            self.assertTrue(0.0 < main <= 1.0, f"{e['file']} main {main}")
+            self.assertEqual(e["globals"]["master"], round(main * 100),
+                             f"{e['file']}: the master global and the main "
+                             f"fader disagree")
+            self.assertIn("dBFS", e["levels_why"],
+                          f"{e['file']} has no reading behind its main fader")
+            mains.append(main)
+        self.assertGreater(len(set(mains)), 1,
+                           "every main fader is the same - the measured trim "
+                           "never ran, and the round is a loudness vote")
 
     def test_the_tempo_is_exact_at_48_khz(self):
         for e in self.round:

@@ -8,7 +8,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 31,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -204,7 +204,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3056
     },
     "mods": [
       {
@@ -269,7 +269,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.51 dBFS and peak -9.31, and 0.28 x 1.091 = 0.3056 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -289,7 +289,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 49,
       "revsize": 85,
       "revtype": 15,
       "dlytime": 1,
@@ -485,7 +485,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.4911
     },
     "mods": [
       {
@@ -550,7 +550,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -27.63 dBFS and peak -13.16, and 0.28 x 1.754 = 0.4911 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -570,7 +570,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 51,
       "revsize": 55,
       "revtype": 19,
       "dlytime": 1,
@@ -766,7 +766,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.5101
     },
     "mods": [
       {
@@ -831,7 +831,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -27.96 dBFS and peak -13.49, and 0.28 x 1.822 = 0.5101 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -851,7 +851,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 33,
       "revsize": 70,
       "revtype": 41,
       "dlytime": 1,
@@ -1047,7 +1047,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3263
     },
     "mods": [
       {
@@ -1112,7 +1112,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -24.08 dBFS and peak -9.68, and 0.28 x 1.165 = 0.3263 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -1132,7 +1132,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 77,
       "revsize": 30,
       "revtype": 7,
       "dlytime": 1,
@@ -1328,7 +1328,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.7712
     },
     "mods": [
       {
@@ -1393,7 +1393,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -31.55 dBFS and peak -15.52, and 0.28 x 2.754 = 0.7712 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -1609,7 +1609,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.2845
     },
     "mods": [
       {
@@ -1674,7 +1674,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -22.89 dBFS and peak -9.56, and 0.28 x 1.016 = 0.2845 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -1694,7 +1694,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 30,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -1890,7 +1890,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3004
     },
     "mods": [
       {
@@ -1955,7 +1955,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.36 dBFS and peak -9.54, and 0.28 x 1.073 = 0.3004 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -1975,7 +1975,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 30,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 3,
@@ -2171,7 +2171,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.2962
     },
     "mods": [
       {
@@ -2236,7 +2236,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.24 dBFS and peak -9.79, and 0.28 x 1.058 = 0.2962 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -2256,7 +2256,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 31,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 0,
@@ -2452,7 +2452,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3091
     },
     "mods": [
       {
@@ -2517,7 +2517,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.61 dBFS and peak -10.70, and 0.28 x 1.104 = 0.3091 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -2798,7 +2798,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -22.75 dBFS and peak -9.72, and 0.28 x 1.000 = 0.28 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -2818,7 +2818,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 31,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -3017,7 +3017,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3142
     },
     "mods": [
       {
@@ -3082,7 +3082,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.75 dBFS and peak -10.48, and 0.28 x 1.122 = 0.3142 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -3100,7 +3100,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 32,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -3299,7 +3299,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3193
     },
     "mods": [
       {
@@ -3364,7 +3364,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.89 dBFS and peak -10.24, and 0.28 x 1.140 = 0.3193 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -3382,7 +3382,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 38,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -3584,7 +3584,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3808
     },
     "mods": [
       {
@@ -3649,7 +3649,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -25.42 dBFS and peak -10.55, and 0.28 x 1.360 = 0.3808 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -3671,7 +3671,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 33,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -3870,7 +3870,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3278
     },
     "mods": [
       {
@@ -3935,7 +3935,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -24.12 dBFS and peak -10.71, and 0.28 x 1.171 = 0.3278 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -3953,7 +3953,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 39,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -4152,7 +4152,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3896
     },
     "mods": [
       {
@@ -4217,7 +4217,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -25.62 dBFS and peak -11.67, and 0.28 x 1.392 = 0.3896 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -4431,7 +4431,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.2823
     },
     "mods": [
       {
@@ -4496,7 +4496,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -22.82 dBFS and peak -8.90, and 0.28 x 1.008 = 0.2823 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -4516,7 +4516,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 51,
       "revsize": 45,
       "revtype": 18,
       "dlytime": 1,
@@ -4715,7 +4715,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.5148
     },
     "mods": [
       {
@@ -4780,7 +4780,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -28.04 dBFS and peak -12.58, and 0.28 x 1.839 = 0.5148 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -4804,7 +4804,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 37,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 2,
@@ -5003,7 +5003,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3712
     },
     "mods": [
       {
@@ -5068,7 +5068,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -25.20 dBFS and peak -10.77, and 0.28 x 1.326 = 0.3712 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -5092,7 +5092,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 31,
       "revsize": 25,
       "revtype": 3,
       "dlytime": 1,
@@ -5305,7 +5305,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.3127
     },
     "mods": [
       {
@@ -5370,7 +5370,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -23.71 dBFS and peak -10.83, and 0.28 x 1.117 = 0.3127 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",
@@ -5390,7 +5390,7 @@
     "globals": {
       "root": 7,
       "scale": 0,
-      "master": 28,
+      "master": 44,
       "revsize": 65,
       "revtype": 15,
       "dlytime": 1,
@@ -5616,7 +5616,7 @@
       "5": 0.337,
       "6": 0.3261,
       "7": 0.2826,
-      "16": 0.28
+      "16": 0.4372
     },
     "mods": [
       {
@@ -5681,7 +5681,7 @@
       }
     ],
     "mods_why": "THE SIX MODULATORS ARE IDENTICAL IN ALL TWENTY, and that is the point: the round varies instrumentation and effects, so everything else is held still. Their BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, which is why a variant that moves a send automatically moves the modulator that sweeps around it. Every target is `level`, `reverb` or `delay`: a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance (notes/traps/PLUGINS.md), and eight of the twelve effects this project uses are GUI-hosted - which is the whole reason the insert pair is never swapped in this round.",
-    "levels_why": "THE MIX IS 019'S, UNCHANGED, IN ALL TWENTY - every channel fader and the main at 0.28, the value confirmed on the rig over forty-eight bars on 2026-09-06. Holding it is the only level-match available offline: the twenty share their sources, their faders and their output stage, so what differs between them is the patches and the sends and not the gain. It is NOT a measurement, and the round still owes one - a variant whose patch is simply louder will win a vote it did not earn.",
+    "levels_why": "THE EIGHT CHANNEL FADERS ARE 019'S, UNCHANGED, IN ALL TWENTY - every ratio the owner tuned by ear on 2026-09-02 is held, so what differs between the twenty is the patches and the sends and not the balance. THE MAIN FADER IS MEASURED, and it is the only number in the mix that moves between variants. Read on the rig 2026-09-12 over FORTY-EIGHT BARS - the LCM of the six modulator periods, and the window snapshot/README.md insists on after a 10-bar read of 019 came back 3.6 dB low - on zynmixer:output_17a with the transport running: this variant read rms -26.62 dBFS and peak -12.43, and 0.28 x 1.561 = 0.4372 brings it to the round's common -22.75 dBFS. THE ROOM IS WHY THE TRIM EXISTS: TAP Reverberator's forty-three modes do not share an output gain, so choosing a room moves the whole bus by several dB - and a listening round where the loudest variant wins has taught nothing. The ceiling is -3 dBFS of predicted peak; the target is pulled down to whatever satisfies it, so no variant is trimmed into clipping.",
     "engines": {
       "6": {
         "engine": "JV/Obxd",

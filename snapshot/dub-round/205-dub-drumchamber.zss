@@ -1285,7 +1285,7 @@
           "level": 0.2826
         },
         "chan_16": {
-          "level": 0.28
+          "level": 0.7712
         }
       },
       "midi_capture": {
@@ -1371,7 +1371,7 @@
               "root": 7,
               "scale": 0,
               "bpm": 120,
-              "master": 28,
+              "master": 77,
               "revsize": 30,
               "revtype": 7,
               "dlytime": 1,
