@@ -106,6 +106,7 @@
 <li>The key stops walking when every voice is locked.</li>
 <li>A greyed knob records why in the session log.</li>
 <li>The preset name comes back after a snapshot load. A voice whose chain had no presets to step through kept that verdict for the rest of the session, so its preset name stayed off the screen through every set you loaded afterwards while every other knob on the page still changed the sound.</li>
+<li>A voice whose chain has no bank chosen yet no longer says its preset knob cannot move. It was drawn greyed &mdash; the instrument&rsquo;s way of saying a control cannot act &mdash; over an engine whose presets were sitting on disk the whole time, which is what two of the three voices in the shipped house set do. A chain whose bank really is empty still greys out, because there the knob really cannot move.</li>
 <li>On an instrument with no voices, a key change no longer leaves ROOT and SCALE in brackets for the rest of the session &mdash; and switching your last voice to a drum while a key change is waiting now lands it instead of stranding it.</li>
 </ul>
 <hr>
