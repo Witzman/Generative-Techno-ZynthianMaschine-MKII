@@ -257,13 +257,11 @@ rather than showing dead columns — which is what the guide's mixing page says.
 
 ---
 
-# The dub round — `dub-round/`, twenty snapshots for one ear-vote
+# The dub round — `dub-round/`, twenty pieces for one ear-vote
 
 **Built 2026-09-12 for `Witzman/ZynthianMaschine-Workshop#41`. This is not a
 pack and it is not shipped**: `bootstrap.sh` does not place it, nothing here
-is a default, and nineteen of the twenty are a record of what was tried. The
-owner plays all twenty, replies with one number, and that number becomes the
-next round.
+is a default, and nineteen of the twenty are a record of what was tried.
 
 ```bash
 python3 tools/build-factory-snapshot.py \
@@ -272,57 +270,90 @@ python3 tools/build-factory-snapshot.py \
 
 `snapshot/dub-round-manifest.json` is a LIST of twenty factory-shaped entries,
 which is why the builder learned to take a list. Every entry carries its own
-`notes` saying what it asks.
+`notes` saying what it is.
 
-## What varies, and what is nailed down
+## Round one was rebuilt, not patched — and that is the lesson
 
-The round's brief is **instrumentation and effects**, so everything else is
-identical in all twenty and a test says so
-(`tools/tests/test_dub_round.py::test_the_music_is_the_same_in_all_twenty`):
-the same tempo, the same key, the same drum placement, the same bass figure,
-the same two stab chords and the same pad chord, the same eight faders, the
-same main at 0.28, and the same six modulators.
+**Round one held the music identical in all twenty on purpose**, so the vote
+would isolate instrumentation and effects. A test enforced it. The owner heard
+the twenty and said they *"all sound the same"*, and that the ask was
+*"variations inside the genre per snapshot"* rather than a vote on the
+best-sounding preset — which was right: twenty mixes of one bar is one piece
+with twenty spellings, and holding the music still is what guaranteed it.
 
-| Varies | Where |
+**The strongest test in `tools/tests/test_dub_round.py` now asserts the
+opposite of what it used to.** `test_no_two_entries_are_the_same_piece` fails
+the build if two entries share a tempo, key, groove, phrase length, drum
+placement and set of authored notes; `test_the_round_spreads_across_the_genre`
+fails it if the twenty are merely near-neighbours — it counts keys, modes,
+kick placements and phrase lengths.
+
+## What each piece varies
+
+| Axis | Where |
 |---|---|
-| the drum machine | `drums[*].kit` — five channels of one machine in 211-215 |
-| the synth patch on F, G and H | `presets`, always with the engine named in `engines` |
-| the room | `globals.revtype` (TAP Reverberator's 43 rooms) and `revsize` |
-| the echo | `globals.dlytime` (1/16 to 1/2) and `dlyfbk` |
-| the sends | `wets`, per chain |
-| what channel E is | silent, the fifth drum, glitch percussion, or a second pad |
+| tempo | 120 or 125 — the only two that divide 30000, so the only two zynseq clocks exactly |
+| key and mode | six roots across MIN, DOR, PHR, PENT and HMIN |
+| phrase length | `div` on F, G and H: 1/16 is one bar, **1/8 is two**, **1/4 is four**, 1/8T is twelve triplet steps |
+| groove | `groove.swing`, a fixed offset on the same steps every bar |
+| drum placement | `hits`/`rotate`/`velo` per channel, including a kick that is not four-on-the-floor |
+| bass line | authored as a TAKE, exact degrees on exact steps |
+| chord progression | authored takes too — from one static chord to i–bVII–bVI–v over four bars |
+| arrangement | three channels playing, or all eight |
+| instrumentation | the drum machine and the synth patch on each voice channel |
+| effects | the room, its decay, the echo division, its feedback, and every send |
 
-**Three axes the issue names are NOT in the round, each for a reason.**
-Polymetry is out because a Turing register of a length other than sixteen
-walks the melody, and the owner's instruction on 2026-09-12 was *"modulation
-is allowed, but keep melodys fixed in the first place"* — so `random` and
-`rhythm` are 0 on every voice in all twenty. The ghost-kick sidechain is out
-because no shipped `.zss` spells an `audio_out` sidechain route and the issue
-refuses to guess one. A continuous noise bed is out because `C* White` is an
-Audio Generator, not a MIDI synth, and putting one in a synth slot is
-unmeasured here.
+**`div` is what makes a progression possible at all.** The step COUNT barely
+moves — 16 straight, 12 triplet — but the time one step occupies does, so the
+same sixteen steps are one bar at 1/16 and four bars at 1/4. It is also the
+sustain ceiling: `note_duration` clamps a note to the loop point, so at 1/16
+the longest note this instrument can hold is half a bar, and at 1/4 it is
+nearly four. A dub pad that hangs over the bar line is unreachable any other
+way.
 
-## The insert pair is never swapped, and that is three decisions at once
+**A long division only goes where it survives.** `_derive_params` reads
+`stepsPerBeat` back off zynseq after a load — which is what makes a voice's
+DIVIDE survive at all — and its loop tests the `CHANNELS` table's kind, so it
+never reaches A–E. The builder refuses a non-1/16 division there unless the
+manifest authors a TAKE on that channel, because nothing rewrites a
+player-owned pattern.
+
+## What is still fixed, because that was never what "the same" meant
+
+`random` and `rhythm` are **0 on every voice in all twenty**, and
+`_rewrite_voice` returns early when both are 0 — so each piece plays its own
+line bit-identically bar after bar. `human_time` and `human_velo` are 0 too:
+they randomise per event, which is the thing that was asked to be held still.
+Swing is not randomisation and the round uses it.
+
+Two axes the issue names are still out. The ghost-kick sidechain, because no
+shipped `.zss` spells an `audio_out` sidechain route and the issue refuses to
+guess one. A `C* White` noise bed, because it is an Audio Generator rather
+than a MIDI Synth and putting one in a synth slot is unmeasured here.
+
+## The insert pair is never swapped — three decisions at once
 
 Every chain keeps 018's `TAP Stereo Echo` + `TAP Reverberator`.
 
 1. **Modulation stays free.** A modulator pointed at a plugin Zynthian hosts
    in `jalv.gtk3` costs about 70 % of a core, and eight of the twelve effects
    this project uses are GUI-hosted. Neither TAP is.
-2. **`REVTYPE` only exists on TAP Reverberator.** `mode` 0-42 is on no other
-   reverb here, so the 43-room palette — the widest effect axis available —
-   is reachable only by keeping it.
+2. **`REVTYPE` only exists on TAP Reverberator.** `mode` 0–42 is on no other
+   reverb here, so the 43-room palette is reachable only by keeping it.
 3. **The twenty stay level-comparable.** An engine swap calls
-   `clear_processor`, and TAP Reverberator's `drylevel` defaults to **-4 dB**
+   `clear_processor`, and TAP Reverberator's `drylevel` defaults to **−4 dB**
    where 018 ships it at 0 — so swapping the reverb on some variants and not
    others would put a 4 dB step between them that nobody chose.
 
-## What is still owed
+## The main fader is measured, and it is the only number in the mix that is
 
-**A measured level-match.** Holding 019's mix is the strongest control
-available offline, and it is not a measurement: a variant whose patch is
-simply louder wins a vote it did not earn. The reading is `zynmixer:output_17a`
-over forty-eight bars, per the trap `019`'s own main fader was set by.
+The eight channel faders are 019's, whose ratios the owner tuned by ear on
+2026-09-02, moved only where a channel changes role. The main fader is a per
+variant trim read on the rig with `notes/tools/dub-round-levels.py`, because
+**TAP Reverberator's forty-three rooms do not share an output gain** — round
+one measured an 8.80 dB RMS spread across twenty snapshots on identical
+faders, purely from the choice of room. A listening round the loudest entry
+wins teaches nothing.
 
 # The genre pack
 

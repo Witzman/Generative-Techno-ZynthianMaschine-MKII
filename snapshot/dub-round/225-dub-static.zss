@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "last_snapshot_fpath": "/zynthian/zynthian-my-data/snapshots/000/215-dub-cr78.zss",
+  "last_snapshot_fpath": "/zynthian/zynthian-my-data/snapshots/000/225-dub-static.zss",
   "midi_profile_state": {
     "MASTER_BANK_CHANGE_UP": "",
     "SYS_ENABLED": "1",
@@ -228,7 +228,7 @@
   },
   "zs3": {
     "zs3-0": {
-      "title": "Dub 215 CR78",
+      "title": "Dub 225 Static",
       "active_chain": 0,
       "global": {
         "midi_transpose": 0
@@ -374,11 +374,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland CR78.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Roland CR78",
+            "Roland TR909",
             "sfz",
-            "Roland CR78.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -405,13 +405,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
@@ -448,13 +448,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -21.93820026016113
+              "value": -13.151546383555875
             },
             "combs_en": {
               "value": 1
@@ -469,7 +469,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -483,11 +483,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland CR78.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Roland CR78",
+            "Roland TR909",
             "sfz",
-            "Roland CR78.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -514,22 +514,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -18.416375079047505
+              "value": -70.0
             },
             "recholevel": {
-              "value": -18.416375079047505
+              "value": -70.0
             },
             "dryLevel": {
               "value": 0.0
@@ -557,13 +557,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -9.118639112994488
+              "value": -70.0
             },
             "combs_en": {
               "value": 1
@@ -578,7 +578,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -592,11 +592,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland CR78.sfz",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland TR909.sfz",
             0,
-            "Roland CR78",
+            "Roland TR909",
             "sfz",
-            "Roland CR78.sfz"
+            "Roland TR909.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -623,22 +623,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -10.457574905606752
+              "value": -70.0
             },
             "recholevel": {
-              "value": -10.457574905606752
+              "value": -70.0
             },
             "dryLevel": {
               "value": 0.0
@@ -666,13 +666,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -13.151546383555875
+              "value": -70.0
             },
             "combs_en": {
               "value": 1
@@ -687,7 +687,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -732,22 +732,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -20.0
+              "value": -12.39577516576788
             },
             "recholevel": {
-              "value": -20.0
+              "value": -12.39577516576788
             },
             "dryLevel": {
               "value": 0.0
@@ -775,13 +775,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -24.436974992327126
+              "value": -10.457574905606752
             },
             "combs_en": {
               "value": 1
@@ -796,7 +796,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -810,11 +810,11 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Roland CR78.sfz",
-            0,
-            "Roland CR78",
+            "/zynthian/zynthian-data/soundfonts/sfz/Drum Machines/Simmons.sfz",
+            24,
+            "Simmons",
             "sfz",
-            "Roland CR78.sfz"
+            "Simmons.sfz"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -841,22 +841,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -21.93820026016113
+              "value": -70.0
             },
             "recholevel": {
-              "value": -21.93820026016113
+              "value": -70.0
             },
             "dryLevel": {
               "value": 0.0
@@ -884,13 +884,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -17.07743928643524
+              "value": -70.0
             },
             "combs_en": {
               "value": 1
@@ -905,23 +905,23 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
         "26": {
           "bank_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_003-KVR_Brass_Synths.presets.lv2/Obxd_bank_003-KVR_Brass_Synths",
+            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/Obxd_bank_002-KVR_Bass",
             null,
-            "003-KVR_Brass_Synths",
+            "002-KVR_Bass",
             null
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_003-KVR_Brass_Synths.presets.lv2/003-KVR_Brass_Synths_BzSYN_PolySynth.ttl",
+            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
             null,
-            "BzSYN PolySynth",
-            "file:///zynthian/zynthian-data/presets/lv2/Obxd_003-KVR_Brass_Synths.presets.lv2/Obxd_bank_003-KVR_Brass_Synths"
+            "Synth Bass 1 OB-Xd",
+            "file:///zynthian/zynthian-data/presets/lv2/Obxd_002-KVR_Bass.presets.lv2/Obxd_bank_002-KVR_Bass"
           ],
           "preset_subdir_info": null,
           "controllers": {
@@ -945,22 +945,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -17.07743928643524
+              "value": -13.979400086720375
             },
             "recholevel": {
-              "value": -17.07743928643524
+              "value": -13.979400086720375
             },
             "dryLevel": {
               "value": 0.0
@@ -988,13 +988,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -20.0
+              "value": -11.70053304058364
             },
             "combs_en": {
               "value": 1
@@ -1009,7 +1009,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -1049,22 +1049,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -6.935749724493126
+              "value": -70.0
             },
             "recholevel": {
-              "value": -6.935749724493126
+              "value": -70.0
             },
             "dryLevel": {
               "value": 0.0
@@ -1092,13 +1092,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -7.958800173440752
+              "value": -70.0
             },
             "combs_en": {
               "value": 1
@@ -1113,7 +1113,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -1126,9 +1126,9 @@
           ],
           "bank_subdir_info": null,
           "preset_info": [
-            "file:///zynthian/zynthian-data/presets/lv2/padthv1_67Padthv1Patches.presets.lv2/67Padthv1Patches_Choir1.ttl",
+            "file:///zynthian/zynthian-data/presets/lv2/padthv1_67Padthv1Patches.presets.lv2/67Padthv1Patches_Randomize01.ttl",
             null,
-            "Choir1",
+            "Randomize01",
             "file:///zynthian/zynthian-data/presets/lv2/padthv1_67Padthv1Patches.presets.lv2/padthv1_bank_67Padthv1Patches"
           ],
           "preset_subdir_info": null,
@@ -1146,22 +1146,22 @@
           "preset_subdir_info": null,
           "controllers": {
             "ldelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "lfeedback": {
-              "value": 35.0
+              "value": 62.0
             },
             "rhaasdelay": {
-              "value": 250.0
+              "value": 1000.0
             },
             "rhaasfeedback": {
               "value": 35.0
             },
             "lecholevel": {
-              "value": -13.979400086720375
+              "value": -10.457574905606752
             },
             "recholevel": {
-              "value": -13.979400086720375
+              "value": -10.457574905606752
             },
             "dryLevel": {
               "value": 0.0
@@ -1189,13 +1189,13 @@
           "preset_subdir_info": null,
           "controllers": {
             "decay": {
-              "value": 2500.0
+              "value": 10000.0
             },
             "drylevel": {
               "value": 0.0
             },
             "wetlevel": {
-              "value": -5.192746210115122
+              "value": -3.0980391997148637
             },
             "combs_en": {
               "value": 1
@@ -1210,7 +1210,7 @@
               "value": 1
             },
             "mode": {
-              "value": 3.0
+              "value": 41.0
             }
           }
         },
@@ -1285,7 +1285,7 @@
           "level": 0.2826
         },
         "chan_16": {
-          "level": 0.3896
+          "level": 0.4624
         }
       },
       "midi_capture": {
@@ -1371,11 +1371,11 @@
               "root": 7,
               "scale": 0,
               "bpm": 120,
-              "master": 39,
-              "revsize": 25,
-              "revtype": 3,
-              "dlytime": 1,
-              "dlyfbk": 35
+              "master": 46,
+              "revsize": 100,
+              "revtype": 41,
+              "dlytime": 5,
+              "dlyfbk": 62
             },
             "mode": "CONTROL",
             "pages": {
@@ -1387,7 +1387,9 @@
               "ALL|": 0
             },
             "selected": 0,
-            "kinds": {},
+            "kinds": {
+              "4": "voice"
+            },
             "stash": {
               "0": {
                 "drum": {
@@ -1533,26 +1535,36 @@
               "2": "gen",
               "3": "gen",
               "4": "gen",
-              "5": "gen",
-              "6": "player",
+              "5": "player",
+              "6": "gen",
               "7": "player"
             },
             "voices": {
               "4": {
-                "register": 108,
-                "ring": [
-                  142,
-                  158,
-                  216,
-                  202
-                ],
-                "length": 8,
-                "random": 25,
+                "register": 179,
+                "ring": [],
+                "length": 16,
+                "random": 0,
+                "rhythm": 0,
+                "rhythm_reg": 0,
                 "gate": 40,
                 "octave": 0,
-                "range": 2,
+                "range": 1,
+                "kit_range": 4,
                 "velo": 110,
-                "density": 40
+                "rotate": 0,
+                "model": "reg",
+                "rule": "rand",
+                "move": 100,
+                "exit": 0,
+                "phrase": 1,
+                "fill": 0,
+                "walk_span": 32,
+                "walk_stride": 4,
+                "walk_seed": 0,
+                "feed": null,
+                "amount": 0,
+                "chord": 0
               },
               "5": {
                 "register": 58,
@@ -1560,12 +1572,12 @@
                 "length": 16,
                 "random": 0,
                 "rhythm": 0,
-                "rhythm_reg": 17473,
-                "gate": 150,
-                "octave": 0,
+                "rhythm_reg": 1,
+                "gate": 1300,
+                "octave": -1,
                 "range": 1,
                 "kit_range": 4,
-                "velo": 110,
+                "velo": 108,
                 "rotate": 0,
                 "model": "reg",
                 "rule": "rand",
@@ -1586,12 +1598,12 @@
                 "length": 16,
                 "random": 0,
                 "rhythm": 0,
-                "rhythm_reg": 16448,
-                "gate": 75,
+                "rhythm_reg": 0,
+                "gate": 100,
                 "octave": 1,
                 "range": 1,
                 "kit_range": 4,
-                "velo": 96,
+                "velo": 90,
                 "rotate": 0,
                 "model": "reg",
                 "rule": "rand",
@@ -1617,7 +1629,7 @@
                 "octave": 0,
                 "range": 1,
                 "kit_range": 4,
-                "velo": 72,
+                "velo": 62,
                 "rotate": 0,
                 "model": "reg",
                 "rule": "rand",
@@ -1649,8 +1661,8 @@
                 "fill": 0
               },
               "1": {
-                "hits": 2,
-                "rotate": 4,
+                "hits": 0,
+                "rotate": 0,
                 "rhythm": 0,
                 "rhythm_reg": 65535,
                 "hand_reg": 0,
@@ -1663,8 +1675,8 @@
                 "fill": 0
               },
               "2": {
-                "hits": 1,
-                "rotate": 12,
+                "hits": 0,
+                "rotate": 0,
                 "rhythm": 0,
                 "rhythm_reg": 65535,
                 "hand_reg": 0,
@@ -1689,73 +1701,43 @@
                 "rule": "rand",
                 "phrase": 1,
                 "fill": 0
-              },
-              "4": {
-                "hits": 2,
-                "rotate": 8,
-                "rhythm": 0,
-                "rhythm_reg": 65535,
-                "hand_reg": 0,
-                "lean": "off",
-                "lane": 0,
-                "move": 100,
-                "exit": 0,
-                "rule": "rand",
-                "phrase": 1,
-                "fill": 0
               }
             },
             "mods": {
-              "0|level": {
-                "depth": 16,
+              "7|reverb": {
+                "depth": 30,
                 "rate": 0,
                 "shape": "tri",
                 "phase0": 0.0,
-                "base": 77,
+                "base": 70,
                 "seed": 1
               },
-              "1|reverb": {
-                "depth": 22,
-                "rate": 1,
-                "shape": "tri",
-                "phase0": 0.3,
-                "base": 35,
-                "seed": 2
-              },
-              "2|delay": {
-                "depth": 28,
+              "7|delay": {
+                "depth": 34,
                 "rate": 2,
                 "shape": "tri",
-                "phase0": 0.55,
+                "phase0": 0.5,
                 "base": 30,
-                "seed": 3
+                "seed": 2
               },
               "3|level": {
-                "depth": 33,
-                "rate": 3,
-                "shape": "tri",
-                "phase0": 0.8,
-                "base": 67,
-                "seed": 4
-              },
-              "6|delay": {
-                "depth": 40,
+                "depth": 36,
                 "rate": 4,
                 "shape": "tri",
-                "phase0": 0.15,
-                "base": 45,
-                "seed": 5
+                "phase0": 0.3,
+                "base": 67,
+                "seed": 3
               },
-              "6|reverb": {
-                "depth": 30,
+              "0|level": {
+                "depth": 18,
                 "rate": 1,
                 "shape": "tri",
-                "phase0": 0.65,
-                "base": 40,
-                "seed": 6
+                "phase0": 0.7,
+                "base": 77,
+                "seed": 4
               }
             },
-            "mod_seed": 6,
+            "mod_seed": 4,
             "mod_depth_mult": 1.0
           }
         },
@@ -1848,5 +1830,5 @@
     }
   },
   "last_zs3_id": null,
-  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHgABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkbCQAAAFkAAAAAAQAAAAAAAAAAZAkbCQAAAFkAAAAAAgAAAAAAAAAAZAkbCQAAAFkAAAAAAwAAAAAAAAAAZAkbCQAAAFkAHBhdG4AAABKAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAEAAAAAAAAAAGQKFQoAAABZAAAAAAMAAAAAAAAAAGQKFQoAAABZABwYXRuAAAANQAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAADAAAAAAAAAABkChYKAAAAWQAcGF0bgAAAHQAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZAqQioAAAFkAAAAAAYAAAAAAAAAAZAqQioAAAFkAAAAAAoAAAAAAAAAAZAqQioAAAFkAAAAAA4AAAAAAAAAAZAqQioAAAFkAHBhdG4AAABKAAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAGQLEYsAAABZAAAAAAIAAAAAAAAAAGQLEYsAAABZABwYXRuAAAAdAAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAABkDxuPAAAAWQAAAAABgAAAAAAAAABkDxuPAAAAWQAAAAACgAAAAAAAAABkDxuPAAAAWQAAAAADgAAAAAAAAABkDxuPAAAAWQAcGF0bgAAAJ4AAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAYAAAAAHUwAAJA3YDcAAAFkAAAAAAYAAAAAHUwAAJA6YDoAAAFkAAAAAAYAAAAAHUwAAJA+YD4AAAFkAAAAAA4AAAAAHUwAAJA5VDkAAAFkAAAAAA4AAAAAHUwAAJA8VDwAAAFkAAAAAA4AAAAAHUwAAJBBVEEAAAFkAHBhdG4AAABfAAAAEQAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAA+QK0grAAABZAAAAAAAAAAAAAAAAA+QMkgyAAABZAAAAAAAAAAAAAAAAA+QOkg6AAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
+  "zynseq_riff_b64": "dmVycwAAABAAAAAKAHgABP//AAAAEAAQcGF0bgAAAHQAAAAKAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAZAkaiQAAAFkAAAAAAQAAAAAAAAAAZAkaiQAAAFkAAAAAAgAAAAAAAAAAZAkaiQAAAFkAAAAAAwAAAAAAAAAAZAkaiQAAAFkAHBhdG4AAAAgAAAACwAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBwYXRuAAAAIAAAAAwAAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAcGF0bgAAAHQAAAANAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAAAAAAIAAAAAAAAAAZAqNCoAAAFkAAAAAAYAAAAAAAAAAZAqNCoAAAFkAAAAAAoAAAAAAAAAAZAqNCoAAAFkAAAAAA4AAAAAAAAAAZAqNCoAAAFkAHBhdG4AAAAgAAAADgAAAAQABAAAPAABAAAAAAAAAAAAAAAAAAAAAQBwYXRuAAAANQAAAA8AAAAEAAQAADwAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAPkB9sHwAAAWQAcGF0bgAAACAAAAAQAAAABAAEAAA8AAEAAAAAAAAAAAAAAAAAAAABAHBhdG4AAABfAAAAEQAAABAAAQAAPAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAA+QK0ArAAABZAAAAAAAAAAAAAAAAA+QLkAuAAABZAAAAAAAAAAAAAAAAA+QMkAyAAABZABiYW5rAAABZgEAAAAACAIA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAoAAAAAAgH/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAAAAAAEAAAAAAAAACwAAAAACAv8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIAAAAAAQAAAAAAAAAMAAAAAAID/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAwAAAAABAAAAAAAAAA0AAAAAAgT/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAEAAAAAAEAAAAAAAAADgAAAAACBf8AAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAUAAAAAAQAAAAAAAAAPAAAAAAIG/wAAAAAAAAAAAAAAAAAAAAAAAAAAAQAABgAAAAABAAAAAAAAABAAAAAAAgf/AAAAAAAAAAAAAAAAAAAAAAAAAAABAAAHAAAAAAEAAAAAAAAAEQAAAAA="
 }
