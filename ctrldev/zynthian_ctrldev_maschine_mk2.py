@@ -787,6 +787,13 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._armed_while_stopped = {}
         self._arm_picked = None
         self._arm_bars = {}
+        # AUTO (#24). `_autopilot` is macro -> armed length for every macro
+        # that re-arms itself when it lands; `_arm_auto` is the picker's flag
+        # while ARM is held, set by a second tap on the picked pad.
+        self._autopilot = {}
+        self._arm_auto = False
+        # A snapshot's AUTO block, staged by set_state for the poll thread.
+        self._autopilot_seed = None
         # Who survives a DROP. Nominated on the Group buttons while ARM is
         # held; empty means the drop takes everything, which is a real and
         # useful setting rather than an unconfigured one.
@@ -2197,6 +2204,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         moved = False
         for (chan, verb), entry in list(self.mod.items()):
             if chan != channel or not tlib.is_drift(verb):
+                continue
+            if verb == "chord" and (self.channel_kind(channel) != "voice"
+                                    or self._is_sampler(channel)):
+                # CHORD DRAWS DEAD HERE (verb_is_dead), and apply() would
+                # store a shape no writer reads: a drum's writer has no chord
+                # branch and a sampler's notes force shape 0. A bind cannot
+                # reach this - _column_dead refuses it - but a snapshot's mods
+                # block or SHIFT+GRID after the bind can. The entry is kept,
+                # for the reason the ownership check above keeps its own.
                 continue
             span = self._mod_range(channel, verb)
             if span is None:
@@ -3805,6 +3821,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # iteration, and takes the whole snapshot save with it.
                 for (ch, verb), e in list(self.mod.items())
             },
+            # AUTO (#24): macro -> armed length for every macro that re-arms
+            # itself. Only the flag and the length - where it is in its cycle
+            # is a bar on a phrase clock that PLAY restarts, so a load waits
+            # for PLAY and lands it one length in.
+            "autopilot": dict(self._autopilot),
             # The seed counter itself. Without it a load restarts it at 0 and
             # the next bind collides with a restored entry's seed - two
             # sample-and-holds on the same rate would then step in lockstep,
@@ -4044,6 +4065,12 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         mult = state.get("mod_depth_mult", 1.0)
         self.mod_depth_mult = (float(mult) if isinstance(mult, (int, float))
                                and 0.0 <= mult <= 2.0 else 1.0)
+        # AUTO (#24). STAGED, NOT APPLIED: the macro queue belongs to the poll
+        # thread and set_state runs on the manager's. Validated on the way in
+        # - a hand can edit the file - and ABSENT MEANS NONE, which is what a
+        # snapshot from before the key honestly recorded. Always a dict, so the
+        # outgoing snapshot's AUTO macros are retired even by a file with none.
+        self._autopilot_seed = tlib.autopilot_in(state.get("autopilot"))
 
         for key, entry in (state.get("mods") or {}).items():
             chan_s, _, verb = str(key).partition("|")
@@ -4591,6 +4618,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._modifier_edge("arm", down)
         if down:
             self._arm_picked = None
+            self._arm_auto = False
             self._render_overlay_leds()
             with self.lock:
                 self._render_pads()
@@ -4604,6 +4632,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # ERASE + SELECT kills all of them, ERASE + the encoder under a column
         # kills that one.
         self._arm_picked = None
+        self._arm_auto = False
         self._render_overlay_leds()
         with self.lock:
             self._render_all()
@@ -4616,11 +4645,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         none at all, and the surgical version already exists on the PENDING
         page for when the player wants it."""
 
-        if not (self._pending_macros.pending() or self._armed_while_stopped):
+        if not (self._pending_macros.pending() or self._armed_while_stopped
+                or self._autopilot):
             return False
         self._pending_macros.clear()
         self._armed_while_stopped.clear()
         self._arm_bars.clear()
+        # AUTO goes with it (#24): a panic gesture that left a macro to come
+        # back on its own would not be a panic gesture.
+        self._autopilot.clear()
         self._slog("arm", result="cancel_all")
         with self.lock:
             self._render_all()
@@ -4656,9 +4689,23 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                        stopped=list(self._armed_while_stopped))
             return
         if step < len(tlib.ARM_MACROS):
-            self._arm_picked = tlib.ARM_MACROS[step]
-            self._slog("arm", result="picked", step=step,
-                       macro=self._arm_picked)
+            macro = tlib.ARM_MACROS[step]
+            if macro == self._arm_picked:
+                # THE SECOND TAP IS AUTO (#24, the owner's gesture): the
+                # picked pad blinks, and the length that follows arms a macro
+                # that re-arms itself. BREAK is refused - see
+                # tlib.AUTOPILOT_REFUSED - and says so in the log; its pad
+                # simply does not blink.
+                if tlib.autopilot_allowed(macro):
+                    self._arm_auto = not self._arm_auto
+                    self._slog("arm", result="auto", macro=macro,
+                               on=self._arm_auto)
+                else:
+                    self._slog("arm", result="auto_refused", macro=macro)
+            else:
+                self._arm_picked = macro
+                self._arm_auto = False
+                self._slog("arm", result="picked", step=step, macro=macro)
         elif step >= 8:
             if self._arm_picked is None:
                 # A length with nothing to arm. Deliberately silent rather
@@ -4685,6 +4732,10 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # many pads to extinguish - so the length is kept here rather than
             # widening the queue's contract for a display.
             self._arm_bars[self._arm_picked] = bars
+            if self._arm_auto:
+                self._autopilot[self._arm_picked] = bars
+            else:
+                self._autopilot.pop(self._arm_picked, None)
             if self._arm_picked in tlib.MUTEPATH_MACROS:
                 # One capture of the mute picture, so only one of DROP and
                 # BREAK may be live. Arming either drops the other and its
@@ -4696,6 +4747,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                         self._pending_macros.cancel(other)
                         self._armed_while_stopped.pop(other, None)
                         self._arm_bars.pop(other, None)
+                        self._autopilot.pop(other, None)
             if self._arm_picked == "break":
                 # BREAK fires NOW and resolves in N bars, so the length is
                 # only the SECOND number. There is no "fires in N" for a macro
@@ -4763,15 +4815,17 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 soonest, left = macro, rem
         if soonest is None:
             return (self._arm_picked, None, None)
-        return (self._arm_picked, self._arm_bars.get(soonest, left), left)
+        return (self._arm_picked, self._shown_length(soonest, left), left)
 
     def _paint_arm_legend(self):
         """The sixteen pads as ARM's grid. Caller holds the lock."""
 
         picked, bars, left = self._arm_state()
+        now = time.monotonic()
         for pad in range(16):
             self._paint_pad(pad, tlib.arm_legend_pad(
-                pad, picked=picked, armed_bars=bars, remaining=left))
+                pad, picked=picked, armed_bars=bars, remaining=left,
+                auto=self._arm_auto, now=now))
 
     def _act_repeat(self, down):
         """STEP > held: every generated channel collapses to its first beat.
@@ -6263,12 +6317,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # Armed while stopped: nothing is counting down yet, so the whole
             # length is still to come. Drawn rather than hidden - a macro the
             # player armed and cannot see is exactly what this page is for.
-            out.append((macro, bars, bars))
+            out.append((macro, bars, bars, macro in self._autopilot))
         for macro in self._pending_macros.pending():
             left = self._pending_macros.remaining(macro, bar)
             if left is None:
                 continue
-            out.append((macro, left, self._arm_bars.get(macro, left)))
+            # The fourth field is AUTO (#24): pending_columns stars the name.
+            out.append((macro, left, self._shown_length(macro, left),
+                        macro in self._autopilot))
         return out
 
     def _cancel_pending(self, column):
@@ -6288,6 +6344,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         macro = rows[column][0]
         self._armed_while_stopped.pop(macro, None)
         self._arm_bars.pop(macro, None)
+        self._autopilot.pop(macro, None)
         self._pending_macros.cancel(macro)
         logging.debug("Maschine: cancelled pending macro %s", macro)
         return True
@@ -8185,6 +8242,15 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._release_all()
             self._phrase_anchor = None
             self._phrase_bar = None
+            # AN AUTO MACRO WAITS FOR PLAY (#24). Its landing is an absolute
+            # bar on a phrase clock that PLAY restarts at 0, so left in the
+            # queue a stop at bar 40 would hold a landing at bar 48 - 48 bars
+            # after the next PLAY. Moved to the stopped set with its length,
+            # it lands that many bars after PLAY, as a macro armed while
+            # stopped always has.
+            for macro, bars in self._autopilot.items():
+                if self._pending_macros.cancel(macro):
+                    self._armed_while_stopped[macro] = bars
         self._slog("transport",
                    state="start" if target == zynseq_lib.SEQ_STARTING
                    else "stop",
@@ -9119,6 +9185,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 # a single raise would abort the rest of the drain, and in a
                 # fixed order the same macros would lose it every time.
                 self._log_poll_error(f"macro {macro}", e)
+            self._autopilot_rearm(macro, bar)
         self._chance_tick(bar)
         self._ratchet_tick(bar)
         self._gate_tick(bar)
@@ -9593,6 +9660,53 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._render_mutes()
             self._render_groups()
 
+    def _autopilot_rearm(self, macro, bar):
+        """An AUTO macro that has just landed is armed again (#24).
+
+        For its whole CYCLE - the length on and the length off, see
+        tlib.autopilot_cycle - counted from the bar it landed on. `_arm_bars`
+        keeps the armed LENGTH, because _fire_macro reads it as how long the
+        episode runs; the cycle is only ever the countdown.
+
+        Called after the fire whether or not the fire raised: a macro that
+        failed once must not silently fall off the autopilot."""
+        bars = self._autopilot.get(macro)
+        if bars is None:
+            return
+        self._arm_bars[macro] = bars
+        self._pending_macros.arm(macro, tlib.autopilot_cycle(bars), bar)
+        self._slog("arm", result="auto_rearm", macro=macro, bars=bars,
+                   at_bar=bar)
+
+    def _shown_length(self, macro, default):
+        """The length a countdown is drawn against. An AUTO macro counts down
+        its whole cycle (#24), so the number on PENDING is the real distance
+        to its next landing; everything else counts its armed length."""
+        if macro in self._autopilot:
+            return tlib.autopilot_cycle(self._autopilot[macro])
+        return self._arm_bars.get(macro, default)
+
+    def _autopilot_land(self, seed):
+        """Replace the AUTO set with a snapshot's (#24). Poll thread.
+
+        The OUTGOING snapshot's AUTO macros are cancelled first - left running
+        they would keep firing a macro from a file that is no longer loaded,
+        the `_bank_state` lesson of 2026-09-04. A one-shot the player armed by
+        hand is left alone, as a load always has."""
+        for macro in list(self._autopilot):
+            self._pending_macros.cancel(macro)
+            self._armed_while_stopped.pop(macro, None)
+            self._arm_bars.pop(macro, None)
+        self._autopilot = dict(seed)
+        for macro, bars in self._autopilot.items():
+            self._arm_bars[macro] = bars
+            if self._phrase_anchor is None:
+                self._armed_while_stopped[macro] = bars
+            else:
+                self._pending_macros.arm(macro, bars, self._phrase_bar or 0)
+        self._slog("arm", result="auto_restored",
+                   autopilot=dict(self._autopilot))
+
     def _fire_macro(self, macro, bar):
         """Dispatch one landed macro.
 
@@ -9930,6 +10044,21 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             if tick % DEVICE_POLL_TICKS == 0:
                 self._check_device()
             owner = self._pad_owner()
+            if (owner == "arm" and self._arm_auto
+                    and self._arm_picked is not None
+                    and not (self._pending_macros.pending()
+                             or self._armed_while_stopped)):
+                # THE ONE PAD A TIMER PAINTS (#24): the AUTO pick blinks.
+                # _paint_pad goes through leds.changed, so it SENDS only on
+                # the 1 Hz phase flip - about two messages a second against
+                # the measured 50/s budget (THE-SURFACE.md: budget the RATE).
+                # Only while the PICKER is showing - once something is
+                # pending the grid is the countdown, and a blink over it
+                # would lie.
+                step = tlib.ARM_MACROS.index(self._arm_picked)
+                self._paint_pad(step, tlib.arm_legend_pad(
+                    step, picked=self._arm_picked, auto=True,
+                    now=time.monotonic()))
             # THE MOD LEGEND IS NO LONGER ANIMATED FROM HERE, and
             # it is not a throttling question any more. Repainting
             # sixteen pads on a timer - at 30 Hz, and then at 10 Hz -
@@ -10117,6 +10246,11 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # thread that is allowed to reach an engine.
                     self._fx_globals_due = False
                     self._push_fx_globals()
+                if self._autopilot_seed is not None:
+                    # A load brought its AUTO macros, or none. Landed here, on
+                    # the thread that drains the macro queue.
+                    seed, self._autopilot_seed = self._autopilot_seed, None
+                    self._autopilot_land(seed)
                 if tick % VOLUME_POLL_TICKS == 0:
                     # ~200ms. Deliberately the existing sub-rate: an unthrottled
                     # 30 Hz modulator is 30 writes/s per moving target, each
@@ -11315,7 +11449,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # between held and broken.
         if self.bank_down:
             label = tlib.bank_label(self._bank_page, self.bank)
-        label = tlib.arm_label(label, self.arm_down, self._arm_picked)
+        label = tlib.arm_label(label, self.arm_down, self._arm_picked,
+                               auto=self._arm_auto)
         # WHICH OVERLAY OWNS THE PADS, while it is latched. Six of them
         # compete for the same sixteen pads and the colours cannot tell them
         # apart - the eight channel hues leave two gaps wider than fifty
