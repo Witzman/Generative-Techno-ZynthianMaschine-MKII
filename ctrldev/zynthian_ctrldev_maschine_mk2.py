@@ -3244,6 +3244,30 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                 logging.error(f"Maschine: preset list failed on {tlib.CHANNELS[channel][1]}: {e}")
                 return []
             presets = getattr(proc, "preset_list", None) or []
+        if not presets and not getattr(proc, "bank_info", None):
+            # NO BANK SELECTED IS NOT NO PRESETS, and caching it as though it
+            # were is what made the column dead FOREVER - #39, split out of
+            # #80. `load_preset_list` returns early while `bank_info` is falsy
+            # (zyngine/zynthian_processor.py:314) and leaves `preset_list`
+            # untouched, so the two states arrive here identical: an empty
+            # list. Cached, `_known_empty` then PROVES the list empty and
+            # state_view draws the PRESET column dead - lower case, no bar,
+            # encoder refused - about a chain whose presets are sitting on
+            # disk behind a bank nobody picked. `030-maschine-house` ships
+            # exactly that on F and G.
+            #
+            # UNKNOWN, NOT EMPTY. Leaving the cache unset makes _known_empty
+            # answer None, and the column draws LIVE - the direction that
+            # function's own docstring calls deliberate, because a column
+            # wrongly drawn dead is a control the player stops reaching for
+            # while one wrongly drawn live corrects itself the moment
+            # anything populates the cache.
+            #
+            # AND NOTHING HERE SELECTS A BANK. Asking for the bank list would
+            # move what the chain points at, from the render path, on the MIDI
+            # thread - the decision this deliberately does not take, and the
+            # reason the defect was not fixed inside #80.
+            return []
         self.preset_cache[channel] = presets
         return presets
 

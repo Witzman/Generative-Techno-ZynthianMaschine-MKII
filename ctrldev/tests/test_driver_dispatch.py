@@ -2240,6 +2240,77 @@ class APresetListOutlivesItsChain(DispatchCase):
         self.assertIsNone(self.d.preset_pending)
 
 
+class AChainWithNoBankIsNotAChainWithNoPresets(DispatchCase):
+    """#39, split out of #2 - which fixed the cache that made this permanent
+    and closed with this half still open.
+
+    `_preset_list` cannot tell "this engine has no presets" from "this chain
+    has no bank selected". It files both as `[]` and caches it, and
+    `state_view` then draws the PRESET column DEAD - lower case, no bar,
+    encoder refused - which is this instrument's precise way of saying a
+    control cannot act.
+
+    zynthian's `load_preset_list` RETURNS EARLY while `bank_info` is falsy
+    (zyngine/zynthian_processor.py:314), leaving `preset_list` untouched. That
+    is exactly what `030-maschine-house` ships on F and G: both chains were
+    built by writing 168 Dexed controller values rather than by choosing a
+    preset, and Dexed's banks are sitting on disk. So two of the three voices
+    tell the player their preset knob cannot move, about a chain with presets
+    waiting behind a bank nobody picked. Measured on the rig 2026-09-09.
+
+    ERRING LIVE IS THE DOCUMENTED DIRECTION. `_known_empty`'s own docstring:
+    a column wrongly drawn dead is a control the player stops reaching for,
+    while one wrongly drawn live corrects itself the moment anything populates
+    the cache. Nothing here selects a bank - moving what a chain points at
+    from a render path is the decision this deliberately does not take.
+    """
+
+    def no_bank(self):
+        """A voice chain whose processor has no bank selected, as the rig's
+        does. `load_preset_list` is the real one's behaviour: it returns
+        without touching `preset_list`."""
+
+        channel = next(c for c in range(8) if not self.d._is_sampler(c))
+        proc = rig_stub.fit_voice_chain(self.d, channel)
+        proc.bank_info = None
+        proc.preset_list = []
+        proc.load_preset_list = lambda: None
+        return channel, proc
+
+    def test_an_unselected_bank_is_not_filed_as_an_empty_list(self):
+        channel, _proc = self.no_bank()
+        self.d._preset_list(channel)
+        self.assertNotIn(
+            channel, self.d.preset_cache,
+            "a chain with no bank was cached as a chain with no presets, "
+            "which is what takes the column dead for the rest of the session")
+
+    def test_the_column_is_drawn_live(self):
+        """The half a player meets. Dead is the instrument saying this knob
+        cannot act, and here it can - nobody has picked the bank yet."""
+
+        channel, _proc = self.no_bank()
+        self.d._preset_list(channel)
+        self.assertIsNotNone(
+            self.d.state_view(channel)["preset"],
+            "the knob was drawn dead over a chain whose presets are waiting")
+
+    def test_an_engine_that_really_has_none_is_still_cached_and_still_dead(self):
+        """THE COUNTERPART, and without it the fix would read as "stop drawing
+        this column dead", which is not what was wrong. A bank IS selected and
+        it holds nothing: that is a proven-empty list, the cache is right to
+        keep it, and the column is right to refuse the knob."""
+
+        channel = next(c for c in range(8) if not self.d._is_sampler(c))
+        proc = rig_stub.fit_voice_chain(self.d, channel)
+        proc.bank_info = ["", 0, "Bank", ""]
+        proc.preset_list = []
+        proc.load_preset_list = lambda: None
+        self.d._preset_list(channel)
+        self.assertEqual(self.d.preset_cache.get(channel), [])
+        self.assertIsNone(self.d.state_view(channel)["preset"])
+
+
 class TheLiveRecordingPathOffTheRig(DispatchCase):
     """Item 77. The harness made the recorder unreachable, and nothing said so.
 
