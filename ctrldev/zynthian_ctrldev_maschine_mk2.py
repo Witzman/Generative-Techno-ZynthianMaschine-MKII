@@ -4543,6 +4543,22 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     with self.lock:
                         self._render_groups()
                     return True
+                if self.erase_down and self.mod_down:
+                    # MOD + ERASE + Group clears that channel's modulators.
+                    #
+                    # ABOVE THE SILENCE BRANCH, AND THAT ORDER IS THE WHOLE
+                    # TRAP. ERASE + Group already means "silence this
+                    # channel", so tested the other way round the chord would
+                    # clear the modulators AND silence the channel - a
+                    # destructive surprise from a gesture whose two-key prefix
+                    # the player already knows as something else.
+                    #
+                    # Same pad-base trap as both branches around it: the
+                    # daemon re-bases the pads on every Group press, on both
+                    # edges, and the driver only ever sees the press.
+                    self._note_base_due = True
+                    self._mod_clear_group(group)
+                    return True
                 if self.erase_down:
                     # Same trap as the ARM branch above, and this one has been
                     # here since ERASE + Group shipped.
@@ -6143,6 +6159,37 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             self._mod_restore_due.append((channel, verb, entry["base"]))
         self.mod.clear()
         self.mod_last = None
+        self._render_display()
+
+    def _mod_clear_group(self, group):
+        """MOD + ERASE + Group: drop every modulator on ONE channel.
+
+        Asked for by the owner at the rig, 2026-09-04, between the two scopes
+        that already shipped: one verb clears with MOD + ERASE + its encoder,
+        and all eight clear with MOD + ERASE + ALL. Without this the only way
+        to strip one channel was to remember which of its verbs carried
+        modulators, or to flatten the other seven along with it.
+
+        THE RESTORES ARE QUEUED, NOT WRITTEN, for the reason _mod_clear_all's
+        docstring gives in full: this runs on the MIDI thread with self.lock
+        held, and a generated lv2:/fx: base reaches the plugin, where a write
+        can block on a socket for seconds.
+
+        A GLOBAL VERB IS NOT ON THIS CHANNEL AND SURVIVES. _mod_key files
+        `fx:` verbs under channel None because one insert is ganged across all
+        eight, so clearing "this group" must not reach them - the player would
+        lose the reverb sweep on seven other channels from a gesture naming
+        one. Matching the channel exactly is what leaves them alone.
+        """
+        keys = [key for key in self.mod if key[0] == group]
+        if not keys:
+            return
+        for key in keys:
+            entry = self.mod.pop(key)
+            self._mod_restore_due.append((key[0], key[1], entry["base"]))
+            if self.mod_last == key:
+                self.mod_last = None
+        self._slog("mod", event="clear_group", group=group, dropped=len(keys))
         self._render_display()
 
     def _mod_base_get(self, channel, verb):

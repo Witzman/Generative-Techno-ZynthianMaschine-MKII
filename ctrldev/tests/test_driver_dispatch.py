@@ -2290,3 +2290,91 @@ class TheLiveRecordingPathOffTheRig(DispatchCase):
             self.libseq.named("addNote"),
             "nothing reached the pattern; libseq saw "
             + repr([name for name, _ in self.libseq.calls]))
+
+
+class ModEraseGroupClearsOneChannel(DispatchCase):
+    """#11, asked for at the rig 2026-09-04: "is there a shortcut for removing
+    all modulation from one group?"
+
+    One verb clears with MOD + ERASE + that encoder, and every channel clears
+    with MOD + ERASE + ALL. The middle scope had no gesture, so stripping one
+    channel meant remembering which of its verbs carried modulators - or using
+    the all-channels clear and flattening the other seven.
+
+    THE GROUP EDGE MUST TEST `mod_down` BEFORE IT REACHES THE SILENCE BRANCH.
+    ERASE + Group already means "silence that channel", so without the order
+    the new chord would clear the modulators AND silence the channel.
+    """
+
+    CH = 2
+    OTHER = 5
+    ENTRY = {"depth": 100, "rate": 1, "shape": "tri", "phase0": 0.0,
+             "base": 40, "seed": 1}
+
+    def setUp(self):
+        super().setUp()
+        self.d.mod[(self.CH, "cutoff")] = dict(self.ENTRY)
+        self.d.mod[(self.CH, "level")] = dict(self.ENTRY)
+        self.d.mod[(self.OTHER, "cutoff")] = dict(self.ENTRY)
+
+    def chord(self, group):
+        """MOD latched, ERASE held, then the Group press."""
+        self.tap("mod")
+        self.press("erase")
+        return self.cc(self.mod.GROUP_CC_FIRST + group, 127)
+
+    def test_it_clears_that_channel_and_leaves_the_others(self):
+        self.chord(self.CH)
+        self.assertEqual(set(self.d.mod), {(self.OTHER, "cutoff")},
+                         "the wrong channels were cleared")
+
+    def test_the_bases_are_queued_and_not_written_on_this_thread(self):
+        """The reason _mod_clear_all defers, and it is load bearing: this runs
+        on the MIDI thread under self.lock, and a generated lv2:/fx: base
+        reaches the plugin, where a write can block on a socket for seconds."""
+
+        with patch.object(self.d, "_mod_base_set") as wrote:
+            self.chord(self.CH)
+        wrote.assert_not_called()
+        self.assertEqual(
+            sorted((c, v) for c, v, _base in self.d._mod_restore_due),
+            [(self.CH, "cutoff"), (self.CH, "level")])
+        self.assertEqual({base for _c, _v, base in self.d._mod_restore_due},
+                         {self.ENTRY["base"]})
+
+    def test_it_does_not_also_silence_the_channel(self):
+        """ERASE + Group already means silence. Tested the other way round,
+        the chord would clear AND silence - the trap this ordering exists
+        for."""
+
+        with patch.object(self.d, "_silence_channel") as silenced:
+            self.chord(self.CH)
+        silenced.assert_not_called()
+
+    def test_erase_and_group_without_mod_still_silences(self):
+        """The gesture this one sits on top of must survive it."""
+
+        self.press("erase")
+        with patch.object(self.d, "_silence_channel") as silenced:
+            self.cc(self.mod.GROUP_CC_FIRST + self.CH, 127)
+        silenced.assert_called_once_with(self.CH)
+        self.assertEqual(len(self.d.mod), 3, "nothing should have been cleared")
+
+    def test_a_global_verb_is_not_on_any_one_channel_and_survives(self):
+        """`_mod_key` files an `fx:` verb under channel None because one
+        insert is ganged across all eight. Clearing "this group" must not
+        reach it, or naming one channel would take the reverb sweep off the
+        other seven."""
+
+        self.d.mod[(None, "fx:reverb")] = dict(self.ENTRY)
+        self.chord(self.CH)
+        self.assertIn((None, "fx:reverb"), self.d.mod)
+
+    def test_it_asks_for_the_pad_base_back(self):
+        """Intercepting a Group button kills the pads unless the note base is
+        re-asserted from the poll thread - the daemon re-bases on every Group
+        press, on both edges, and the driver only sees the press."""
+
+        self.d._note_base_due = False
+        self.chord(self.CH)
+        self.assertTrue(self.d._note_base_due)
