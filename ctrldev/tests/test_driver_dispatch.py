@@ -838,10 +838,13 @@ class ADrumTakesAmberSurvivesWhatCannotReconstructIt(DispatchCase):
         """A second driver, loaded from `state`, with the pattern put back
         AFTER the load.
 
-        `rig_stub`'s libseq is one shared note store for all eight patterns -
-        `selectPattern` is a recorder - so `set_state` rewriting the seven
-        generator-owned channels overwrites whatever channel 0 was holding.
-        Seeding afterwards is the fake's constraint, not the driver's."""
+        Seeded after the load because `set_state` rewrites the seven
+        generator-owned channels and this one is being restored on purpose.
+
+        IT USED TO SAY the fake kept "one shared note store for all eight
+        patterns - `selectPattern` is a recorder", and that was true until
+        item 77 gave the fake a store per pattern. The ordering here no longer
+        works around anything; it is just the order the state arrives in."""
 
         fresh = rig_stub.make_driver()
         fresh.libseq.getSteps = lambda: 16
@@ -969,6 +972,14 @@ class BankScenesCase(DispatchCase):
         """HITS matters more than ROTATE: `_recount_hits` REFUSES to read it
         back off a thinned pattern, so the stash is the only copy."""
 
+        # THINNED, which is the state the docstring above is about and the
+        # only one in which the stash really is the only copy. The pattern now
+        # has a real length (item 77 gave the fake one), so `_recount_hits`
+        # would otherwise read a genuine count off it and the stash would
+        # never be consulted - the test would still pass and would be testing
+        # the recount instead. The register is subtractive: a bit off is a
+        # step the euclid line does not get to sound.
+        self.d.state[2]["rhythm_reg"] = 0b1011011101101
         self.d.hits[2] = 11
         self.d._bank_switch(4)
         self.assertEqual(self.d.hits[2], 0)
@@ -1073,6 +1084,12 @@ class BankScenesCase(DispatchCase):
 
         self.d._bank_state[3] = {"channels": {}, "hits": [1], "rot": ["x"],
                                  "owners": {}}
+        # A channel whose stash says one hit HAS one note - the pattern and
+        # the register agree on a real rig, and since item 77 the fake can say
+        # so. Without this the recount reads an empty 16-step pattern and the
+        # assertion below would be about the recount rather than about the
+        # truncated list this test is named for.
+        self.d.libseq.seed_notes(3, 0, [0], self.d._group_note(0))
         self.d._bank_switch(3)
         self.assertEqual(self.d.hits[0], 1)
         self.assertEqual(self.d.hits[7], 0, "past the end of a short list")
@@ -2221,3 +2238,55 @@ class APresetListOutlivesItsChain(DispatchCase):
         self.d.preset_pending = (5, 12, 0.0)
         self.d._resync_all()
         self.assertIsNone(self.d.preset_pending)
+
+
+class TheLiveRecordingPathOffTheRig(DispatchCase):
+    """Item 77. The harness made the recorder unreachable, and nothing said so.
+
+    `FakeLibseq`'s catch-all answers 0 to every question the recorder asks -
+    whether the sequence is playing, where the playhead is, how long the
+    pattern is - and `_capture` refuses on each of them in turn. So no test
+    off the rig had ever reached the live-recording path at all: not one pad
+    capture, not the overdub replace, not the duration clamp, not the
+    ownership claim. A stopped pattern of zero steps at clock zero is not a
+    state a real sequencer can ever be in.
+
+    The stub carries a `play_state` dict already and NOTHING READS IT - there
+    is no `getPlayState` on the fake, so the catch-all wins and every sequence
+    is stopped forever. A field that looks like it works and does nothing is
+    the shape this whole item is about.
+
+    These drive the path the way the daemon does: a NoteOn and then the
+    NoteOn-at-velocity-0 that the daemon sends for a release.
+    """
+
+    ch = 0
+    STEP = 4
+
+    def setUp(self):
+        super().setUp()
+        # Outside STEP mode a pad PLAYS and records. Inside it, the same pad
+        # edits the pattern and never reaches the recorder at all.
+        self.d.mode = "CONTROL"
+        self.press("rec")
+        self.libseq = self.d.libseq
+        self.libseq.play_state[self.ch] = self.mod.zynseq_lib.SEQ_PLAYING
+        # THE THIRD BARRIER, and the driver's own path through it. `_capture`
+        # refuses on `cps <= 0`, and `cps` is a CACHE the pattern repaint
+        # fills from getClocksPerStep() - on the rig `_render_pads` has run
+        # thousands of times before any pad is struck. Filled here by calling
+        # it rather than by assigning the array, so the test cannot pass
+        # against a cache the instrument would never have populated.
+        self.d._render_pads()
+
+    def strike(self, step, velocity=100):
+        """Press and release, as the daemon sends them."""
+        self.pad(step, velocity)
+        self.d.midi_event(bytes([0x90, self.base + step, 0]))
+
+    def test_a_struck_pad_is_written_into_the_pattern(self):
+        self.strike(self.STEP)
+        self.assertTrue(
+            self.libseq.named("addNote"),
+            "nothing reached the pattern; libseq saw "
+            + repr([name for name, _ in self.libseq.calls]))
