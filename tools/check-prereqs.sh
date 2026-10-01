@@ -14,6 +14,20 @@ else
     bad "/zynthian/build_info.txt - is this a ZynthianOS install?"
 fi
 
+echo "Rust toolchain"
+# Debian's cargo is 1.65 on Bookworm and cannot read daemon/Cargo.lock (lock
+# file version 4); the pinned tree needs rustc 1.86. Measured 2026-09-20.
+if command -v cargo >/dev/null 2>&1; then
+    cv=$(cargo --version 2>/dev/null | awk '{print $2}')
+    maj=${cv%%.*}; rest=${cv#*.}; min=${rest%%.*}
+    if [ "${maj:-0}" -gt 1 ] 2>/dev/null || { [ "${maj:-0}" -eq 1 ] && [ "${min:-0}" -ge 86 ]; } 2>/dev/null
+    then ok "cargo $cv"
+    else bad "cargo $cv is too old, need 1.86+ (apt remove rustc cargo, then https://sh.rustup.rs)"
+    fi
+else
+    bad "cargo (install rustup: https://sh.rustup.rs - NOT apt install cargo)"
+fi
+
 echo "LV2 plugins"
 for pkg in obxd-lv2 padthv1-lv2 tap-lv2; do
     if dpkg -s "$pkg" >/dev/null 2>&1; then ok "$pkg"; else bad "$pkg (apt install $pkg)"; fi

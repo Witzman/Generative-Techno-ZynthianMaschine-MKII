@@ -63,6 +63,64 @@ for pkg in obxd-lv2 padthv1-lv2 tap-lv2; do
     fi
 done
 
+# --- 1b. the Rust toolchain ---------------------------------------------------
+# MEASURED 2026-09-20, after a fresh install off a clean ZynthianOS reported the
+# failure. `apt install rustc cargo` on Bookworm gives cargo 1.65, and 1.65
+# cannot even READ daemon/Cargo.lock:
+#     error: failed to parse lock file at: .../daemon/Cargo.lock
+#     Caused by: lock file version `4` was found, but this version of Cargo
+#     does not understand this lock file
+# Rewriting the lock back to version 3 does NOT rescue it - the pinned tree
+# under tungstenite reaches idna_adapter, which is edition 2024. Measured on
+# x86_64: 1.65 cannot parse the lock, 1.85 cannot resolve (icu_* and
+# idna_adapter demand rustc 1.86), 1.86 builds clean. So the toolchain comes
+# from rustup, and Debian's is removed first: two cargos on PATH is how this
+# error comes back with no visible reason.
+RUST_MIN_MINOR=86
+# `set -e` is on, so this is an `if` and not an `&&`: a missing ~/.cargo/bin
+# would end the installer on a true statement about a fresh Pi.
+CARGO_HOME_BIN="${HOME:-/root}/.cargo/bin"
+if [ -d "$CARGO_HOME_BIN" ]; then PATH="$CARGO_HOME_BIN:$PATH"; fi
+
+cargo_version() { cargo --version 2>/dev/null | awk '{print $2}'; }
+# 0 = cargo is absent or older than 1.$RUST_MIN_MINOR, i.e. rustup is needed.
+cargo_too_old() {
+    command -v cargo >/dev/null 2>&1 || return 0
+    v=$(cargo_version); [ -n "$v" ] || return 0
+    maj=${v%%.*}; rest=${v#*.}; min=${rest%%.*}
+    case "$maj:$min" in *[!0-9:]*|:*|*:) return 0 ;; esac
+    [ "$maj" -gt 1 ] && return 1
+    [ "$maj" -eq 1 ] && [ "$min" -ge "$RUST_MIN_MINOR" ] && return 1
+    return 0
+}
+
+say "Rust toolchain (cargo 1.$RUST_MIN_MINOR or newer - Debian's is 1.65 and cannot build this)"
+if [ "$DRY" = 1 ]; then
+    echo "  [dry-run] cargo --version, and IF it is absent or older than 1.$RUST_MIN_MINOR:"
+    run "apt-get remove -y rustc cargo"
+    run "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
+    echo "  [dry-run] PATH=\$HOME/.cargo/bin:\$PATH, then re-check the version"
+elif cargo_too_old; then
+    have=$(cargo_version)
+    echo "  cargo is ${have:-absent}, need 1.$RUST_MIN_MINOR or newer - installing rustup"
+    for p in rustc cargo; do
+        if dpkg -s "$p" >/dev/null 2>&1; then run "apt-get remove -y $p"; fi
+    done
+    run "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
+    PATH="$CARGO_HOME_BIN:$PATH"
+    hash -r 2>/dev/null || true
+    if cargo_too_old; then
+        have=$(cargo_version)
+        echo "rustup ran and cargo is still ${have:-absent}. Stopping before the" >&2
+        echo "build, which would fail on the lock file. Open a new shell, check" >&2
+        echo "'cargo --version', and run this script again." >&2
+        exit 1
+    fi
+    echo "  now: $(cargo --version)"
+else
+    echo "  already present: $(cargo --version)"
+fi
+
 # --- 2. build the daemon -------------------------------------------------------
 # ALWAYS, since 2026-09-03. This used to skip the build when a binary already
 # existed and print "already built", so re-running the installer after a git
