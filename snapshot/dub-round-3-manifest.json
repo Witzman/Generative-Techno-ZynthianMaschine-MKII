@@ -1,0 +1,3509 @@
+[
+ {
+  "file": "241-dub-dotted",
+  "title": "Dub 241 Dotted",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "THE DOTTED-EIGHTH ECHO, the delay both Signs of Life sources treat as the genre's default. Round two used 3/16 on three pieces, but each under a full stab figure; here the delay is the figure. 125 BPM, F minor, and the stab plays only TWICE a bar - on the 'and' of one and of three - because at 3/16 each stab answers itself three steps later and again three after that, and the echoes fill every gap the stab left. The least notes of any piece in the round, and the most rhythm.",
+  "tempo": 125,
+  "globals": {
+   "root": 5,
+   "scale": 0,
+   "master": 22,
+   "revsize": 34,
+   "revtype": 3,
+   "dlytime": 2,
+   "dlyfbk": 56
+  },
+  "drums": {
+   "0": {
+    "kit": "Roland TR909",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 108,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "Roland TR909",
+    "hits": 1,
+    "rotate": 4,
+    "velo": 66,
+    "why": "one rimshot on beat 2"
+   },
+   "2": {
+    "kit": "Roland TR909",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent - the echo is the clap"
+   },
+   "3": {
+    "kit": "Roland TR909",
+    "hits": 8,
+    "rotate": 0,
+    "velo": 54,
+    "why": "eighth hats, quiet"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1025,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 340,
+    "octave": -1,
+    "range": 1,
+    "velo": 112,
+    "chord": 0,
+    "why": "the root twice - the pad above it sits a full octave clear"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1028,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 90,
+    "octave": 1,
+    "range": 1,
+    "velo": 92,
+    "chord": 0,
+    "why": "two stabs a bar, on the offbeat sixteenths; 3/16 does the rest"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1400,
+    "octave": 0,
+    "range": 1,
+    "velo": 56,
+    "chord": 0,
+    "why": "one chord a bar, held"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      29
+     ],
+     "velo": 112,
+     "duration": 5.0,
+     "why": "the root twice - the pad above it sits a full octave clear"
+    },
+    {
+     "step": 10,
+     "notes": [
+      29
+     ],
+     "velo": 112,
+     "duration": 5.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 2,
+     "notes": [
+      53,
+      56,
+      60
+     ],
+     "velo": 92,
+     "duration": 1.6,
+     "why": "two stabs a bar, on the offbeat sixteenths; 3/16 does the rest"
+    },
+    {
+     "step": 10,
+     "notes": [
+      53,
+      56,
+      60
+     ],
+     "velo": 92,
+     "duration": 1.6,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      41,
+      44,
+      48
+     ],
+     "velo": 56,
+     "duration": 15.0,
+     "why": "one chord a bar, held"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a short dark sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings.ttl",
+    "name": "TapeStrings",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 50,
+    "reverb": 30
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 26,
+    "rate": 4,
+    "shape": "tri",
+    "phase0": 0.15,
+    "seed": 1,
+    "why": "the echo swells and recedes over three bars"
+   },
+   {
+    "channel": 3,
+    "verb": "level",
+    "depth": 24,
+    "rate": 3,
+    "shape": "tri",
+    "phase0": 0.6,
+    "seed": 2,
+    "why": "the hats breathe"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "242-dub-outside",
+  "title": "Dub 242 Outside",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "THE BACKCLOTH FROM OUTSIDE - the transcript's 'giving from outside': two dedicated pad layers, one low and sustained, one high that sweeps. 120 BPM, C# minor. H holds a single chord for four bars; E, an octave and more above it, changes chord every bar - i, bVI, bIII, bVII - and breathes in level on a random six-bar curve. The kick is soft and there is no stab: the two layers ARE the piece, and the drums are a pulse under them.",
+  "tempo": 120,
+  "globals": {
+   "root": 1,
+   "scale": 0,
+   "master": 22,
+   "revsize": 80,
+   "revtype": 5,
+   "dlytime": 3,
+   "dlyfbk": 58
+  },
+  "drums": {
+   "0": {
+    "kit": "SP 12",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 78,
+    "why": "soft four on the floor"
+   },
+   "1": {
+    "kit": "SP 12",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "2": {
+    "kit": "SP 12",
+    "hits": 1,
+    "rotate": 12,
+    "velo": 50,
+    "why": "one clap on beat 4, in the wash"
+   },
+   "3": {
+    "kit": "SP 12",
+    "hits": 4,
+    "rotate": 2,
+    "velo": 40,
+    "why": "quarter-note offbeat hat, barely there"
+   }
+  },
+  "voices": {
+   "4": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 4369,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 380,
+    "octave": 2,
+    "range": 1,
+    "velo": 44,
+    "chord": 0,
+    "why": "the high layer: i, bVI, bIII, bVII, one a bar at 1/4"
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 257,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 750,
+    "octave": -1,
+    "range": 1,
+    "velo": 100,
+    "chord": 0,
+    "why": "the root, twice in four bars"
+   },
+   "6": {
+    "empty": true,
+    "why": "no stab: the two pads are the harmony. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1500,
+    "octave": 0,
+    "range": 1,
+    "velo": 54,
+    "chord": 0,
+    "why": "the low layer: one chord for four bars"
+   }
+  },
+  "chords": {
+   "4": [
+    {
+     "step": 0,
+     "notes": [
+      61,
+      64,
+      68
+     ],
+     "velo": 44,
+     "duration": 3.8,
+     "why": "the high layer: i, bVI, bIII, bVII, one a bar at 1/4"
+    },
+    {
+     "step": 4,
+     "notes": [
+      69,
+      73,
+      76
+     ],
+     "velo": 44,
+     "duration": 3.8,
+     "why": ""
+    },
+    {
+     "step": 8,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 44,
+     "duration": 3.8,
+     "why": ""
+    },
+    {
+     "step": 12,
+     "notes": [
+      71,
+      75,
+      78
+     ],
+     "velo": 44,
+     "duration": 3.8,
+     "why": ""
+    }
+   ],
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      25
+     ],
+     "velo": 100,
+     "duration": 7.5,
+     "why": "the root, twice in four bars"
+    },
+    {
+     "step": 8,
+     "notes": [
+      25
+     ],
+     "velo": 100,
+     "duration": 7.5,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      37,
+      40,
+      44
+     ],
+     "velo": 54,
+     "duration": 15.0,
+     "why": "the low layer: one chord for four bars"
+    }
+   ]
+  },
+  "presets": {
+   "5": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_000-FMR_Patch_Book",
+    "file": "000-FMR_Patch_Book_Slower_Strings_OB-Xa.ttl",
+    "name": "Slower Strings OB-Xa",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "attack 0.632, sustain 1.0 - a swell that never falls back"
+   },
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "one low note every two bars"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "unused: G is silent"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_Dusk5.ttl",
+    "name": "Dusk5",
+    "controllers": {},
+    "why": "the low sustained layer"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 4,
+    "verb": "level",
+    "depth": 22,
+    "rate": 2,
+    "shape": "s&h",
+    "phase0": 0.3,
+    "seed": 1,
+    "why": "the high layer breathes over six bars"
+   },
+   {
+    "channel": 7,
+    "verb": "reverb",
+    "depth": 24,
+    "rate": 0,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 2,
+    "why": "the low layer's room over sixteen bars"
+   },
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 28,
+    "rate": 1,
+    "shape": "tri",
+    "phase0": 0.5,
+    "seed": 3,
+    "why": "the high layer's room over eight"
+   }
+  ],
+  "engines": {
+   "5": {
+    "engine": "JV/Obxd",
+    "why": "E becomes the high sweeping layer"
+   },
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   "1/4",
+   "1/4",
+   null,
+   "1/4"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "243-dub-nest",
+  "title": "Dub 243 Nest",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "FOUR LOOP LENGTHS AT ONCE. 125 BPM, Bb dorian. The kick loops every bar, the bass every HALF bar (1/32, sixteen steps in two beats), the stab every two bars (1/8) and the pad every four (1/4) - so the figure never lands the same way twice inside a phrase, which is what polymeter is for, reached with the divisions this instrument has. Not true 5-against-4: a pattern's length here is a whole number of bars or a half bar, and the round says so rather than pretending.",
+  "tempo": 125,
+  "globals": {
+   "root": 10,
+   "scale": 2,
+   "master": 22,
+   "revsize": 40,
+   "revtype": 4,
+   "dlytime": 1,
+   "dlyfbk": 44
+  },
+  "drums": {
+   "0": {
+    "kit": "Korg DDD1",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 108,
+    "why": "four on the floor, once a bar"
+   },
+   "1": {
+    "kit": "Korg DDD1",
+    "hits": 2,
+    "rotate": 4,
+    "velo": 70,
+    "why": "backbeat"
+   },
+   "2": {
+    "kit": "Korg DDD1",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "3": {
+    "kit": "Korg DDD1",
+    "hits": 8,
+    "rotate": 0,
+    "velo": 54,
+    "why": "eighth hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 2377,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 60,
+    "octave": -1,
+    "range": 1,
+    "velo": 108,
+    "chord": 0,
+    "why": "five notes in a half-bar loop - it comes round twice a bar"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 2056,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 120,
+    "octave": 2,
+    "range": 1,
+    "velo": 88,
+    "chord": 0,
+    "why": "i then IV (dorian's major fourth), once each in a two-bar loop"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1500,
+    "octave": 1,
+    "range": 1,
+    "velo": 52,
+    "chord": 0,
+    "why": "i, held for four bars - only the stab above it moves"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      34
+     ],
+     "velo": 108,
+     "duration": 1.5,
+     "why": "five notes in a half-bar loop - it comes round twice a bar"
+    },
+    {
+     "step": 3,
+     "notes": [
+      34
+     ],
+     "velo": 108,
+     "duration": 1.5,
+     "why": ""
+    },
+    {
+     "step": 6,
+     "notes": [
+      34
+     ],
+     "velo": 108,
+     "duration": 1.5,
+     "why": ""
+    },
+    {
+     "step": 8,
+     "notes": [
+      44
+     ],
+     "velo": 108,
+     "duration": 1.5,
+     "why": ""
+    },
+    {
+     "step": 11,
+     "notes": [
+      34
+     ],
+     "velo": 108,
+     "duration": 1.5,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 3,
+     "notes": [
+      70,
+      73,
+      77
+     ],
+     "velo": 88,
+     "duration": 2.2,
+     "why": "i then IV (dorian's major fourth), once each in a two-bar loop"
+    },
+    {
+     "step": 11,
+     "notes": [
+      75,
+      79,
+      82
+     ],
+     "velo": 88,
+     "duration": 2.2,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      58,
+      61,
+      65
+     ],
+     "velo": 52,
+     "duration": 15.0,
+     "why": "i, held for four bars - only the stab above it moves"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_000-FMR_Patch_Book",
+    "file": "000-FMR_Patch_Book_Synth_Bass_2_OB-Xd.ttl",
+    "name": "Synth Bass 2 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a rounder bass"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings2.ttl",
+    "name": "TapeStrings2",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 30,
+    "rate": 3,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 1,
+    "why": "the stab's echo over four bars"
+   },
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 16,
+    "rate": 1,
+    "shape": "tri",
+    "phase0": 0.4,
+    "seed": 2,
+    "why": "the kick breathes over eight"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1/32",
+   "1/8",
+   "1/4"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "244-dub-ghosts",
+  "title": "Dub 244 Ghosts",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "GHOST NOTES. 120 BPM, G# minor. One loud kick and nothing else above velocity 40: the snare, the clap and the hat are all dense euclidean lines played so quietly that they register as a texture under the kick rather than as parts - the transcript's 'ghost notes at lowered velocity'. Stab on the backbeat, a bass that answers it, and a small, dry room so the ghosts are not washed away.",
+  "tempo": 120,
+  "globals": {
+   "root": 8,
+   "scale": 0,
+   "master": 22,
+   "revsize": 24,
+   "revtype": 1,
+   "dlytime": 0,
+   "dlyfbk": 30
+  },
+  "drums": {
+   "0": {
+    "kit": "Boss DR55",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 112,
+    "why": "the only loud thing"
+   },
+   "1": {
+    "kit": "Boss DR55",
+    "hits": 3,
+    "rotate": 2,
+    "velo": 36,
+    "why": "ghost snare"
+   },
+   "2": {
+    "kit": "Boss DR55",
+    "hits": 5,
+    "rotate": 5,
+    "velo": 30,
+    "why": "ghost clap"
+   },
+   "3": {
+    "kit": "Boss DR55",
+    "hits": 11,
+    "rotate": 0,
+    "velo": 40,
+    "why": "ghost hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 17545,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 300,
+    "octave": -1,
+    "range": 1,
+    "velo": 110,
+    "chord": 0,
+    "why": "a bass that answers the ghosts rather than the kick"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 4112,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 80,
+    "octave": 2,
+    "range": 1,
+    "velo": 80,
+    "chord": 0,
+    "why": "the stab on the backbeat, not the offbeat"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1400,
+    "octave": 1,
+    "range": 1,
+    "velo": 46,
+    "chord": 0,
+    "why": "a pad well behind it"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      32
+     ],
+     "velo": 110,
+     "duration": 3.0,
+     "why": "a bass that answers the ghosts rather than the kick"
+    },
+    {
+     "step": 3,
+     "notes": [
+      32
+     ],
+     "velo": 110,
+     "duration": 2.0,
+     "why": ""
+    },
+    {
+     "step": 7,
+     "notes": [
+      42
+     ],
+     "velo": 110,
+     "duration": 2.0,
+     "why": ""
+    },
+    {
+     "step": 10,
+     "notes": [
+      32
+     ],
+     "velo": 110,
+     "duration": 2.0,
+     "why": ""
+    },
+    {
+     "step": 14,
+     "notes": [
+      39
+     ],
+     "velo": 110,
+     "duration": 1.5,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 4,
+     "notes": [
+      68,
+      71,
+      75
+     ],
+     "velo": 80,
+     "duration": 1.2,
+     "why": "the stab on the backbeat, not the offbeat"
+    },
+    {
+     "step": 12,
+     "notes": [
+      68,
+      71,
+      75
+     ],
+     "velo": 80,
+     "duration": 1.2,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      56,
+      59,
+      63
+     ],
+     "velo": 46,
+     "duration": 15.0,
+     "why": "a pad well behind it"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a short dark sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings.ttl",
+    "name": "TapeStrings",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 24,
+    "rate": 4,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 1,
+    "why": "the stab's echo, three bars"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "245-dub-chase",
+  "title": "Dub 245 Chase",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "TONE CHASING - a second pad a fifth above the first, entering inside its tail. 120 BPM, Eb dorian. H plays the chord; E answers five steps (two and a half beats at 1/8) later with the fifth voiced bare, so it cannot contradict the chord it sits inside and the two layers overlap rather than alternate. Both loop every two bars. A light pulse underneath.",
+  "tempo": 120,
+  "globals": {
+   "root": 3,
+   "scale": 2,
+   "master": 22,
+   "revsize": 70,
+   "revtype": 5,
+   "dlytime": 3,
+   "dlyfbk": 52
+  },
+  "drums": {
+   "0": {
+    "kit": "Yamaha RX11",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 100,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "Yamaha RX11",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "2": {
+    "kit": "Yamaha RX11",
+    "hits": 1,
+    "rotate": 12,
+    "velo": 56,
+    "why": "one clap on beat 4"
+   },
+   "3": {
+    "kit": "Yamaha RX11",
+    "hits": 4,
+    "rotate": 2,
+    "velo": 46,
+    "why": "offbeat hats, every second eighth"
+   }
+  },
+  "voices": {
+   "4": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 32,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1000,
+    "octave": 1,
+    "range": 1,
+    "velo": 40,
+    "chord": 0,
+    "why": "the fifth, voiced bare, entering inside the first pad's tail"
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1200,
+    "octave": -1,
+    "range": 1,
+    "velo": 100,
+    "chord": 0,
+    "why": "one root a bar-and-a-half"
+   },
+   "6": {
+    "empty": true,
+    "why": "no stab. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1300,
+    "octave": 0,
+    "range": 1,
+    "velo": 58,
+    "chord": 0,
+    "why": "the first pad"
+   }
+  },
+  "chords": {
+   "4": [
+    {
+     "step": 5,
+     "notes": [
+      58,
+      65
+     ],
+     "velo": 40,
+     "duration": 10.0,
+     "why": "the fifth, voiced bare, entering inside the first pad's tail"
+    }
+   ],
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      27
+     ],
+     "velo": 100,
+     "duration": 12.0,
+     "why": "one root a bar-and-a-half"
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      39,
+      42,
+      46
+     ],
+     "velo": 58,
+     "duration": 13.0,
+     "why": "the first pad"
+    }
+   ]
+  },
+  "presets": {
+   "5": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_000-FMR_Patch_Book",
+    "file": "000-FMR_Patch_Book_Ambient_Mood_OB-Xd.ttl",
+    "name": "Ambient Mood OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "attack 0.684, sustain 1.0 - a pad that blooms"
+   },
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Round_Bass_1_OB-Xd.ttl",
+    "name": "Round Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a round sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "unused: G is silent"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_Choir1.ttl",
+    "name": "Choir1",
+    "controllers": {},
+    "why": "the first pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 4,
+    "verb": "reverb",
+    "depth": 30,
+    "rate": 2,
+    "shape": "tri",
+    "phase0": 0.25,
+    "seed": 1,
+    "why": "the chasing pad's room over six bars"
+   },
+   {
+    "channel": 7,
+    "verb": "delay",
+    "depth": 26,
+    "rate": 3,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 2,
+    "why": "the first pad's echo over four bars"
+   }
+  ],
+  "engines": {
+   "5": {
+    "engine": "JV/Obxd",
+    "why": "E becomes the chasing pad"
+   },
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   "1/8",
+   null,
+   null,
+   "1/8"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "246-dub-slowwalk",
+  "title": "Dub 246 Slowwalk",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "NOTHING PLAYED CHANGES - everything else does. 120 BPM, D phrygian. A plain Basic-Channel figure with five modulators on odd periods - three bars and six bars, against a one-bar pattern - two of them random sample-and-hold curves. The source's own account of the genre: 'never the notes'; echo, room and level walking in and out of phase with each other at periods that never line up inside a phrase. 5 and 7 bars do not exist on this instrument; 3 and 6 are what it has.",
+  "tempo": 120,
+  "globals": {
+   "root": 2,
+   "scale": 3,
+   "master": 22,
+   "revsize": 50,
+   "revtype": 3,
+   "dlytime": 1,
+   "dlyfbk": 46
+  },
+  "drums": {
+   "0": {
+    "kit": "SP1200 2",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 108,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "SP1200 2",
+    "hits": 1,
+    "rotate": 4,
+    "velo": 62,
+    "why": "one rimshot"
+   },
+   "2": {
+    "kit": "SP1200 2",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "3": {
+    "kit": "SP1200 2",
+    "hits": 8,
+    "rotate": 0,
+    "velo": 52,
+    "why": "eighth hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 257,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 700,
+    "octave": -1,
+    "range": 1,
+    "velo": 108,
+    "chord": 0,
+    "why": "root, then the flat second - phrygian's one move"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 17476,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 90,
+    "octave": 2,
+    "range": 1,
+    "velo": 92,
+    "chord": 0,
+    "why": "the figure never changes"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1400,
+    "octave": 1,
+    "range": 1,
+    "velo": 52,
+    "chord": 0,
+    "why": "one chord, held"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      26
+     ],
+     "velo": 108,
+     "duration": 7.0,
+     "why": "root, then the flat second - phrygian's one move"
+    },
+    {
+     "step": 8,
+     "notes": [
+      27
+     ],
+     "velo": 108,
+     "duration": 7.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 2,
+     "notes": [
+      62,
+      65,
+      69
+     ],
+     "velo": 92,
+     "duration": 1.6,
+     "why": "the figure never changes"
+    },
+    {
+     "step": 6,
+     "notes": [
+      62,
+      65,
+      69
+     ],
+     "velo": 92,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 10,
+     "notes": [
+      62,
+      65,
+      69
+     ],
+     "velo": 92,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 14,
+     "notes": [
+      62,
+      65,
+      69
+     ],
+     "velo": 92,
+     "duration": 1.6,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      50,
+      53,
+      57
+     ],
+     "velo": 52,
+     "duration": 15.0,
+     "why": "one chord, held"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a short dark sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings2.ttl",
+    "name": "TapeStrings2",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 40,
+    "rate": 4,
+    "shape": "s&h",
+    "phase0": 0.1,
+    "seed": 1,
+    "why": "the stab's echo, a random curve over three bars"
+   },
+   {
+    "channel": 6,
+    "verb": "reverb",
+    "depth": 30,
+    "rate": 2,
+    "shape": "tri",
+    "phase0": 0.4,
+    "seed": 2,
+    "why": "and its room over six"
+   },
+   {
+    "channel": 3,
+    "verb": "level",
+    "depth": 22,
+    "rate": 4,
+    "shape": "tri",
+    "phase0": 0.7,
+    "seed": 3,
+    "why": "the hats over three"
+   },
+   {
+    "channel": 7,
+    "verb": "reverb",
+    "depth": 26,
+    "rate": 4,
+    "shape": "s&h",
+    "phase0": 0.8,
+    "seed": 4,
+    "why": "the pad's room, random, over three"
+   },
+   {
+    "channel": 2,
+    "verb": "delay",
+    "depth": 34,
+    "rate": 2,
+    "shape": "tri",
+    "phase0": 0.2,
+    "seed": 5,
+    "why": "an echo on the silent clap's send over six"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "247-dub-twochord",
+  "title": "Dub 247 Twochord",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "ONLY TWO CHORDS - the source's own sentence: 'this track only uses two chords'. 120 BPM, F# minor: i for one bar, bVII for the next, in a two-bar loop, nothing else. Stab, pad and bass all move together and the drums hardly exist. A very long room and a 3/8 echo carry the piece; the notes are the smallest part of it.",
+  "tempo": 120,
+  "globals": {
+   "root": 6,
+   "scale": 0,
+   "master": 22,
+   "revsize": 90,
+   "revtype": 5,
+   "dlytime": 4,
+   "dlyfbk": 62
+  },
+  "drums": {
+   "0": {
+    "kit": "LINN9000 2",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 96,
+    "why": "soft four on the floor"
+   },
+   "1": {
+    "kit": "LINN9000 2",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "2": {
+    "kit": "LINN9000 2",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "3": {
+    "kit": "LINN9000 2",
+    "hits": 8,
+    "rotate": 0,
+    "velo": 40,
+    "why": "quiet eighth hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 257,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 700,
+    "octave": -1,
+    "range": 1,
+    "velo": 104,
+    "chord": 0,
+    "why": "the root of each chord"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 43690,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 90,
+    "octave": 1,
+    "range": 1,
+    "velo": 88,
+    "chord": 0,
+    "why": "offbeat eighths: four on i, four on bVII"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 257,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 750,
+    "octave": 0,
+    "range": 1,
+    "velo": 50,
+    "chord": 0,
+    "why": "the same two chords, held"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      30
+     ],
+     "velo": 104,
+     "duration": 7.0,
+     "why": "the root of each chord"
+    },
+    {
+     "step": 8,
+     "notes": [
+      40
+     ],
+     "velo": 104,
+     "duration": 7.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 1,
+     "notes": [
+      54,
+      57,
+      61
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": "offbeat eighths: four on i, four on bVII"
+    },
+    {
+     "step": 3,
+     "notes": [
+      54,
+      57,
+      61
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 5,
+     "notes": [
+      54,
+      57,
+      61
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 7,
+     "notes": [
+      54,
+      57,
+      61
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 9,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 11,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 13,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 15,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 88,
+     "duration": 1.6,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      42,
+      45,
+      49
+     ],
+     "velo": 50,
+     "duration": 7.5,
+     "why": "the same two chords, held"
+    },
+    {
+     "step": 8,
+     "notes": [
+      52,
+      56,
+      59
+     ],
+     "velo": 50,
+     "duration": 7.5,
+     "why": ""
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_000-FMR_Patch_Book",
+    "file": "000-FMR_Patch_Book_Synth_Bass_2_OB-Xd.ttl",
+    "name": "Synth Bass 2 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a rounder bass"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_Dusk5.ttl",
+    "name": "Dusk5",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 56,
+    "reverb": 44
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 28,
+    "rate": 3,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 1,
+    "why": "the echo over four bars"
+   },
+   {
+    "channel": 7,
+    "verb": "reverb",
+    "depth": 22,
+    "rate": 0,
+    "shape": "tri",
+    "phase0": 0.3,
+    "seed": 2,
+    "why": "the room over sixteen"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1/8",
+   "1/8",
+   "1/8"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "248-dub-blue",
+  "title": "Dub 248 Blue",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "A BLUE NOTE IN DUB. 125 BPM, C blues - the minor pentatonic with the flat fifth added, which none of the first twenty uses. The bass walks root, minor third, fourth, then up the flat fifth into the fifth and back, and the stab is a plain minor triad. The flat fifth is the only tritone the genre allows itself, and here it is on the bass where a delay can hold it.",
+  "tempo": 125,
+  "globals": {
+   "root": 0,
+   "scale": 9,
+   "master": 22,
+   "revsize": 36,
+   "revtype": 3,
+   "dlytime": 1,
+   "dlyfbk": 44
+  },
+  "drums": {
+   "0": {
+    "kit": "Korg DDM110",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 106,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "Korg DDM110",
+    "hits": 1,
+    "rotate": 12,
+    "velo": 70,
+    "why": "one rim on beat 4"
+   },
+   "2": {
+    "kit": "Korg DDM110",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "3": {
+    "kit": "Korg DDM110",
+    "hits": 6,
+    "rotate": 1,
+    "velo": 52,
+    "why": "six hats against sixteen"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 19785,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 160,
+    "octave": -1,
+    "range": 1,
+    "velo": 110,
+    "chord": 0,
+    "why": "the walk: root, root, b3, 4, b5, 5, root"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 16448,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 120,
+    "octave": 2,
+    "range": 1,
+    "velo": 90,
+    "chord": 0,
+    "why": "a plain minor triad twice a bar"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1400,
+    "octave": 1,
+    "range": 1,
+    "velo": 50,
+    "chord": 0,
+    "why": "a pad well behind it"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      24
+     ],
+     "velo": 110,
+     "duration": 3.0,
+     "why": "the walk: root, root, b3, 4, b5, 5, root"
+    },
+    {
+     "step": 3,
+     "notes": [
+      24
+     ],
+     "velo": 110,
+     "duration": 2.0,
+     "why": ""
+    },
+    {
+     "step": 6,
+     "notes": [
+      27
+     ],
+     "velo": 110,
+     "duration": 1.5,
+     "why": ""
+    },
+    {
+     "step": 8,
+     "notes": [
+      29
+     ],
+     "velo": 110,
+     "duration": 1.5,
+     "why": ""
+    },
+    {
+     "step": 10,
+     "notes": [
+      30
+     ],
+     "velo": 110,
+     "duration": 1.0,
+     "why": ""
+    },
+    {
+     "step": 11,
+     "notes": [
+      31
+     ],
+     "velo": 110,
+     "duration": 1.0,
+     "why": ""
+    },
+    {
+     "step": 14,
+     "notes": [
+      24
+     ],
+     "velo": 110,
+     "duration": 1.5,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 6,
+     "notes": [
+      60,
+      63,
+      67
+     ],
+     "velo": 90,
+     "duration": 2.0,
+     "why": "a plain minor triad twice a bar"
+    },
+    {
+     "step": 14,
+     "notes": [
+      60,
+      63,
+      67
+     ],
+     "velo": 90,
+     "duration": 2.0,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      48,
+      51,
+      55
+     ],
+     "velo": 50,
+     "duration": 15.0,
+     "why": "a pad well behind it"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a short dark sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings.ttl",
+    "name": "TapeStrings",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 30,
+    "rate": 4,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 1,
+    "why": "the stab's echo over three bars"
+   },
+   {
+    "channel": 0,
+    "verb": "level",
+    "depth": 16,
+    "rate": 1,
+    "shape": "tri",
+    "phase0": 0.5,
+    "seed": 2,
+    "why": "the kick breathes"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "249-dub-stutter",
+  "title": "Dub 249 Stutter",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "A STUTTER ON THE STAB. 125 BPM, E phrygian dominant - the flat second over a major chord. The stab plays at 1/32 - sixteen steps in two beats, so the whole figure lasts half a bar - five quick hits that the 1/8 echo smears into a roll. Everything else is slow: a four-bar pad, a bass that moves once a bar, a quiet kick. The fastest thing in the round sitting over the slowest.",
+  "tempo": 125,
+  "globals": {
+   "root": 4,
+   "scale": 6,
+   "master": 22,
+   "revsize": 44,
+   "revtype": 4,
+   "dlytime": 1,
+   "dlyfbk": 48
+  },
+  "drums": {
+   "0": {
+    "kit": "Boss DR220",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 100,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "Boss DR220",
+    "hits": 1,
+    "rotate": 4,
+    "velo": 60,
+    "why": "one rim"
+   },
+   "2": {
+    "kit": "Boss DR220",
+    "hits": 1,
+    "rotate": 12,
+    "velo": 54,
+    "why": "one clap"
+   },
+   "3": {
+    "kit": "Boss DR220",
+    "hits": 12,
+    "rotate": 0,
+    "velo": 44,
+    "why": "twelve soft hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 257,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 600,
+    "octave": -1,
+    "range": 1,
+    "velo": 108,
+    "chord": 0,
+    "why": "root, then the major third"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 9289,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 40,
+    "octave": 2,
+    "range": 1,
+    "velo": 84,
+    "chord": 0,
+    "why": "five hits in a half-bar loop - a stutter"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1500,
+    "octave": 1,
+    "range": 1,
+    "velo": 50,
+    "chord": 0,
+    "why": "a four-bar pad"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      28
+     ],
+     "velo": 108,
+     "duration": 6.0,
+     "why": "root, then the major third"
+    },
+    {
+     "step": 8,
+     "notes": [
+      32
+     ],
+     "velo": 108,
+     "duration": 5.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 0,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 84,
+     "duration": 0.9,
+     "why": "five hits in a half-bar loop - a stutter"
+    },
+    {
+     "step": 3,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 84,
+     "duration": 0.9,
+     "why": ""
+    },
+    {
+     "step": 6,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 84,
+     "duration": 0.9,
+     "why": ""
+    },
+    {
+     "step": 10,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 84,
+     "duration": 0.9,
+     "why": ""
+    },
+    {
+     "step": 13,
+     "notes": [
+      64,
+      68,
+      71
+     ],
+     "velo": 84,
+     "duration": 0.9,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      52,
+      56,
+      59
+     ],
+     "velo": 50,
+     "duration": 15.0,
+     "why": "a four-bar pad"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_000-FMR_Patch_Book",
+    "file": "000-FMR_Patch_Book_Synth_Bass_2_OB-Xd.ttl",
+    "name": "Synth Bass 2 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a rounder bass"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_000-FMR_Patch_Book",
+    "file": "000-FMR_Patch_Book_Funk_Keys_OB-Xa.ttl",
+    "name": "Funk Keys OB-Xa",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings2.ttl",
+    "name": "TapeStrings2",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 30,
+    "rate": 3,
+    "shape": "tri",
+    "phase0": 0.3,
+    "seed": 1,
+    "why": "the echo smears the stutter, over four bars"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1/32",
+   "1/4"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "250-dub-kickless",
+  "title": "Dub 250 Kickless",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "NO KICK. 120 BPM, Bb minor. The pulse is carried by the bass - a round sub on every quarter note - with the hats and a rimshot on the backbeat above it, so the thing the ear locks to is a note and not a drum. The one piece in either round with channel A silent. If the low end can be the metronome, this is how.",
+  "tempo": 120,
+  "globals": {
+   "root": 10,
+   "scale": 0,
+   "master": 22,
+   "revsize": 36,
+   "revtype": 3,
+   "dlytime": 1,
+   "dlyfbk": 42
+  },
+  "drums": {
+   "0": {
+    "kit": "Kawai R50",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent - the bass is the kick"
+   },
+   "1": {
+    "kit": "Kawai R50",
+    "hits": 2,
+    "rotate": 4,
+    "velo": 84,
+    "why": "rimshot on 2 and 4"
+   },
+   "2": {
+    "kit": "Kawai R50",
+    "hits": 1,
+    "rotate": 12,
+    "velo": 60,
+    "why": "one clap"
+   },
+   "3": {
+    "kit": "Kawai R50",
+    "hits": 8,
+    "rotate": 0,
+    "velo": 56,
+    "why": "eighth hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 4369,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 500,
+    "octave": -1,
+    "range": 1,
+    "velo": 112,
+    "chord": 0,
+    "why": "root on every quarter note: the pulse"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 17476,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 90,
+    "octave": 1,
+    "range": 1,
+    "velo": 90,
+    "chord": 0,
+    "why": "offbeat stabs"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1400,
+    "octave": 0,
+    "range": 1,
+    "velo": 50,
+    "chord": 0,
+    "why": "a pad well behind it"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      34
+     ],
+     "velo": 112,
+     "duration": 3.0,
+     "why": "root on every quarter note: the pulse"
+    },
+    {
+     "step": 4,
+     "notes": [
+      34
+     ],
+     "velo": 112,
+     "duration": 3.0,
+     "why": ""
+    },
+    {
+     "step": 8,
+     "notes": [
+      34
+     ],
+     "velo": 112,
+     "duration": 3.0,
+     "why": ""
+    },
+    {
+     "step": 12,
+     "notes": [
+      34
+     ],
+     "velo": 112,
+     "duration": 3.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 2,
+     "notes": [
+      58,
+      61,
+      65
+     ],
+     "velo": 90,
+     "duration": 1.6,
+     "why": "offbeat stabs"
+    },
+    {
+     "step": 6,
+     "notes": [
+      58,
+      61,
+      65
+     ],
+     "velo": 90,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 10,
+     "notes": [
+      58,
+      61,
+      65
+     ],
+     "velo": 90,
+     "duration": 1.6,
+     "why": ""
+    },
+    {
+     "step": 14,
+     "notes": [
+      58,
+      61,
+      65
+     ],
+     "velo": 90,
+     "duration": 1.6,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      46,
+      49,
+      53
+     ],
+     "velo": 50,
+     "duration": 15.0,
+     "why": "a pad well behind it"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Round_Bass_1_OB-Xd.ttl",
+    "name": "Round Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a round sub that can carry the pulse"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_Dusk5.ttl",
+    "name": "Dusk5",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 28,
+    "rate": 4,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 1,
+    "why": "the echo over three bars"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "251-dub-throw",
+  "title": "Dub 251 Throw",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "ONE STAB, THROWN. 120 BPM, F dorian. The stab plays once every TWO bars, and the echo - 3/8, with the feedback near the top of what TAP will take without running away - is what makes it a line: the single chord comes back across the next bar and a half and sinks into the room. The sparsest stab in either round, which is the point; the delay is the instrument.",
+  "tempo": 120,
+  "globals": {
+   "root": 5,
+   "scale": 2,
+   "master": 22,
+   "revsize": 60,
+   "revtype": 6,
+   "dlytime": 4,
+   "dlyfbk": 72
+  },
+  "drums": {
+   "0": {
+    "kit": "Drumula 1",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 100,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "Drumula 1",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "2": {
+    "kit": "Drumula 1",
+    "hits": 1,
+    "rotate": 12,
+    "velo": 62,
+    "why": "one clap"
+   },
+   "3": {
+    "kit": "Drumula 1",
+    "hits": 4,
+    "rotate": 2,
+    "velo": 44,
+    "why": "four offbeat hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 257,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 700,
+    "octave": -1,
+    "range": 1,
+    "velo": 108,
+    "chord": 0,
+    "why": "root, then the fifth"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 8,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 120,
+    "octave": 2,
+    "range": 1,
+    "velo": 92,
+    "chord": 0,
+    "why": "ONE stab in two bars"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1500,
+    "octave": 1,
+    "range": 1,
+    "velo": 46,
+    "chord": 0,
+    "why": "a pad well behind it"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      29
+     ],
+     "velo": 108,
+     "duration": 7.0,
+     "why": "root, then the fifth"
+    },
+    {
+     "step": 8,
+     "notes": [
+      36
+     ],
+     "velo": 108,
+     "duration": 7.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 3,
+     "notes": [
+      65,
+      68,
+      72
+     ],
+     "velo": 92,
+     "duration": 1.5,
+     "why": "ONE stab in two bars"
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      53,
+      56,
+      60
+     ],
+     "velo": 46,
+     "duration": 15.0,
+     "why": "a pad well behind it"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a short dark sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_003-KVR_Brass_Synths",
+    "file": "003-KVR_Brass_Synths_Analog_Brass_Chrds.ttl",
+    "name": "Analog Brass Chrds",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_TapeStrings.ttl",
+    "name": "TapeStrings",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 62,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 18,
+    "rate": 3,
+    "shape": "s&h",
+    "phase0": 0.2,
+    "seed": 1,
+    "why": "the throw swells and recedes"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1/8",
+   "1/8",
+   "1/4"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ },
+ {
+  "file": "252-dub-kyoto",
+  "title": "Dub 252 Kyoto",
+  "base": "snapshot/018-generative-techno-main-insert.zss",
+  "notes": "THE JAPANESE PENTATONIC. 120 BPM, A, in the five-note scale with a flat second and a flat sixth - the 'in' scale, the only one in either round with no third. Chords are built from its own notes, so they sound suspended rather than minor or major, and the bass reaches the flat second once a bar as the only pull. The stab is a bell patch instead of a brass one: a struck sound over a bowed pad.",
+  "tempo": 120,
+  "globals": {
+   "root": 9,
+   "scale": 10,
+   "master": 22,
+   "revsize": 48,
+   "revtype": 3,
+   "dlytime": 1,
+   "dlyfbk": 44
+  },
+  "drums": {
+   "0": {
+    "kit": "Roland CR78",
+    "hits": 4,
+    "rotate": 0,
+    "velo": 96,
+    "why": "four on the floor"
+   },
+   "1": {
+    "kit": "Roland CR78",
+    "hits": 1,
+    "rotate": 4,
+    "velo": 54,
+    "why": "one rim"
+   },
+   "2": {
+    "kit": "Roland CR78",
+    "hits": 0,
+    "rotate": 0,
+    "velo": 1,
+    "why": "silent"
+   },
+   "3": {
+    "kit": "Roland CR78",
+    "hits": 3,
+    "rotate": 1,
+    "velo": 50,
+    "why": "three hats"
+   }
+  },
+  "voices": {
+   "4": {
+    "empty": true,
+    "why": "channel E is silent. `empty` is rhythm_reg 0 - no note is written and the pads draw an empty line."
+   },
+   "5": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1025,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 600,
+    "octave": -1,
+    "range": 1,
+    "velo": 108,
+    "chord": 0,
+    "why": "root, then the flat second: the one pull"
+   },
+   "6": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 16448,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 160,
+    "octave": 2,
+    "range": 1,
+    "velo": 86,
+    "chord": 0,
+    "why": "a bell chord twice a bar"
+   },
+   "7": {
+    "register": 179,
+    "length": 16,
+    "rhythm_reg": 1,
+    "rotate": 0,
+    "random": 0,
+    "rhythm": 0,
+    "gate": 1400,
+    "octave": 1,
+    "range": 1,
+    "velo": 50,
+    "chord": 0,
+    "why": "a pad well behind it"
+   }
+  },
+  "chords": {
+   "5": [
+    {
+     "step": 0,
+     "notes": [
+      33
+     ],
+     "velo": 108,
+     "duration": 6.0,
+     "why": "root, then the flat second: the one pull"
+    },
+    {
+     "step": 10,
+     "notes": [
+      34
+     ],
+     "velo": 108,
+     "duration": 5.0,
+     "why": ""
+    }
+   ],
+   "6": [
+    {
+     "step": 6,
+     "notes": [
+      69,
+      74,
+      76
+     ],
+     "velo": 86,
+     "duration": 2.5,
+     "why": "a bell chord twice a bar"
+    },
+    {
+     "step": 14,
+     "notes": [
+      69,
+      74,
+      76
+     ],
+     "velo": 86,
+     "duration": 2.5,
+     "why": ""
+    }
+   ],
+   "7": [
+    {
+     "step": 0,
+     "notes": [
+      57,
+      62,
+      64
+     ],
+     "velo": 50,
+     "duration": 15.0,
+     "why": "a pad well behind it"
+    }
+   ]
+  },
+  "presets": {
+   "6": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_002-KVR_Bass",
+    "file": "002-KVR_Bass_Synth_Bass_1_OB-Xd.ttl",
+    "name": "Synth Bass 1 OB-Xd",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "a short dark sub"
+   },
+   "7": {
+    "engine": "JV/Obxd",
+    "bundle": "Obxd_StaminaByDS",
+    "file": "StaminaByDS_BELL_Some_Bell.ttl",
+    "name": "BELL Some Bell",
+    "controllers": {
+     "voicecount": 1.0,
+     "unison": 0.0
+    },
+    "why": "the stab"
+   },
+   "8": {
+    "engine": "JV/padthv1",
+    "bundle": "padthv1_67Padthv1Patches",
+    "file": "67Padthv1Patches_Dusk5.ttl",
+    "name": "Dusk5",
+    "controllers": {},
+    "why": "the pad"
+   }
+  },
+  "wets": {
+   "1": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "2": {
+    "delay": 18,
+    "reverb": 30
+   },
+   "3": {
+    "delay": 30,
+    "reverb": 34
+   },
+   "4": {
+    "delay": 0,
+    "reverb": 8
+   },
+   "5": {
+    "delay": 0,
+    "reverb": 0
+   },
+   "6": {
+    "delay": 0,
+    "reverb": 6
+   },
+   "7": {
+    "delay": 44,
+    "reverb": 36
+   },
+   "8": {
+    "delay": 16,
+    "reverb": 52
+   }
+  },
+  "levels": {
+   "0": 0.77,
+   "1": 0.7065,
+   "2": 0.7826,
+   "3": 0.67,
+   "4": 0.2065,
+   "5": 0.337,
+   "6": 0.3261,
+   "7": 0.2826,
+   "16": 0.2178
+  },
+  "mods": [
+   {
+    "channel": 6,
+    "verb": "delay",
+    "depth": 30,
+    "rate": 3,
+    "shape": "tri",
+    "phase0": 0.0,
+    "seed": 1,
+    "why": "the bell's echo over four bars"
+   }
+  ],
+  "engines": {
+   "6": {
+    "engine": "JV/Obxd",
+    "why": "F leaves JC303 for a patch that was read."
+   }
+  },
+  "kinds": {
+   "4": "voice"
+  },
+  "div": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   "1/4"
+  ],
+  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
+ }
+]

@@ -33,8 +33,9 @@ under the wrong name.
 tools/fix-snapshot-identity.py --check snapshot/*.zss snapshot/*/*.zss
 ```
 
-**Must print `94 of 94 name themselves`** — 73 until 2026-09-12, when item
-41's twenty landed in `dub-round/` and the count moved with them. All three
+**Must print `106 of 106 name themselves`** — 73 until 2026-09-12, when item
+41's twenty landed in `dub-round/`, and 94 until item 42's twelve landed in
+`dub-round-3/`; the count moves with every pack. All three
 generators stamp it now (`build-genre-snapshots.py`,
 `build-factory-snapshot.py`, `add-main-insert.py`), so this is a guard against
 the next path that copies a snapshot, not a chore.
@@ -354,6 +355,51 @@ variant trim read on the rig with `notes/tools/dub-round-levels.py`, because
 one measured an 8.80 dB RMS spread across twenty snapshots on identical
 faders, purely from the choice of room. A listening round the loudest entry
 wins teaches nothing.
+
+# The dub round, third — `dub-round-3/`, twelve more pieces
+
+**Built 2026-10-01 for `Witzman/ZynthianMaschine-Workshop#42`. Not a pack, not
+shipped**, exactly like `dub-round/`: nothing installs it and none is a default.
+
+```bash
+python3 tools/build-factory-snapshot.py \
+    --manifest snapshot/dub-round-3-manifest.json --out snapshot/dub-round-3
+```
+
+It takes the axes `dub-round/` left alone — a long echo as the figure itself
+(`241`), the backcloth from outside (`242`), four loop lengths at once
+(`243`), ghost notes (`244`), tone chasing (`245`), slow modulation on periods
+that never line up (`246`), only two chords (`247`), a blue note (`248`), a
+half-bar stutter (`249`), a pulse carried by the bass with no kick (`250`), one
+stab thrown into a long echo (`251`) and a five-note Japanese scale (`252`).
+The ones that need a plugin state nobody has read off the rig — a noise bed, a
+shimmer insert, a granular layer, a sidechain route — are NOT here and are
+named in the issue.
+
+**Its tests are round two's, inherited** (`tools/tests/test_dub_round_3.py`
+subclasses `TheRoundCase`), plus three of its own: no piece may equal one of
+round two's twenty, the round must reach scales, keys, kits and long echoes
+round two did not, and a provisional main fader must say so.
+
+**THE MAIN FADERS ARE PROVISIONAL.** They are copied from `221` and were not
+measured, because the manifest was built while the Pi was off. Each entry's
+`levels_why` begins `PROVISIONAL`, and the rig gate replaces that word with a
+48-bar reading at `zynmixer:output_17a`.
+
+**A music check that round two never had.** `tools/validate-manifest.py` reads
+the pack schema and renders pitches from the Turing register, so it cannot read
+these takes. Its interval, unison, low-register and kit-collision checks were
+run over the authored notes with `render()` swapped for one that reads the
+takes. The first run flagged nine of the twelve - a bass or a stab sitting
+within a fifth of a sustained pad, one unison, and a snare and clap sharing a
+sample on one step - and all of it was fixed in the manifest by moving the
+layers apart (pad to octave 1, stab to octave 2 wherever the bass moves) and
+not by removing notes. The attack and onset budgets were NOT applied: they are
+tuned for the generator packs, and round two's own centre piece, `221`, fails
+them. **The same run over round two flags 6 of its 20 for an interval, unison
+or kit fault.** Nothing was changed there; it is the owner's round, already
+heard. The swapped-`render()` script is not committed - it lives in a session
+scratchpad - so the check is a one-off, not a gate.
 
 # The genre pack
 
