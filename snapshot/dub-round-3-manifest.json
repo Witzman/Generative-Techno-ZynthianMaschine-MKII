@@ -8,7 +8,7 @@
   "globals": {
    "root": 5,
    "scale": 0,
-   "master": 22,
+   "master": 36,
    "revsize": 34,
    "revtype": 3,
    "dlytime": 2,
@@ -226,7 +226,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.3631
   },
   "mods": [
    {
@@ -259,7 +259,7 @@
   "kinds": {
    "4": "voice"
   },
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -28.45 dBFS and peak -13.75, and 0.2178 x 1.667 = 0.3631 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -271,7 +271,7 @@
   "globals": {
    "root": 1,
    "scale": 0,
-   "master": 22,
+   "master": 57,
    "revsize": 80,
    "revtype": 5,
    "dlytime": 3,
@@ -522,7 +522,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.5683
   },
   "mods": [
    {
@@ -579,7 +579,7 @@
    null,
    "1/4"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -32.34 dBFS and peak -18.46, and 0.2178 x 2.609 = 0.5683 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -591,7 +591,7 @@
   "globals": {
    "root": 10,
    "scale": 2,
-   "master": 22,
+   "master": 31,
    "revsize": 40,
    "revtype": 4,
    "dlytime": 1,
@@ -836,7 +836,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.3098
   },
   "mods": [
    {
@@ -879,7 +879,7 @@
    "1/8",
    "1/4"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -27.07 dBFS and peak -12.59, and 0.2178 x 1.422 = 0.3098 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -891,7 +891,7 @@
   "globals": {
    "root": 8,
    "scale": 0,
-   "master": 22,
+   "master": 72,
    "revsize": 24,
    "revtype": 1,
    "dlytime": 0,
@@ -1136,7 +1136,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.7237
   },
   "mods": [
    {
@@ -1159,7 +1159,7 @@
   "kinds": {
    "4": "voice"
   },
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -34.44 dBFS and peak -18.49, and 0.2178 x 3.323 = 0.7237 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -1171,7 +1171,7 @@
   "globals": {
    "root": 3,
    "scale": 2,
-   "master": 22,
+   "master": 95,
    "revsize": 70,
    "revtype": 5,
    "dlytime": 3,
@@ -1379,7 +1379,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.9475
   },
   "mods": [
    {
@@ -1426,7 +1426,7 @@
    null,
    "1/8"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -36.78 dBFS and peak -19.93, and 0.2178 x 4.350 = 0.9475 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -1438,7 +1438,7 @@
   "globals": {
    "root": 2,
    "scale": 3,
-   "master": 22,
+   "master": 32,
    "revsize": 50,
    "revtype": 3,
    "dlytime": 1,
@@ -1678,7 +1678,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.3203
   },
   "mods": [
    {
@@ -1741,7 +1741,7 @@
   "kinds": {
    "4": "voice"
   },
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -27.36 dBFS and peak -12.73, and 0.2178 x 1.471 = 0.3203 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -1753,7 +1753,7 @@
   "globals": {
    "root": 6,
    "scale": 0,
-   "master": 22,
+   "master": 33,
    "revsize": 90,
    "revtype": 5,
    "dlytime": 4,
@@ -2048,7 +2048,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.3308
   },
   "mods": [
    {
@@ -2091,7 +2091,7 @@
    "1/8",
    "1/8"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -27.64 dBFS and peak -13.07, and 0.2178 x 1.519 = 0.3308 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -2103,7 +2103,7 @@
   "globals": {
    "root": 0,
    "scale": 9,
-   "master": 22,
+   "master": 30,
    "revsize": 36,
    "revtype": 3,
    "dlytime": 1,
@@ -2366,7 +2366,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.3027
   },
   "mods": [
    {
@@ -2399,7 +2399,7 @@
   "kinds": {
    "4": "voice"
   },
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -26.87 dBFS and peak -11.57, and 0.2178 x 1.390 = 0.3027 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -2411,7 +2411,7 @@
   "globals": {
    "root": 4,
    "scale": 6,
-   "master": 22,
+   "master": 42,
    "revsize": 44,
    "revtype": 4,
    "dlytime": 1,
@@ -2662,7 +2662,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.4203
   },
   "mods": [
    {
@@ -2695,7 +2695,7 @@
    "1/32",
    "1/4"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -29.72 dBFS and peak -15.56, and 0.2178 x 1.930 = 0.4203 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -2707,7 +2707,7 @@
   "globals": {
    "root": 10,
    "scale": 0,
-   "master": 22,
+   "master": 26,
    "revsize": 36,
    "revtype": 3,
    "dlytime": 1,
@@ -2965,7 +2965,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.2586
   },
   "mods": [
    {
@@ -2988,7 +2988,7 @@
   "kinds": {
    "4": "voice"
   },
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -25.50 dBFS and peak -11.65, and 0.2178 x 1.187 = 0.2586 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -3000,7 +3000,7 @@
   "globals": {
    "root": 5,
    "scale": 2,
-   "master": 22,
+   "master": 70,
    "revsize": 60,
    "revtype": 6,
    "dlytime": 4,
@@ -3207,7 +3207,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.6967
   },
   "mods": [
    {
@@ -3240,7 +3240,7 @@
    "1/8",
    "1/4"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -34.11 dBFS and peak -16.41, and 0.2178 x 3.199 = 0.6967 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  },
  {
@@ -3252,7 +3252,7 @@
   "globals": {
    "root": 9,
    "scale": 10,
-   "master": 22,
+   "master": 33,
    "revsize": 48,
    "revtype": 3,
    "dlytime": 1,
@@ -3470,7 +3470,7 @@
    "5": 0.337,
    "6": 0.3261,
    "7": 0.2826,
-   "16": 0.2178
+   "16": 0.3293
   },
   "mods": [
    {
@@ -3503,7 +3503,7 @@
    null,
    "1/4"
   ],
-  "levels_why": "PROVISIONAL - copied from 221 and NOT YET MEASURED. The main fader is the one number in the mix that is not a musical choice and it has not been trimmed for this piece: read it off zynmixer:output_17a over 48 bars at the rig and replace it, level-matching to the round-two target of -24.01 dBFS.",
+  "levels_why": "THE EIGHT CHANNEL FADERS ARE 221's. THE MAIN FADER IS MEASURED. Read on the rig 2026-10-01 over FORTY-EIGHT BARS on zynmixer:output_17a with the transport running at main fader 0.2178: this piece read rms -27.60 dBFS and peak -13.00, and 0.2178 x 1.512 = 0.3293 brings it to the round's common -24.01 dBFS (the target round two used). The ceiling is -3 dBFS of predicted peak. THIS IS A PREDICTION UNTIL THE SECOND READING: the trim is linear in the fader, but the number the ear hears is the one measured AFTER it.",
   "mods_why": "Every target is `level`, `reverb` or `delay` - a mixer fader and the two TAP inserts, none of which is GUI-hosted. A modulator pointed at a plugin Zynthian hosts in jalv.gtk3 costs about 70 % of a core per instance, and eight of the twelve effects this project uses are GUI-hosted; that is why the insert pair is never swapped in this round. The BASES are not written here - the builder reads each one back off the mixer strip or the insert wet this same run wrote, so a piece that moves a send moves the modulator sweeping around it."
  }
 ]
