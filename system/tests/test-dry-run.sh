@@ -24,7 +24,10 @@ head_() { printf '\n%s\n' "$1"; }
 
 # Anything that would touch a machine. If a --dry-run calls one, it exits 99
 # and every assertion about that run fails loudly.
-POISON="ssh scp systemctl udevadm apt-get cargo install rsync"
+# curl and rustup joined the list on 2026-09-20 with the toolchain step: a
+# --dry-run that actually fetched sh.rustup.rs would install a compiler on
+# whoever ran the tests.
+POISON="ssh scp systemctl udevadm apt-get cargo install rsync curl rustup"
 BIN=$(mktemp -d); trap 'rm -rf "$BIN" "$FAKE"' EXIT
 for c in $POISON; do
     printf '#!/bin/sh\necho "POISON: %s was actually run: $*" >&2\nexit 99\n' "$c" > "$BIN/$c"
@@ -119,6 +122,11 @@ has   "--with-daemon asks the UNIT where the daemon lives" "$W" \
 has   "--with-daemon sends the Rust sources"        "$W" "\[dry-run\] scp .*/daemon/src/.*\.rs"
 has   "--with-daemon sends the lockfile too"        "$W" "\[dry-run\].*Cargo\.lock"
 has   "--with-daemon builds ON the Pi"              "$W" "\[dry-run\] ssh .*cargo build --release"
+# rustup writes its PATH line at the END of ~/.bashrc, and Debian's ~/.bashrc
+# returns out of itself for a non-interactive shell - which `ssh host 'cmd'`
+# is. Without the env line the build here dies with "cargo: command not found"
+# on a Pi where cargo works the moment you log in.
+has   "--with-daemon sources ~/.cargo/env first"    "$W" "\[dry-run\] ssh .*\. ~/\.cargo/env; cd <daemon> && cargo build"
 has   "--with-daemon verifies the binary moved"     "$W" "mtime moved, abort if it did not"
 hasnt "--with-daemon still never sends maschine.json" "$W" 'scp.*maschine\.json'
 has   "--with-daemon says why maschine.json is withheld" "$W" \
@@ -178,6 +186,18 @@ if [ $rc -eq 0 ]; then ok "exits 0"; else bad "exits 0" "rc=$rc
 $I"; fi
 has "reports the ZynthianOS build" "$I" '^ZynthianOS: Oram-2601-1 fake$'
 has "says it is a dry run"         "$I" 'DRY RUN - nothing will be changed\.'
+
+# THE TOOLCHAIN, since 2026-09-20. A clean ZynthianOS has Debian's cargo 1.65,
+# which cannot read daemon/Cargo.lock (lock file version 4) and whose successor
+# in the lock needs rustc 1.86. An installer that reaches `cargo build` without
+# saying anything about this is the bug that was reported from a fresh Pi.
+head_ "install.sh --dry-run - the Rust toolchain comes before the build"
+has    "names a minimum cargo"              "$I" '== Rust toolchain \(cargo 1\.86 or newer'
+has    "removes Debian's rustc and cargo"   "$I" '\[dry-run\] apt-get remove -y rustc cargo'
+has    "installs rustup"                    "$I" "\[dry-run\] curl .* https://sh\.rustup\.rs \| sh -s -- -y --profile minimal"
+hasnt  "never apt-installs a compiler"      "$I" 'apt-get install -y (rustc|cargo)'
+before "rustup comes BEFORE the build"      "$I" 'sh\.rustup\.rs' "cd '.*/daemon' && cargo build --release"
+before "the removal comes BEFORE rustup"    "$I" 'apt-get remove -y rustc cargo' 'sh\.rustup\.rs'
 
 has "installs the udev rule"       "$I" "\[dry-run\] install -m 0644 '.*/system/99-maschine\.rules' /etc/udev/rules\.d/99-maschine\.rules"
 has "reloads udev rules"           "$I" '\[dry-run\] udevadm control --reload-rules'

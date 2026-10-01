@@ -3,6 +3,10 @@ name = "maschine"
 version = "0.0.1"
 authors = ["William Light <wrl@illest.net>"]
 edition = "2021"
+# MEASURED 2026-09-20, not guessed: 1.85 cannot resolve this lock (icu_* and
+# idna_adapter want 1.86) and 1.86 builds it clean. Stated here so a too-old
+# toolchain says so in one line instead of listing eight transitive crates.
+rust-version = "1.86"
 
 [profile.release]
 lto = true

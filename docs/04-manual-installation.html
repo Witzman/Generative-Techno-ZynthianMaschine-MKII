@@ -101,9 +101,20 @@ cd /opt/technomaschine</code></pre>
 <h2 id="the-daemon-and-the-driver">The daemon and the driver</h2>
 <h3 id="step-1--build-the-daemon">Step 1 — Build the daemon</h3>
 <p><strong>What.</strong> Compiles the Rust HID daemon that speaks to the Maschine. <strong>Why.</strong> No binary is shipped; the daemon is built where it runs. <strong>How to confirm.</strong> <code>daemon/target/release/maschine</code> exists and is executable.</p>
-<pre><code class="language-bash">apt install -y rustc cargo
+<p><strong>The toolchain comes from rustup, not from <code>apt</code>.</strong> ZynthianOS is Bookworm, and Bookworm's packaged cargo is 1.65 &mdash; old enough that it stops before it compiles anything:</p>
+<pre><code>error: failed to parse lock file at: .../daemon/Cargo.lock
+
+Caused by:
+  lock file version `4` was found, but this version of Cargo does not
+  understand this lock file, perhaps Cargo needs to be updated?</code></pre>
+<p>Measured on 20 September 2026: cargo 1.65 cannot read the lock file, 1.85 reads it and then refuses to resolve it (<code>icu_*</code> and <code>idna_adapter</code> require rustc 1.86), and <strong>1.86 builds it clean</strong>. Rewriting the lock to the older format does not help &mdash; it is the dependencies, not the format. Remove Debian's pair first; two <code>cargo</code>s on <code>PATH</code> brings the same error back with nothing to show why.</p>
+<pre><code class="language-bash">apt remove -y rustc cargo
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+. "$HOME/.cargo/env"
+cargo --version          # → 1.86.0 or newer
 cd daemon &amp;&amp; cargo build --release &amp;&amp; cd ..</code></pre>
 <p>Minutes on a Pi 4. Do not interrupt it.</p>
+<p><strong><code>. "$HOME/.cargo/env"</code> is needed in every new shell until you log out and back in</strong>, and it is needed even after that for <code>ssh pi 'cargo …'</code>: rustup appends its <code>PATH</code> line to the end of <code>~/.bashrc</code>, and Debian's <code>~/.bashrc</code> returns out of itself on line three when the shell is not interactive. A one-shot <code>ssh</code> command is exactly that shell, so <code>cargo</code> is missing there on a Pi where it works perfectly when you log in.</p>
 <h3 id="step-2--put-the-daemon-config-in-place">Step 2 — Put the daemon config in place</h3>
 <p><strong>What.</strong> Installs pad note offsets, encoder CC numbers, and <code>external_pad_leds</code>. <strong>Why.</strong> Without <code>"external_pad_leds": true</code> the daemon repaints the pads itself in its own global colour, and the first pad you touch destroys the driver's per-channel picture. <strong>How to confirm.</strong> The <code>grep</code> prints the flag as <code>true</code>.</p>
 <pre><code class="language-bash">cp system/maschine.json daemon/maschine.json

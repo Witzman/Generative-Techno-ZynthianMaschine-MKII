@@ -182,7 +182,7 @@ if [ "$DAEMON" = 1 ]; then
         echo "  [dry-run] ssh '$PI' systemctl show -p ExecStart --value maschine-mk2"
         echo "  [dry-run] scp '$REPO/daemon/src/'*.rs '$PI:<daemon>/src/'"
         echo "  [dry-run] scp Cargo.toml Cargo.lock '$PI:<daemon>/'"
-        echo "  [dry-run] ssh '$PI' 'cd <daemon> && cargo build --release'   (minutes)"
+        echo "  [dry-run] ssh '$PI' '. ~/.cargo/env; cd <daemon> && cargo build --release'   (minutes)"
         echo "  [dry-run] verify the binary's mtime moved, abort if it did not"
     else
         # Ask the unit where the binary is rather than guessing the repo path.
@@ -207,7 +207,14 @@ if [ "$DAEMON" = 1 ]; then
         echo "  sent daemon sources"
 
         echo "  building on the Pi - this takes minutes, do not interrupt"
-        ssh "$PI" "cd '$PIDAEMON' && cargo build --release" \
+        # ~/.cargo/env FIRST, and it is allowed to be absent. The toolchain
+        # on the Pi comes from rustup (Debian's cargo is 1.65 and cannot read
+        # Cargo.lock at all - see install.sh section 1b), and rustup puts its
+        # PATH line at the END of ~/.bashrc, which Debian's own first line
+        # returns out of for a non-interactive shell. `ssh host 'cmd'` is
+        # exactly that shell, so without this the build here fails with
+        # "cargo: command not found" on a Pi where cargo works when you log in.
+        ssh "$PI" ". ~/.cargo/env 2>/dev/null || true; cd '$PIDAEMON' && cargo build --release" \
             || { echo "BUILD FAILED on the Pi. The OLD binary is still in place and" >&2
                  echo "nothing was restarted. Fix it before deploying again." >&2; exit 1; }
 
