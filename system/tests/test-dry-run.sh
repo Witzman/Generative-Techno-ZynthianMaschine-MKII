@@ -197,6 +197,7 @@ for f in zynthian_ctrldev_maschine_mk2.py techno_lib.py maschine_mk2_lib.py; do
     has "installs driver $f" "$I" "\[dry-run\] install -m 0644 '.*/ctrldev/$f' '.*/zyngine/ctrldev/$f'"
 done
 has "patches zynautoconnect"       "$I" "\[dry-run\] python3 '.*/tools/patch-autoconnect-maschine\.py' '.*zynthian_autoconnect\.py'"
+has "patches the DIN out route"    "$I" "\\[dry-run\\] python3 '.*/tools/patch-autoconnect-din-out\\.py' '.*zynthian_autoconnect\\.py'"
 # One-time .bak baseline before the first overwrite, and never a second time.
 has "takes a .bak of zynautoconnect" "$I" "\[dry-run\] cp '$FAKE/zynthian-ui/zynautoconnect/zynthian_autoconnect\.py' '.*\.bak'"
 

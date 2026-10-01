@@ -41,6 +41,10 @@ if grep -q "maschine rs.*Pads MIDI" /zynthian/zynthian-ui/zynautoconnect/zynthia
 then ok "zynautoconnect patched"
 else bad "zynautoconnect NOT patched (run tools/patch-autoconnect-maschine.py)"
 fi
+if grep -q "MASCHINE DIN OUT" /zynthian/zynthian-ui/zynautoconnect/zynthian_autoconnect.py 2>/dev/null
+then ok "zynautoconnect sends MIDI to the DIN out"
+else bad "DIN out NOT patched (run tools/patch-autoconnect-din-out.py)"
+fi
 
 echo "Services"
 for u in maschine-mk2 maschine-clock; do

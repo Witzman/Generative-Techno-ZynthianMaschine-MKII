@@ -150,6 +150,9 @@ done
 say "Patch zynautoconnect (idempotent)"
 backup "$AUTOCONNECT"
 run "python3 '$REPO/tools/patch-autoconnect-maschine.py' '$AUTOCONNECT'"
+# The second edit to the same file: every chain's MIDI also leaves by the
+# MK2's DIN OUT socket. No second .bak - the one taken above is the baseline.
+run "python3 '$REPO/tools/patch-autoconnect-din-out.py' '$AUTOCONNECT'"
 
 # --- 9. restart, daemon FIRST -------------------------------------------------
 say "Restart: daemon first, UI second"
