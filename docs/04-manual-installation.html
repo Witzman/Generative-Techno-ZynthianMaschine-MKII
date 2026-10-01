@@ -146,6 +146,10 @@ systemctl show -p After zynthian.service | tr ' ' '\n' | grep maschine
 <pre><code class="language-bash">python3 tools/patch-autoconnect-maschine.py
 grep -c "maschine rs.*Pads MIDI" /zynthian/zynthian-ui/zynautoconnect/zynthian_autoconnect.py</code></pre>
 <p>It ships as a patcher rather than a copy, so it edits <em>your</em> file. It is idempotent. <strong>Re-run it after every Zynthian system update</strong> — an update replaces <code>zynthian_autoconnect.py</code> and takes the binding with it.</p>
+<p><strong>A second patcher sends the notes out of the MIDI OUT socket.</strong> Zynthian's own per-chain MIDI outputs carry nothing from a synth chain, so without this the socket on the back stays silent. It connects every chain's router output to the Maschine's OUT port, so the generator's notes and the notes you play leave together, on channels 1–8. It is found by name, so it survives a replug, and it is idempotent like the first.</p>
+<pre><code class="language-bash">python3 tools/patch-autoconnect-din-out.py
+grep -c "MASCHINE DIN OUT" /zynthian/zynthian-ui/zynautoconnect/zynthian_autoconnect.py</code></pre>
+<p><strong>Never cable OUT to IN.</strong> IN is routed into every chain, so the notes loop back out and storm. Re-run this one after a Zynthian update too.</p>
 <h3 id="step-8--copy-the-three-driver-files">Step 8 — Copy the three driver files</h3>
 <p><strong>What.</strong> Drops the control-surface driver into Zynthian's <code>ctrldev</code> directory. <strong>Why.</strong> Two traps. These are untracked drop-ins in a checkout that tracks upstream, so <strong>never use git in <code>/zynthian/zynthian-ui</code></strong> — a <code>git reset --hard</code> deletes them and the running instrument with them. And every module there needs a <code>dev_ids</code> attribute; without it the whole UI crash-loops every 14 seconds. <strong>How to confirm.</strong> All three files are present in the target directory.</p>
 <pre><code class="language-bash">install -m 0644 ctrldev/zynthian_ctrldev_maschine_mk2.py \
