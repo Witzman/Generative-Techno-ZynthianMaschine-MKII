@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Alte Hardware, neues Instrument — Maschine MK2 × Zynthian</title>
+  <link rel="stylesheet" href="presentation.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Foliennavigation">
+      <a class="brand" href="../index.html"><span class="brand-mark">◉</span><span><b>MASCHINE</b><small>× ZYNTHIAN</small></span></a>
+      <div class="sidebar-meta"><span>VORTRAG</span><span>30 MIN</span></div>
+      <nav id="slide-nav"></nav>
+      <div class="sidebar-help">← → navigieren<br>O Übersicht · F Vollbild</div>
+    </aside>
+    <main class="stage">
+      <div class="stage-bar"><span id="section-label">AUSGANGSLAGE</span><span><span id="counter">01</span> / 24</span></div>
+      <section id="deck" aria-live="polite"></section>
+      <div class="progress"><i id="progress-bar"></i></div>
+      <div class="controls"><button id="prev" aria-label="Vorherige Folie">←</button><button id="next" aria-label="Nächste Folie">→</button><button id="overview" aria-label="Übersicht">☷</button></div>
+    </main>
+  </div>
+  <script>
+    const asset = name => `assets/${name}`;
+    const slides = [
+      {section:'AUSGANGSLAGE', kicker:'CHAOSTREFF · 10. OKTOBER 2026', title:'Alte Hardware.<br><em>Neues Instrument.</em>', lead:'Wie eine Maschine MK2 nach dem Ende des Herstellersupports weiterlebt — mit Linux, Reverse Engineering und etwas Eurorack-Denken.', hero:'hero'},
+      {section:'AUSGANGSLAGE', kicker:'DAS GERÄT', title:'Ein Controller, der<br>mehr sein wollte.', image:'Frame-00246.png', body:'16 Pads · 8 Encoder · 2 Displays · 2×8 Gruppen-LEDs', caption:'Native Instruments Maschine MK2 — gebaut für Software, heute offen für neue Ideen.'},
+      {section:'AUSGANGSLAGE', kicker:'DIE AUSGANGSFRAGE', title:'Wegwerfen<br>oder weiterleben?', quote:'Kein Herstellersupport mehr.\nAber ein großartiges Gerät.', body:'Die Hardware ist da. Die USB-Verbindung funktioniert. Nur die ursprüngliche Welt dahinter ist verschwunden.', dark:true},
+      {section:'ZYNTHIAN', kicker:'EINE OFFENE PLATTFORM', title:'Zynthian ist Linux<br>als Synthesizer.', body:'Raspberry Pi 4 · ZynthianOS · zynseq · Python', bullets:['offene Software statt Black Box','Snapshots speichern Instrument und Pattern','Controller-Treiber sind erweiterbare Python-Module'], visual:'zynthian'},
+      {section:'ZYNTHIAN', kicker:'WARUM DAS PASST', title:'Die richtigen<br>Steckstellen sind offen.', body:'Die Maschine muss keine Zynthian-Oberfläche imitieren. Sie darf eine eigene Oberfläche für denselben Sequencer werden.', chips:['Python-Treiber','zynseq','Snapshots','Linux'], visual:'fit'},
+      {section:'DER ALTE TREIBER', kicker:'FUNDSTÜCK', title:'Im Netz gab es<br>schon einen Versuch.', body:'Ein alter MK2-Treiber für Zynthian: genug, um Hoffnung zu machen — nicht genug, um das Gerät zu spielen.', visual:'search'},
+      {section:'DER ALTE TREIBER', kicker:'BESTANDSAUFNAHME', title:'Ein paar Pads gingen.<br>Der Rest blieb stumm.', columns:[['GING','Pads','Noten'],['FEHLTE','Buttons','Encoder','Displays','LEDs']], visual:'status'},
+      {section:'DER ALTE TREIBER', kicker:'DIE URSACHE', title:'Das HID-Protokoll<br>war nur halb erzählt.', body:'USB HID liefert Rohdaten. Der alte Treiber kannte einen kleinen Ausschnitt davon. Der Rest des Geräts war kein Defekt — nur unbeschriebene Sprache.', code:'HID → ??? → Zynthian', visual:'hid'},
+      {section:'DIE ZWISCHENSCHICHT', kicker:'ARCHITEKTUR', title:'Eine Übersetzungsschicht<br>zwischen zwei Welten.', diagram:'architecture'},
+      {section:'DIE ZWISCHENSCHICHT', kicker:'DER DAEMON', title:'Erst einmal: Bytes<br>in Ereignisse verwandeln.', body:'Der Rust-Daemon liest USB HID, trennt Eingaben und Ausgaben und reicht stabile Events weiter.', code:'USB report  →  button / encoder / pad  →  event', visual:'daemon'},
+      {section:'DIE ZWISCHENSCHICHT', kicker:'REVERSE ENGINEERING', title:'Display-Protokolle<br>geben ihre Geheimnisse preis.', image:'9UyT8l2.jpeg', body:'Nicht dokumentiert. Nicht magisch. Ein Signal verändern, ein Byte suchen, eine Hypothese testen.', caption:'Das Display als Messinstrument: Parameter werden sichtbar, bevor der Code sie versteht.'},
+      {section:'DIE ZWISCHENSCHICHT', kicker:'REVERSE ENGINEERING', title:'LEDs: eine nach<br>der anderen.', image:'bj1JJTl.jpeg', body:'LED-Position, Farbe und Helligkeit aus dem Datenstrom isolieren. Dann den nächsten Schritt suchen.', caption:'Die Gruppen-LEDs werden zu acht sichtbaren Kanälen.'},
+      {section:'DIE ZWISCHENSCHICHT', kicker:'IN DEN SEQUENCER', title:'Der Treiber schreibt<br>in zynseq.', body:'Patterns liegen in Snapshots. Der Touchscreen spiegelt die Pads. Die Maschine wird zur physischen Oberfläche eines offenen Sequencers.', diagram:'inject'},
+      {section:'DIE ZWISCHENSCHICHT', kicker:'ZWISCHENSTAND', title:'Jetzt ist der Controller<br>vollständig nutzbar.', body:'Buttons. Encoder. Displays. LEDs. Pads. Alles spricht mit Zynthian.', quote:'Aber ein Controller<br>ist noch kein Instrument.', dark:true},
+      {section:'VOM CONTROLLER ZUM INSTRUMENT', kicker:'DIE IDEE', title:'Nicht den Beat zeichnen.<br>Ein Muster erzeugen.', body:'Die Oberfläche soll nicht nur abspielen, was vorher programmiert wurde. Sie soll musikalische Entscheidungen anbieten.', visual:'spark'},
+      {section:'VOM CONTROLLER ZUM INSTRUMENT', kicker:'EURORACK-KONZEPTE', title:'Aus dem Modularbereich<br>geborgt — und übersetzt.', chips:['Euklidische Rhythmen','Turing-Machine','LFO','Wahrscheinlichkeit'], visual:'modular'},
+      {section:'VOM CONTROLLER ZUM INSTRUMENT', kicker:'FÜNF DRUM-KANÄLE', title:'Euklid verteilt<br>die Schläge.', body:'Hits · Rotation · Division · Länge. Dazu Zufall, Swing und Ratchets — pro Kanal.', diagram:'euclid'},
+      {section:'VOM CONTROLLER ZUM INSTRUMENT', kicker:'DREI STIMMEN', title:'Die Turing-Machine<br>hält Bewegung im Loop.', body:'Eine Zufallsfolge mit einstellbarer Veränderung: vertraut genug zum Wiedererkennen, offen genug zum Weiterlaufen.', diagram:'turing'},
+      {section:'VOM CONTROLLER ZUM INSTRUMENT', kicker:'DIE ENTSCHEIDUNG', title:'Der Generator besitzt<br>das Pattern.', body:'Acht Kanäle sind immer aktiv. Nichts wird während des Spielens erzeugt oder abgebaut. Live-Pad und Overdub liegen obendrauf.', visual:'ownership'},
+      {section:'VOM CONTROLLER ZUM INSTRUMENT', kicker:'DIE OBERFLÄCHE', title:'Vier Modi. Ein<br>ALL-Lens.', chips:['CONTROL','STEP','AUTO','VOLUME'], image:'vUadLn5.jpeg', caption:'Jeder Modus zeigt denselben musikalischen Zustand aus einer anderen Nähe.'},
+      {section:'DEMO & FAZIT', kicker:'JETZT LIVE', title:'Die Maschine spielt<br>nicht aus der Aufzeichnung.', image:'Frame-00246.png', body:'Live-Demo am Rig. Wenn etwas ausfällt, bleibt die Erklärung: Der Generator besitzt das Pattern.', badge:'LIVE DEMO'},
+      {section:'DEMO & FAZIT', kicker:'WAS HÄNGT', title:'Alte Hardware<br>ist selten tot.', bullets:['Offene Plattform schlägt Neukauf, wenn die Schnittstellen offen sind.','Reverse Engineering ist Geduld, nicht Magie.','Ein gutes Protokoll ist nur der Anfang — eine gute Oberfläche macht ein Instrument.'], visual:'lessons'},
+      {section:'DEMO & FAZIT', kicker:'OFFEN FÜR MITMACHEN', title:'Das Projekt ist<br>noch nicht fertig.', links:['github.com/Witzman/ZynthianMaschine-Workshop','witzman.de/dub/'], body:'Treiber verbessern · Hardware testen · Snapshots bauen · Ideen einbringen', visual:'open'},
+      {section:'DEMO & FAZIT', kicker:'DANKE', title:'Fragen?', lead:'Was würdet ihr aus einem Controller machen, dessen Hersteller längst aufgehört hat?', image:'bj1JJTl.jpeg', caption:'Maschine MK2 × Zynthian · Linux · Reverse Engineering · generative Musik'}
+    ];
+    const nav = document.querySelector('#slide-nav'), deck = document.querySelector('#deck');
+    const groups = [...new Set(slides.map(s=>s.section))];
+    groups.forEach(g => { const label=document.createElement('div'); label.className='nav-group'; label.innerHTML=`<span>${g}</span>`; nav.append(label); slides.forEach((s,i)=>{if(s.section===g){const b=document.createElement('button');b.innerHTML=`<i>${String(i+1).padStart(2,'0')}</i>${s.kicker}`;b.onclick=()=>go(i);b.dataset.index=i;nav.append(b)}})});
+    function esc(text){return text.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+    function visual(type){
+      const map={
+        zynthian:'<div class="stack"><b>Raspberry Pi 4</b><span>Linux / ZynthianOS</span><strong>zynseq</strong><small>offene Synth-Plattform</small></div>',
+        fit:'<div class="port-grid"><b>MASCHINE</b><i>USB HID</i><b>ZYNTHIAN</b><i>Python · zynseq · Snapshots</i></div>',
+        search:'<div class="search-card"><span>▣</span> MK2 driver<br><small>last update: unknown</small><hr><em>some pads detected</em></div>',
+        status:'<div class="status-grid"><b>PAD</b><b class="bad">BUTTON</b><b class="bad">ENCODER</b><b class="bad">DISPLAY</b></div>',
+        hid:'<div class="hid"><span>1B 00 7F 2A</span><span>1B 00 7F 2A</span><span>1B 00 81 2A</span><strong>?</strong></div>',
+        daemon:'<div class="pulse"><i></i><i></i><i></i><i></i><span>EVENT BUS</span></div>',
+        spark:'<div class="spark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>',
+        modular:'<div class="modules"><b>EUCLID</b><b>TURING</b><b>LFO</b></div>',
+        ownership:'<div class="ownership"><strong>GENERATOR</strong><span>⇣ owns ⇣</span><b>PATTERN</b><small>live pad + overdub overlay</small></div>',
+        lessons:'<div class="lesson-lines"><span>hardware</span><span>protocol</span><span>instrument</span></div>',
+        open:'<div class="open-mark">↗</div>'}; return map[type]||'';
+    }
+    function diagram(type){ if(type==='architecture') return '<div class="diagram"><b>MASCHINE MK2</b><i>USB HID</i><b>DAEMON <small>Rust</small></b><i>events</i><b>TREIBER <small>Python</small></b><i>notes + state</i><b>ZYNSEQ / ZYNTHIAN</b></div>'; if(type==='inject') return '<div class="inject"><span>PAD</span><b>→</b><span>DRIVER</span><b>→</b><span>ZYNSEQ</span><b>→</b><span>SNAPSHOT</span></div>'; if(type==='euclid') return '<div class="steps">● · ● · ● ● · · ● · ● · ● · · ·</div>'; return '<div class="steps">● ● · ● · ● · · ● ● · · ● · ● ·</div>'; }
+    function html(s,i){let content=''; if(s.image) content+=`<figure class="photo"><img src="${asset(s.image)}" alt="${esc(s.title.replace(/<[^>]+>/g,''))}">${s.caption?`<figcaption>${s.caption}</figcaption>`:''}</figure>`; if(s.visual) content+=`<div class="visual">${visual(s.visual)}</div>`; if(s.diagram) content+=diagram(s.diagram); return `<article class="slide ${s.hero?'hero':''} ${s.dark?'dark':''}" data-index="${i}"><div class="slide-inner"><div class="slide-copy"><div class="kicker">${s.kicker}</div><h1>${s.title}</h1>${s.lead?`<p class="lead">${s.lead}</p>`:''}${s.body?`<p>${s.body}</p>`:''}${s.quote?`<blockquote>${esc(s.quote).replace(/\n/g,'<br>')}</blockquote>`:''}${s.bullets?`<ul>${s.bullets.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}${s.chips?`<div class="chips">${s.chips.map(x=>`<span>${x}</span>`).join('')}</div>`:''}${s.columns?`<div class="columns">${s.columns.map((c,j)=>`<div class="column ${j?'bad':''}"><b>${c[0]}</b>${c.slice(1).map(x=>`<span>${x}</span>`).join('')}</div>`).join('')}</div>`:''}${s.code?`<code class="code-line">${s.code}</code>`:''}${s.links?`<div class="links">${s.links.map(x=>`<a href="https://${x}" target="_blank">${x}</a>`).join('')}</div>`:''}${s.badge?`<span class="badge">${s.badge}</span>`:''}</div>${content}</div><div class="slide-number">${String(i+1).padStart(2,'0')}</div></article>`}
+    let current=0; deck.innerHTML=slides.map(html).join(''); const els=[...document.querySelectorAll('.slide')];
+    function go(i){current=Math.max(0,Math.min(slides.length-1,i)); els.forEach((e,n)=>e.classList.toggle('active',n===current)); document.querySelectorAll('#slide-nav button').forEach(b=>b.classList.toggle('active',+b.dataset.index===current)); document.querySelector('#counter').textContent=String(current+1).padStart(2,'0'); document.querySelector('#section-label').textContent=slides[current].section; document.querySelector('#progress-bar').style.width=`${((current+1)/slides.length)*100}%`; history.replaceState(null,'',`#${current+1}`)}
+    document.querySelector('#prev').onclick=()=>go(current-1); document.querySelector('#next').onclick=()=>go(current+1); document.querySelector('#overview').onclick=()=>document.body.classList.toggle('overview');
+    document.addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(current+1)} if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(current-1)} if(e.key.toLowerCase()==='o')document.body.classList.toggle('overview'); if(e.key.toLowerCase()==='f')document.documentElement.requestFullscreen?.()});
+    go(Math.max(0,Math.min(slides.length-1,(parseInt(location.hash.slice(1),10)||1)-1)));
+  </script>
+</body>
+</html>
