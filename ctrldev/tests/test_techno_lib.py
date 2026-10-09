@@ -1143,9 +1143,12 @@ class TestHandback(unittest.TestCase):
         self.assertTrue(tl.hands_back("voice", "length"))
         self.assertFalse(tl.hands_back("drum", "length"))
 
-    def test_random_hands_back_only_when_it_moves_off_lock(self):
-        self.assertTrue(tl.hands_back("voice", "random", 40))
-        self.assertFalse(tl.hands_back("voice", "random", 0))
+    def test_melody_and_rhythm_never_hand_a_voice_back(self):
+        # Item 46: on a take they edit in place. They took the pattern back
+        # until 2026-10-09, which destroyed every authored chord.
+        for verb in ("random", "rhythm"):
+            for value in (0, 40, 100):
+                self.assertFalse(tl.hands_back("voice", verb, value))
 
     def test_random_does_nothing_on_a_drum(self):
         self.assertFalse(tl.hands_back("drum", "random", 40))
@@ -4019,12 +4022,12 @@ class TestGeneratorSurface(unittest.TestCase):
         self.assertIn("rhythm", tl.VERB_COLS)
         self.assertNotIn("density", tl.VERB_COLS)
 
-    def test_rhythm_hands_the_pattern_back_only_when_moved_off_lock(self):
-        # Same rule RANDOM already has: turning it DOWN to LOCK must not be
-        # destructive, or the one gesture that says "stop changing my pattern"
-        # would destroy it.
-        self.assertTrue(tl.hands_back("voice", "rhythm", 40))
-        self.assertFalse(tl.hands_back("voice", "rhythm", 0))
+    def test_a_drums_rhythm_still_hands_back_only_when_moved_off_lock(self):
+        # Turning it DOWN to LOCK must not be destructive, or the one gesture
+        # that says "stop changing my pattern" would destroy it. A voice's
+        # RHYTHM no longer hands back at all (item 46).
+        self.assertTrue(tl.hands_back("drum", "rhythm", 40))
+        self.assertFalse(tl.hands_back("drum", "rhythm", 0))
 
     def test_rhythm_is_not_modulatable(self):
         # It rewrites the whole pattern through _apply_generator, which is
@@ -9897,3 +9900,93 @@ class TheHumaniseScalesAreDerivedFromAnEar(unittest.TestCase):
         self.assertEqual(tl.human_surface(9.9), 100)
         self.assertEqual(tl.human_surface(-1.0), 0)
         self.assertEqual(tl.humanvelo_surface(500.0), 100)
+
+
+class TestTakePlan(unittest.TestCase):
+    """Item 46. MELODY and RHYTHM on a take are in-place edits, planned here."""
+
+    ROOT, SCALE = 0, 0
+
+    def plan(self, live, held=None, shifts=None, melody=0, rhythm=0, rng=None,
+             steps=16):
+        return tl.take_plan(live, held or {}, shifts or {}, melody, rhythm,
+                            self.ROOT, self.SCALE, steps,
+                            rng or random.Random(3).random)
+
+    def triad(self):
+        # C2 major-ish stack in the scale the tests use, long note on step 0.
+        base = tl.BASE_NOTE + self.ROOT
+        scale = tl.SCALES[self.SCALE][1]
+        return {base + scale[0]: 4.0, base + scale[2]: 4.0, base + scale[4]: 4.0}
+
+    def test_zero_and_zero_is_the_identity(self):
+        self.assertEqual(self.plan({0: self.triad()}), [])
+
+    def test_the_inputs_are_not_mutated(self):
+        live = {0: self.triad(), 8: self.triad()}
+        before = {s: dict(e) for s, e in live.items()}
+        self.plan(live, melody=100, rhythm=100)
+        self.assertEqual(live, before)
+
+    def test_a_melody_move_keeps_every_tone_and_every_duration(self):
+        live = {0: self.triad()}
+        ops = self.plan(live, melody=100, rng=lambda: 0.0)
+        self.assertEqual(len(ops), 1)
+        kind, step, pairs, offset = ops[0]
+        self.assertEqual((kind, step), ("move", 0))
+        self.assertEqual([o for o, _ in pairs], sorted(live[0]))
+        self.assertEqual(len(pairs), 3)
+        self.assertTrue(all(new != old for old, new in pairs))
+        self.assertEqual(offset, 1)
+
+    def test_a_chord_moves_rigidly_in_the_scale(self):
+        # Every tone moves the same direction by one scale step, so a tone
+        # that was in the scale is still in it.
+        scale = {(tl.BASE_NOTE + self.ROOT + i) % 12
+                 for i in tl.SCALES[self.SCALE][1]}
+        ops = self.plan({0: self.triad()}, melody=100, rng=lambda: 0.0)
+        for _old, new in ops[0][2]:
+            self.assertIn(new % 12, scale)
+
+    def test_the_walk_is_bounded_and_bounces(self):
+        shifts = {0: tl.TAKE_SHIFT_MAX}
+        ops = self.plan({0: self.triad()}, shifts=shifts, melody=100,
+                        rng=lambda: 0.0)         # asks for +1
+        self.assertEqual(ops[0][3], tl.TAKE_SHIFT_MAX - 1)
+
+    def test_a_move_that_would_drop_a_tone_is_refused_whole(self):
+        top = {127: 1.0, 126: 1.0}
+        self.assertEqual(self.plan({0: top}, melody=100, rng=lambda: 0.0), [])
+
+    def test_a_move_onto_a_pitch_still_sounding_is_refused(self):
+        # zynseq deletes the earlier note, so the plan must not make it.
+        base = tl.BASE_NOTE + self.ROOT
+        nxt = tl.scale_step(base, 1, self.ROOT, self.SCALE)
+        live = {0: {base: 4.0}, 2: {nxt: 1.0}}
+        ops = self.plan(live, melody=100, rng=lambda: 0.0)
+        self.assertFalse([o for o in ops if o[0] == "move" and o[1] == 0])
+
+    def test_rhythm_mutes_a_step_but_never_the_last_one(self):
+        live = {0: {40: 1.0}, 4: {42: 1.0}}
+        ops = self.plan(live, rhythm=100, rng=lambda: 0.0)
+        self.assertEqual([o[0] for o in ops], ["mute"])
+        self.assertEqual(self.plan({0: {40: 1.0}}, rhythm=100,
+                                   rng=lambda: 0.0), [])
+
+    def test_rhythm_restores_a_muted_step_clamped_to_the_gap(self):
+        ops = self.plan({8: {40: 1.0}}, held={0: {42: 12.0}}, rhythm=100,
+                        rng=lambda: 0.0)
+        self.assertEqual([o for o in ops if o[0] == "restore"],
+                         [("restore", 0, 8.0)])
+
+    def test_rhythm_never_invents_a_step(self):
+        live = {0: {40: 1.0}, 4: {42: 1.0}}
+        for seed in range(40):
+            ops = self.plan(live, rhythm=60, rng=random.Random(seed).random)
+            touched = {o[1] for o in ops}
+            self.assertLessEqual(touched, {0, 4})
+
+    def test_a_restore_that_would_collide_waits(self):
+        live = {0: {40: 5.0}}                  # still covers step 2
+        ops = self.plan(live, held={2: {40: 1.0}}, rhythm=100, rng=lambda: 0.0)
+        self.assertEqual([o for o in ops if o[0] == "restore"], [])

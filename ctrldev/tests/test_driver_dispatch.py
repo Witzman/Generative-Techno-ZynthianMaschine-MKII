@@ -22,6 +22,7 @@ of a number is a test that will one day disagree with the instrument and be
 believed over it.
 """
 
+import json
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -2701,3 +2702,110 @@ class ModEraseGroupClearsOneChannel(DispatchCase):
         self.d._note_base_due = False
         self.chord(self.CH)
         self.assertTrue(self.d._note_base_due)
+
+
+class ATakeIsEditedInPlace(DispatchCase):
+    """Item 46. MELODY and RHYTHM on a player-owned voice move and mute the
+    events that are there. They used to hand the pattern back, which rebuilt
+    it as one note per step and destroyed every authored chord."""
+
+    CH = 5
+
+    def setUp(self):
+        super().setUp()
+        self.tl = self.mod.tlib
+        self.d.owner[self.CH] = "player"
+        self.libseq = self.d.libseq
+        base = self.tl.BASE_NOTE + self.d.globals["root"]
+        scale = self.tl.SCALES[self.d.globals["scale"]][1]
+        self.chord = (base + scale[0], base + scale[2], base + scale[4])
+        self.d._select_pattern(self.CH)
+        self.libseq.clear()
+        for note in self.chord:
+            self.libseq.addNote(0, note, 90, 4.0, 0.0)
+        self.libseq.addNote(8, self.chord[0], 80, 2.0, 0.0)
+        self.libseq.calls.clear()
+
+    def run_wrap(self, melody=0, rhythm=0, roll=0.0):
+        self.d.state[self.CH]["random"] = melody
+        self.d.state[self.CH]["rhythm"] = rhythm
+        real = self.tl.take_plan
+        with patch.object(self.tl, "take_plan",
+                          side_effect=lambda *a, **k: real(*a, rng=lambda: roll)):
+            self.d._rewrite_voice(self.CH)
+
+    def sounding(self, step):
+        self.d._select_pattern(self.CH)
+        return sorted(n for n, _ in self.libseq.notes.get(step, []))
+
+    def test_lock_writes_nothing(self):
+        self.run_wrap()
+        self.assertEqual(self.libseq.named("clear"), [])
+        self.assertEqual(self.libseq.named("addNote"), [])
+        self.assertEqual(self.libseq.named("removeNote"), [])
+
+    def test_melody_moves_the_chord_and_keeps_its_length_and_velocity(self):
+        self.run_wrap(melody=100)
+        self.assertEqual(self.libseq.named("clear"), [])
+        moved = self.sounding(0)
+        self.assertEqual(len(moved), 3)
+        self.assertNotEqual(moved, sorted(self.chord))
+        self.d._select_pattern(self.CH)
+        for note in moved:
+            self.assertEqual(self.libseq.getNoteDuration(0, note), 4.0)
+            self.assertEqual(self.libseq.getNoteVelocity(0, note), 90)
+
+    def test_the_take_stays_the_players(self):
+        self.run_wrap(melody=100, rhythm=100)
+        self.assertEqual(self.d.owner[self.CH], "player")
+
+    def test_rhythm_mutes_a_step_and_a_later_wrap_puts_it_back_whole(self):
+        self.run_wrap(rhythm=100)
+        self.assertEqual(self.sounding(0), [])
+        self.assertEqual(sorted(self.d.state[self.CH]["take_held"][0]),
+                         sorted(self.chord))
+        self.run_wrap(rhythm=100)
+        self.assertEqual(self.sounding(0), sorted(self.chord))
+        self.d._select_pattern(self.CH)
+        self.assertEqual(self.libseq.getNoteDuration(0, self.chord[1]), 4.0)
+
+    def test_a_frozen_machine_leaves_the_take_alone(self):
+        self.d.frozen = True
+        self.run_wrap(melody=100, rhythm=100)
+        self.assertEqual(self.libseq.named("removeNote"), [])
+
+    def test_turning_the_knob_no_longer_hands_the_take_back(self):
+        with patch.object(self.d, "_handback") as handback:
+            self.d.apply(self.CH, "random", 60)
+            self.d.apply(self.CH, "rhythm", 60)
+        handback.assert_not_called()
+        self.assertEqual(self.sounding(0), sorted(self.chord))
+
+    def test_a_handback_forgets_the_take(self):
+        self.run_wrap(melody=100)
+        self.assertTrue(self.d.state[self.CH]["take_shift"])
+        self.d._handback(self.CH)
+        self.assertNotIn("take_shift", self.d.state[self.CH])
+        self.assertNotIn("take_held", self.d.state[self.CH])
+
+    def test_the_offsets_and_the_muted_steps_survive_a_snapshot(self):
+        # STORED, DRAWN, NEVER WRITTEN: the state is only worth having if a
+        # fresh driver reads it back.
+        self.run_wrap(melody=100, rhythm=100)
+        st = self.d.state[self.CH]
+        shifts, held = dict(st["take_shift"]), dict(st["take_held"])
+        self.assertTrue(shifts or held)
+        saved = json.loads(json.dumps(self.d.get_state()))
+        fresh = rig_stub.make_driver()
+        fresh.set_state(saved)
+        self.assertEqual(fresh.state[self.CH]["take_shift"], shifts)
+        self.assertEqual(fresh.state[self.CH]["take_held"], held)
+
+    def test_a_hand_edited_snapshot_cannot_poison_the_take(self):
+        saved = json.loads(json.dumps(self.d.get_state()))
+        saved["voices"][str(self.CH)]["take_held"] = {"x": 3, "2": [["a"]]}
+        saved["voices"][str(self.CH)]["take_shift"] = {"1": "wide"}
+        fresh = rig_stub.make_driver()
+        fresh.set_state(saved)
+        self.assertEqual(fresh.state[self.CH]["take_held"], {})
+        self.assertEqual(fresh.state[self.CH]["take_shift"], {})
