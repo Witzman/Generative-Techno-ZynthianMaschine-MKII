@@ -2417,7 +2417,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                                         roll=self._move_roll()):
             return
         held = st.setdefault("take_held", {})
-        shifts = st.setdefault("take_shift", {})
+        shift = int(st.get("take_shift", 0) or 0)
         with self.lock:
             if self.writer_token[channel] is not None:
                 return
@@ -2434,31 +2434,43 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                          for s, ev in held.items() if s not in live}
             for s in [s for s in held if s in live]:
                 del held[s]
-            ops = tlib.take_plan(live, held_view, shifts, melody, rhythm,
+            ops = tlib.take_plan(live, held_view, shift, melody, rhythm,
                                  self.globals["root"], self.globals["scale"],
                                  steps)
+            # The events as they stand while the ops are applied in order: a
+            # restore puts a step back before a shift moves it.
+            cur = {s: dict(ev) for s, ev in events.items() if ev}
             for op in ops:
-                step = op[1]
                 if op[0] == "mute":
-                    held[step] = events[step]
-                    for note in events[step]:
+                    step = op[1]
+                    held[step] = cur.pop(step)
+                    for note in held[step]:
                         self.libseq.removeNote(step, note)
                 elif op[0] == "restore":
-                    cap = op[2]
+                    step, cap = op[1], op[2]
+                    cur[step] = {}
                     for note, event in held.pop(step).items():
-                        self._put_event(step, note, event,
-                                        min(event[1], cap))
-                    if any(held_view[step][n] > cap for n in held_view[step]):
-                        logging.info(f"Maschine take {channel}: step {step} "
-                                     f"restored shorter, clamped to {cap}")
-                else:
-                    _op, _step, pairs, offset = op
-                    old = events[step]
-                    for note, _new in pairs:
-                        self.libseq.removeNote(step, note)
-                    for note, new in pairs:
-                        self._put_event(step, new, old[note])
-                    shifts[step] = offset
+                        shortened = min(event[1], cap)
+                        self._put_event(step, note, event, shortened)
+                        cur[step][note] = (event[0], shortened) + event[2:]
+                        if shortened < event[1]:
+                            logging.info(f"Maschine take {channel}: step "
+                                         f"{step} restored shorter, clamped "
+                                         f"to {cap}")
+                elif op[0] == "shift":
+                    _op, offset, live_moves, held_moves = op
+                    for step, pairs in live_moves.items():
+                        for note, _new in pairs:
+                            self.libseq.removeNote(step, note)
+                        moved = {}
+                        for note, new in pairs:
+                            self._put_event(step, new, cur[step][note])
+                            moved[new] = cur[step][note]
+                        cur[step] = moved
+                    for step, pairs in held_moves.items():
+                        held[step] = {new: held[step][old]
+                                      for old, new in pairs}
+                    st["take_shift"] = offset
             if ops:
                 self.libseq.updateSequenceInfo()
         if ops:
@@ -4047,8 +4059,7 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # The pattern in the .zss holds the SHIFTED and the
                     # REMAINING notes, so without these the bound has no origin
                     # and a muted step is gone for good. JSON keys are strings.
-                    "take_shift": {str(k): int(v) for k, v in
-                                   self.state[i].get("take_shift", {}).items()},
+                    "take_shift": int(self.state[i].get("take_shift", 0) or 0),
                     "take_held": {
                         str(k): [[n, *e] for n, e in ev.items()]
                         for k, ev in self.state[i].get("take_held", {}).items()
@@ -4401,18 +4412,18 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     st[field] = saved[field]
             # A hand-editable file indexes a pattern through these, so each
             # entry is validated rather than trusted.
-            st["take_shift"], st["take_held"] = {}, {}
+            st["take_shift"], st["take_held"] = 0, {}
             try:
-                for key, value in (saved.get("take_shift") or {}).items():
-                    st["take_shift"][int(key)] = max(
-                        -tlib.TAKE_SHIFT_MAX, min(tlib.TAKE_SHIFT_MAX, int(value)))
+                st["take_shift"] = max(
+                    -tlib.TAKE_SHIFT_MAX, min(tlib.TAKE_SHIFT_MAX,
+                                              int(saved.get("take_shift") or 0)))
                 for key, events in (saved.get("take_held") or {}).items():
                     st["take_held"][int(key)] = {
                         int(e[0]): (int(e[1]), float(e[2]), int(e[3]),
                                     int(e[4]), int(e[5]), float(e[6]))
                         for e in events if 0 <= int(e[0]) <= 127}
             except (TypeError, ValueError, IndexError, AttributeError):
-                st["take_shift"], st["take_held"] = {}, {}
+                st["take_shift"], st["take_held"] = 0, {}
             if "rotate" in saved:
                 # INTO THE LEGACY ARRAY. `rotate` was in the list above until
                 # 2026-08-31, which put it in self.state where param_get never

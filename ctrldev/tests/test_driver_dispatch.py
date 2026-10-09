@@ -2755,6 +2755,14 @@ class ATakeIsEditedInPlace(DispatchCase):
             self.assertEqual(self.libseq.getNoteDuration(0, note), 4.0)
             self.assertEqual(self.libseq.getNoteVelocity(0, note), 90)
 
+    def test_melody_moves_every_step_by_the_same_amount(self):
+        # Item 47: the progression keeps its shape. Step 8 holds the chord's
+        # root only; after a move it has moved exactly as far as the chord.
+        self.run_wrap(melody=100)
+        step0, step8 = self.sounding(0), self.sounding(8)
+        self.assertEqual(step8[0], step0[0])
+        self.assertEqual(self.d.state[self.CH]["take_shift"], 1)
+
     def test_the_take_stays_the_players(self):
         self.run_wrap(melody=100, rhythm=100)
         self.assertEqual(self.d.owner[self.CH], "player")
@@ -2788,24 +2796,35 @@ class ATakeIsEditedInPlace(DispatchCase):
         self.assertNotIn("take_shift", self.d.state[self.CH])
         self.assertNotIn("take_held", self.d.state[self.CH])
 
-    def test_the_offsets_and_the_muted_steps_survive_a_snapshot(self):
+    def test_the_offset_and_the_muted_steps_survive_a_snapshot(self):
         # STORED, DRAWN, NEVER WRITTEN: the state is only worth having if a
         # fresh driver reads it back.
         self.run_wrap(melody=100, rhythm=100)
         st = self.d.state[self.CH]
-        shifts, held = dict(st["take_shift"]), dict(st["take_held"])
-        self.assertTrue(shifts or held)
+        shift, held = st["take_shift"], dict(st["take_held"])
+        self.assertTrue(shift or held)
         saved = json.loads(json.dumps(self.d.get_state()))
         fresh = rig_stub.make_driver()
         fresh.set_state(saved)
-        self.assertEqual(fresh.state[self.CH]["take_shift"], shifts)
+        self.assertEqual(fresh.state[self.CH]["take_shift"], shift)
         self.assertEqual(fresh.state[self.CH]["take_held"], held)
+
+    def test_a_muted_step_comes_back_in_the_same_place_as_the_rest(self):
+        self.run_wrap(rhythm=100)                       # step 0 muted
+        self.assertEqual(self.sounding(0), [])
+        self.run_wrap(melody=100)                       # take moves, step 0 held
+        self.run_wrap(rhythm=100)                       # step 0 returns
+        got = self.sounding(0)
+        want = self.tl.take_shift_chord(sorted(self.chord), 1,
+                                        self.d.globals["root"],
+                                        self.d.globals["scale"])
+        self.assertEqual(got, sorted(want))
 
     def test_a_hand_edited_snapshot_cannot_poison_the_take(self):
         saved = json.loads(json.dumps(self.d.get_state()))
         saved["voices"][str(self.CH)]["take_held"] = {"x": 3, "2": [["a"]]}
-        saved["voices"][str(self.CH)]["take_shift"] = {"1": "wide"}
+        saved["voices"][str(self.CH)]["take_shift"] = "wide"
         fresh = rig_stub.make_driver()
         fresh.set_state(saved)
         self.assertEqual(fresh.state[self.CH]["take_held"], {})
-        self.assertEqual(fresh.state[self.CH]["take_shift"], {})
+        self.assertEqual(fresh.state[self.CH]["take_shift"], 0)

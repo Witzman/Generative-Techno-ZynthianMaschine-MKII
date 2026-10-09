@@ -2127,30 +2127,39 @@ class techno_lib:
         return False
 
     @staticmethod
-    def take_plan(live, held, shifts, melody, rhythm, root, scale_idx, steps,
+    def take_plan(live, held, shift, melody, rhythm, root, scale_idx, steps,
                   rng=random.random):
         """What MELODY and RHYTHM do to a TAKE: a list of in-place edits.
 
         A pure function so the rule can be tested with no stub. `live` is
         {step: {note: duration}} as read from the pattern, `held` the same for
-        steps RHYTHM has muted, `shifts` {step: scale-degree offset}. Both
-        dicts are COPIED - the caller applies the returned ops.
+        steps RHYTHM has muted, `shift` the channel's one scale-degree offset.
+        Inputs are COPIED - the caller applies the returned ops, in order.
 
-        Ops, in the order to apply them:
+        Ops:
             ("mute", step)                   remove the step, keep its event
             ("restore", step, cap)           put it back, duration at most cap
             ("forget", step)                 drop a held step the player has
                                              since tapped something onto
-            ("move", step, ((old, new), ...), offset)
+            ("shift", offset, live_moves, held_moves)
+                every step moves together; each *_moves is
+                {step: ((old, new), ...)}
 
         RHYTHM toggles a step with probability `rhythm`/100 and never invents
         one, never shortens one it did not have to, and never mutes the last
-        sounding step. MELODY moves a whole step one scale step with
-        probability `melody`/100, rigid, bounded by TAKE_SHIFT_MAX either way.
-        Both are the identity at 0, so LOCK stays exact."""
+        sounding step.
+
+        MELODY MOVES THE WHOLE TAKE OR NOTHING (item 47). With probability
+        `melody`/100 per wrap the channel moves one scale step, every live and
+        every muted step together, so a written progression keeps its shape and
+        only changes key. Per-step drift (item 46's first cut) let i, bVII, bVI
+        wander apart. Muted steps move too, or they would come back out of key.
+        All-or-nothing: one tone off the MIDI range, two merging, or a moved
+        note clashing with the same pitch still sounding elsewhere refuses that
+        direction, and the other is tried. Bounded by TAKE_SHIFT_MAX, bouncing.
+        Both knobs are the identity at 0, so LOCK stays exact."""
         live = {s: dict(e) for s, e in live.items()}
         held = {s: dict(e) for s, e in held.items()}
-        shifts = dict(shifts)
         ops = []
         if rhythm > 0:
             for step in sorted(set(live) | set(held)):
@@ -2161,7 +2170,7 @@ class techno_lib:
                         held[step] = live.pop(step)
                         ops.append(("mute", step))
                     continue
-                if step in live or not held.get(step):
+                if not held.get(step):
                     continue
                 later = [s for s in live if s > step]
                 cap = float((min(later) if later else steps) - step)
@@ -2172,31 +2181,50 @@ class techno_lib:
                 live[step] = events
                 del held[step]
                 ops.append(("restore", step, cap))
-        if melody > 0:
-            for step in sorted(live):
-                if rng() >= melody / 100.0:
+        if melody > 0 and rng() < melody / 100.0 and (live or held):
+            direction = 1 if rng() < 0.5 else -1
+            limit = techno_lib.TAKE_SHIFT_MAX
+            if abs(shift + direction) > limit:
+                direction = -direction
+            for attempt in (direction, -direction):
+                if abs(shift + attempt) > limit:
                     continue
-                direction = 1 if rng() < 0.5 else -1
-                offset = shifts.get(step, 0)
-                limit = techno_lib.TAKE_SHIFT_MAX
-                if abs(offset + direction) > limit:
-                    direction = -direction
-                    if abs(offset + direction) > limit:
-                        continue
-                old = sorted(live[step])
-                new = techno_lib.take_shift_chord(old, direction, root,
+                moved = techno_lib.take_shift_all(live, held, attempt, root,
                                                   scale_idx)
-                if new is None:
-                    continue
-                durs = [live[step][n] for n in old]
-                trial = {s: e for s, e in live.items() if s != step}
-                if any(techno_lib.take_clash(trial, step, n, d)
-                       for n, d in zip(new, durs)):
-                    continue
-                live[step] = dict(zip(new, durs))
-                shifts[step] = offset + direction
-                ops.append(("move", step, tuple(zip(old, new)), offset + direction))
+                if moved is not None:
+                    live_moves, held_moves = moved
+                    ops.append(("shift", shift + attempt, live_moves,
+                                held_moves))
+                    break
         return ops
+
+    @staticmethod
+    def take_shift_all(live, held, direction, root, scale_idx):
+        """(live_moves, held_moves) moving every step one scale step, or None.
+
+        None when any step cannot move whole (see take_shift_chord) or the
+        moved take would put the same pitch under itself at two steps."""
+        live_moves, held_moves, moved = {}, {}, {}
+        for step, events in live.items():
+            notes = sorted(events)
+            new = techno_lib.take_shift_chord(notes, direction, root,
+                                              scale_idx)
+            if new is None:
+                return None
+            live_moves[step] = tuple(zip(notes, new))
+            moved[step] = {n: events[o] for o, n in live_moves[step]}
+        for step, events in held.items():
+            notes = sorted(events)
+            new = techno_lib.take_shift_chord(notes, direction, root,
+                                              scale_idx)
+            if new is None:
+                return None
+            held_moves[step] = tuple(zip(notes, new))
+        for step, events in moved.items():
+            if any(techno_lib.take_clash(moved, step, n, d)
+                   for n, d in events.items()):
+                return None
+        return live_moves, held_moves
 
     @staticmethod
     def freeze_blocks(what, frozen, deep):
