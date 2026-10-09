@@ -2289,6 +2289,14 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         # meant the register still walked under a player-owned channel and only
         # the WRITE was refused. Asking here refuses the mutation too, so a
         # recorded take comes back to the line it was recorded over.
+        if self.owner.get(channel) == tlib.OWNER_PLAYER:
+            # A TAKE IS EDITED IN PLACE, NEVER REGENERATED - item 46. The
+            # guard below refuses a player-owned channel outright, which kept
+            # the take safe and made MELODY and RHYTHM useless on it; the
+            # encoder used to hand the pattern back instead, which destroyed
+            # every authored chord. Neither is what the knobs should do.
+            self._rewrite_take(channel)
+            return
         if not tlib.generator_may_write("melody", self.frozen, self.freeze_deep,
                                         self.owner.get(channel),
                                         move=self._move_of(channel),
@@ -2339,6 +2347,125 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
             # is the LOCK grammar this instrument already has.
             st["walk_seed"] = (int(st.get("walk_seed", 0)) + 1) & 0xFFFFFFFF
         self._write_voice_pattern(channel)
+
+    def _take_events(self, step):
+        """{note: (velocity, duration, chance, stutter count, stutter dur,
+        offset)} for one step of the SELECTED pattern. Caller holds the lock.
+
+        Everything remove-and-re-add would otherwise reset: the pattern has no
+        in-place pitch edit, so a moved note starts from nothing."""
+        out = {}
+        for note in self._notes_at(step):
+            chance = 100
+            if self.has_step_chance:
+                try:
+                    chance = int(self.libseq.getNotePlayChance(step, note))
+                except Exception:
+                    chance = 100
+            count = sdur = 0
+            if self.has_stutter:
+                try:
+                    count = int(self.libseq.getStutterCount(step, note))
+                    sdur = int(self.libseq.getStutterDur(step, note))
+                except Exception:
+                    count = sdur = 0
+            offset = 0.0
+            getter = getattr(self.libseq, "getNoteOffset", None)
+            if getter is not None:
+                try:
+                    offset = float(getter(step, note))
+                except Exception:
+                    offset = 0.0
+            out[note] = (int(self.libseq.getNoteVelocity(step, note)),
+                         self._note_duration(step, note), chance, count, sdur,
+                         offset)
+        return out
+
+    def _put_event(self, step, note, event, duration=None):
+        velocity, dur, chance, count, sdur, offset = event
+        self.libseq.addNote(step, note, velocity,
+                            dur if duration is None else duration, offset)
+        if self.has_step_chance and chance != 100:
+            self.libseq.setNotePlayChance(step, note, chance)
+        if count and self.has_stutter:
+            self.libseq.setStutterCount(step, note, count)
+            self.libseq.setStutterDur(step, note, sdur)
+
+    def _rewrite_take(self, channel):
+        """Called at a playhead wrap for a PLAYER-OWNED voice: MELODY and
+        RHYTHM edit the events already there.
+
+        MELODY moves a whole step one scale step, rigid, so a chord stays that
+        chord's shape in the scale. RHYTHM mutes a step and later puts it back
+        whole. Neither adds a step, changes a velocity, or touches a duration
+        (a restore may be clamped to the gap, and says so). Both at 0 return
+        before reading anything, so a take that is not being asked for
+        anything is bit for bit what it was.
+
+        Item 46. The plan is `tlib.take_plan`, which is pure and tested with
+        no stub; this is only the read and the apply, in ONE lock hold so no
+        other writer can interleave. A writer between its two holds owns the
+        pattern (writer_token) and this skips the wrap instead of racing it."""
+
+        st = self.state[channel]
+        melody = int(st.get("random", 0) or 0)
+        rhythm = int(st.get("rhythm", 0) or 0)
+        if melody <= 0 and rhythm <= 0:
+            return
+        if not tlib.generator_may_write("melody", self.frozen, self.freeze_deep,
+                                        None, move=self._move_of(channel),
+                                        roll=self._move_roll()):
+            return
+        held = st.setdefault("take_held", {})
+        shifts = st.setdefault("take_shift", {})
+        with self.lock:
+            if self.writer_token[channel] is not None:
+                return
+            self._select_pattern(channel)
+            steps = self.libseq.getSteps()
+            if steps <= 0:
+                return
+            events = {step: self._take_events(step) for step in range(steps)}
+            live = {s: {n: e[1] for n, e in ev.items()}
+                    for s, ev in events.items() if ev}
+            # A step the player has since tapped something onto cannot also be
+            # held: the restore would land on top of their note.
+            held_view = {s: {n: e[1] for n, e in ev.items()}
+                         for s, ev in held.items() if s not in live}
+            for s in [s for s in held if s in live]:
+                del held[s]
+            ops = tlib.take_plan(live, held_view, shifts, melody, rhythm,
+                                 self.globals["root"], self.globals["scale"],
+                                 steps)
+            for op in ops:
+                step = op[1]
+                if op[0] == "mute":
+                    held[step] = events[step]
+                    for note in events[step]:
+                        self.libseq.removeNote(step, note)
+                elif op[0] == "restore":
+                    cap = op[2]
+                    for note, event in held.pop(step).items():
+                        self._put_event(step, note, event,
+                                        min(event[1], cap))
+                    if any(held_view[step][n] > cap for n in held_view[step]):
+                        logging.info(f"Maschine take {channel}: step {step} "
+                                     f"restored shorter, clamped to {cap}")
+                else:
+                    _op, _step, pairs, offset = op
+                    old = events[step]
+                    for note, _new in pairs:
+                        self.libseq.removeNote(step, note)
+                    for note, new in pairs:
+                        self._put_event(step, new, old[note])
+                    shifts[step] = offset
+            if ops:
+                self.libseq.updateSequenceInfo()
+        if ops:
+            self._slog("take", channel=channel, ops=len(ops))
+            self._rebuild_notes(channel)
+            with self.lock:
+                self._render_pads()
 
     def _duplicate(self):
         """Give the last line back. Restores the previous register, forces
@@ -3916,6 +4043,16 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                     # than raising on the save path. 0 is OFF, which is what
                     # it was doing anyway.
                     "chord": self.state[i].get("chord", 0),
+                    # ITEM 46: a take's MELODY offsets and RHYTHM-muted steps.
+                    # The pattern in the .zss holds the SHIFTED and the
+                    # REMAINING notes, so without these the bound has no origin
+                    # and a muted step is gone for good. JSON keys are strings.
+                    "take_shift": {str(k): int(v) for k, v in
+                                   self.state[i].get("take_shift", {}).items()},
+                    "take_held": {
+                        str(k): [[n, *e] for n, e in ev.items()]
+                        for k, ev in self.state[i].get("take_held", {}).items()
+                    },
                 }
                 # SP4: keyed on how the channel BEHAVES, not on the table. A
                 # drum chain switched to voice holds register, gate and octave
@@ -4262,6 +4399,20 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
                           "phrase", "fill", "chord"):
                 if field in saved:
                     st[field] = saved[field]
+            # A hand-editable file indexes a pattern through these, so each
+            # entry is validated rather than trusted.
+            st["take_shift"], st["take_held"] = {}, {}
+            try:
+                for key, value in (saved.get("take_shift") or {}).items():
+                    st["take_shift"][int(key)] = max(
+                        -tlib.TAKE_SHIFT_MAX, min(tlib.TAKE_SHIFT_MAX, int(value)))
+                for key, events in (saved.get("take_held") or {}).items():
+                    st["take_held"][int(key)] = {
+                        int(e[0]): (int(e[1]), float(e[2]), int(e[3]),
+                                    int(e[4]), int(e[5]), float(e[6]))
+                        for e in events if 0 <= int(e[0]) <= 127}
+            except (TypeError, ValueError, IndexError, AttributeError):
+                st["take_shift"], st["take_held"] = {}, {}
             if "rotate" in saved:
                 # INTO THE LEGACY ARRAY. `rotate` was in the list above until
                 # 2026-08-31, which put it in self.state where param_get never
@@ -8150,6 +8301,8 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         if self.owner[channel] == "player":
             return
         self.owner[channel] = "player"
+        self.state[channel].pop("take_shift", None)
+        self.state[channel].pop("take_held", None)
         kind = self.channel_kind(channel)
         if tlib.claim_clears(kind):
             # The take REPLACES the generated line rather than landing on top
@@ -8191,6 +8344,9 @@ class zynthian_ctrldev_maschine_mk2(zynthian_ctrldev_base):
         self._release_all()
         self.owner[channel] = "gen"
         self.notes[channel].clear()
+        # The regenerated pattern has no memory of the take it replaces.
+        self.state[channel].pop("take_shift", None)
+        self.state[channel].pop("take_held", None)
         if self.channel_kind(channel) == "voice":
             self._write_voice_pattern(channel)
         else:

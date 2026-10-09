@@ -1460,10 +1460,16 @@ class techno_lib:
         # pattern back.**
         "drum": frozenset(("hits", "rotate", "div",
                            "lean", "lane", "rhythm")),
-        # `rhythm` joins the voice set: it rewrites the whole pattern, so it
-        # takes it back from a player the same way `random` does - and under
-        # the same exception, moving DOWN to LOCK is not destructive.
-        "voice": frozenset(("length", "div", "random", "rhythm")),
+        # `random` AND `rhythm` LEFT THE VOICE SET 2026-10-09 (item 46). They
+        # used to rewrite the whole pattern, so they took it back from the
+        # player - and that destroyed every chord and long note in a pack
+        # snapshot the moment MELODY or RHYTHM moved off LOCK, because those
+        # files are player-owned by construction. On a take the two knobs now
+        # edit the events in place (`take_plan`); on a generated channel they
+        # rewrite from the register exactly as before, which needs no
+        # handback because there is nothing to hand back. LENGTH and DIV stay:
+        # they change the grid the take sits on, so no in-place edit exists.
+        "voice": frozenset(("length", "div")),
     }
 
     @staticmethod
@@ -2060,6 +2066,137 @@ class techno_lib:
         # ownership are absolute, and asking a probability first would let a
         # frozen channel's refusal depend on a dice roll.
         return techno_lib.move_allows(move, roll)
+
+    # HOW FAR A TAKE'S STEP MAY WANDER FROM WHERE IT WAS PLAYED, in scale
+    # degrees either way. One octave of a seven-note scale. Without a bound the
+    # walk is unbounded and a take drifts out of its register for good; with no
+    # memory of the origin the bound has nothing to measure from, which is why
+    # the per-step offset is state (`take_shift`).
+    TAKE_SHIFT_MAX = 7
+
+    @staticmethod
+    def scale_step(note, direction, root, scale_idx):
+        """The next note of the scale above (+1) or below (-1) `note`, or None
+        off the end of the MIDI range.
+
+        A search rather than a degree lookup, because a take may hold notes
+        the scale does not contain - a hand-played chromatic tone, or a pad
+        built in another key - and those must still move to a legal neighbour
+        instead of raising."""
+        intervals = techno_lib.SCALES[scale_idx][1]
+        tonic = techno_lib.BASE_NOTE + root
+        classes = {(tonic + i) % 12 for i in intervals}
+        probe = note
+        while True:
+            probe += direction
+            if probe < 0 or probe > 127:
+                return None
+            if probe % 12 in classes:
+                return probe
+
+    @staticmethod
+    def take_shift_chord(notes, direction, root, scale_idx):
+        """Every note of one step moved one scale step the same way, or None.
+
+        None when any tone would leave the MIDI range, or when two tones would
+        land on one note: dropping a tone silently is the refusal this surface
+        may not commit, so the whole step stays where it is instead."""
+        moved = [techno_lib.scale_step(n, direction, root, scale_idx)
+                 for n in notes]
+        if any(n is None for n in moved) or len(set(moved)) != len(moved):
+            return None
+        return tuple(moved)
+
+    @staticmethod
+    def take_overlap(step_a, dur_a, step_b, dur_b):
+        return step_a < step_b + dur_b and step_b < step_a + dur_a
+
+    @staticmethod
+    def take_clash(live, step, note, dur):
+        """Would `note` at `step` for `dur` overlap the same pitch at another
+        step? zynseq DELETES the earlier note when a later step writes a pitch
+        it still covers (see note_duration), so an overlap is a silently lost
+        note, and the plan refuses it instead."""
+        for other, events in live.items():
+            if other == step:
+                continue
+            other_dur = events.get(note)
+            if other_dur is not None and techno_lib.take_overlap(
+                    step, dur, other, other_dur):
+                return True
+        return False
+
+    @staticmethod
+    def take_plan(live, held, shifts, melody, rhythm, root, scale_idx, steps,
+                  rng=random.random):
+        """What MELODY and RHYTHM do to a TAKE: a list of in-place edits.
+
+        A pure function so the rule can be tested with no stub. `live` is
+        {step: {note: duration}} as read from the pattern, `held` the same for
+        steps RHYTHM has muted, `shifts` {step: scale-degree offset}. Both
+        dicts are COPIED - the caller applies the returned ops.
+
+        Ops, in the order to apply them:
+            ("mute", step)                   remove the step, keep its event
+            ("restore", step, cap)           put it back, duration at most cap
+            ("forget", step)                 drop a held step the player has
+                                             since tapped something onto
+            ("move", step, ((old, new), ...), offset)
+
+        RHYTHM toggles a step with probability `rhythm`/100 and never invents
+        one, never shortens one it did not have to, and never mutes the last
+        sounding step. MELODY moves a whole step one scale step with
+        probability `melody`/100, rigid, bounded by TAKE_SHIFT_MAX either way.
+        Both are the identity at 0, so LOCK stays exact."""
+        live = {s: dict(e) for s, e in live.items()}
+        held = {s: dict(e) for s, e in held.items()}
+        shifts = dict(shifts)
+        ops = []
+        if rhythm > 0:
+            for step in sorted(set(live) | set(held)):
+                if rng() >= rhythm / 100.0:
+                    continue
+                if step in live:
+                    if len(live) > 1 and step not in held:
+                        held[step] = live.pop(step)
+                        ops.append(("mute", step))
+                    continue
+                if step in live or not held.get(step):
+                    continue
+                later = [s for s in live if s > step]
+                cap = float((min(later) if later else steps) - step)
+                events = {n: min(d, cap) for n, d in held[step].items()}
+                if any(techno_lib.take_clash(live, step, n, d)
+                       for n, d in events.items()):
+                    continue
+                live[step] = events
+                del held[step]
+                ops.append(("restore", step, cap))
+        if melody > 0:
+            for step in sorted(live):
+                if rng() >= melody / 100.0:
+                    continue
+                direction = 1 if rng() < 0.5 else -1
+                offset = shifts.get(step, 0)
+                limit = techno_lib.TAKE_SHIFT_MAX
+                if abs(offset + direction) > limit:
+                    direction = -direction
+                    if abs(offset + direction) > limit:
+                        continue
+                old = sorted(live[step])
+                new = techno_lib.take_shift_chord(old, direction, root,
+                                                  scale_idx)
+                if new is None:
+                    continue
+                durs = [live[step][n] for n in old]
+                trial = {s: e for s, e in live.items() if s != step}
+                if any(techno_lib.take_clash(trial, step, n, d)
+                       for n, d in zip(new, durs)):
+                    continue
+                live[step] = dict(zip(new, durs))
+                shifts[step] = offset + direction
+                ops.append(("move", step, tuple(zip(old, new)), offset + direction))
+        return ops
 
     @staticmethod
     def freeze_blocks(what, frozen, deep):

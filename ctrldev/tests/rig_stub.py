@@ -71,6 +71,7 @@ class FakeLibseq:
         # that writes `libseq.notes[step]` still addresses the pattern the
         # driver is looking at.
         self._by_pattern = {}
+        self.durations = {}
         self.selected = self.pattern_id(1, 0)
         self.notes = self._by_pattern.setdefault(self.selected, {})
         self.tempo = 125.0
@@ -163,11 +164,26 @@ class FakeLibseq:
     def addNote(self, step, note, velocity, duration, offset):
         self.calls.append(("addNote", (step, note, velocity, duration, offset)))
         self.notes.setdefault(step, []).append((note, velocity))
+        self.durations[(self.selected, step, note)] = duration
         return True
+
+    def removeNote(self, step, note):
+        # A REAL REMOVE, item 46. The catch-all recorded the call and removed
+        # nothing, so a test of any in-place edit read back the note it had
+        # just taken out.
+        self.calls.append(("removeNote", (step, note)))
+        self.notes[step] = [(n, v) for n, v in self.notes.get(step, [])
+                            if n != note]
+        self.durations.pop((self.selected, step, note), None)
+
+    def getNoteDuration(self, step, note):
+        return self.durations.get((self.selected, step, note), 1.0)
 
     def clear(self):
         self.calls.append(("clear", ()))
         self.notes.clear()
+        for key in [k for k in self.durations if k[0] == self.selected]:
+            del self.durations[key]
 
     def getNoteVelocity(self, step, note):
         for n, v in self.notes.get(step, []):
