@@ -9903,68 +9903,104 @@ class TheHumaniseScalesAreDerivedFromAnEar(unittest.TestCase):
 
 
 class TestTakePlan(unittest.TestCase):
-    """Item 46. MELODY and RHYTHM on a take are in-place edits, planned here."""
+    """Items 46 and 47. MELODY and RHYTHM on a take are in-place edits, planned
+    here. MELODY moves the WHOLE take together."""
 
     ROOT, SCALE = 0, 0
 
-    def plan(self, live, held=None, shifts=None, melody=0, rhythm=0, rng=None,
+    def plan(self, live, held=None, shift=0, melody=0, rhythm=0, rng=None,
              steps=16):
-        return tl.take_plan(live, held or {}, shifts or {}, melody, rhythm,
+        return tl.take_plan(live, held or {}, shift, melody, rhythm,
                             self.ROOT, self.SCALE, steps,
                             rng or random.Random(3).random)
 
-    def triad(self):
-        # C2 major-ish stack in the scale the tests use, long note on step 0.
+    def degrees(self, *picks):
         base = tl.BASE_NOTE + self.ROOT
         scale = tl.SCALES[self.SCALE][1]
-        return {base + scale[0]: 4.0, base + scale[2]: 4.0, base + scale[4]: 4.0}
+        return {base + scale[i % len(scale)] + 12 * (i // len(scale)): 4.0
+                for i in picks}
+
+    def progression(self):
+        # Three chords on three steps, the shape item 47 is about.
+        return {0: self.degrees(0, 2, 4), 4: self.degrees(5, 7, 9),
+                8: self.degrees(3, 5, 7)}
+
+    def shifts(self, ops):
+        return [o for o in ops if o[0] == "shift"]
 
     def test_zero_and_zero_is_the_identity(self):
-        self.assertEqual(self.plan({0: self.triad()}), [])
+        self.assertEqual(self.plan(self.progression()), [])
 
     def test_the_inputs_are_not_mutated(self):
-        live = {0: self.triad(), 8: self.triad()}
+        live = self.progression()
         before = {s: dict(e) for s, e in live.items()}
         self.plan(live, melody=100, rhythm=100)
         self.assertEqual(live, before)
 
-    def test_a_melody_move_keeps_every_tone_and_every_duration(self):
-        live = {0: self.triad()}
-        ops = self.plan(live, melody=100, rng=lambda: 0.0)
+    def test_every_step_moves_together_in_one_direction(self):
+        live = self.progression()
+        ops = self.shifts(self.plan(live, melody=100, rng=lambda: 0.0))
         self.assertEqual(len(ops), 1)
-        kind, step, pairs, offset = ops[0]
-        self.assertEqual((kind, step), ("move", 0))
-        self.assertEqual([o for o, _ in pairs], sorted(live[0]))
-        self.assertEqual(len(pairs), 3)
-        self.assertTrue(all(new != old for old, new in pairs))
+        _kind, offset, live_moves, _held = ops[0]
         self.assertEqual(offset, 1)
+        self.assertEqual(sorted(live_moves), sorted(live))
+        for step, pairs in live_moves.items():
+            self.assertEqual(len(pairs), len(live[step]))
+            self.assertTrue(all(new > old for old, new in pairs))
 
-    def test_a_chord_moves_rigidly_in_the_scale(self):
-        # Every tone moves the same direction by one scale step, so a tone
-        # that was in the scale is still in it.
-        scale = {(tl.BASE_NOTE + self.ROOT + i) % 12
-                 for i in tl.SCALES[self.SCALE][1]}
-        ops = self.plan({0: self.triad()}, melody=100, rng=lambda: 0.0)
-        for _old, new in ops[0][2]:
-            self.assertIn(new % 12, scale)
+    def test_the_progression_keeps_its_shape(self):
+        # The point of item 47: the gaps BETWEEN the chords survive a move.
+        # In scale-degree terms every tone moved one step, so the number of
+        # scale steps between any two tones is unchanged.
+        live = self.progression()
+        ops = self.shifts(self.plan(live, melody=100, rng=lambda: 0.0))
+        classes = sorted((tl.BASE_NOTE + self.ROOT + i) % 12
+                         for i in tl.SCALES[self.SCALE][1])
+
+        def rank(note):
+            return sum(1 for n in range(0, note) if n % 12 in classes)
+
+        for step, pairs in ops[0][2].items():
+            for (a, a2), (b, b2) in zip(pairs, pairs[1:]):
+                self.assertEqual(rank(b2) - rank(a2), rank(b) - rank(a))
 
     def test_the_walk_is_bounded_and_bounces(self):
-        shifts = {0: tl.TAKE_SHIFT_MAX}
-        ops = self.plan({0: self.triad()}, shifts=shifts, melody=100,
-                        rng=lambda: 0.0)         # asks for +1
-        self.assertEqual(ops[0][3], tl.TAKE_SHIFT_MAX - 1)
+        ops = self.shifts(self.plan(self.progression(), shift=tl.TAKE_SHIFT_MAX,
+                                    melody=100, rng=lambda: 0.0))
+        self.assertEqual(ops[0][1], tl.TAKE_SHIFT_MAX - 1)
 
-    def test_a_move_that_would_drop_a_tone_is_refused_whole(self):
-        top = {127: 1.0, 126: 1.0}
-        self.assertEqual(self.plan({0: top}, melody=100, rng=lambda: 0.0), [])
+    def test_a_take_that_cannot_move_whole_does_not_move_at_all(self):
+        live = self.progression()
+        live[12] = {127: 1.0}                # cannot go up
+        up = self.plan(live, melody=100, rng=lambda: 0.0)       # asks +1
+        down = self.shifts(up)
+        self.assertEqual(len(down), 1)
+        self.assertEqual(down[0][1], -1)                        # tried the other way
+        live[13] = {0: 1.0}                  # and now neither can
+        self.assertEqual(self.shifts(self.plan(live, melody=100,
+                                               rng=lambda: 0.0)), [])
 
-    def test_a_move_onto_a_pitch_still_sounding_is_refused(self):
-        # zynseq deletes the earlier note, so the plan must not make it.
-        base = tl.BASE_NOTE + self.ROOT
-        nxt = tl.scale_step(base, 1, self.ROOT, self.SCALE)
-        live = {0: {base: 4.0}, 2: {nxt: 1.0}}
-        ops = self.plan(live, melody=100, rng=lambda: 0.0)
-        self.assertFalse([o for o in ops if o[0] == "move" and o[1] == 0])
+    def test_a_move_that_merges_two_sounding_pitches_is_refused(self):
+        # Off-scale tones can land on one scale tone. 36 and 37 both step up
+        # to 38 in this scale, and 36 still covers step 2 where 37 sits:
+        # zynseq would delete the earlier note, so up is refused and the
+        # other direction is the one taken.
+        live = {0: {36: 4.0}, 2: {37: 1.0}}
+        ops = self.shifts(self.plan(live, melody=100, rng=lambda: 0.0))
+        self.assertEqual(len(ops), 1)
+        self.assertEqual(ops[0][1], -1)
+
+    def test_melody_at_a_low_value_often_does_nothing(self):
+        moved = sum(bool(self.shifts(self.plan(
+            self.progression(), melody=10, rng=random.Random(i).random)))
+            for i in range(200))
+        self.assertTrue(5 < moved < 60, moved)
+
+    def test_muted_steps_move_with_the_take(self):
+        ops = self.shifts(self.plan({0: self.degrees(0, 2)},
+                                    held={8: self.degrees(3, 5)}, melody=100,
+                                    rng=lambda: 0.0))
+        self.assertEqual(sorted(ops[0][3]), [8])
 
     def test_rhythm_mutes_a_step_but_never_the_last_one(self):
         live = {0: {40: 1.0}, 4: {42: 1.0}}
