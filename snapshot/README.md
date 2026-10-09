@@ -33,9 +33,9 @@ under the wrong name.
 tools/fix-snapshot-identity.py --check snapshot/*.zss snapshot/*/*.zss
 ```
 
-**Must print `106 of 106 name themselves`** — 73 until 2026-09-12, when item
+**Must print `111 of 111 name themselves`** — 73 until 2026-09-12, when item
 41's twenty landed in `dub-round/`, and 94 until item 42's twelve landed in
-`dub-round-3/`; the count moves with every pack. All three
+`dub-round-3/`, and 111 with the five dub phrases; the count moves with every pack. All three
 generators stamp it now (`build-genre-snapshots.py`,
 `build-factory-snapshot.py`, `add-main-insert.py`), so this is a guard against
 the next path that copies a snapshot, not a chore.
@@ -400,6 +400,51 @@ them. **The same run over round two flags 6 of its 20 for an interval, unison
 or kit fault.** Nothing was changed there; it is the owner's round, already
 heard. The swapped-`render()` script is not committed - it lives in a session
 scratchpad - so the check is a one-off, not a gate.
+
+# The dub phrases — `dub-phrases/`, five pieces that are not a loop
+
+**Built 2026-10-09 for `Witzman/ZynthianMaschine-Workshop#45`. Not a pack and not
+a default**; they go into bank `000` beside the dub rounds.
+
+```bash
+python3 tools/build-factory-snapshot.py \
+    --manifest snapshot/dub-phrases-manifest.json --out snapshot/dub-phrases
+```
+
+Every earlier dub piece is one bar looping. Here the drums are a one-bar loop
+with a **PHRASE** of 2, 3 or 4 bars and a **FILL** on its last bar, while the
+pitched takes run 2 or 4 bars at `1/8` or `1/4`, so two kinds of part repeat at
+different lengths:
+
+| Piece | BPM / key | Drum phrase | Pitched take |
+|---|---|---|---|
+| `253` Four-bar | 125 G minor | 4: kick, hats fill on bar 4 | stab: i, bVII, bVI, v at 1/4 |
+| `254` Three-bar | 120 A minor | 3: kick and rim fill on bar 3 | skank over i, i, bVII, iv at 1/4, so they realign every 12 bars |
+| `255` Two-bar | 125 F minor | 2: rim and a clap that exists only in the fill bar | stab i then bVI at 1/8, into a 3/16 echo |
+| `256` Broken Phrygian | 120 D phrygian | 4: hats and clap fill | bass root, root, b2, root, b2 at 1/8: twice per drum phrase |
+| `257` Rolling Wash | 125 C minor | 2: kick and quiet hats fill | two pads at 1/4, the second a fifth above and two beats late |
+
+**START THEM WITH THE MASCHINE'S PLAY BUTTON.** The phrase clock is anchored in
+`_toggle_transport` and nowhere else: a transport started from the touchscreen
+or through CUIA plays every bar as a plain bar and never fills. Measured on the
+rig 2026-10-09 with the same settings, 12 bars either way.
+
+**What the fill is.** `fill_line` only ADDS steps, furthest from the beat first,
+the same steps every time. At a high amount it reaches the beat, and that was
+measured to be audible as a fault: the fill is written a few tens of
+milliseconds after the bar line, so a hit on step 0 is lost from the fill bar
+and sounds at the start of the plain bar after it. the dub-phrases test `a fill never reaches a beat` caps the amounts (two were 100 and are 60 now).
+
+**The main faders are measured**, 48 bars at `zynmixer:output_17a`, to the
+common -24.01 dBFS of the other two rounds. The readings were taken without the
+fill bars, because the level tool starts the sequences through CUIA.
+
+**Known driver hazard, not fixed here.** `_recount_hits` re-reads HITS from the
+notes in the pattern whenever `_derive_params` runs (a snapshot load, a Group
+press, a bank drift), and it does not know about `_fill_now`. If that lands in a
+fill bar, the fill is baked into HITS and the channel plays the filled bar for
+good. Seen on the rig when a snapshot load arrived 7 s after PLAY.
+
 
 # The genre pack
 
