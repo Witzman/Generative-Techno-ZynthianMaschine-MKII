@@ -23,6 +23,7 @@ believed over it.
 """
 
 import json
+import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -2828,3 +2829,40 @@ class ATakeIsEditedInPlace(DispatchCase):
         fresh.set_state(saved)
         self.assertEqual(fresh.state[self.CH]["take_held"], {})
         self.assertEqual(fresh.state[self.CH]["take_shift"], 0)
+
+
+class AStaleHeartbeatSaysSoOnThePageLineAndThePadsStillWork(DispatchCase):
+    """Item 3 (the watchdog's stall banner), offline half, 2026-11-04.
+
+    The banner has never been SEEN on the rig, because provoking a stall means
+    breaking the machine on purpose. This proves the half that can be proved
+    here: with the heartbeat stale, the real `_render_display` puts
+    `GEN STOPPED Ns` on the wire, and a pad press still reaches the step
+    editor, because that path never consults the stall.
+
+    WHAT THIS DOES NOT PROVE: that a real stall looks like this. `_beat_at` is
+    set by hand, and the stub records notes and draws nothing - an assertion
+    here is an assertion about the fake. #3 stays open until a stall happens on
+    its own and the indicator is read before anything is restarted.
+    """
+
+    def drawn_text(self):
+        packets = []
+        with patch.object(self.d, "_send_osc",
+                          side_effect=lambda p: packets.append(bytes(p))):
+            self.d._render_display()
+        return b"".join(packets)
+
+    def test_a_stale_heartbeat_puts_gen_stopped_on_the_wire(self):
+        self.d._beat_at = time.monotonic() - 5.5
+        self.assertIn(b"GEN STOPPED 5s", self.drawn_text())
+
+    def test_a_fresh_heartbeat_does_not(self):
+        self.d._beat_at = time.monotonic()
+        self.assertNotIn(b"GEN STOPPED", self.drawn_text())
+
+    def test_a_pad_still_reaches_the_step_editor_while_stalled(self):
+        self.d._beat_at = time.monotonic() - 5.5
+        with patch.object(self.d, "_toggle_step") as toggle:
+            self.assertTrue(self.pad(0))
+        self.assertEqual(toggle.call_args[0][0], 0)
