@@ -1337,6 +1337,35 @@ mod tests {
 
     fn make_mikro() -> Mikro { Mikro::new(0) }
 
+    /// Records which buttons `read_buttons` reports, and whether down or up.
+    struct Pressed(Vec<(MaschineButton, bool)>);
+
+    impl MaschineHandler for Pressed {
+        fn button_down(&mut self, _: &mut dyn Maschine, b: MaschineButton, _: u8, d: bool) {
+            self.0.push((b, d));
+        }
+        fn button_up(&mut self, _: &mut dyn Maschine, b: MaschineButton, _: u8, d: bool) {
+            self.0.push((b, d));
+        }
+    }
+
+    #[test]
+    #[ignore = "item 51: a real defect, deliberately unfixed until measured at the rig - see the issue"]
+    fn three_buttons_changing_in_one_byte_are_all_reported() {
+        // Found 2026-11-04 by the whole-branch review of item 51. The loop in
+        // `read_buttons` accumulates `off` (the bit position) and then shifts
+        // `diff` by that running total instead of by this iteration's step, so
+        // the third changed bit of a byte is lost and later bits are misread.
+        let mut m = make_mikro();
+        let mut h = Pressed(Vec::new());
+        let mut report = [0u8; 24];
+        report[0] = 0b0000_0111; // F1, F2, F3 together
+        m.read_buttons(&mut h, &report);
+        let mut got: Vec<String> = h.0.iter().map(|(b, d)| format!("{:?}:{}", b, d)).collect();
+        got.sort();
+        assert_eq!(got, vec!["F1:true", "F2:true", "F3:true"]);
+    }
+
     // --- the input path's own guards, 2026-09-03 ---------------------------
 
     #[test]

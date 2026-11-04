@@ -2841,9 +2841,17 @@ class AStaleHeartbeatSaysSoOnThePageLineAndThePadsStillWork(DispatchCase):
     editor, because that path never consults the stall.
 
     WHAT THIS DOES NOT PROVE: that a real stall looks like this. `_beat_at` is
-    set by hand, and the stub records notes and draws nothing - an assertion
-    here is an assertion about the fake. #3 stays open until a stall happens on
-    its own and the indicator is read before anything is restarted.
+    set by hand, and the stub is a recorder - an assertion here is an assertion
+    about the fake. The pad test mocks `_toggle_step`, so it shows dispatch
+    REACHES the step editor, not that a note is written, and it is separate from
+    the banner test rather than "while a pad is pressed".
+
+    ALSO NOT COVERED, and found by the whole-branch review: the watchdog thread
+    never paints the banner (see `_watchdog_loop`'s docstring). It appears when
+    something calls `_render_display`, and the thread that does so every tick is
+    the one that is stalled. A pad press does not repaint the display, so at the
+    rig the indicator may only show after a handler that repaints, such as an
+    encoder turn. Read it after turning one.
     """
 
     def drawn_text(self):
@@ -2859,7 +2867,9 @@ class AStaleHeartbeatSaysSoOnThePageLineAndThePadsStillWork(DispatchCase):
 
     def test_a_fresh_heartbeat_does_not(self):
         self.d._beat_at = time.monotonic()
-        self.assertNotIn(b"GEN STOPPED", self.drawn_text())
+        text = self.drawn_text()
+        self.assertIn(b"/maschine/display/text", text)   # it did draw
+        self.assertNotIn(b"GEN STOPPED", text)
 
     def test_a_pad_still_reaches_the_step_editor_while_stalled(self):
         self.d._beat_at = time.monotonic() - 5.5
