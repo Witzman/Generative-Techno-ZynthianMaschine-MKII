@@ -289,6 +289,17 @@ class TestEncoderMovement(unittest.TestCase):
     def test_zero_values_does_not_divide_by_zero(self):
         self.assertEqual(lib.units_per_step(0), 128)
 
+    def test_a_light_touch_cannot_flip_a_two_value_verb(self):
+        # The same idea Machinista states as "32 raw counts for a choice, 8 for
+        # a level": the fewer settings a verb has, the more travel one step
+        # costs, so a knock on the knob cannot skip a choice. Here it falls out
+        # of 128 / values, not of a separate rule (item 49, 2026-11-04).
+        self.assertEqual(lib.units_per_step(2), 64)
+        self.assertGreater(lib.units_per_step(2), lib.units_per_step(128))
+        travel = lib.step_units(lib.units_per_step(2), False)
+        self.assertEqual(lib.encoder_steps(0, 4, travel)[0], 0)
+        self.assertEqual(lib.encoder_steps(0, travel, travel)[0], 1)
+
     def test_the_step_factor_is_two(self):
         # Pinned here and nowhere else. It has moved twice already - x10 as a
         # FINE modifier, then x3 as the default - each time by playing the
