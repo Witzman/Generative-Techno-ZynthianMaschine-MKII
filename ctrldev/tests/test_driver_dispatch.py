@@ -23,6 +23,7 @@ believed over it.
 """
 
 import json
+import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -2828,3 +2829,50 @@ class ATakeIsEditedInPlace(DispatchCase):
         fresh.set_state(saved)
         self.assertEqual(fresh.state[self.CH]["take_held"], {})
         self.assertEqual(fresh.state[self.CH]["take_shift"], 0)
+
+
+class AStaleHeartbeatSaysSoOnThePageLineAndThePadsStillWork(DispatchCase):
+    """Item 3 (the watchdog's stall banner), offline half, 2026-11-04.
+
+    The banner has never been SEEN on the rig, because provoking a stall means
+    breaking the machine on purpose. This proves the half that can be proved
+    here: with the heartbeat stale, the real `_render_display` puts
+    `GEN STOPPED Ns` on the wire, and a pad press still reaches the step
+    editor, because that path never consults the stall.
+
+    WHAT THIS DOES NOT PROVE: that a real stall looks like this. `_beat_at` is
+    set by hand, and the stub is a recorder - an assertion here is an assertion
+    about the fake. The pad test mocks `_toggle_step`, so it shows dispatch
+    REACHES the step editor, not that a note is written, and it is separate from
+    the banner test rather than "while a pad is pressed".
+
+    ALSO NOT COVERED, and found by the whole-branch review: the watchdog thread
+    never paints the banner (see `_watchdog_loop`'s docstring). It appears when
+    something calls `_render_display`, and the thread that does so every tick is
+    the one that is stalled. A pad press does not repaint the display, so at the
+    rig the indicator may only show after a handler that repaints, such as an
+    encoder turn. Read it after turning one.
+    """
+
+    def drawn_text(self):
+        packets = []
+        with patch.object(self.d, "_send_osc",
+                          side_effect=lambda p: packets.append(bytes(p))):
+            self.d._render_display()
+        return b"".join(packets)
+
+    def test_a_stale_heartbeat_puts_gen_stopped_on_the_wire(self):
+        self.d._beat_at = time.monotonic() - 5.5
+        self.assertIn(b"GEN STOPPED 5s", self.drawn_text())
+
+    def test_a_fresh_heartbeat_does_not(self):
+        self.d._beat_at = time.monotonic()
+        text = self.drawn_text()
+        self.assertIn(b"/maschine/display/text", text)   # it did draw
+        self.assertNotIn(b"GEN STOPPED", text)
+
+    def test_a_pad_still_reaches_the_step_editor_while_stalled(self):
+        self.d._beat_at = time.monotonic() - 5.5
+        with patch.object(self.d, "_toggle_step") as toggle:
+            self.assertTrue(self.pad(0))
+        self.assertEqual(toggle.call_args[0][0], 0)

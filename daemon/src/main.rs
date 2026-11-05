@@ -1316,6 +1316,27 @@ mod tests {
     }
 
     #[test]
+    fn the_report_map_has_no_unmapped_bit() {
+        // `read_buttons` does `MAP[idx][8 - off].expect("unknown button
+        // received from device")` for EVERY changed bit of all 24 report
+        // bytes, encoder bytes included. A `None` anywhere in the table is
+        // therefore a panic on the input path, and the process is the whole
+        // surface. `every_reachable_button` cannot see one: it walks only the
+        // first eight rows and `filter_map`s the Nones away. Found 2026-11-04
+        // while costing item 51 - the table has none today, and this is what
+        // says so.
+        for (idx, row) in BUTTON_REPORT_TO_MIKROBUTTONS_MAP.iter().enumerate() {
+            for (bit, entry) in row.iter().enumerate() {
+                assert!(
+                    entry.is_some(),
+                    "report byte {} bit {} is None: read_buttons would panic on it",
+                    idx, bit
+                );
+            }
+        }
+    }
+
+    #[test]
     fn every_reachable_button_has_a_name() {
         // `btn_to_osc_button_map` ends in `_ => "NO"`, so an unnamed button is
         // not a compile error: it silently becomes a button called NO, and
