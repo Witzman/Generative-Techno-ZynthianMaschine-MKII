@@ -448,7 +448,8 @@ impl Mikro {
             //println!("IDX: {}, Value{}", idx, byte);
             let mut off = 0usize;
             while diff != 0 {
-                off += (diff.trailing_zeros() + 1) as usize;
+                let step = (diff.trailing_zeros() + 1) as usize;
+                off += step;
                 let btn = BUTTON_REPORT_TO_MIKROBUTTONS_MAP[idx][8 - off]
                     .expect("unknown button received from device");
                 if idx <= 7 {
@@ -482,7 +483,7 @@ impl Mikro {
                             self.set_roller_state(byte as usize, (idx - 8) / 2 as usize);
                         };
                 };
-                                diff >>= off;
+                diff >>= step;
             }
 
             self.buttons[idx] = byte;
@@ -1350,7 +1351,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "item 51: a real defect, deliberately unfixed until measured at the rig - see the issue"]
     fn three_buttons_changing_in_one_byte_are_all_reported() {
         // Found 2026-11-04 by the whole-branch review of item 51. The loop in
         // `read_buttons` accumulates `off` (the bit position) and then shifts

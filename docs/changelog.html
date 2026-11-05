@@ -90,6 +90,7 @@
 </ul>
 <p><strong>Fixed</strong></p>
 <ul>
+<li>Pressing three or more buttons in the same instant now reports all of them; the third and later ones used to be dropped.</li>
 <li>MELODY and RHYTHM on a voice you recorded or loaded with chords no longer wipe it: they move and drop the steps that are there instead of rebuilding the channel one note at a time. MELODY moves the whole take together, so a written progression keeps its shape.</li>
 <li>Installing on a clean ZynthianOS builds the daemon again. Debian&rsquo;s cargo is 1.65, which cannot read the repository&rsquo;s lock file, so both installers now put a current toolchain in place from rustup before the build &mdash; reported from a fresh Pi 4 install.</li>
 <li>A knob that cannot reach its plugin says so instead of moving a number.</li>
